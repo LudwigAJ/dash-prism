@@ -44,10 +44,24 @@ format:
     npm run venv
     npm run format
 
+# format Python code with black
+format-py:
+    black dash_prism tests
+
 # check typescript no emit
 check:
     npm run venv
     npx tsc --noEmit
+
+# type check Python with mypy
+check-py:
+    mypy
+
+# run all linters (TypeScript + Python)
+lint:
+    npx tsc --noEmit
+    black --check dash_prism tests
+    mypy
 
 # Remove dist & build directories
 clean:
