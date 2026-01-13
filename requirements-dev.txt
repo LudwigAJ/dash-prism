@@ -2,7 +2,7 @@
 # Install with: pip install -r requirements-dev.txt
 
 # Core development tools
-dash[dev]>=3.1.0
+dash[dev]>=3.1.1
 wheel
 build
 pyyaml>=6.0.0

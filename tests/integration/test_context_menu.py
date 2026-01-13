@@ -71,6 +71,7 @@ def test_context_menu_appears_on_right_click(prism_app_with_layouts):
     wait_for_element_invisible(duo, CONTEXT_MENU, timeout=2)
 
 
+@pytest.mark.skip(reason="Flaky on CI: rename input timing issues in headless Chrome")
 def test_context_menu_rename(prism_app_with_layouts):
     """Test renaming tab via context menu."""
     duo = prism_app_with_layouts

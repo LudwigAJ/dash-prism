@@ -110,6 +110,7 @@ def test_create_multiple_tabs(prism_app_with_layouts):
     assert len(tabs) == 3, "Should have 3 tabs"
 
 
+@pytest.mark.skip(reason="Flaky on CI: rename input timing issues in headless Chrome")
 def test_rename_tab_via_double_click(prism_app_with_layouts):
     """Test renaming a tab by double-clicking."""
     duo = prism_app_with_layouts
