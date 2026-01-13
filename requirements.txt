@@ -1,0 +1,15 @@
+# Development dependencies
+# Recommended: Install package with pip install -e .[dev,test]
+
+# Core development tools
+dash[dev]>=3.1.0
+wheel
+build
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Linting and type checking
+black>=23.0.0
+mypy>=1.0.0

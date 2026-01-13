@@ -1,0 +1,728 @@
+/**
+ * Prism Global Styles
+ *
+ * Contents:
+ * 1. Tailwind v4 configuration (@import, @source, @theme)
+ * 2. CSS custom properties (.prism-container)
+ * 3. Theme definitions (.prism-theme-light/dark)
+ * 4. Size variants (.prism-size-sm/lg)
+ * 5. Root layout (.prism-root, .prism-view-*)
+ * 6. Third-party overrides (react-split-pane, cmdk, sonner)
+ * 7. Component styles (tab bar, search bar, panels)
+ * 8. Keyframes (for potential use)
+ * 9. Print styles
+ */
+
+/* =============================================================================
+   TAILWIND CONFIGURATION
+   ============================================================================= */
+
+@import 'tailwindcss';
+
+/* Source paths for Tailwind to scan for class usage */
+@source '../**/*.{ts,tsx}';
+@source './**/*.{ts,tsx,css}';
+
+/* Dark mode variant - activated by .prism-theme-dark class */
+@custom-variant dark (&:is(.prism-theme-dark *));
+
+/* Theme: map CSS variables to Tailwind utilities */
+@theme inline {
+  /* Colors - map to CSS variables */
+  --color-background: var(--prism-background);
+  --color-foreground: var(--prism-foreground);
+  --color-card: var(--prism-surface);
+  --color-card-foreground: var(--prism-surface-foreground);
+  --color-popover: var(--prism-popover);
+  --color-popover-foreground: var(--prism-popover-foreground);
+  --color-primary: var(--prism-primary);
+  --color-primary-foreground: var(--prism-background);
+  --color-secondary: var(--prism-secondary);
+  --color-secondary-foreground: var(--prism-foreground);
+  --color-muted: var(--prism-muted);
+  --color-muted-foreground: var(--prism-muted-foreground);
+  --color-accent: var(--prism-accent);
+  --color-accent-foreground: var(--prism-accent-foreground);
+  --color-destructive: var(--prism-destructive);
+  --color-destructive-foreground: var(--prism-background);
+  --color-border: var(--prism-border);
+  --color-input: var(--prism-input);
+  --color-ring: var(--prism-primary);
+
+  /* Additional custom colors */
+  --color-surface: var(--prism-surface);
+  --color-surface-foreground: var(--prism-surface-foreground);
+  --color-surface-dim: var(--prism-surface-dim);
+  --color-tertiary: var(--prism-tertiary);
+
+  /* Border radius */
+  --radius-sm: var(--prism-radius-sm);
+  --radius-md: var(--prism-radius-md);
+  --radius-lg: var(--prism-radius-lg);
+
+  /* Shadows */
+  --shadow-sm: var(--prism-shadow-sm);
+  --shadow-md: var(--prism-shadow-md);
+  --shadow-lg: var(--prism-shadow-lg);
+}
+
+/* =============================================================================
+   SHARED VARIABLES (Non-theme-specific)
+   Applied to .prism-container, inherited by children
+   ============================================================================= */
+
+.prism-container {
+  /* Typography */
+  --prism-font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif;
+  --prism-font-size-xs: 11px;
+  --prism-font-size-sm: 12px;
+  --prism-font-size-base: 14px;
+  --prism-font-size-lg: 16px;
+  --prism-font-size-xl: 18px;
+
+  /* Shadows (light theme defaults, overridden in dark) */
+  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+
+  /* Spacing */
+  --prism-spacing-xs: 4px;
+  --prism-spacing-sm: 8px;
+  --prism-spacing-md: 12px;
+  --prism-spacing-lg: 16px;
+  --prism-spacing-xl: 20px;
+
+  /* Border radius */
+  --prism-radius-sm: 4px;
+  --prism-radius-md: 8px;
+  --prism-radius-lg: 12px;
+
+  /* Apply base font */
+  font-family: var(--prism-font-family);
+  font-size: var(--prism-font-size-base);
+}
+
+/* =============================================================================
+   LIGHT THEME (Flatly-inspired)
+   Based on Bootswatch Flatly with teal accents
+   ============================================================================= */
+
+.prism-theme-light {
+  /* Core backgrounds */
+  --prism-background: #ffffff;
+  --prism-foreground: #2c3e50;
+  --prism-surface: #f5f7f8;
+  --prism-surface-foreground: #2c3e50;
+  --prism-surface-dim: #e8ebed;
+  --prism-popover: #ffffff;
+  --prism-popover-foreground: #2c3e50;
+
+  /* Accent colors */
+  --prism-primary: #18bc9c;
+  --prism-secondary: #5d6d7e;
+  --prism-tertiary: #e67e22;
+  --prism-accent: #f0f3f4;
+  --prism-accent-foreground: #2c3e50;
+  --prism-muted: #f0f3f4;
+  --prism-muted-foreground: #6c7a89;
+  --prism-destructive: #c0392b;
+
+  /* Borders and inputs */
+  --prism-border: #d5dbdf;
+  --prism-input: #f0f3f4;
+
+  /* Shadows */
+  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* =============================================================================
+   DARK THEME (Darkly-inspired)
+   Based on Bootswatch Darkly with teal accents
+   ============================================================================= */
+
+.prism-theme-dark {
+  /* Core backgrounds */
+  --prism-background: #1e1e1e;
+  --prism-foreground: #e8e8e8;
+  --prism-surface: #2d2d2d;
+  --prism-surface-foreground: #e8e8e8;
+  --prism-surface-dim: #3d3d3d;
+  --prism-popover: #2d2d2d;
+  --prism-popover-foreground: #e8e8e8;
+
+  /* Accent colors */
+  --prism-primary: #00bc8c;
+  --prism-secondary: #9ca3af;
+  --prism-tertiary: #f39c12;
+  --prism-accent: #3d3d3d;
+  --prism-accent-foreground: #e8e8e8;
+  --prism-muted: #2d2d2d;
+  --prism-muted-foreground: #a1a1aa;
+  --prism-destructive: #ef4444;
+
+  /* Borders and inputs */
+  --prism-border: #404040;
+  --prism-input: #2d2d2d;
+
+  /* Shadows */
+  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* =============================================================================
+   SIZE VARIANTS
+   Override spacing and font sizes for sm/lg
+   ============================================================================= */
+
+.prism-size-sm {
+  --prism-font-size-base: 13px;
+  --prism-font-size-sm: 10px;
+  --prism-font-size-lg: 14px;
+  --prism-font-size-xl: 14px;
+  --prism-spacing-sm: 6px;
+  --prism-spacing-md: 8px;
+  --prism-spacing-lg: 12px;
+  --prism-spacing-xl: 14px;
+}
+
+.prism-size-lg {
+  --prism-font-size-base: 16px;
+  --prism-font-size-sm: 13px;
+  --prism-font-size-lg: 18px;
+  --prism-font-size-xl: 22px;
+  --prism-spacing-sm: 10px;
+  --prism-spacing-md: 14px;
+  --prism-spacing-lg: 20px;
+  --prism-spacing-xl: 28px;
+}
+
+/* =============================================================================
+   ROOT LAYOUT
+   Full-height layout structure for the Prism workspace
+   Uses Tailwind utilities via @apply
+   ============================================================================= */
+
+.prism-root {
+  @apply flex min-h-0 w-full flex-col overflow-hidden;
+  background-color: var(--prism-background);
+  color: var(--prism-foreground);
+  font-family: var(--prism-font-family);
+}
+
+.prism-view-workspace {
+  @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+}
+
+.prism-view-panels {
+  @apply flex min-h-0 w-full flex-1;
+}
+
+/* =============================================================================
+   SCROLLBAR STYLING
+   Custom scrollbar appearance for Prism containers
+   ============================================================================= */
+
+/* Scrollbar utility class for layout containers */
+.prism-scrollable {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--prism-border) transparent;
+}
+
+.prism-scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.prism-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.prism-scrollable::-webkit-scrollbar-thumb {
+  background-color: var(--prism-border);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.prism-scrollable::-webkit-scrollbar-thumb:hover {
+  background-color: var(--prism-muted-foreground);
+}
+
+/* Dark theme scrollbar adjustments */
+.prism-theme-dark .prism-scrollable::-webkit-scrollbar-thumb {
+  background-color: var(--prism-border);
+}
+
+.prism-theme-dark .prism-scrollable::-webkit-scrollbar-thumb:hover {
+  background-color: var(--prism-muted-foreground);
+}
+
+/* =============================================================================
+   REACT SPLIT PANE
+   Styles for the react-split-pane library 
+   ============================================================================= */
+
+/* react-split-pane styles */
+.SplitPane {
+  position: relative !important;
+}
+
+.Resizer {
+  background: hsl(var(--border));
+  opacity: 1;
+  z-index: 1;
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+
+.Resizer:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+.Resizer.horizontal {
+  height: 4px;
+  cursor: row-resize;
+  margin: -2px 0;
+  border-top: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+}
+
+.Resizer.vertical {
+  width: 4px;
+  cursor: col-resize;
+  margin: 0 -2px;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+}
+
+/* =============================================================================
+   TAB BAR SIZING
+   Size-specific heights and padding for tab bar
+   ============================================================================= */
+
+/* Default (md) tab bar */
+.prism-container [data-slot='tabs-list'] {
+  height: 32px;
+  min-height: 32px;
+  font-size: var(--prism-font-size-sm);
+}
+
+.prism-container [data-slot='tabs-trigger'] {
+  font-size: var(--prism-font-size-sm);
+  padding: 4px 12px;
+}
+
+/* Small tabs */
+.prism-size-sm [data-slot='tabs-list'] {
+  height: 26px;
+  min-height: 26px;
+}
+
+.prism-size-sm [data-slot='tabs-trigger'] {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.prism-size-sm [data-slot='tabs-trigger'] button {
+  padding: 2px;
+}
+
+.prism-size-sm [data-slot='tabs-trigger'] svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Large tabs */
+.prism-size-lg [data-slot='tabs-list'] {
+  height: 40px;
+  min-height: 40px;
+}
+
+.prism-size-lg [data-slot='tabs-trigger'] {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+.prism-size-lg [data-slot='tabs-trigger'] svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* =============================================================================
+   STATUS BAR SIZING
+   Fixed heights for status bar
+   ============================================================================= */
+
+.prism-status-bar {
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  flex-shrink: 0;
+}
+
+.prism-size-sm .prism-status-bar {
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  font-size: 10px;
+}
+
+.prism-size-lg .prism-status-bar {
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  font-size: 12px;
+}
+
+/* =============================================================================
+   SEARCH BAR COMPONENT
+   ============================================================================= */
+
+.prism-searchbar {
+  @apply border-border flex items-center border-b px-3;
+  height: 36px;
+  min-height: 36px;
+  background-color: var(--prism-background);
+  position: relative; /* Positioning context for dropdown */
+}
+
+.prism-searchbar-prompt {
+  @apply font-mono text-sm font-semibold;
+  color: var(--prism-primary);
+  line-height: 1;
+  user-select: none;
+}
+
+/* Display mode - clickable bar showing current layout */
+.prism-searchbar-display {
+  @apply cursor-pointer;
+}
+
+.prism-searchbar-display:hover {
+  background-color: var(--prism-accent);
+}
+
+.prism-searchbar-display:focus {
+  @apply ring-1 outline-none ring-inset;
+  ring-color: var(--prism-primary);
+}
+
+.prism-searchbar-layout-name {
+  @apply truncate text-sm font-medium;
+  color: var(--prism-foreground);
+  margin-left: 6px;
+}
+
+/* Command input wrapper - align with prompt */
+.prism-searchbar .prism-command {
+  @apply flex items-center;
+}
+
+.prism-searchbar [cmdk-input-wrapper] {
+  @apply flex flex-1 flex-row items-center;
+}
+
+.prism-searchbar [cmdk-input] {
+  @apply w-full border-none bg-transparent text-sm outline-none;
+  color: var(--prism-foreground);
+  font-family: inherit;
+  caret-color: var(--prism-primary);
+  padding: 0;
+  margin: 0;
+  height: auto;
+  line-height: 1;
+}
+
+.prism-searchbar [cmdk-input]::placeholder {
+  @apply opacity-50;
+  color: var(--prism-secondary);
+}
+
+/* Dropdown list */
+.prism-searchbar-dropdown {
+  @apply absolute top-full right-0 left-0 z-50;
+  @apply bg-popover border-border rounded-b-md border shadow-lg;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* =============================================================================
+   PANEL COMPONENT
+   ============================================================================= */
+
+.prism-panel {
+  @apply flex h-full w-full flex-col;
+}
+
+.prism-panel-container {
+  @apply flex h-full w-full;
+}
+
+.prism-panel-child {
+  @apply min-h-0 min-w-0 overflow-hidden;
+}
+
+/* =============================================================================
+   TAB RENAME INPUT
+   Inline editing input for tab names
+   ============================================================================= */
+
+.prism-tab-rename-input {
+  position: absolute;
+  left: 12px;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--prism-input);
+  border: 1px solid var(--prism-primary);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: inherit;
+  font-family: inherit;
+  color: var(--prism-foreground);
+  outline: none;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.prism-tab-rename-input:focus {
+  border-color: var(--prism-primary);
+}
+
+/* =============================================================================
+   NEW TAB BUTTON
+   Styles for the "add new tab" button in the tab bar
+   ============================================================================= */
+
+.prism-tabbar-add {
+  @apply flex items-center justify-center;
+  width: 28px;
+  height: 28px;
+  color: var(--prism-muted-foreground);
+}
+
+.prism-tabbar-add:hover:not(:disabled) {
+  color: var(--prism-foreground);
+  background-color: var(--prism-accent);
+}
+
+.prism-tabbar-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =============================================================================
+   PINNED PANEL STYLES
+   When a Panel is pinned, tabs spread out evenly
+   ============================================================================= */
+
+.prism-tabbar-pinned {
+  width: 100%;
+}
+
+/* Pinned panel tabs spread out evenly */
+.prism-tabbar-pinned [data-slot='tabs-list'] {
+  width: 100%;
+  display: flex;
+}
+
+/* Each tab in a pinned panel takes equal space */
+.prism-tabbar-pinned [data-slot='tabs-trigger'] {
+  flex: 1;
+  justify-content: center;
+  max-width: none;
+}
+
+/* =============================================================================
+   CMDK OVERRIDES
+   External library requires CSS overrides
+   ============================================================================= */
+
+[cmdk-root].prism-command {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  position: static;
+  width: 100%;
+}
+
+[cmdk-root].prism-param-options-command {
+  position: static;
+  flex: 1;
+}
+
+[cmdk-list] {
+  overflow: auto;
+  max-height: 300px;
+  transition: height 100ms ease;
+}
+
+[cmdk-input]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+[cmdk-item] {
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[cmdk-item][data-selected='true'] {
+  background: var(--prism-accent);
+}
+
+[cmdk-item][data-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+[cmdk-empty] {
+  padding: 0.5rem 0.75rem;
+  color: var(--prism-muted-foreground);
+  font-size: var(--prism-font-size-sm);
+  text-align: center;
+}
+
+/* =============================================================================
+   NOTIFICATIONS (Sonner Toasts)
+   Override Sonner toast styles to match Prism theme
+   ============================================================================= */
+
+[data-sonner-toaster] {
+  font-family: var(--prism-font-family);
+}
+
+[data-sonner-toast] {
+  background: var(--prism-popover);
+  border: 1px solid var(--prism-border);
+  color: var(--prism-popover-foreground);
+}
+
+[data-sonner-toast][data-type='success'] {
+  background: var(--prism-surface);
+  border-color: var(--prism-primary);
+}
+
+[data-sonner-toast][data-type='error'] {
+  background: var(--prism-surface);
+  border-color: var(--prism-destructive);
+}
+
+/* =============================================================================
+   ANIMATIONS & KEYFRAMES
+   Custom animations not covered by tw-animate-css
+   ============================================================================= */
+
+@keyframes prism-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes prism-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes prism-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes prism-slide-in-from-top {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes prism-slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes prism-slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes prism-slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes prism-scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes prism-scale-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+/* =============================================================================
+   PRINT STYLES
+   Hide UI chrome when printing
+   ============================================================================= */
+
+@media print {
+  .prism-status-bar,
+  .prism-search-bar,
+  [data-slot='tabs-list'] {
+    display: none !important;
+  }
+
+  .prism-container {
+    background: white !important;
+    color: black !important;
+  }
+}

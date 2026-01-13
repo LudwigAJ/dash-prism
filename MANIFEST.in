@@ -1,0 +1,7 @@
+recursive-include dash_prism *.js *.js.map *.json *.css *.html
+include LICENSE
+include README.md
+prune tests
+prune .github
+global-exclude __pycache__
+global-exclude *.py[cod]

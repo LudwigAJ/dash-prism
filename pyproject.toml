@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dash_prism"
+version = "0.1.0"
+description = "Prism: Advanced multi-panel workspace manager for Plotly Dash"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Ludwig Jonsson", email = "developer-prism@protonmail.com"}
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Dash",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["dash", "plotly", "workspace", "tabs", "panels", "ui"]
+
+dependencies = [
+    "dash>=3.1.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
+    "dash[testing]>=3.1.0",
+]
+dev = [
+    "dash[dev]>=3.1.0",
+    "build>=1.0.0",
+    "wheel>=0.40.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/LudwigAJ/dash-prism"
+Repository = "https://github.com/LudwigAJ/dash-prism.git"
+Issues = "https://github.com/LudwigAJ/dash-prism/issues"
+
+[tool.setuptools.packages.find]
+include = ["dash_prism*"]
+
+[tool.setuptools.package-data]
+dash_prism = ["*.js", "*.js.map", "*.json", "*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--cov=dash_prism",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--headless",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | dash_prism/Prism\.py
+  | dash_prism/Action\.py
+  | dash_prism/PrismContent\.py
+  | dash_prism/_imports_\.py
+)/
+'''
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "dash_prism/Prism.py",
+    "dash_prism/Action.py",
+    "dash_prism/PrismContent.py",
+    "dash_prism/_imports_.py",
+]
+
+[tool.coverage.run]
+source = ["dash_prism"]
+omit = [
+    "*/tests/*",
+    "*/dash_prism/Prism.py",
+    "*/dash_prism/Action.py",
+    "*/dash_prism/PrismContent.py",
+    "*/dash_prism/_imports_.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+]
