@@ -41,6 +41,8 @@ Dash Prism addresses these issues by providing:
 
 ## Installation
 
+**Requirements:** Python 3.10+, Dash 3.1.1+
+
 ```bash
 pip install dash-prism
 ```

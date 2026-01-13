@@ -8,7 +8,7 @@ Installation
 
    pip install dash-prism
 
-Requirements: Python 3.9+, Dash 3.1.0+
+Requirements: Python 3.10+, Dash 3.1.1+
 
 Minimal Example
 ---------------

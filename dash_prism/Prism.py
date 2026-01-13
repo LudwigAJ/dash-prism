@@ -24,7 +24,7 @@ class Prism(PrismComponent):
     - **Persistent State**: Save workspace configuration across browser sessions
     - **Layout Registry**: Register static or dynamic layouts with parameters
     - **Async Support**: Full support for async layout callbacks
-    - **Type-Safe**: Complete type hints for Python 3.8+
+    - **Type-Safe**: Complete type hints for Python 3.10+
 
     :param id: Unique identifier for this component in Dash callbacks.
         Use this ID to read workspace state or update component properties.

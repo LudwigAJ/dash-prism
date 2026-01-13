@@ -13,7 +13,7 @@ Features
 - **Persistent state**: Save workspace configuration across sessions
 - **Layout registry**: Register static or dynamic layouts with parameters
 - **Async support**: Full support for async layout callbacks
-- **Type-safe**: Complete type hints for Python 3.8+
+- **Type-safe**: Complete type hints for Python 3.10+
 
 Quick Start
 -----------
@@ -178,7 +178,7 @@ _js_dist = [
     # },
 ]
 
-_css_dist = []
+_css_dist: list[dict[str, str]] = []
 
 
 for _component in _component_all:

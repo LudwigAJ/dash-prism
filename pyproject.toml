@@ -11,14 +11,13 @@ license = {text = "Apache-2.0"}
 authors = [
     {name = "Ludwig Jonsson", email = "developer-prism@protonmail.com"}
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: Dash",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -34,7 +33,7 @@ test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
-    "dash[testing]>=3.1.0",
+    "dash[testing]>=3.1.1",
 ]
 dev = [
     "dash[dev]>=3.1.1",
@@ -98,21 +97,21 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
-packages = ["dash_prism"]
-exclude = [
-    "dash_prism/Prism.py",
-    "dash_prism/Action.py",
-    "dash_prism/PrismContent.py",
-    "dash_prism/_imports_.py",
+follow_imports = "silent"
+# Only check hand-written source files (not auto-generated component wrappers)
+files = [
     "dash_prism/__init__.py",
-    "dash_prism/PrismComponent.py",
-    "dash_prism/PrismActionComponent.py",
-    "dash_prism/PrismContentComponent.py",
+    "dash_prism/Action.py",
+    "dash_prism/icons.py",
+    "dash_prism/init.py",
+    "dash_prism/Prism.py",
+    "dash_prism/registry.py",
+    "dash_prism/utils.py",
 ]
 
 [tool.coverage.run]
