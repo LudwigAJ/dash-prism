@@ -78,17 +78,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install black mypy types-setuptools
+          pip install -r requirements-dev.txt
 
       - name: Check formatting with black
         run: black --check dash_prism tests
 
       - name: Type check with mypy
-        run: mypy
+        run: mypy dash_prism/
 
   build:
     name: Build Distribution
