@@ -109,6 +109,10 @@ exclude = [
     "dash_prism/Action.py",
     "dash_prism/PrismContent.py",
     "dash_prism/_imports_.py",
+    "dash_prism/__init__.py",
+    "dash_prism/PrismComponent.py",
+    "dash_prism/PrismActionComponent.py",
+    "dash_prism/PrismContentComponent.py",
 ]
 
 [tool.coverage.run]
