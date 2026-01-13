@@ -96,24 +96,6 @@ extend-exclude = '''
 )/
 '''
 
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-ignore_missing_imports = true
-follow_imports = "silent"
-# Only check hand-written source files (not auto-generated component wrappers)
-files = [
-    "dash_prism/__init__.py",
-    "dash_prism/Action.py",
-    "dash_prism/icons.py",
-    "dash_prism/init.py",
-    "dash_prism/Prism.py",
-    "dash_prism/registry.py",
-    "dash_prism/utils.py",
-]
-
 [tool.coverage.run]
 source = ["dash_prism"]
 omit = [

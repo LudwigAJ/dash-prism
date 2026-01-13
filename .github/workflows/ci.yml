@@ -89,7 +89,7 @@ jobs:
         run: black --check dash_prism tests
 
       - name: Type check with mypy
-        run: mypy dash_prism/
+        run: mypy
 
   build:
     name: Build Distribution
