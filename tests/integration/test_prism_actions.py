@@ -9,7 +9,6 @@ Best Practices Applied:
 - Keep tests isolated and focused
 """
 
-
 from __future__ import annotations
 
 import pytest
@@ -40,9 +39,7 @@ def test_prism_action_renders_in_statusbar(dash_duo):
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
-    app.layout = html.Div([
-        dash_prism.Prism(id="prism", actions=[action1, action2], style={})
-    ])
+    app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action1, action2], style={})])
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)
@@ -67,10 +64,7 @@ def test_prism_action_click_triggers_callback(dash_duo):
 
     action = dash_prism.Action(id="test-action", label="Test Action", icon="Check")
 
-    @app.callback(
-        Output("output", "children"),
-        Input("test-action", "n_clicks")
-    )
+    @app.callback(Output("output", "children"), Input("test-action", "n_clicks"))
     def handle_action_click(n_clicks):
         if n_clicks is None:
             return "Not clicked"
@@ -78,10 +72,12 @@ def test_prism_action_click_triggers_callback(dash_duo):
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
-    app.layout = html.Div([
-        dash_prism.Prism(id="prism", actions=[action], style={}),
-        html.Div(id="output", children="Not clicked"),
-    ])
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(id="prism", actions=[action], style={}),
+            html.Div(id="output", children="Not clicked"),
+        ]
+    )
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)
@@ -113,9 +109,7 @@ def test_prism_action_with_no_icon(dash_duo):
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
-    app.layout = html.Div([
-        dash_prism.Prism(id="prism", actions=[action], style={})
-    ])
+    app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action], style={})])
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)

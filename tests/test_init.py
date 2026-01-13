@@ -87,11 +87,11 @@ def test_init_with_parameterized_layout(prism_app: Dash) -> None:
         id="param-layout",
         name="Parameterized",
         param_options={
-            'opt1': ('Option 1', {'value': '1'}),
-            'opt2': ('Option 2', {'value': '2'}),
+            "opt1": ("Option 1", {"value": "1"}),
+            "opt2": ("Option 2", {"value": "2"}),
         },
     )
-    def param_layout(value: str = '1'):
+    def param_layout(value: str = "1"):
         return html.Div(f"Value: {value}")
 
     dash_prism.init("test-prism", prism_app)
@@ -125,13 +125,9 @@ def test_init_multiple_static_layouts(prism_app: Dash) -> None:
 
 def test_init_nested_prism_component(dash_app: Dash) -> None:
     """Test finding Prism component nested in layout."""
-    dash_app.layout = html.Div([
-        html.Div([
-            html.Div([
-                dash_prism.Prism(id="nested-prism", style={})
-            ])
-        ])
-    ])
+    dash_app.layout = html.Div(
+        [html.Div([html.Div([dash_prism.Prism(id="nested-prism", style={})])])]
+    )
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
@@ -155,8 +151,8 @@ def test_init_with_description_and_keywords(prism_app: Dash) -> None:
     metadata = dash_prism.get_registered_layouts_metadata()
     assert len(metadata) == 1
     assert "documented" in metadata
-    assert metadata["documented"]['description'] == "This is a well-documented layout"
-    assert metadata["documented"]['keywords'] == ["test", "example", "demo"]
+    assert metadata["documented"]["description"] == "This is a well-documented layout"
+    assert metadata["documented"]["keywords"] == ["test", "example", "demo"]
 
     dash_prism.init("test-prism", prism_app)
 
@@ -174,7 +170,7 @@ def test_init_with_allow_multiple(prism_app: Dash) -> None:
     metadata = dash_prism.get_registered_layouts_metadata()
     assert len(metadata) == 1
     assert "multi" in metadata
-    assert metadata["multi"]['allowMultiple'] is True
+    assert metadata["multi"]["allowMultiple"] is True
 
     dash_prism.init("test-prism", prism_app)
 
@@ -192,16 +188,18 @@ def test_init_error_on_none_prism_id(prism_app: Dash) -> None:
 
 def test_init_with_complex_nested_layout(dash_app: Dash) -> None:
     """Test finding Prism in deeply nested layout with None children."""
-    dash_app.layout = html.Div([
-        html.Div(children=None),  # None children
-        html.Div([
-            "text node",  # Text node
-            html.Span("span"),  # Non-container
-            html.Div([
-                dash_prism.Prism(id="deep-prism", style={})
-            ])
-        ])
-    ])
+    dash_app.layout = html.Div(
+        [
+            html.Div(children=None),  # None children
+            html.Div(
+                [
+                    "text node",  # Text node
+                    html.Span("span"),  # Non-container
+                    html.Div([dash_prism.Prism(id="deep-prism", style={})]),
+                ]
+            ),
+        ]
+    )
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
     dash_prism.init("deep-prism", dash_app)
@@ -242,7 +240,7 @@ def test_init_with_callback_with_multiple_params(prism_app: Dash) -> None:
     metadata = dash_prism.get_registered_layouts_metadata()
     assert "multi-param" in metadata
     # Layout with callback should be registered
-    assert metadata["multi-param"]['name'] == "Multi Param"
+    assert metadata["multi-param"]["name"] == "Multi Param"
 
     dash_prism.init("test-prism", prism_app)
     assert len(prism_app.callback_map) > 0
@@ -256,9 +254,7 @@ def test_init_with_async_app() -> None:
     except Exception:
         pytest.skip("Dash version doesn't support use_async")
 
-    app.layout = html.Div([
-        dash_prism.Prism(id="async-prism", style={})
-    ])
+    app.layout = html.Div([dash_prism.Prism(id="async-prism", style={})])
 
     @dash_prism.register_layout(id="async-layout", name="Async")
     async def async_layout():
@@ -287,7 +283,7 @@ def test_init_registers_metadata_in_component(prism_app: Dash) -> None:
 
     # After init, the component should have registeredLayouts (if supported)
     # Some versions may not support this property
-    if hasattr(prism_component, 'registeredLayouts'):
+    if hasattr(prism_component, "registeredLayouts"):
         assert prism_component.registeredLayouts is not None
         assert isinstance(prism_component.registeredLayouts, dict)
         assert "metadata-test" in prism_component.registeredLayouts
@@ -342,14 +338,16 @@ def test_init_with_deeply_nested_components(dash_app: Dash) -> None:
 
 def test_init_with_mixed_content(dash_app: Dash) -> None:
     """Test finding component among mixed content types."""
-    dash_app.layout = html.Div([
-        "String content",
-        123,  # Number
-        None,  # None
-        html.Div("Div"),
-        [html.Span("Nested list")],  # Nested list
-        dash_prism.Prism(id="mixed-prism", style={})
-    ])
+    dash_app.layout = html.Div(
+        [
+            "String content",
+            123,  # Number
+            None,  # None
+            html.Div("Div"),
+            [html.Span("Nested list")],  # Nested list
+            dash_prism.Prism(id="mixed-prism", style={}),
+        ]
+    )
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
     dash_prism.init("mixed-prism", dash_app)

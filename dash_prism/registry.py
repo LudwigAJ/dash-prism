@@ -77,10 +77,10 @@ class LayoutParameter:
         :rtype: dict[str, Any]
         """
         return {
-            'name': self.name,
-            'hasDefault': self.has_default,
-            'default': self.default,
-            'annotation': self.annotation,
+            "name": self.name,
+            "hasDefault": self.has_default,
+            "default": self.default,
+            "annotation": self.annotation,
         }
 
 
@@ -112,7 +112,7 @@ class LayoutRegistration:
 
     id: str
     name: str
-    description: str = ''
+    description: str = ""
     keywords: List[str] = field(default_factory=list)
     allow_multiple: bool = False
     layout: Any = None
@@ -139,17 +139,17 @@ class LayoutRegistration:
         :rtype: dict[str, Any]
         """
         result: Dict[str, Any] = {
-            'name': self.name,
-            'description': self.description,
-            'keywords': self.keywords,
-            'allowMultiple': self.allow_multiple,
-            'params': [p.to_dict() for p in self.parameters],  # Changed from 'parameters'
-            'paramOptions': None,  # Changed from 'parameterOptions'
+            "name": self.name,
+            "description": self.description,
+            "keywords": self.keywords,
+            "allowMultiple": self.allow_multiple,
+            "params": [p.to_dict() for p in self.parameters],  # Changed from 'parameters'
+            "paramOptions": None,  # Changed from 'parameterOptions'
         }
 
         if self.param_options:
-            result['paramOptions'] = {
-                key: {'description': label, 'params': params}  # Changed 'label' to 'description'
+            result["paramOptions"] = {
+                key: {"description": label, "params": params}  # Changed 'label' to 'description'
                 for key, (label, params) in self.param_options.items()
             }
 
@@ -244,10 +244,7 @@ class LayoutRegistry:
         :returns: Dictionary mapping layout IDs to metadata dicts. This is what gets sent to the frontend.
         :rtype: dict[str, dict[str, Any]]
         """
-        return {
-            layout_id: reg.to_metadata()
-            for layout_id, reg in self._layouts.items()
-        }
+        return {layout_id: reg.to_metadata() for layout_id, reg in self._layouts.items()}
 
 
 # Global registry instance
@@ -347,17 +344,14 @@ def _validate_registration(
         raise ValueError("Layout 'id' is required")
 
     if not isinstance(layout_id, str):
-        raise ValueError(
-            f"Layout 'id' must be a string, got {type(layout_id).__name__}"
-        )
+        raise ValueError(f"Layout 'id' must be a string, got {type(layout_id).__name__}")
 
     if layout_id in registry:
         raise ValueError(f"Layout '{layout_id}' is already registered")
 
     if layout is None and callback is None:
         raise ValueError(
-            "Either 'layout' (static) or a decorated function (callback) "
-            "must be provided"
+            "Either 'layout' (static) or a decorated function (callback) " "must be provided"
         )
 
     if layout is not None and callback is not None:
@@ -373,13 +367,10 @@ def _validate_registration(
 
         for key, value in param_options.items():
             if not isinstance(key, str):
-                raise ValueError(
-                    f"param_options keys must be strings, got {type(key).__name__}"
-                )
+                raise ValueError(f"param_options keys must be strings, got {type(key).__name__}")
             if not isinstance(value, tuple) or len(value) != 2:
                 raise ValueError(
-                    f"param_options['{key}'] must be a tuple of "
-                    "(label: str, params: dict)"
+                    f"param_options['{key}'] must be a tuple of " "(label: str, params: dict)"
                 )
             label, params = value
             if not isinstance(label, str):
@@ -420,13 +411,12 @@ def register_layout(
     id: str,  # noqa: A002
     *,
     name: Optional[str] = None,
-    description: str = '',
+    description: str = "",
     keywords: Optional[List[str]] = None,
     allow_multiple: bool = False,
     param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
     layout: Any,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
@@ -434,19 +424,18 @@ def register_layout(
     id: str,  # noqa: A002
     *,
     name: Optional[str] = None,
-    description: str = '',
+    description: str = "",
     keywords: Optional[List[str]] = None,
     allow_multiple: bool = False,
     param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    ...
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
 def register_layout(
     id: str,  # noqa: A002
     *,
     name: Optional[str] = None,
-    description: str = '',
+    description: str = "",
     keywords: Optional[List[str]] = None,
     allow_multiple: bool = False,
     param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,

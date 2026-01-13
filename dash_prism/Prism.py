@@ -187,7 +187,7 @@ class Prism(PrismComponent):
     """
 
     # Override _type to match what init.py expects
-    _type = 'Prism'
+    _type = "Prism"
 
     def __init__(self, **kwargs):
         """Initialize Prism component.

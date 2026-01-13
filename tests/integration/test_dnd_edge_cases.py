@@ -265,7 +265,7 @@ class TestPinnedPanelsDnD:
             pytest.skip("Pin panel feature not available")
 
         # Try to split (ActionChains.pause() handles timing)
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # Either split is prevented, or it succeeds but respects pinned state
         # The key assertion is no browser errors
@@ -316,7 +316,7 @@ class TestMaxTabsDnD:
         create_tabs_for_dnd_test(duo, 5)
 
         # Split should work (moves tab, doesn't create new one)
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # Total tabs should be unchanged
         total_tabs = len(get_tabs(duo))
@@ -382,12 +382,9 @@ class TestDnDErrorHandling:
         source_tab = tabs[0]
 
         actions = ActionChains(duo.driver)
-        actions.click_and_hold(source_tab) \
-               .pause(0.3) \
-               .move_by_offset(500, 500) \
-               .pause(0.3) \
-               .release() \
-               .perform()
+        actions.click_and_hold(source_tab).pause(0.3).move_by_offset(500, 500).pause(
+            0.3
+        ).release().perform()
 
         # Should not cause errors
         errors = check_browser_errors(duo)

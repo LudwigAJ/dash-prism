@@ -75,7 +75,7 @@ class TestPanelSplitDirections:
         dragged_tab_id = tab_ids[1]  # Drag the second tab
 
         # Drag to right edge to split
-        result = drag_tab_to_panel_edge(duo, 1, 'right')
+        result = drag_tab_to_panel_edge(duo, 1, "right")
         assert result, "Drag operation should complete"
 
         # Wait for panel split
@@ -107,7 +107,7 @@ class TestPanelSplitDirections:
         tab_ids = create_tabs_for_dnd_test(duo, 3)
 
         # Drag to left edge
-        result = drag_tab_to_panel_edge(duo, 1, 'left')
+        result = drag_tab_to_panel_edge(duo, 1, "left")
         assert result, "Drag operation should complete"
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
@@ -137,7 +137,7 @@ class TestPanelSplitDirections:
         tab_ids = create_tabs_for_dnd_test(duo, 3)
 
         # Drag to top edge
-        result = drag_tab_to_panel_edge(duo, 1, 'top')
+        result = drag_tab_to_panel_edge(duo, 1, "top")
         assert result, "Drag operation should complete"
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
@@ -163,7 +163,7 @@ class TestPanelSplitDirections:
         tab_ids = create_tabs_for_dnd_test(duo, 3)
 
         # Drag to bottom edge
-        result = drag_tab_to_panel_edge(duo, 1, 'bottom')
+        result = drag_tab_to_panel_edge(duo, 1, "bottom")
         assert result, "Drag operation should complete"
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
@@ -196,7 +196,7 @@ class TestSplitPanelTabDistribution:
         remaining_tabs = [tab_ids[0], tab_ids[2]]  # A, C
 
         # Drag B to right
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
         wait_for_panel_count(duo, 2, timeout=5.0)
@@ -207,9 +207,9 @@ class TestSplitPanelTabDistribution:
 
         # One panel should have the dragged tab, other should have remaining
         all_panel_tabs = set(panel0_tabs + panel1_tabs)
-        assert all_panel_tabs == set(tab_ids), (
-            f"All tabs should be accounted for. Expected {set(tab_ids)}, got {all_panel_tabs}"
-        )
+        assert all_panel_tabs == set(
+            tab_ids
+        ), f"All tabs should be accounted for. Expected {set(tab_ids)}, got {all_panel_tabs}"
 
         # Total tab count
         assert len(panel0_tabs) + len(panel1_tabs) == 3, "Should have 3 tabs total"
@@ -231,7 +231,7 @@ class TestSplitPanelTabDistribution:
         assert len(get_tabs(duo)) == 5, "Should have 5 tabs"
 
         # Drag middle tab to right
-        drag_tab_to_panel_edge(duo, 2, 'right')
+        drag_tab_to_panel_edge(duo, 2, "right")
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
         wait_for_panel_count(duo, 2, timeout=5.0)
@@ -271,16 +271,16 @@ class TestSplitPanelConstraints:
         original_panel_id = get_panel_id(duo, 0)
 
         # Split
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         # One of the panels should have original ID
         panel_ids = [get_panel_id(duo, 0), get_panel_id(duo, 1)]
-        assert original_panel_id in panel_ids, (
-            f"Original panel ID {original_panel_id} should still exist. Found: {panel_ids}"
-        )
+        assert (
+            original_panel_id in panel_ids
+        ), f"Original panel ID {original_panel_id} should still exist. Found: {panel_ids}"
 
         errors = check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"
@@ -298,7 +298,7 @@ class TestSplitPanelConstraints:
         tab_ids = create_tabs_for_dnd_test(duo, 2)
 
         # Try to split
-        drag_tab_to_panel_edge(duo, 0, 'right')
+        drag_tab_to_panel_edge(duo, 0, "right")
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
 
         # Result depends on implementation - either:
@@ -324,7 +324,7 @@ class TestSplitPanelConstraints:
         tab_ids = create_tabs_for_dnd_test(duo, 4)
 
         # Perform split
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
 
         errors = check_browser_errors(duo)
@@ -348,7 +348,7 @@ class TestMultipleSplits:
         tab_ids = create_tabs_for_dnd_test(duo, 4)
 
         # First split
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
         wait_for_panel_count(duo, 2, timeout=5.0)
 
@@ -356,7 +356,7 @@ class TestMultipleSplits:
         assert len(get_panels(duo)) == 2, "Should have 2 panels after first split"
 
         # Second split (from panel with remaining tabs)
-        drag_tab_to_panel_edge(duo, 0, 'bottom', source_panel_index=0)
+        drag_tab_to_panel_edge(duo, 0, "bottom", source_panel_index=0)
         # ActionChains.pause() handles timing - wait_for_panel_count handles state
 
         # Should now have 3 panels

@@ -65,13 +65,13 @@ def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 5.0) -> b
     TimeoutException
         If condition not met within timeout.
     """
+
     def tab_count_equals(driver):
         tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
         return len(tabs) == expected_count
 
     WebDriverWait(dash_duo.driver, timeout).until(
-        tab_count_equals,
-        message=f"Expected {expected_count} tabs but condition not met"
+        tab_count_equals, message=f"Expected {expected_count} tabs but condition not met"
     )
     return True
 
@@ -94,13 +94,13 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 5.0) ->
     bool
         True if condition met within timeout.
     """
+
     def panel_count_equals(driver):
         panels = driver.find_elements(By.CSS_SELECTOR, PANEL_SELECTOR)
         return len(panels) == expected_count
 
     WebDriverWait(dash_duo.driver, timeout).until(
-        panel_count_equals,
-        message=f"Expected {expected_count} panels but condition not met"
+        panel_count_equals, message=f"Expected {expected_count} panels but condition not met"
     )
     return True
 
@@ -125,7 +125,7 @@ def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 3.0) ->
     """
     WebDriverWait(dash_duo.driver, timeout).until(
         EC.invisibility_of_element_located((By.CSS_SELECTOR, selector)),
-        message=f"Element {selector} did not become invisible"
+        message=f"Element {selector} did not become invisible",
     )
     return True
 
@@ -333,7 +333,8 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> bool:
     bool
         True if rename mode was triggered successfully.
     """
-    result = dash_duo.driver.execute_async_script("""
+    result = dash_duo.driver.execute_async_script(
+        """
         var callback = arguments[arguments.length - 1];
         var tabId = arguments[0];
         var tab = document.querySelector("[data-testid='prism-tab-" + tabId + "']");
@@ -347,7 +348,9 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> bool:
 
         // Wait for React to process the state update
         setTimeout(function() { callback(true); }, 100);
-    """, tab_id)
+    """,
+        tab_id,
+    )
     return result
 
 
@@ -366,7 +369,8 @@ def set_input_value_react(dash_duo, selector: str, value: str):
     value : str
         Value to set.
     """
-    dash_duo.driver.execute_async_script("""
+    dash_duo.driver.execute_async_script(
+        """
         var callback = arguments[arguments.length - 1];
         var input = document.querySelector(arguments[0]);
         if (input) {
@@ -388,7 +392,10 @@ def set_input_value_react(dash_duo, selector: str, value: str):
         } else {
             callback(false);
         }
-    """, selector, value)
+    """,
+        selector,
+        value,
+    )
 
 
 def press_enter_on_element(dash_duo, selector: str):
@@ -402,14 +409,17 @@ def press_enter_on_element(dash_duo, selector: str):
     selector : str
         CSS selector for the element.
     """
-    dash_duo.driver.execute_script("""
+    dash_duo.driver.execute_script(
+        """
         var input = document.querySelector(arguments[0]);
         if (input) {
             input.dispatchEvent(new KeyboardEvent('keydown', {
                 key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
             }));
         }
-    """, selector)
+    """,
+        selector,
+    )
 
 
 # =============================================================================
@@ -487,14 +497,11 @@ def perform_drag_and_drop(
         True if drag completed without error.
     """
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_element) \
-           .pause(0.5) \
-           .move_by_offset(initial_offset, initial_offset) \
-           .pause(0.3) \
-           .move_to_element_with_offset(target_element, offset_x, offset_y) \
-           .pause(0.5) \
-           .release() \
-           .perform()
+    actions.click_and_hold(source_element).pause(0.5).move_by_offset(
+        initial_offset, initial_offset
+    ).pause(0.3).move_to_element_with_offset(target_element, offset_x, offset_y).pause(
+        0.5
+    ).release().perform()
     return True
 
 
@@ -553,14 +560,9 @@ def drag_tab_to_position(
 
     # Use ActionChains chaining with pauses for @dnd-kit event processing
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab) \
-           .pause(0.5) \
-           .move_by_offset(15, 0) \
-           .pause(0.3) \
-           .move_to_element_with_offset(target_tab, offset_x, 0) \
-           .pause(0.5) \
-           .release() \
-           .perform()
+    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 0).pause(
+        0.3
+    ).move_to_element_with_offset(target_tab, offset_x, 0).pause(0.5).release().perform()
 
     return True
 
@@ -615,16 +617,12 @@ def drag_tab_to_panel_edge(
 
     # Get source position for offset calculation
     source_rect = source_tab.rect
-    source_x = source_rect['x'] + source_rect['width'] / 2
-    source_y = source_rect['y'] + source_rect['height'] / 2
+    source_x = source_rect["x"] + source_rect["width"] / 2
+    source_y = source_rect["y"] + source_rect["height"] / 2
 
     # Phase 1: Start drag to make drop zones appear
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab) \
-           .pause(0.5) \
-           .move_by_offset(15, 15) \
-           .pause(0.5) \
-           .perform()
+    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(0.5).perform()
 
     # Find the drop zone element now that drag is active
     drop_zone_selector = f"[data-testid^='prism-drop-zone-{edge}']"
@@ -638,8 +636,8 @@ def drag_tab_to_panel_edge(
     dz_rect = dz.rect
 
     # Phase 2: Move to drop zone center and release
-    dz_center_x = dz_rect['x'] + dz_rect['width'] / 2
-    dz_center_y = dz_rect['y'] + dz_rect['height'] / 2
+    dz_center_x = dz_rect["x"] + dz_rect["width"] / 2
+    dz_center_y = dz_rect["y"] + dz_rect["height"] / 2
 
     # Current position after phase 1: source_x + 15, source_y + 15
     current_x = source_x + 15
@@ -651,10 +649,7 @@ def drag_tab_to_panel_edge(
 
     # Move to drop zone and release
     actions2 = ActionChains(dash_duo.driver)
-    actions2.move_by_offset(delta_x, delta_y) \
-            .pause(0.3) \
-            .release() \
-            .perform()
+    actions2.move_by_offset(delta_x, delta_y).pause(0.3).release().perform()
 
     return True
 
@@ -707,26 +702,17 @@ def drag_tab_to_other_panel(
 
     # Use ActionChains for the drag operation
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab) \
-           .pause(0.5) \
-           .move_by_offset(15, 15) \
-           .pause(0.3)
+    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(0.3)
 
     if target_tabs:
         # Drop onto the first tab in target panel
-        actions.move_to_element(target_tabs[0]) \
-               .pause(0.5) \
-               .release() \
-               .perform()
+        actions.move_to_element(target_tabs[0]).pause(0.5).release().perform()
     else:
         # No tabs in target panel - drop on the panel itself (upper area)
         target_panel_rect = target_panel.rect
         actions.move_to_element_with_offset(
-            target_panel, 0, -target_panel_rect['height'] // 3
-        ) \
-               .pause(0.5) \
-               .release() \
-               .perform()
+            target_panel, 0, -target_panel_rect["height"] // 3
+        ).pause(0.5).release().perform()
 
     return True
 
@@ -761,11 +747,9 @@ def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> N
 
     # Use chained ActionChains with pause() - not time.sleep()
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab) \
-           .pause(0.5) \
-           .move_by_offset(15, 15) \
-           .pause(0.5) \
-           .perform()  # >8px to trigger PointerSensor
+    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(
+        0.5
+    ).perform()  # >8px to trigger PointerSensor
 
 
 def cancel_drag_with_escape(dash_duo) -> None:
@@ -780,6 +764,4 @@ def cancel_drag_with_escape(dash_duo) -> None:
         The dash testing fixture.
     """
     actions = ActionChains(dash_duo.driver)
-    actions.send_keys(Keys.ESCAPE) \
-           .pause(0.3) \
-           .perform()
+    actions.send_keys(Keys.ESCAPE).pause(0.3).perform()

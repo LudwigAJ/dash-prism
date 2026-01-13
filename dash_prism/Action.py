@@ -176,7 +176,7 @@ class Action(PrismActionComponent):
     """
 
     # Override _type to match what init.py expects (internal wire protocol)
-    _type = 'PrismAction'
+    _type = "PrismAction"
 
     def __init__(self, **kwargs):
         """Initialize Action component.

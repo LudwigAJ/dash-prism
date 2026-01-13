@@ -186,7 +186,9 @@ def validate_workspace(
     tab_to_panels: Dict[str, List[str]] = {}
     for panel_id, tab_list in panel_tabs.items():
         if not isinstance(tab_list, list):
-            validation_errors.append(f"panelTabs['{panel_id}']: expected list, got {type(tab_list).__name__}")
+            validation_errors.append(
+                f"panelTabs['{panel_id}']: expected list, got {type(tab_list).__name__}"
+            )
             continue
         for tab_id in tab_list:
             if tab_id not in tab_to_panels:
@@ -239,26 +241,20 @@ def validate_workspace(
     # -------------------------------------------------------------------------
     for leaf_id in leaf_panel_ids:
         if leaf_id not in panel_tabs:
-            validation_errors.append(
-                f"Leaf panel '{leaf_id}' missing from panelTabs"
-            )
+            validation_errors.append(f"Leaf panel '{leaf_id}' missing from panelTabs")
 
     # -------------------------------------------------------------------------
     # 8. activePanelId is a valid leaf panel
     # -------------------------------------------------------------------------
     if active_panel_id not in leaf_panel_ids:
-        validation_errors.append(
-            f"activePanelId '{active_panel_id}' is not a valid leaf panel"
-        )
+        validation_errors.append(f"activePanelId '{active_panel_id}' is not a valid leaf panel")
 
     # -------------------------------------------------------------------------
     # 9. Each activeTabIds entry references valid panel and tab
     # -------------------------------------------------------------------------
     for panel_id, tab_id in active_tab_ids.items():
         if panel_id not in panel_tabs:
-            validation_errors.append(
-                f"activeTabIds references unknown panel '{panel_id}'"
-            )
+            validation_errors.append(f"activeTabIds references unknown panel '{panel_id}'")
         elif tab_id and tab_id not in (panel_tabs.get(panel_id) or []):
             validation_errors.append(
                 f"activeTabIds['{panel_id}'] = '{tab_id}' but tab not in panelTabs['{panel_id}']"
@@ -323,7 +319,7 @@ def walk_layout(
         return type(layout)(result)
 
     # Handle dicts (but not Dash components)
-    if isinstance(layout, dict) and not hasattr(layout, '_type'):
+    if isinstance(layout, dict) and not hasattr(layout, "_type"):
         return {k: walk_layout(v, transform, _visited) for k, v in layout.items()}
 
     # Check for circular references
@@ -336,8 +332,8 @@ def walk_layout(
     layout = transform(layout)
 
     # Recursively transform children
-    if hasattr(layout, 'children'):
-        children = getattr(layout, 'children', None)
+    if hasattr(layout, "children"):
+        children = getattr(layout, "children", None)
         if children is not None:
             layout.children = walk_layout(children, transform, _visited)
 
@@ -380,14 +376,14 @@ def inject_tab_id(layout: Any, tab_id: str) -> Any:
     layout = copy.deepcopy(layout)
 
     def transform(component: Any) -> Any:
-        if hasattr(component, 'id'):
-            component_id = getattr(component, 'id', None)
+        if hasattr(component, "id"):
+            component_id = getattr(component, "id", None)
 
             # Only transform string IDs (skip None and dict IDs)
             if isinstance(component_id, str):
                 component.id = {
-                    'type': component_id,
-                    'index': tab_id,
+                    "type": component_id,
+                    "index": tab_id,
                 }
         return component
 
@@ -419,14 +415,14 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
 
     from .registry import get_layout
 
-    tab_id = data.get('tabId')
-    layout_id = data.get('layoutId')
-    layout_params = data.get('layoutParams', {})
+    tab_id = data.get("tabId")
+    layout_id = data.get("layoutId")
+    layout_params = data.get("layoutParams", {})
 
     if not layout_id:
         return html.Div(
-            'Select a layout from the search bar',
-            className='prism-empty-tab',
+            "Select a layout from the search bar",
+            className="prism-empty-tab",
         )
 
     registration = get_layout(layout_id)
@@ -434,7 +430,7 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     if not registration:
         return html.Div(
             f"Layout '{layout_id}' not found",
-            className='prism-error-tab',
+            className="prism-error-tab",
         )
 
     try:
@@ -451,18 +447,18 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     except TypeError as e:
         return html.Div(
             [
-                html.H3('Layout Error'),
+                html.H3("Layout Error"),
                 html.Pre(f"Error rendering layout: {e}\nCheck required parameters."),
             ],
-            className='prism-error-tab',
+            className="prism-error-tab",
         )
     except Exception as e:
         return html.Div(
             [
-                html.H3('Layout Error'),
+                html.H3("Layout Error"),
                 html.Pre(str(e)),
             ],
-            className='prism-error-tab',
+            className="prism-error-tab",
         )
 
 
@@ -485,7 +481,7 @@ def find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
 
     def search(component: Any) -> Any:
         nonlocal result
-        if hasattr(component, 'id') and component.id == component_id:
+        if hasattr(component, "id") and component.id == component_id:
             result = component
         return component
 
@@ -519,7 +515,7 @@ def update_component_props(
     layout = copy.deepcopy(layout)
 
     def transform(component: Any) -> Any:
-        if hasattr(component, 'id') and component.id == component_id:
+        if hasattr(component, "id") and component.id == component_id:
             for key, value in props.items():
                 setattr(component, key, value)
         return component

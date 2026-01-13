@@ -75,8 +75,7 @@ def test_close_tab(prism_app_with_layouts):
     # Hover over tab to reveal close button (it's hidden until hover)
     tab = tabs[1]
     duo.driver.execute_script(
-        "arguments[0].dispatchEvent(new MouseEvent('mouseenter', {bubbles: true}))",
-        tab
+        "arguments[0].dispatchEvent(new MouseEvent('mouseenter', {bubbles: true}))", tab
     )
 
     # Find and click the close button

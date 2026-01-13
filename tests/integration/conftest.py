@@ -121,27 +121,23 @@ def prism_app_with_layouts(dash_duo):
         id="test-static",
         name="Test Static Layout",
         description="A simple static test layout",
-        layout=html.Div([
-            html.H1("Test Content"),
-            html.P("Static content", id="static-content")
-        ]),
+        layout=html.Div([html.H1("Test Content"), html.P("Static content", id="static-content")]),
     )
 
     dash_prism.register_layout(
         id="test-callback",
         name="Test Callback Layout",
         description="A layout with callback",
-        layout=html.Div([
-            html.H1("Callback Test"),
-            html.Button("Click me", id="test-button", n_clicks=0),
-            html.Div(id="test-output"),
-        ]),
+        layout=html.Div(
+            [
+                html.H1("Callback Test"),
+                html.Button("Click me", id="test-button", n_clicks=0),
+                html.Div(id="test-output"),
+            ]
+        ),
     )
 
-    @app.callback(
-        Output("test-output", "children"),
-        Input("test-button", "n_clicks")
-    )
+    @app.callback(Output("test-output", "children"), Input("test-button", "n_clicks"))
     def update_output(n_clicks):
         return f"Clicked {n_clicks} times"
 
@@ -175,7 +171,8 @@ def prism_app_with_layouts(dash_duo):
 
     # Patch ResizeObserver to fire immediately in headless mode
     # react-split-pane relies on ResizeObserver to measure container before rendering children
-    dash_duo.driver.execute_script("""
+    dash_duo.driver.execute_script(
+        """
         // Store original ResizeObserver
         const OriginalResizeObserver = window.ResizeObserver;
 
@@ -217,13 +214,16 @@ def prism_app_with_layouts(dash_duo):
         };
 
         console.log('ResizeObserver patched for headless mode');
-    """)
+    """
+    )
 
     # Clear any stored workspace data from previous test runs
-    dash_duo.driver.execute_script("""
+    dash_duo.driver.execute_script(
+        """
         localStorage.removeItem('prism-workspace');
         sessionStorage.removeItem('prism-workspace');
-    """)
+    """
+    )
 
     # Wait for Prism to fully load (explicit wait)
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)

@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from dash import Dash
 
-logger = logging.getLogger('dash_prism')  
+logger = logging.getLogger("dash_prism")
 
 
 # =============================================================================
@@ -62,10 +62,10 @@ def _find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
     if layout is None:
         return None
 
-    if hasattr(layout, 'id') and layout.id == component_id:
+    if hasattr(layout, "id") and layout.id == component_id:
         return layout
 
-    if hasattr(layout, 'children'):
+    if hasattr(layout, "children"):
         children = layout.children
         if children is None:
             return None
@@ -80,7 +80,7 @@ def _find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
     return None
 
 
-def _is_app_async(app: 'Dash') -> bool:
+def _is_app_async(app: "Dash") -> bool:
     """Check if the Dash app is configured for async callbacks.
 
     :param app: The Dash application instance.
@@ -88,7 +88,7 @@ def _is_app_async(app: 'Dash') -> bool:
     :returns: ``True`` if app uses async callbacks, ``False`` otherwise.
     :rtype: bool
     """
-    return getattr(app, 'use_async', False)
+    return getattr(app, "use_async", False)
 
 
 def _run_callback(
@@ -152,10 +152,10 @@ def _create_error_component(message: str) -> Any:
 
     return html.Div(
         [
-            html.H3('Layout Error'),
+            html.H3("Layout Error"),
             html.Pre(message),
         ],
-        className='prism-error-tab',
+        className="prism-error-tab",
     )
 
 
@@ -258,7 +258,7 @@ async def _render_tab_layout_async(
 # =============================================================================
 
 
-def _validate_init(app: 'Dash', prism_id: str) -> list[str]:
+def _validate_init(app: "Dash", prism_id: str) -> list[str]:
     """Validate the initialization setup.
 
     :param app: The Dash application.
@@ -270,15 +270,13 @@ def _validate_init(app: 'Dash', prism_id: str) -> list[str]:
     """
     errors: list[str] = []
 
-    if not hasattr(app, 'callback'):
-        errors.append(
-            "Invalid 'app' argument: expected a Dash application instance"
-        )
+    if not hasattr(app, "callback"):
+        errors.append("Invalid 'app' argument: expected a Dash application instance")
 
     if not prism_id or not isinstance(prism_id, str):
         errors.append("Invalid 'prism_id': must be a non-empty string")
 
-    if not hasattr(app, 'layout') or app.layout is None:
+    if not hasattr(app, "layout") or app.layout is None:
         errors.append(
             "app.layout must be set before calling init(). "
             "Make sure you define app.layout = ... before calling dash_prism.init()"
@@ -287,7 +285,7 @@ def _validate_init(app: 'Dash', prism_id: str) -> list[str]:
     return errors
 
 
-def _validate_prism_component(app: 'Dash', prism_id: str) -> Optional[Any]:
+def _validate_prism_component(app: "Dash", prism_id: str) -> Optional[Any]:
     """Find and validate the Prism component in the app layout.
 
     :param app: The Dash application.
@@ -309,8 +307,8 @@ def _validate_prism_component(app: 'Dash', prism_id: str) -> Optional[Any]:
         )
         return None
 
-    component_type = getattr(prism_component, '_type', None)
-    if component_type != 'Prism':
+    component_type = getattr(prism_component, "_type", None)
+    if component_type != "Prism":
         warnings.warn(
             f"Component with id='{prism_id}' is not a Prism component "
             f"(found {component_type}). Make sure you're using dash_prism.Prism().",
@@ -326,7 +324,7 @@ def _validate_prism_component(app: 'Dash', prism_id: str) -> Optional[Any]:
 # =============================================================================
 
 
-def init(prism_id: str, app: 'Dash') -> None:
+def init(prism_id: str, app: "Dash") -> None:
     """
     Initialize Prism with a Dash application.
 
@@ -382,8 +380,7 @@ def init(prism_id: str, app: 'Dash') -> None:
     errors = _validate_init(app, prism_id)
     if errors:
         raise InitializationError(
-            "Prism initialization failed:\n"
-            + "\n".join(f"  - {e}" for e in errors)
+            "Prism initialization failed:\n" + "\n".join(f"  - {e}" for e in errors)
         )
 
     # Warn if no layouts registered
@@ -418,25 +415,26 @@ def init(prism_id: str, app: 'Dash') -> None:
 
     # Create the tab rendering callback using pattern matching
     if use_async:
+
         @app.callback(
-            Output({'type': 'prism-content', 'index': MATCH}, 'children'),
-            Input({'type': 'prism-content', 'index': MATCH}, 'id'),
-            Input({'type': 'prism-content', 'index': MATCH}, 'data'),
+            Output({"type": "prism-content", "index": MATCH}, "children"),
+            Input({"type": "prism-content", "index": MATCH}, "id"),
+            Input({"type": "prism-content", "index": MATCH}, "data"),
             prevent_initial_call=False,
         )
         async def render_prism_content_async(content_id, data):
             """Async callback to render a tab's content."""
-            print('render_prism_content_async %s, %s' % (content_id, data))
-            logger.info('render_prism_content_async %s, %s', content_id, data)
+            print("render_prism_content_async %s, %s" % (content_id, data))
+            logger.info("render_prism_content_async %s, %s", content_id, data)
 
             if not content_id or not data:
                 raise PreventUpdate
-            
-            tab_id = content_id.get('index')
 
-            layout_id = data.get('layoutId')
-            layout_params = data.get('layoutParams', {})
-            layout_options = data.get('layoutOptions', '')
+            tab_id = content_id.get("index")
+
+            layout_id = data.get("layoutId")
+            layout_params = data.get("layoutParams", {})
+            layout_options = data.get("layoutOptions", "")
 
             if not layout_id:
                 raise PreventUpdate
@@ -446,24 +444,26 @@ def init(prism_id: str, app: 'Dash') -> None:
                 raise PreventUpdate
 
             return result
+
     else:
+
         @app.callback(
-            Output({'type': 'prism-content', 'index': MATCH}, 'children'),
-            Input({'type': 'prism-content', 'index': MATCH}, 'id'),
-            Input({'type': 'prism-content', 'index': MATCH}, 'data'),
+            Output({"type": "prism-content", "index": MATCH}, "children"),
+            Input({"type": "prism-content", "index": MATCH}, "id"),
+            Input({"type": "prism-content", "index": MATCH}, "data"),
             prevent_initial_call=False,
         )
         def render_prism_content(content_id, data):
             """Sync callback to render a tab's content."""
-            print('render_prism_content_async %s, %s' % (content_id, data))
-            logger.info('render_prism_content %s, %s', content_id, data)
+            print("render_prism_content_async %s, %s" % (content_id, data))
+            logger.info("render_prism_content %s, %s", content_id, data)
             if not content_id or not data:
                 raise PreventUpdate
 
-            tab_id = content_id.get('index')
-            layout_id = data.get('layoutId')
-            layout_params = data.get('layoutParams', {})
-            layout_options = data.get('layoutOption', '')
+            tab_id = content_id.get("index")
+            layout_id = data.get("layoutId")
+            layout_params = data.get("layoutParams", {})
+            layout_options = data.get("layoutOption", "")
 
             if not layout_id:
                 raise PreventUpdate

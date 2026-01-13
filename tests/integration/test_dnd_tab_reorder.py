@@ -61,9 +61,9 @@ class TestBasicTabReorder:
 
         # Order should have changed (first tab should no longer be first)
         # The exact new order depends on drop mechanics, but it should differ
-        assert new_order != initial_order or new_order[0] != initial_order[0], (
-            f"Tab order should change. Initial: {initial_order}, Final: {new_order}"
-        )
+        assert (
+            new_order != initial_order or new_order[0] != initial_order[0]
+        ), f"Tab order should change. Initial: {initial_order}, Final: {new_order}"
 
         # Should still have 3 tabs in 1 panel
         assert len(get_tabs(duo)) == 3, "Should still have 3 tabs"
@@ -95,9 +95,9 @@ class TestBasicTabReorder:
         new_order = get_tab_order_in_panel(duo, 0)
 
         # The last tab should have moved toward the front
-        assert new_order != initial_order, (
-            f"Tab order should change. Initial: {initial_order}, Final: {new_order}"
-        )
+        assert (
+            new_order != initial_order
+        ), f"Tab order should change. Initial: {initial_order}, Final: {new_order}"
 
         # All tabs should still exist
         assert set(new_order) == set(initial_order), "All tabs should still exist"
@@ -189,9 +189,9 @@ class TestReorderBoundaryConditions:
         final_order = get_tab_order_in_panel(duo, 0)
 
         # All tabs should be preserved (same set, possibly different order)
-        assert set(final_order) == set(initial_order), (
-            f"All tabs should be preserved. Initial: {set(initial_order)}, Final: {set(final_order)}"
-        )
+        assert set(final_order) == set(
+            initial_order
+        ), f"All tabs should be preserved. Initial: {set(initial_order)}, Final: {set(final_order)}"
         assert len(final_order) == 4, "Should still have 4 tabs"
 
         errors = check_browser_errors(duo)
@@ -247,9 +247,9 @@ class TestReorderStateConsistency:
         # ActionChains.pause() handles timing
 
         final_panel_count = len(get_panels(duo))
-        assert final_panel_count == initial_panel_count, (
-            f"Panel count should be unchanged. Initial: {initial_panel_count}, Final: {final_panel_count}"
-        )
+        assert (
+            final_panel_count == initial_panel_count
+        ), f"Panel count should be unchanged. Initial: {initial_panel_count}, Final: {final_panel_count}"
 
     def test_reorder_no_browser_errors(self, prism_app_with_layouts):
         """

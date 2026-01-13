@@ -67,7 +67,7 @@ class TestCreateSplitMoveWorkflow:
         assert len(get_panels(duo)) == 1, "Should start with 1 panel"
 
         # Step 2: Split panel by dragging second tab to right
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         # Step 3: Verify intermediate state
@@ -116,7 +116,7 @@ class TestCreateSplitMoveWorkflow:
         assert len(tab_ids) == 5
 
         # Step 2: First split (horizontal)
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         # Step 3: Reorder tabs in panel 0
@@ -127,7 +127,7 @@ class TestCreateSplitMoveWorkflow:
         # Step 4: Second split (if panel has enough tabs)
         panel0_tabs = get_tab_order_in_panel(duo, 0)
         if len(panel0_tabs) >= 2:
-            drag_tab_to_panel_edge(duo, 0, 'bottom', source_panel_index=0)
+            drag_tab_to_panel_edge(duo, 0, "bottom", source_panel_index=0)
 
         # Step 5: Verify panels exist (at least 2, possibly 3)
         panels = get_panels(duo)
@@ -158,7 +158,7 @@ class TestCrossPanelTabMove:
 
         # Create tabs and split
         create_tabs_for_dnd_test(duo, 4)
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         # Get initial state
@@ -200,7 +200,7 @@ class TestCrossPanelTabMove:
         duo = prism_app_with_layouts
 
         create_tabs_for_dnd_test(duo, 5)
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         # Move tab 0 -> 1
@@ -242,7 +242,7 @@ class TestPanelCollapse:
         create_tabs_for_dnd_test(duo, 3)
 
         # Split panel
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
         wait_for_panel_count(duo, 2, timeout=5.0)
 
         assert len(get_panels(duo)) == 2, "Should have 2 panels"
@@ -298,7 +298,7 @@ class TestStateConsistency:
         drag_tab_to_position(duo, 2, 0)
 
         # Split
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # Cross-panel moves (if 2 panels exist)
         panels = get_panels(duo)
@@ -338,7 +338,7 @@ class TestStateConsistency:
         drag_tab_to_position(duo, 0, 2)
 
         # Split
-        drag_tab_to_panel_edge(duo, 1, 'right')
+        drag_tab_to_panel_edge(duo, 1, "right")
 
         # Cross-panel move if possible
         if len(get_panels(duo)) == 2:

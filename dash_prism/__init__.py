@@ -144,32 +144,32 @@ from .Action import Action, PrismAction
 from .Prism import Prism
 from .PrismContentComponent import PrismContentComponent as PrismContent
 
-if not hasattr(_dash, '__plotly_dash') and not hasattr(_dash, 'development'):
+if not hasattr(_dash, "__plotly_dash") and not hasattr(_dash, "development"):
     print(
-        'Dash was not successfully imported. '
-        'Make sure you don\'t have a file '
+        "Dash was not successfully imported. "
+        "Make sure you don't have a file "
         'named \n"dash.py" in your current directory.',
         file=_sys.stderr,
     )
     _sys.exit(1)
 
 _basepath = _os.path.dirname(__file__)
-_filepath = _os.path.abspath(_os.path.join(_basepath, 'package-info.json'))
+_filepath = _os.path.abspath(_os.path.join(_basepath, "package-info.json"))
 with open(_filepath) as _f:
     _package_info = _json.load(_f)
 
-package_name = _package_info['name'].replace(' ', '_').replace('-', '_')
-__version__ = _package_info['version']
+package_name = _package_info["name"].replace(" ", "_").replace("-", "_")
+__version__ = _package_info["version"]
 
 _js_dist = [
     {
-        'relative_package_path': 'dash_prism.js',
-        'namespace': package_name,
+        "relative_package_path": "dash_prism.js",
+        "namespace": package_name,
     },
     {
-        'relative_package_path': 'dash_prism.js.map',
-        'namespace': package_name,
-        'dynamic': True,
+        "relative_package_path": "dash_prism.js.map",
+        "namespace": package_name,
+        "dynamic": True,
     },
     # {
     #     'dev_package_path': 'proptypes.js',
@@ -182,8 +182,8 @@ _css_dist = []
 
 
 for _component in _component_all:
-    setattr(locals()[_component], '_js_dist', _js_dist)
-    setattr(locals()[_component], '_css_dist', _css_dist)
+    setattr(locals()[_component], "_js_dist", _js_dist)
+    setattr(locals()[_component], "_css_dist", _css_dist)
 
 
 # =============================================================================
@@ -224,32 +224,32 @@ from .icons import AVAILABLE_ICONS, get_available_icons
 # Export all public symbols
 __all__ = [
     # Components (from _imports_)
-    'Action',
-    'Prism',
-    'PrismAction',  # Backwards compatibility alias
-    'PrismContent',
+    "Action",
+    "Prism",
+    "PrismAction",  # Backwards compatibility alias
+    "PrismContent",
     # Registration API
-    'register_layout',
-    'registry',
-    'get_layout',
-    'get_registered_layouts_metadata',
-    'clear_registry',
+    "register_layout",
+    "registry",
+    "get_layout",
+    "get_registered_layouts_metadata",
+    "clear_registry",
     # Classes
-    'LayoutRegistration',
-    'LayoutParameter',
-    'LayoutRegistry',
+    "LayoutRegistration",
+    "LayoutParameter",
+    "LayoutRegistry",
     # Utilities
-    'walk_layout',
-    'inject_tab_id',
-    'render_layout_for_tab',
-    'find_component_by_id',
-    'update_component_props',
-    'validate_workspace',
-    'InvalidWorkspace',
+    "walk_layout",
+    "inject_tab_id",
+    "render_layout_for_tab",
+    "find_component_by_id",
+    "update_component_props",
+    "validate_workspace",
+    "InvalidWorkspace",
     # Initialization
-    'init',
-    'InitializationError',
+    "init",
+    "InitializationError",
     # Icons
-    'AVAILABLE_ICONS',
-    'get_available_icons',
+    "AVAILABLE_ICONS",
+    "get_available_icons",
 ]

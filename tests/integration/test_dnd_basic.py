@@ -207,9 +207,7 @@ class TestDnDBasicInfrastructure:
         tab_ids = create_tabs_for_dnd_test(duo, 4)
 
         # All IDs should be unique
-        assert len(tab_ids) == len(set(tab_ids)), (
-            f"Tab IDs should be unique. Got: {tab_ids}"
-        )
+        assert len(tab_ids) == len(set(tab_ids)), f"Tab IDs should be unique. Got: {tab_ids}"
 
         # All IDs should be non-empty strings
         for tab_id in tab_ids:

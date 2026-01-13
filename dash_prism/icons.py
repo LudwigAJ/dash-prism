@@ -22,10 +22,10 @@ def _load_icons() -> frozenset[str]:
     :returns: Frozen set of available icon names.
     :rtype: frozenset[str]
     """
-    icons_path = Path(__file__).parent / 'icons.json'
+    icons_path = Path(__file__).parent / "icons.json"
     if not icons_path.exists():
         # Fallback for development when icons.json hasn't been copied
-        icons_path = Path(__file__).parent.parent / 'src' / 'icons.json'
+        icons_path = Path(__file__).parent.parent / "src" / "icons.json"
 
     if not icons_path.exists():
         raise FileNotFoundError(
@@ -33,10 +33,10 @@ def _load_icons() -> frozenset[str]:
             "Run 'npm run build' to generate it."
         )
 
-    with icons_path.open('r', encoding='utf-8') as f:
+    with icons_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    return frozenset(data['icons'])
+    return frozenset(data["icons"])
 
 
 def _get_available_icons_set() -> frozenset[str]:

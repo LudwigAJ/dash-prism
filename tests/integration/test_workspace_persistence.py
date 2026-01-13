@@ -88,14 +88,16 @@ def test_prism_initializes_without_persistence(dash_duo):
         layout=html.Div("Test content", id="test-content"),
     )
 
-    app.layout = html.Div([
-        dash_prism.Prism(
-            id="prism",
-            persistence=False,
-            persistence_type="memory",
-            style={},
-        )
-    ])
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=False,
+                persistence_type="memory",
+                style={},
+            )
+        ]
+    )
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)
@@ -120,14 +122,16 @@ def test_prism_initializes_with_localStorage_persistence(dash_duo):
         layout=html.Div("Test content", id="test-content"),
     )
 
-    app.layout = html.Div([
-        dash_prism.Prism(
-            id="prism",
-            persistence=True,
-            persistence_type="local",
-            style={},
-        )
-    ])
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=True,
+                persistence_type="local",
+                style={},
+            )
+        ]
+    )
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)
@@ -152,14 +156,16 @@ def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
         layout=html.Div("Test content", id="test-content"),
     )
 
-    app.layout = html.Div([
-        dash_prism.Prism(
-            id="prism",
-            persistence=True,
-            persistence_type="session",
-            style={},
-        )
-    ])
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=True,
+                persistence_type="session",
+                style={},
+            )
+        ]
+    )
 
     dash_prism.init("prism", app)
     dash_duo.start_server(app)
