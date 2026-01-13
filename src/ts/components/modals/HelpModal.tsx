@@ -12,7 +12,7 @@ import { cn } from '@utils/cn';
 import type { Theme } from '@types';
 
 // Version can be imported from a constants file or package.json
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 
 export type HelpModalProps = {
   /** Whether the modal is open */

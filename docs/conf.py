@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'Dash Prism'
 copyright = '2026, Ludwig Jonsson'
 author = 'Ludwig Jonsson'
-release = '0.1.1'
+release = '0.1.2'
 
 extensions = [
     'sphinx.ext.autodoc',
