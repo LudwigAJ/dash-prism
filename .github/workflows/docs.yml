@@ -30,8 +30,8 @@ jobs:
           node-version: "20"
 
       - run: npm ci
-      - run: npm run build
-      - run: pip install -e . sphinx furo
+      - run: pip install -e . sphinx sphinx-rtd-theme
+      - run: npm run build:js
 
       - name: Build docs
         run: cd docs && make html

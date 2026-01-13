@@ -33,6 +33,6 @@ Building Docs
 
 .. code-block:: bash
 
-   pip install sphinx furo
+   pip install sphinx sphinx-rtd-theme
    cd docs
    make html
