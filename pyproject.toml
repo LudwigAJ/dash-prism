@@ -92,8 +92,7 @@ line-length = 100
 target-version = ["py310", "py311", "py312"]
 include = '\.pyi?$'
 extend-exclude = '''
-/(
-  # directories
+(
   \.eggs
   | \.git
   | \.mypy_cache
@@ -101,11 +100,11 @@ extend-exclude = '''
   | \.venv
   | build
   | dist
-  | dash_prism/Prism\.py
-  | dash_prism/Action\.py
-  | dash_prism/PrismContent\.py
-  | dash_prism/_imports_\.py
-)/
+  | PrismComponent\.py$
+  | PrismActionComponent\.py$
+  | PrismContentComponent\.py$
+  | _imports_\.py$
+)
 '''
 
 [tool.mypy]
@@ -130,9 +129,10 @@ files = [
 source = ["dash_prism"]
 omit = [
     "*/tests/*",
-    "*/dash_prism/Prism.py",
-    "*/dash_prism/Action.py",
-    "*/dash_prism/PrismContent.py",
+    # Auto-generated Dash component wrappers
+    "*/dash_prism/PrismComponent.py",
+    "*/dash_prism/PrismActionComponent.py",
+    "*/dash_prism/PrismContentComponent.py",
     "*/dash_prism/_imports_.py",
 ]
 
