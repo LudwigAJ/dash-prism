@@ -103,6 +103,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
+packages = ["dash_prism"]
 exclude = [
     "dash_prism/Prism.py",
     "dash_prism/Action.py",
