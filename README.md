@@ -56,11 +56,11 @@ import dash_prism
 
 app = dash.Dash(__name__)
 
-@dash_prism.register_layout(id='home', name='Home', icon='Home')
+@dash_prism.register_layout(id='home', name='Home')
 def home():
     return html.Div('Welcome to Dash Prism')
 
-@dash_prism.register_layout(id='analytics', name='Analytics', icon='BarChart3')
+@dash_prism.register_layout(id='analytics', name='Analytics')
 def analytics():
     return html.Div('Analytics content here')
 

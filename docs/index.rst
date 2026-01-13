@@ -11,7 +11,7 @@ layout registration, and persistent state.
 
    app = Dash(__name__)
 
-   @dash_prism.register_layout(id='home', name='Home', icon='Rocket')
+   @dash_prism.register_layout(id='home', name='Home')
    def home_layout():
        return html.Div('Welcome!')
 

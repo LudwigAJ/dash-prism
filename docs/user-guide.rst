@@ -11,8 +11,8 @@ Register layouts with the decorator:
    @dash_prism.register_layout(
        id='dashboard',
        name='Dashboard',
-       icon='BarChart3',  # Use get_available_icons() to see options
-       category='Analytics',
+       description='Main analytics dashboard',
+       keywords=['analytics', 'charts', 'metrics'],
    )
    def dashboard_layout():
        return html.Div([...])
@@ -30,21 +30,28 @@ Or register static content directly:
 Parameterized Layouts
 ^^^^^^^^^^^^^^^^^^^^^
 
+Layouts can accept parameters. Prism automatically inspects function signatures:
+
+.. code-block:: python
+
+   @dash_prism.register_layout(id='user-profile', name='User Profile')
+   def user_profile(user_id: str):
+       return html.Div(f'Profile: {user_id}')
+
+For pre-defined parameter options, use ``param_options``:
+
 .. code-block:: python
 
    @dash_prism.register_layout(
-       id='user-profile',
-       name='User Profile',
-       params=[
-           dash_prism.LayoutParameter(
-               name='user_id',
-               type='string',
-               required=True,
-           ),
-       ]
+       id='chart',
+       name='Chart View',
+       param_options={
+           'bar': ('Bar Chart', {'chart_type': 'bar'}),
+           'line': ('Line Chart', {'chart_type': 'line'}),
+       }
    )
-   def user_profile(user_id: str):
-       return html.Div(f'Profile: {user_id}')
+   def chart_layout(chart_type: str = 'bar'):
+       return dcc.Graph(...)
 
 Async Layouts
 ^^^^^^^^^^^^^
@@ -301,7 +308,7 @@ Use ``validate_workspace`` to check workspace data before writing:
 
 .. code-block:: python
 
-   from dash_prism.utils import validate_workspace, WorkspaceValidationError
+   from dash_prism.utils import validate_workspace, InvalidWorkspace
 
    @app.callback(
        Output('workspace', 'writeWorkspace'),
@@ -314,8 +321,8 @@ Use ``validate_workspace`` to check workspace data before writing:
        try:
            validate_workspace(workspace)
            return workspace, ''
-       except WorkspaceValidationError as e:
-           return dash.no_update, f'Invalid workspace: {e.message}'
+       except InvalidWorkspace as e:
+           return dash.no_update, f'Invalid workspace: {e.errors}'
 
 Configuration
 -------------

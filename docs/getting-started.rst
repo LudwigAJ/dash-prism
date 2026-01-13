@@ -43,7 +43,7 @@ Development Installation
 
 .. code-block:: bash
 
-   git clone https://github.com/yourusername/dash_prism.git
-   cd dash_prism
+   git clone https://github.com/LudwigAJ/dash-prism.git
+   cd dash-prism
    npm install && npm run build
    pip install -e .
