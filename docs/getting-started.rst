@@ -10,6 +10,8 @@ Installation
 
 Requirements: Python 3.10+, Dash 3.1.1+
 
+**PyPI:** https://pypi.org/project/dash-prism/
+
 Minimal Example
 ---------------
 
