@@ -153,13 +153,20 @@ if not hasattr(_dash, "__plotly_dash") and not hasattr(_dash, "development"):
     )
     _sys.exit(1)
 
-_basepath = _os.path.dirname(__file__)
-_filepath = _os.path.abspath(_os.path.join(_basepath, "package-info.json"))
-with open(_filepath) as _f:
-    _package_info = _json.load(_f)
+# Package metadata - use importlib.metadata for robust version detection
+try:
+    from importlib.metadata import version as _get_version, PackageNotFoundError
 
-package_name = _package_info["name"].replace(" ", "_").replace("-", "_")
-__version__ = _package_info["version"]
+    __version__ = _get_version("dash_prism")
+except PackageNotFoundError:
+    # Fallback for editable installs or when metadata is unavailable
+    _basepath = _os.path.dirname(__file__)
+    _filepath = _os.path.abspath(_os.path.join(_basepath, "package-info.json"))
+    with open(_filepath) as _f:
+        _package_info = _json.load(_f)
+    __version__ = _package_info["version"]
+
+package_name = "dash_prism"
 
 _js_dist = [
     {

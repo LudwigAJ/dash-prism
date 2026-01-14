@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dash_prism"
-version = "0.1.2"
+version = "0.2.0"
 description = "Prism: Advanced multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -21,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 keywords = [
     "dash",
