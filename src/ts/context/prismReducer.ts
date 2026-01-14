@@ -18,6 +18,8 @@ export type SearchBarMode = 'hidden' | 'display' | 'search' | 'params' | 'option
 export type PrismState = {
   undoStack: Array<{ tab: Tab; position: number; panelId: PanelId }>;
   searchBarModes: Record<PanelId, SearchBarMode>;
+  /** Tab ID currently being renamed (ephemeral UI state, not persisted) */
+  renamingTabId: TabId | null;
 } & Workspace;
 
 type DraftState = Draft<PrismState>;
@@ -62,11 +64,14 @@ function getTabsForPanel(draft: DraftState, panelId: PanelId): Draft<Tab>[] {
  * Move a tab from one panel to another.
  * Updates both tab.panelId AND panelTabs atomically.
  * Returns sourcePanelId for further processing, or undefined if no-op/failed.
+ *
+ * @param targetIndex - Optional index to insert at. If undefined, appends to end.
  */
 function handleMoveTabToPanel(
   draft: DraftState,
   tabId: TabId,
-  targetPanelId: PanelId
+  targetPanelId: PanelId,
+  targetIndex?: number
 ): PanelId | undefined {
   const tab = findTabById(draft.tabs, tabId);
   if (!tab) return undefined;
@@ -82,9 +87,16 @@ function handleMoveTabToPanel(
     draft.panelTabs[sourcePanelId].splice(sourceIdx, 1);
   }
 
-  // Add to target panelTabs
+  // Add to target panelTabs at specified index or end
   if (!draft.panelTabs[targetPanelId]) draft.panelTabs[targetPanelId] = [];
-  draft.panelTabs[targetPanelId].push(tabId);
+  if (targetIndex !== undefined && targetIndex >= 0) {
+    // Clamp index to valid range and insert at position
+    const clampedIndex = Math.min(targetIndex, draft.panelTabs[targetPanelId].length);
+    draft.panelTabs[targetPanelId].splice(clampedIndex, 0, tabId);
+  } else {
+    // Append to end (default behavior)
+    draft.panelTabs[targetPanelId].push(tabId);
+  }
 
   // Update tab's panelId
   tab.panelId = targetPanelId;
@@ -222,6 +234,7 @@ export const initialState: PrismState = {
   searchBarsHidden: false,
   undoStack: [],
   searchBarModes: {},
+  renamingTabId: null,
 };
 
 // =============================================================================
@@ -300,7 +313,7 @@ export type Action =
       type: 'UPDATE_TAB_LAYOUT';
       payload: { tabId: TabId; layoutId: LayoutId; name: string; params?: Record<string, string> };
     }
-  | { type: 'MOVE_TAB'; payload: { tabId: TabId; targetPanelId: PanelId } }
+  | { type: 'MOVE_TAB'; payload: { tabId: TabId; targetPanelId: PanelId; targetIndex?: number } }
   | { type: 'REORDER_TAB'; payload: { panelId: PanelId; fromIndex: number; toIndex: number } }
   | { type: 'SET_TAB_ICON'; payload: { tabId: TabId; icon?: string } }
   | { type: 'SET_TAB_STYLE'; payload: { tabId: TabId; style?: string } }
@@ -322,7 +335,9 @@ export type Action =
   | { type: 'TOGGLE_SEARCH_BARS' }
   | { type: 'SET_SEARCHBAR_MODE'; payload: { panelId: PanelId; mode: SearchBarMode } }
   | { type: 'TOGGLE_FAVORITE_LAYOUT'; payload: { layoutId: LayoutId } }
-  | { type: 'POP_UNDO' };
+  | { type: 'POP_UNDO' }
+  | { type: 'START_RENAME_TAB'; payload: { tabId: TabId } }
+  | { type: 'CLEAR_RENAME_TAB' };
 
 // =============================================================================
 // Reducer
@@ -335,12 +350,25 @@ export function prismReducer(state: PrismState, action: Action): PrismState {
       // Workspace Sync (Dash → Prism)
       // -----------------------------------------------------------------------
       case 'SYNC_WORKSPACE': {
-        const { tabs, panel, activeTabIds, activePanelId, panelTabs } = action.payload;
-        if (tabs) draft.tabs = tabs;
-        if (panel) draft.panel = panel;
-        if (panelTabs) draft.panelTabs = panelTabs;
-        if (activeTabIds) draft.activeTabIds = activeTabIds;
-        if (activePanelId) draft.activePanelId = activePanelId;
+        const {
+          tabs,
+          panel,
+          activeTabIds,
+          activePanelId,
+          panelTabs,
+          favoriteLayouts,
+          searchBarsHidden,
+          theme,
+        } = action.payload;
+        // Use explicit undefined checks (not truthiness) to allow syncing empty arrays/strings
+        if (tabs !== undefined) draft.tabs = tabs;
+        if (panel !== undefined) draft.panel = panel;
+        if (panelTabs !== undefined) draft.panelTabs = panelTabs;
+        if (activeTabIds !== undefined) draft.activeTabIds = activeTabIds;
+        if (activePanelId !== undefined) draft.activePanelId = activePanelId;
+        if (favoriteLayouts !== undefined) draft.favoriteLayouts = favoriteLayouts;
+        if (searchBarsHidden !== undefined) draft.searchBarsHidden = searchBarsHidden;
+        if (theme !== undefined) draft.theme = theme;
         break;
       }
 
@@ -418,6 +446,8 @@ export function prismReducer(state: PrismState, action: Action): PrismState {
         const { tabId, name } = action.payload;
         const tab = findTabById(draft.tabs, tabId);
         if (tab) tab.name = name;
+        // Clear rename mode after committing
+        draft.renamingTabId = null;
         break;
       }
 
@@ -473,9 +503,9 @@ export function prismReducer(state: PrismState, action: Action): PrismState {
       }
 
       case 'MOVE_TAB': {
-        const { tabId, targetPanelId } = action.payload;
+        const { tabId, targetPanelId, targetIndex } = action.payload;
 
-        const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId);
+        const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId, targetIndex);
         if (!sourcePanelId) break; // No-op or tab not found
 
         // Update active tabs
@@ -735,6 +765,24 @@ export function prismReducer(state: PrismState, action: Action): PrismState {
         // Update active states
         draft.activeTabIds[targetPanelId] = restoredTab.id;
         draft.activePanelId = targetPanelId;
+        break;
+      }
+
+      // -----------------------------------------------------------------------
+      // Rename Tab UI State
+      // -----------------------------------------------------------------------
+      case 'START_RENAME_TAB': {
+        const { tabId } = action.payload;
+        const tab = findTabById(draft.tabs, tabId);
+        // Only allow rename if tab exists and is not locked
+        if (tab && !tab.locked) {
+          draft.renamingTabId = tabId;
+        }
+        break;
+      }
+
+      case 'CLEAR_RENAME_TAB': {
+        draft.renamingTabId = null;
         break;
       }
     }

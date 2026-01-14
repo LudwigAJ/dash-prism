@@ -34,8 +34,9 @@ export function useShareLinks() {
       shareData.layoutOption = tab.layoutOption;
     }
 
-    // Encode as base64 JSON
-    const encoded = btoa(JSON.stringify(shareData));
+    // Encode as base64 JSON (UTF-8 safe)
+    const jsonStr = JSON.stringify(shareData);
+    const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
     const currentUrl = window.location.href.split('#')[0];
     return `${currentUrl}#p:${encoded}`;
   }, []);
@@ -80,7 +81,7 @@ export function useShareLinks() {
 
       // Check allowMultiple constraint
       if (!layoutInfo.allowMultiple) {
-        const existing = state.tabs.find((t) => t.layoutId === layoutId);
+        const existing = state.tabs?.find((t) => t.layoutId === layoutId);
         if (existing) {
           toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`);
           dispatch({
@@ -92,7 +93,7 @@ export function useShareLinks() {
       }
 
       // Check maxTabs limit
-      if (maxTabs && maxTabs > 0 && state.tabs.length >= maxTabs) {
+      if (maxTabs && maxTabs > 0 && (state.tabs?.length ?? 0) >= maxTabs) {
         toast.error(`Max tabs (${maxTabs}) reached`);
         return false;
       }
@@ -126,7 +127,8 @@ export function useShareLinks() {
     const encoded = hash.slice(3); // Remove '#p:'
 
     try {
-      const decoded = atob(encoded);
+      // Decode base64 (UTF-8 safe)
+      const decoded = decodeURIComponent(escape(atob(encoded)));
       const shareData = JSON.parse(decoded) as ShareData;
 
       if (!shareData.layoutId) {

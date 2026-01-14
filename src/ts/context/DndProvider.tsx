@@ -32,8 +32,9 @@ export function DndProvider({ children }: DndProviderProps) {
   // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
   const isSingleTabMode = useMemo(() => {
     const leafPanelIds = getLeafPanelIds(state.panel);
-    return state.tabs.length === 1 && leafPanelIds.length === 1;
-  }, [state.tabs.length, state.panel]);
+    const tabCount = state.tabs?.length ?? 0;
+    return tabCount === 1 && leafPanelIds.length === 1;
+  }, [state.tabs?.length, state.panel]);
 
   // Configure sensors (pointer + keyboard for accessibility)
   const sensors = useSensors(
@@ -51,7 +52,7 @@ export function DndProvider({ children }: DndProviderProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const tab = state.tabs.find((t) => t.id === active.id);
+    const tab = state.tabs?.find((t) => t.id === active.id);
 
     if (tab?.locked) {
       // Don't allow dragging locked tabs
@@ -82,7 +83,7 @@ export function DndProvider({ children }: DndProviderProps) {
       setOverPanelId(overId.replace('panel-drop-', ''));
     } else {
       // Over a tab - find its panel
-      const overTab = state.tabs.find((t) => t.id === overId);
+      const overTab = state.tabs?.find((t) => t.id === overId);
       setOverPanelId(overTab?.panelId ?? null);
     }
   };
@@ -104,12 +105,15 @@ export function DndProvider({ children }: DndProviderProps) {
     const overId = String(over.id);
 
     // Case 1: Dropped on a panel drop zone (cross-panel move or split)
-    const match = overId.match(/^panel-drop-(left|right|top|bottom)-(.+)$/);
+    // Use data object from droppable instead of parsing string ID
+    const dropData = over.data.current as
+      | { panelId?: string; edge?: string; type?: string }
+      | undefined;
 
-    if (match) {
-      const [, edge, targetPanelId] = match;
+    if (dropData?.edge) {
+      const { edge, panelId: targetPanelId } = dropData;
 
-      if (edge && edge !== 'center') {
+      if (edge && edge !== 'center' && targetPanelId) {
         // Edge drop → SPLIT_PANEL
         const direction = edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical';
         // 'before' = left/top (new panel first), 'after' = right/bottom (new panel second)
@@ -128,10 +132,10 @@ export function DndProvider({ children }: DndProviderProps) {
       return;
     }
 
-    // Case 2: Dropped on TabBar drop zone (cross-panel move)
-    const searchbarMatch = overId.match(/^searchbar-drop-(.+)$/);
-    if (searchbarMatch) {
-      const targetPanelId = searchbarMatch[1];
+    // Case 2: Dropped on TabBar/SearchBar drop zone (cross-panel move)
+    // Use data object instead of regex matching
+    if (dropData?.type === 'searchbar' && dropData.panelId) {
+      const targetPanelId = dropData.panelId;
       if (activeTab.panelId !== targetPanelId) {
         dispatch({
           type: 'MOVE_TAB',
@@ -142,7 +146,7 @@ export function DndProvider({ children }: DndProviderProps) {
     }
 
     // Case 3: Dropped on another tab (reorder within panel or cross-panel)
-    const overTab = state.tabs.find((t) => t.id === overId);
+    const overTab = state.tabs?.find((t) => t.id === overId);
     if (!overTab) return;
 
     if (activeTab.panelId === overTab.panelId) {
@@ -162,13 +166,17 @@ export function DndProvider({ children }: DndProviderProps) {
         });
       }
     } else {
-      // Different panel: move to target panel at position
-      const targetPanelTabs = state.tabs.filter((t) => t.panelId === overTab.panelId);
-      const targetIndex = targetPanelTabs.findIndex((t) => t.id === overId);
+      // Different panel: move to target panel at drop position
+      const targetPanelTabIds = state.panelTabs[overTab.panelId] || [];
+      const targetIndex = targetPanelTabIds.indexOf(overId);
 
       dispatch({
         type: 'MOVE_TAB',
-        payload: { tabId: activeId, targetPanelId: overTab.panelId },
+        payload: {
+          tabId: activeId,
+          targetPanelId: overTab.panelId,
+          targetIndex: targetIndex >= 0 ? targetIndex : undefined,
+        },
       });
     }
   };

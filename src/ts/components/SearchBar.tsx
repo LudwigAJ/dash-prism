@@ -33,7 +33,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
   const activeTabId = state.activeTabIds[panelId];
   const activeTab = useMemo(
-    () => state.tabs.find((t) => t.id === activeTabId) ?? null,
+    () => state.tabs?.find((t) => t.id === activeTabId) ?? null,
     [state.tabs, activeTabId]
   );
 
@@ -53,6 +53,15 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
   const inputRef = useRef<HTMLInputElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
+
+  // ===== DROPDOWN RESIZE STATE =====
+  const DEFAULT_DROPDOWN_HEIGHT = 300;
+  const MIN_DROPDOWN_HEIGHT = 120;
+  const MAX_DROPDOWN_HEIGHT = 600;
+  const [dropdownHeight, setDropdownHeight] = useState(DEFAULT_DROPDOWN_HEIGHT);
+  const isResizingRef = useRef(false);
+  const startYRef = useRef(0);
+  const startHeightRef = useRef(DEFAULT_DROPDOWN_HEIGHT);
 
   // ===== DERIVED FROM SELECTED LAYOUT =====
   const layoutEntries = useMemo(() => Object.entries(registeredLayouts), [registeredLayouts]);
@@ -85,6 +94,49 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
     setSelectedLayoutId(null);
     setParamValues({});
     setCurrentParamIndex(0);
+    setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT); // Reset dropdown height
+  }, []);
+
+  // ===== DROPDOWN RESIZE HANDLERS =====
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizingRef.current = true;
+      startYRef.current = e.clientY;
+      startHeightRef.current = dropdownHeight;
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [dropdownHeight]
+  );
+
+  // Effect for resize drag handling
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const deltaY = e.clientY - startYRef.current;
+      const newHeight = Math.min(
+        MAX_DROPDOWN_HEIGHT,
+        Math.max(MIN_DROPDOWN_HEIGHT, startHeightRef.current + deltaY)
+      );
+      setDropdownHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
   }, []);
 
   const applyLayout = useCallback(
@@ -265,6 +317,31 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
     dispatch({ type: 'SET_SEARCHBAR_MODE', payload: { panelId, mode } });
   }, [mode, panelId, dispatch]);
 
+  // ===== CLICK OUTSIDE HANDLER =====
+  // Close dropdown when clicking outside the command wrapper
+  // This handles cases where blur doesn't fire (e.g., after clicking favorite star)
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+        if (mode === 'params' || mode === 'options') {
+          resetState();
+        }
+        if (currentLayout) {
+          setMode('display');
+        } else {
+          setMode('search');
+        }
+      }
+    };
+
+    // Use mousedown to catch clicks before focus changes
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown, currentLayout, mode, resetState]);
+
   // ================================================================================
   // RENDER: HIDDEN
   // ================================================================================
@@ -397,7 +474,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
           />
 
           {showDropdown && (
-            <CommandList className="prism-searchbar-dropdown">
+            <CommandList className="prism-searchbar-dropdown" style={{ maxHeight: dropdownHeight }}>
               <CommandItem onSelect={handleBackToLayouts}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 <span>Back to layouts</span>
@@ -413,6 +490,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                   </CommandItem>
                 ))}
               </CommandGroup>
+              {/* Resize handle */}
+              <div className="prism-searchbar-resize-handle" onMouseDown={handleResizeStart} />
             </CommandList>
           )}
         </Command>
@@ -443,7 +522,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
         />
 
         {showDropdown && (
-          <CommandList className="prism-searchbar-dropdown">
+          <CommandList className="prism-searchbar-dropdown" style={{ maxHeight: dropdownHeight }}>
             {filteredLayouts.length === 0 ? (
               <CommandEmpty>No layouts found</CommandEmpty>
             ) : (
@@ -462,6 +541,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                     >
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()} // Prevent focus theft from input
                         onClick={(e) => {
                           e.stopPropagation();
                           dispatch({ type: 'TOGGLE_FAVORITE_LAYOUT', payload: { layoutId: id } });
@@ -494,6 +574,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                 })}
               </CommandGroup>
             )}
+            {/* Resize handle */}
+            <div className="prism-searchbar-resize-handle" onMouseDown={handleResizeStart} />
           </CommandList>
         )}
       </Command>

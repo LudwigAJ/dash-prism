@@ -36,12 +36,12 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   const { statusBarPosition, theme } = useConfig();
 
   return (
-    <div className="prism-view-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="prism-view-workspace">
       {statusBarPosition === 'top' && (
         <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
       )}
 
-      <div className="prism-view-panels flex min-h-0 flex-1 overflow-hidden">
+      <div className="prism-view-panels">
         <Panel panel={state.panel} />
       </div>
 

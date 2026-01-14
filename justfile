@@ -76,6 +76,14 @@ install-test:
 test-unit:
     source .venv/bin/activate && pip install -e . -q && pytest tests/ --ignore=tests/integration/ -v
 
+# Run TypeScript unit tests
+test-ts:
+    npm run test:ts
+
+# Run Python unit tests only
+test-py:
+    source .venv/bin/activate && pip install -e . -q && pytest tests/ --ignore=tests/integration/ -v
+
 # Run integration tests (requires chromedriver) - uses 4 parallel workers
 test-integration:
     source .venv/bin/activate && pip install -e . -q && pytest tests/integration/ -v -n 4 --dist loadfile
@@ -84,8 +92,9 @@ test-integration:
 test-integration-seq:
     source .venv/bin/activate && pip install -e . -q && pytest tests/integration/ -v
 
-# Run all tests
+# Run all tests (Python + TypeScript)
 test:
+    npm run test:ts
     source .venv/bin/activate && pip install -e . -q && pytest tests/ -v --ignore=tests/integration/
     source .venv/bin/activate && pytest tests/integration/ -v -n 4 --dist loadfile
 

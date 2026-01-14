@@ -1,69 +1,233 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { usePrism } from './usePrism';
 import { useConfig } from '@context/ConfigContext';
+import { findPanelById } from '@utils/panels';
+import type { PanelId, TabId } from '@types';
 
+/**
+ * Global keyboard shortcuts for Prism component.
+ *
+ * Shortcuts (Cmd/Ctrl + key):
+ * - N: New tab in active panel
+ * - D: Delete (close) active tab (if not locked)
+ * - J: Navigate to previous tab
+ * - K: Navigate to next tab
+ * - O: Toggle lock on active tab
+ * - I: Toggle pin on active panel
+ * - R: Rename active tab (opens rename dialog)
+ * - Y: Toggle search bars visibility
+ * - B: Duplicate active tab
+ * - U: Undo last closed tab
+ */
 export function useKeyboardShortcuts() {
   const { state, dispatch } = usePrism();
   const { maxTabs } = useConfig();
 
-  const createTab = useCallback(
-    (panelId: string) => {
-      const panelTabs = state.tabs.filter((t) => t.panelId === panelId);
-      if (panelTabs.length >= maxTabs) return;
+  // Track rename mode - when true, we prompt user for new name
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
 
-      // Dispatch intent - reducer handles ID generation
+  // ========== Helper: Get active tab ==========
+  const getActiveTab = useCallback(() => {
+    const activeTabId = state.activeTabIds[state.activePanelId];
+    if (!activeTabId) return null;
+    return state.tabs?.find((t) => t.id === activeTabId) ?? null;
+  }, [state.activeTabIds, state.activePanelId, state.tabs]);
+
+  // ========== Helper: Get tabs in active panel ==========
+  const getActivePanelTabs = useCallback(() => {
+    const tabIds = state.panelTabs[state.activePanelId] ?? [];
+    return tabIds.map((id) => state.tabs?.find((t) => t.id === id)).filter(Boolean);
+  }, [state.panelTabs, state.activePanelId, state.tabs]);
+
+  // ========== Action: Create new tab ==========
+  const createTab = useCallback(
+    (panelId: PanelId) => {
+      const panelTabIds = state.panelTabs[panelId] ?? [];
+      if (panelTabIds.length >= maxTabs) return;
+
       dispatch({ type: 'ADD_TAB', payload: { panelId } });
     },
-    [state.tabs, maxTabs, dispatch]
+    [state.panelTabs, maxTabs, dispatch]
   );
 
+  // ========== Action: Close active tab ==========
   const closeActiveTab = useCallback(() => {
-    const activeTabId = state.activeTabIds[state.activePanelId];
-    if (activeTabId) {
-      const tab = state.tabs.find((t) => t.id === activeTabId);
-      if (tab && !tab.locked) {
-        // Just dispatch REMOVE_TAB - reducer handles undo stack internally
-        dispatch({ type: 'REMOVE_TAB', payload: { tabId: activeTabId } });
-      }
+    const tab = getActiveTab();
+    const panel = findPanelById(state.panel, state.activePanelId);
+    // Don't close if tab is locked OR panel is pinned
+    if (tab && !tab.locked && !panel?.pinned) {
+      dispatch({ type: 'REMOVE_TAB', payload: { tabId: tab.id } });
     }
-  }, [state, dispatch]);
+  }, [getActiveTab, state.panel, state.activePanelId, dispatch]);
 
+  // ========== Action: Undo close ==========
   const undoCloseTab = useCallback(() => {
     if (state.undoStack.length > 0) {
       dispatch({ type: 'POP_UNDO' });
     }
   }, [state.undoStack, dispatch]);
 
+  // ========== Action: Navigate tabs (J = prev, K = next) ==========
+  const navigateTab = useCallback(
+    (direction: 'prev' | 'next') => {
+      const panelTabs = getActivePanelTabs();
+      if (panelTabs.length === 0) return;
+
+      const activeTabId = state.activeTabIds[state.activePanelId];
+      const currentIndex = panelTabs.findIndex((t) => t?.id === activeTabId);
+      if (currentIndex === -1) return;
+
+      let newIndex: number;
+      if (direction === 'prev') {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : panelTabs.length - 1;
+      } else {
+        newIndex = currentIndex < panelTabs.length - 1 ? currentIndex + 1 : 0;
+      }
+
+      const newTab = panelTabs[newIndex];
+      if (newTab) {
+        dispatch({
+          type: 'SELECT_TAB',
+          payload: { tabId: newTab.id as TabId, panelId: state.activePanelId },
+        });
+      }
+    },
+    [getActivePanelTabs, state.activeTabIds, state.activePanelId, dispatch]
+  );
+
+  // ========== Action: Toggle tab lock ==========
+  const toggleTabLock = useCallback(() => {
+    const tab = getActiveTab();
+    if (tab) {
+      dispatch({ type: 'TOGGLE_TAB_LOCK', payload: { tabId: tab.id } });
+    }
+  }, [getActiveTab, dispatch]);
+
+  // ========== Action: Toggle panel pin ==========
+  const togglePanelPin = useCallback(() => {
+    const panelId = state.activePanelId;
+    const panel = findPanelById(state.panel, panelId);
+    if (!panel) return;
+
+    if (panel.pinned) {
+      dispatch({ type: 'UNPIN_PANEL', payload: { panelId } });
+    } else {
+      dispatch({ type: 'PIN_PANEL', payload: { panelId } });
+    }
+  }, [state.activePanelId, state.panel, dispatch]);
+
+  // ========== Action: Rename tab ==========
+  const renameActiveTab = useCallback(() => {
+    const tab = getActiveTab();
+    if (!tab || tab.locked) return;
+
+    // Dispatch to trigger inline rename in TabBar via state.renamingTabId
+    dispatch({ type: 'START_RENAME_TAB', payload: { tabId: tab.id } });
+  }, [getActiveTab, dispatch]);
+
+  // ========== Action: Toggle search bars ==========
+  const toggleSearchBars = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SEARCH_BARS' });
+  }, [dispatch]);
+
+  // ========== Action: Duplicate tab ==========
+  const duplicateActiveTab = useCallback(() => {
+    const tab = getActiveTab();
+    if (!tab) return;
+
+    const panelTabIds = state.panelTabs[state.activePanelId] ?? [];
+    if (panelTabIds.length >= maxTabs) return;
+
+    dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
+  }, [getActiveTab, state.panelTabs, state.activePanelId, maxTabs, dispatch]);
+
+  // ========== Keyboard event handler ==========
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip shortcuts when user is typing in editable elements
+      const target = e.target as HTMLElement | null;
+      const isEditable =
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (isEditable) return;
+
       const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod) return;
 
-      // Cmd/Ctrl + N: New tab
-      if (isMod && e.key === 'n') {
-        e.preventDefault();
-        createTab(state.activePanelId);
-      }
+      switch (e.key.toLowerCase()) {
+        case 'n':
+          // New tab
+          e.preventDefault();
+          createTab(state.activePanelId);
+          break;
 
-      // Cmd/Ctrl + D: Close tab
-      if (isMod && e.key === 'd') {
-        e.preventDefault();
-        closeActiveTab();
-      }
+        case 'd':
+          // Delete (close) tab
+          e.preventDefault();
+          closeActiveTab();
+          break;
 
-      // Cmd/Ctrl + Shift + Z: Undo close
-      if (isMod && e.shiftKey && e.key === 'z') {
-        e.preventDefault();
-        undoCloseTab();
-      }
+        case 'j':
+          // Navigate to previous tab
+          e.preventDefault();
+          navigateTab('prev');
+          break;
 
-      // Cmd/Ctrl + Shift + H: Toggle search bars
-      if (isMod && e.key === 'h') {
-        e.preventDefault();
-        dispatch({ type: 'TOGGLE_SEARCH_BARS' });
+        case 'k':
+          // Navigate to next tab
+          e.preventDefault();
+          navigateTab('next');
+          break;
+
+        case 'o':
+          // Toggle lock on active tab
+          e.preventDefault();
+          toggleTabLock();
+          break;
+
+        case 'i':
+          // Toggle pin on active panel
+          e.preventDefault();
+          togglePanelPin();
+          break;
+
+        case 'r':
+          // Rename active tab
+          e.preventDefault();
+          renameActiveTab();
+          break;
+
+        case 'y':
+          // Toggle search bars
+          e.preventDefault();
+          toggleSearchBars();
+          break;
+
+        case 'b':
+          // Duplicate tab
+          e.preventDefault();
+          duplicateActiveTab();
+          break;
+
+        case 'u':
+          // Undo close tab
+          e.preventDefault();
+          undoCloseTab();
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createTab, closeActiveTab, undoCloseTab, state.activePanelId, dispatch]);
+  }, [
+    state.activePanelId,
+    createTab,
+    closeActiveTab,
+    navigateTab,
+    toggleTabLock,
+    togglePanelPin,
+    renameActiveTab,
+    toggleSearchBars,
+    duplicateActiveTab,
+    undoCloseTab,
+  ]);
 }

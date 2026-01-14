@@ -264,6 +264,16 @@
   background-color: var(--prism-muted-foreground);
 }
 
+/* Hidden scrollbar utility - keeps scroll functionality without visible scrollbar */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 /* =============================================================================
    REACT SPLIT PANE
    Styles for the react-split-pane library 
@@ -275,15 +285,9 @@
 }
 
 .Resizer {
-  background: hsl(var(--border));
-  opacity: 1;
   z-index: 1;
   box-sizing: border-box;
-  background-clip: padding-box;
-}
-
-.Resizer:hover {
-  background: hsl(var(--primary) / 0.5);
+  /* Background handled by dividerClassName prop in Panel.tsx */
 }
 
 .Resizer.horizontal {
@@ -393,6 +397,37 @@
   position: relative; /* Positioning context for dropdown */
 }
 
+/* SearchBar size variants */
+.prism-size-sm .prism-searchbar {
+  height: 30px;
+  min-height: 30px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.prism-size-sm .prism-searchbar-prompt {
+  font-size: 11px;
+}
+
+.prism-size-sm .prism-command input {
+  font-size: 11px;
+}
+
+.prism-size-lg .prism-searchbar {
+  height: 44px;
+  min-height: 44px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.prism-size-lg .prism-searchbar-prompt {
+  font-size: 15px;
+}
+
+.prism-size-lg .prism-command input {
+  font-size: 15px;
+}
+
 .prism-searchbar-prompt {
   @apply font-mono text-sm font-semibold;
   color: var(--prism-primary);
@@ -410,8 +445,7 @@
 }
 
 .prism-searchbar-display:focus {
-  @apply ring-1 outline-none ring-inset;
-  ring-color: var(--prism-primary);
+  @apply ring-primary ring-1 outline-none ring-inset;
 }
 
 .prism-searchbar-layout-name {
@@ -451,6 +485,16 @@
   @apply bg-popover border-border rounded-b-md border shadow-lg;
   max-height: 300px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resize handle at bottom of dropdown - invisible, just changes cursor on hover */
+.prism-searchbar-resize-handle {
+  height: 6px;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  background: transparent;
 }
 
 /* =============================================================================
@@ -516,28 +560,6 @@
 .prism-tabbar-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* =============================================================================
-   PINNED PANEL STYLES
-   When a Panel is pinned, tabs spread out evenly
-   ============================================================================= */
-
-.prism-tabbar-pinned {
-  width: 100%;
-}
-
-/* Pinned panel tabs spread out evenly */
-.prism-tabbar-pinned [data-slot='tabs-list'] {
-  width: 100%;
-  display: flex;
-}
-
-/* Each tab in a pinned panel takes equal space */
-.prism-tabbar-pinned [data-slot='tabs-trigger'] {
-  flex: 1;
-  justify-content: center;
-  max-width: none;
 }
 
 /* =============================================================================
@@ -619,94 +641,105 @@
 }
 
 /* =============================================================================
-   ANIMATIONS & KEYFRAMES
-   Custom animations not covered by tw-animate-css
+   NEW LAYOUT COMPONENT SIZING
+   Card grid and typography for layout selection view
    ============================================================================= */
 
-@keyframes prism-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.prism-newlayout {
+  padding: 24px;
 }
 
-@keyframes prism-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.prism-newlayout-section {
+  margin-bottom: 32px;
 }
 
-@keyframes prism-fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+.prism-newlayout-section:last-child {
+  margin-bottom: 0;
 }
 
-@keyframes prism-slide-in-from-top {
-  from {
-    transform: translateY(-100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+.prism-newlayout-heading {
+  font-size: 14px;
+  margin-bottom: 16px;
 }
 
-@keyframes prism-slide-in-from-bottom {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+.prism-newlayout-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
 
-@keyframes prism-slide-in-from-left {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.prism-newlayout-card-title {
+  font-size: 16px;
 }
 
-@keyframes prism-slide-in-from-right {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.prism-newlayout-card-description {
+  font-size: 14px;
 }
 
-@keyframes prism-scale-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+.prism-newlayout-card-meta {
+  font-size: 12px;
 }
 
-@keyframes prism-scale-out {
-  from {
-    transform: scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: scale(0.95);
-    opacity: 0;
-  }
+/* Small size */
+.prism-size-sm .prism-newlayout {
+  padding: 16px;
+}
+
+.prism-size-sm .prism-newlayout-section {
+  margin-bottom: 20px;
+}
+
+.prism-size-sm .prism-newlayout-heading {
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+.prism-size-sm .prism-newlayout-grid {
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.prism-size-sm .prism-newlayout-card-title {
+  font-size: 13px;
+}
+
+.prism-size-sm .prism-newlayout-card-description {
+  font-size: 11px;
+}
+
+.prism-size-sm .prism-newlayout-card-meta {
+  font-size: 10px;
+}
+
+/* Large size */
+.prism-size-lg .prism-newlayout {
+  padding: 32px;
+}
+
+.prism-size-lg .prism-newlayout-section {
+  margin-bottom: 40px;
+}
+
+.prism-size-lg .prism-newlayout-heading {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.prism-size-lg .prism-newlayout-grid {
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.prism-size-lg .prism-newlayout-card-title {
+  font-size: 18px;
+}
+
+.prism-size-lg .prism-newlayout-card-description {
+  font-size: 16px;
+}
+
+.prism-size-lg .prism-newlayout-card-meta {
+  font-size: 13px;
 }
 
 /* =============================================================================
@@ -716,7 +749,7 @@
 
 @media print {
   .prism-status-bar,
-  .prism-search-bar,
+  .prism-searchbar,
   [data-slot='tabs-list'] {
     display: none !important;
   }

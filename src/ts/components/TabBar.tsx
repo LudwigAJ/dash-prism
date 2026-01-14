@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo, memo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, memo, useEffect } from 'react';
 import { Lock, X, LoaderCircle, Plus } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
@@ -88,8 +88,12 @@ const TabItem = memo(function TabItem({
 }: TabItemProps) {
   // Now useLoading is called at component top-level (not in a loop)
   const ctx = window.dash_component_api?.useDashContext?.();
-  // Only depend on tab.id - makeComponentPath only uses tab.id
-  const componentPath = useMemo(() => ['prism', 'content', tab.id], [tab.id]);
+  const { componentId = 'prism' } = useConfig();
+  // Use componentId from config instead of hard-coded 'prism'
+  const componentPath = useMemo(
+    () => makeComponentPath(componentId, tab.id),
+    [componentId, tab.id]
+  );
   const isLoading = ctx?.useLoading({ rawPath: componentPath }) ?? false;
 
   const TabIcon = tab.icon ? getTabIcon(tab.icon) : null;
@@ -124,14 +128,11 @@ const TabItem = memo(function TabItem({
           data-testid={`prism-tab-${tab.id}`}
           className={cn(
             'group/tab relative cursor-default self-stretch',
-            isDragging && 'z-50 opacity-50'
+            isDragging && 'z-50 opacity-50',
+            isPinned && 'flex flex-1'
           )}
           {...listeners}
           {...attributes}
-          // onDoubleClick={(e) => {
-          //   e.stopPropagation();
-          //   if (!isLocked && !isPinned) onStartRename(tab);
-          // }}
         >
           {/* Radix TabsTrigger - auto-handles value matching */}
           <TabsTrigger
@@ -143,7 +144,7 @@ const TabItem = memo(function TabItem({
               e.stopPropagation();
               if (!isLocked && !isPinned) onStartRename(tab);
             }}
-            className={cn('h-full', styleClasses)}
+            className={cn('h-full', styleClasses, isPinned && 'flex-1')}
           >
             {/* Tab name (hidden when editing) */}
             <span
@@ -187,7 +188,7 @@ const TabItem = memo(function TabItem({
                   tabIndex={0}
                   data-testid={`prism-tab-close-${tab.id}`}
                   className={cn(
-                    'text-secondary flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
+                    'group/close text-secondary flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
                     'hover:text-foreground hover:bg-destructive/20',
                     isLoading ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
                   )}
@@ -203,8 +204,15 @@ const TabItem = memo(function TabItem({
                     }
                   }}
                 >
+                  {/* Show spinner when loading, but X on hover to allow cancellation */}
                   {isLoading ? (
-                    <Spinner size="sm" className="h-3.5 w-3.5 shrink-0" />
+                    <>
+                      <Spinner
+                        size="sm"
+                        className="h-3.5 w-3.5 shrink-0 group-hover/close:hidden"
+                      />
+                      <X className="hidden h-3.5 w-3.5 group-hover/close:block" />
+                    </>
                   ) : (
                     <X className="h-3.5 w-3.5" />
                   )}
@@ -234,12 +242,11 @@ const TabItem = memo(function TabItem({
           onSelect={() => onDuplicateTab(tab)}
         >
           Duplicate
-          <ContextMenuShortcut>⌃⇧D</ContextMenuShortcut>
+          <ContextMenuShortcut>⌃B</ContextMenuShortcut>
         </ContextMenuItem>
 
         <ContextMenuItem data-testid="prism-context-menu-info" onSelect={() => onOpenInfo?.(tab)}>
           Info
-          <ContextMenuShortcut>⌃I</ContextMenuShortcut>
         </ContextMenuItem>
 
         {/* Share - only available if tab has a layoutId */}
@@ -287,7 +294,7 @@ const TabItem = memo(function TabItem({
             onSelect={() => dispatch({ type: 'LOCK_TAB', payload: { tabId: tab.id } })}
           >
             Lock Tab
-            <ContextMenuShortcut>⌃L</ContextMenuShortcut>
+            <ContextMenuShortcut>⌃O</ContextMenuShortcut>
           </ContextMenuItem>
         )}
         {isLocked && !isPinned && (
@@ -296,7 +303,7 @@ const TabItem = memo(function TabItem({
             onSelect={() => dispatch({ type: 'UNLOCK_TAB', payload: { tabId: tab.id } })}
           >
             Unlock Tab
-            <ContextMenuShortcut>⌃L</ContextMenuShortcut>
+            <ContextMenuShortcut>⌃O</ContextMenuShortcut>
           </ContextMenuItem>
         )}
 
@@ -304,11 +311,13 @@ const TabItem = memo(function TabItem({
         {!isPinned && (
           <ContextMenuItem data-testid="prism-context-menu-pin" onSelect={onPinPanel}>
             Pin Panel
+            <ContextMenuShortcut>⌃I</ContextMenuShortcut>
           </ContextMenuItem>
         )}
         {isPinned && (
           <ContextMenuItem data-testid="prism-context-menu-unpin" onSelect={onUnpinPanel}>
             Unpin Panel
+            <ContextMenuShortcut>⌃I</ContextMenuShortcut>
           </ContextMenuItem>
         )}
 
@@ -347,7 +356,7 @@ export const TabBar = memo(function TabBar({
   isPinned = false,
   onOpenInfo,
 }: TabBarProps) {
-  const { openInfoModal, openSetIconModal, dispatch } = usePrism();
+  const { state, openInfoModal, openSetIconModal, dispatch } = usePrism();
   const { maxTabs, theme } = useConfig();
   const { shareTab } = useShareLinks();
 
@@ -383,12 +392,14 @@ export const TabBar = memo(function TabBar({
   const closeTab = useCallback(
     (tabId: string, e?: React.MouseEvent) => {
       e?.stopPropagation();
+      // Don't allow closing tabs in pinned panels
+      if (isPinned) return;
       const tab = findTabById(tabs, tabId);
       if (tab && !tab.locked) {
         dispatch({ type: 'REMOVE_TAB', payload: { tabId } });
       }
     },
-    [tabs, dispatch]
+    [tabs, dispatch, isPinned]
   );
 
   const startRename = useCallback(
@@ -412,12 +423,27 @@ export const TabBar = memo(function TabBar({
   const cancelRename = useCallback(() => {
     setEditingTabId(null);
     setEditingName('');
-  }, []);
+    dispatch({ type: 'CLEAR_RENAME_TAB' });
+  }, [dispatch]);
 
   const addTab = useCallback(() => {
     if (maxTabs > 0 && tabs.length >= maxTabs) return;
     dispatch({ type: 'ADD_TAB', payload: { panelId } });
   }, [tabs.length, maxTabs, panelId, dispatch]);
+
+  // Listen for keyboard-triggered rename via state.renamingTabId
+  useEffect(() => {
+    const targetTabId = state.renamingTabId;
+    if (!targetTabId) return;
+
+    // Only handle if the tab belongs to this panel
+    const tab = tabs.find((t) => t.id === targetTabId);
+    if (tab && !tab.locked && !isPinned) {
+      startRename(tab);
+    }
+    // Clear the rename trigger after handling
+    dispatch({ type: 'CLEAR_RENAME_TAB' });
+  }, [state.renamingTabId, tabs, isPinned, startRename, dispatch]);
 
   const duplicateTab = useCallback(
     (tab: Tab) => {
@@ -460,58 +486,58 @@ export const TabBar = memo(function TabBar({
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        'bg-surface border-border relative flex w-full shrink-0 items-stretch border-b',
-        isPinned && 'prism-tabbar-pinned'
-      )}
+      className="bg-surface border-border relative flex w-full shrink-0 items-stretch border-b"
     >
       {/* Drop zone highlight overlay */}
       {isOver && (
         <div className="ring-primary bg-primary/10 pointer-events-none absolute inset-0 z-10 ring-2 ring-inset" />
       )}
-      {/* Radix TabsList - provides keyboard navigation and ARIA */}
-      <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
-        <TabsList className={cn('flex-0 justify-start gap-0', isPinned && 'prism-tabbar-pinned')}>
-          {tabs.map((tab) => (
-            <TabItem
-              key={tab.id}
-              tab={tab}
-              theme={theme}
-              isPinned={isPinned}
-              editingTabId={editingTabId}
-              editingName={editingName}
-              inputRef={inputRef}
-              onStartRename={startRename}
-              onCommitRename={commitRename}
-              onCancelRename={cancelRename}
-              onEditingNameChange={setEditingName}
-              onCloseTab={closeTab}
-              onDuplicateTab={duplicateTab}
-              onSetTabIcon={setTabIcon}
-              onSetTabStyle={setTabStyle}
-              onPinPanel={pinPanel}
-              onUnpinPanel={unpinPanel}
-              onOpenInfo={openInfoModal}
-              onShareTab={shareTab}
-              dispatch={dispatch}
-            />
-          ))}
-        </TabsList>
-      </SortableContext>
+      {/* Scrollable tab container with + button inside, hidden scrollbar */}
+      <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden">
+        {/* Radix TabsList - provides keyboard navigation and ARIA */}
+        <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
+          <TabsList className={cn('flex-nowrap gap-0', isPinned && 'flex-1')}>
+            {tabs.map((tab) => (
+              <TabItem
+                key={tab.id}
+                tab={tab}
+                theme={theme}
+                isPinned={isPinned}
+                editingTabId={editingTabId}
+                editingName={editingName}
+                inputRef={inputRef}
+                onStartRename={startRename}
+                onCommitRename={commitRename}
+                onCancelRename={cancelRename}
+                onEditingNameChange={setEditingName}
+                onCloseTab={closeTab}
+                onDuplicateTab={duplicateTab}
+                onSetTabIcon={setTabIcon}
+                onSetTabStyle={setTabStyle}
+                onPinPanel={pinPanel}
+                onUnpinPanel={unpinPanel}
+                onOpenInfo={openInfoModal}
+                onShareTab={shareTab}
+                dispatch={dispatch}
+              />
+            ))}
+          </TabsList>
+        </SortableContext>
 
-      {/* Add tab button - hidden when pinned */}
-      {!isPinned && (
-        <Tooltip content={maxTabs > 0 && tabs.length >= maxTabs ? 'Max tabs reached' : 'New tab'}>
-          <button
-            data-testid="prism-tabbar-add-button"
-            className="prism-tabbar-add hover:bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors"
-            onClick={addTab}
-            disabled={maxTabs > 0 && tabs.length >= maxTabs}
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </Tooltip>
-      )}
+        {/* Add tab button - inside scroll area, hidden when pinned */}
+        {!isPinned && (
+          <Tooltip content={maxTabs > 0 && tabs.length >= maxTabs ? 'Max tabs reached' : 'New tab'}>
+            <button
+              data-testid="prism-tabbar-add-button"
+              className="prism-tabbar-add hover:bg-accent flex w-7 shrink-0 items-center justify-center transition-colors"
+              onClick={addTab}
+              disabled={maxTabs > 0 && tabs.length >= maxTabs}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        )}
+      </div>
 
       {/* Spacer - double-click to create new tab */}
       {!isPinned && (

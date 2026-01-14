@@ -101,3 +101,76 @@ def test_clear_registry(sample_layout) -> None:
     dash_prism.clear_registry()
     assert "to-clear" not in dash_prism.registry
     assert len(dash_prism.registry) == 0
+
+
+def test_layout_metadata_contract_with_frontend() -> None:
+    """
+    Contract test ensuring to_metadata() returns exact field names expected by frontend.
+
+    Frontend TypeScript types (src/ts/types/index.ts):
+    - LayoutMeta: { name, description?, keywords?, allowMultiple?, params?, paramOptions? }
+    - LayoutParam: { name, hasDefault, default? }
+    - LayoutOption: { description?, params }
+    """
+
+    @dash_prism.register_layout(
+        id="contract-test",
+        name="Contract Test Layout",
+        description="Test description",
+        keywords=["test", "contract"],
+        allow_multiple=True,
+        param_options={
+            "option1": ("Option 1 Description", {"chart_type": "bar"}),
+        },
+    )
+    def contract_layout(chart_type: str = "bar"):
+        return html.Div(chart_type)
+
+    metadata = dash_prism.get_registered_layouts_metadata()
+    layout_meta = metadata["contract-test"]
+
+    # Verify exact field names (not 'parameters', 'parameterOptions', etc.)
+    assert "name" in layout_meta
+    assert "description" in layout_meta
+    assert "keywords" in layout_meta
+    assert "allowMultiple" in layout_meta  # camelCase
+    assert "params" in layout_meta  # NOT 'parameters'
+    assert "paramOptions" in layout_meta  # NOT 'parameterOptions'
+
+    # Verify params structure matches LayoutParam type
+    assert isinstance(layout_meta["params"], list)
+    if layout_meta["params"]:
+        param = layout_meta["params"][0]
+        assert "name" in param
+        assert "hasDefault" in param  # camelCase
+        # 'default' and 'annotation' are optional
+
+    # Verify paramOptions structure matches LayoutOption type
+    assert layout_meta["paramOptions"] is not None
+    option = layout_meta["paramOptions"]["option1"]
+    assert "description" in option  # NOT 'label'
+    assert "params" in option
+
+
+def test_layout_parameter_to_dict_contract() -> None:
+    """
+    Contract test for LayoutParameter.to_dict() matching frontend LayoutParam type.
+    """
+    from dash_prism.registry import LayoutParameter
+
+    param = LayoutParameter(
+        name="test_param",
+        has_default=True,
+        default="default_value",
+        annotation="str",
+    )
+
+    result = param.to_dict()
+
+    # Verify exact field names for frontend
+    assert result == {
+        "name": "test_param",
+        "hasDefault": True,  # camelCase
+        "default": "default_value",
+        "annotation": "str",
+    }

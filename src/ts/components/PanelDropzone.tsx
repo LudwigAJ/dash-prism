@@ -17,7 +17,8 @@ export function PanelDropZone({ panelId, children, isPinned = false }: PanelDrop
 
   // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
   const leafPanelIds = getLeafPanelIds(state.panel);
-  const isSingleTabMode = state.tabs.length === 1 && leafPanelIds.length === 1;
+  const tabCount = state.tabs?.length ?? 0;
+  const isSingleTabMode = tabCount === 1 && leafPanelIds.length === 1;
 
   // Disable dropzones entirely for pinned panels or single-tab mode
   const dropzonesEnabled = isActive && !isPinned && !isSingleTabMode;

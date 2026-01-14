@@ -89,7 +89,7 @@ export type PrismProps = {
    * Write-only output property.
    * Workspace state changes are written here for Dash callbacks.
    */
-  writeWorkspace?: Partial<Workspace>;
+  updateWorkspace?: Partial<Workspace>;
 
   /**
    * Array of PrismAction components to display in the status bar.
@@ -107,6 +107,13 @@ export type PrismProps = {
    * 'session' for sessionStorage, or 'memory' for no persistence.
    */
   persistence_type: PersistenceType;
+
+  /**
+   * Layout ID to automatically load in the first tab on initial load.
+   * Must match a registered layout ID. If persistence is enabled and a saved
+   * workspace exists, the persisted state takes precedence over initialLayout.
+   */
+  initialLayout?: string;
 
   /**
    * Styling props from Dash
@@ -132,7 +139,8 @@ export function Prism({
   actions = [],
   persistence = false,
   persistence_type = 'memory',
-  writeWorkspace,
+  initialLayout,
+  updateWorkspace,
   readWorkspace,
   style,
   children,
@@ -140,10 +148,11 @@ export function Prism({
   return (
     <div
       id={id}
-      className={`prism-root prism-container prism-theme-${theme} prism-size-${size} flex min-h-0 w-full flex-col overflow-hidden`}
+      className={`prism-root prism-container prism-theme-${theme} prism-size-${size} bg-background text-foreground`}
       style={style}
     >
       <ConfigProvider
+        componentId={id}
         registeredLayouts={registeredLayouts}
         theme={theme}
         size={size}
@@ -152,8 +161,9 @@ export function Prism({
         persistenceType={persistence_type}
         searchBarPlaceholder={searchBarPlaceholder}
         statusBarPosition={statusBarPosition}
+        initialLayout={initialLayout}
       >
-        <PrismProvider writeWorkspace={writeWorkspace} setProps={setProps}>
+        <PrismProvider updateWorkspace={updateWorkspace} setProps={setProps}>
           <DndProvider>
             <WorkspaceView actions={actions}>{children}</WorkspaceView>
           </DndProvider>

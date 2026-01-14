@@ -23,7 +23,7 @@ export function StatusBar({
   onOpenInfo,
 }: StatusBarProps) {
   const { state, dispatch } = usePrism();
-  const { theme, maxTabs } = useConfig();
+  const { theme, maxTabs, componentId = 'prism' } = useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Get Dash API for rendering action components
@@ -31,11 +31,11 @@ export function StatusBar({
 
   // Get active tab and search bar mode for active panel
   const activeTabId = state.activeTabIds[state.activePanelId];
-  const activeTab = state.tabs.find((t) => t.id === activeTabId);
+  const activeTab = state.tabs?.find((t) => t.id === activeTabId);
   const searchBarMode = state.searchBarModes[state.activePanelId] ?? 'display';
 
   // Counts
-  const tabCount = state.tabs.length;
+  const tabCount = state.tabs?.length ?? 0;
   const panelCount = countLeafPanels(state.panel);
   const canUndo = state.undoStack.length > 0;
 
@@ -58,16 +58,13 @@ export function StatusBar({
   }, [canUndo, dispatch]);
 
   return (
-    <div className="bg-surface border-border text-secondary flex h-[22px] items-center gap-2 border-t px-3 py-1.5 text-xs">
+    <div className="prism-status-bar bg-surface border-border text-secondary flex items-center gap-2 border-t px-3 py-1.5 text-xs">
       {/* Help Button */}
       <Tooltip content="Help" delayDuration={300}>
         <button
           data-testid="prism-statusbar-help"
           className="text-secondary hover:text-foreground hover:bg-surface-dim rounded-sm p-1 transition-colors"
-          onClick={() => {
-            console.log('Help button clicked, onOpenHelp:', onOpenHelp);
-            onOpenHelp?.();
-          }}
+          onClick={() => onOpenHelp?.()}
         >
           <Info className="h-3 w-3" />
         </button>
@@ -189,7 +186,7 @@ export function StatusBar({
                   {index > 0 && <span className="text-border opacity-60">|</span>}
                   <api.ExternalWrapper
                     component={enhancedActionSpec}
-                    componentPath={['prism', 'actions', index]}
+                    componentPath={[componentId, 'actions', index]}
                   />
                 </React.Fragment>
               );

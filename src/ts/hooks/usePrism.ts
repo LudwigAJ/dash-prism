@@ -99,7 +99,7 @@ export function useWorkspace() {
     leafPanels,
     isOnlyPanel,
     canCloseTab,
-    tabCount: state.tabs.length,
+    tabCount: state.tabs?.length ?? 0,
     panelCount: leafPanels.length,
   };
 }
