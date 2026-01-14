@@ -1,7 +1,7 @@
 {
   "name": "dash_prism",
   "version": "0.2.0",
-  "description": "Prism: Advanced multi-panel workspace manager for Plotly Dash",
+  "description": "Prism: Powerful multi-panel workspace manager for Plotly Dash",
   "main": "index.ts",
   "repository": {
     "type": "git",
