@@ -2,91 +2,220 @@
 Dash Prism Usage Example
 ========================
 
-This example demonstrates the full Prism API with all demo layouts.
+This example demonstrates the full Prism API with polished demo layouts.
 All layouts and callbacks are defined in this single file.
+
+Run with: python usage.py
+Dependencies: pip install -r requirements-test.txt
 """
 
+from __future__ import annotations
+
+import random
 import time
 from datetime import datetime
+from typing import Any
 
 import dash
-from dash import html, dcc, callback, Input, Output, State, MATCH, ctx
-from dash.exceptions import PreventUpdate
+import numpy as np
 import plotly.express as px
-0 
+import plotly.graph_objects as go
+from dash import MATCH, Input, Output, State, callback, ctx, dcc, html
+from dash.exceptions import PreventUpdate
 
 import dash_prism
+
+
+# =============================================================================
+# THEME UTILITIES
+# =============================================================================
+
+
+def get_theme_colors(theme: str = "light") -> dict[str, str]:
+    """Get color palette for given theme.
+
+    Args:
+        theme: 'light' or 'dark'
+
+    Returns:
+        Dictionary with color values for bg, text, surface, border, accent, etc.
+    """
+    if theme == "dark":
+        # Bloomberg Terminal / Claude CLI inspired dark theme
+        return {
+            "bg": "#0a0e14",  # Deep navy black
+            "surface": "#131921",  # Slightly lighter surface
+            "text": "#e6e6e6",  # Off-white text
+            "text_secondary": "#8b949e",  # Muted text
+            "border": "#2d333b",  # Subtle border
+            "accent": "#ff9500",  # Bloomberg orange
+            "accent_secondary": "#00d4aa",  # Teal green
+            "success": "#3fb950",  # Green
+            "error": "#f85149",  # Red
+            "warning": "#d29922",  # Yellow/amber
+            "header_bg": "#161b22",  # Header background
+            "input_bg": "#0d1117",  # Input field background
+            "chart_grid": "rgba(139, 148, 158, 0.15)",  # Subtle grid
+        }
+    else:
+        # Clean, professional light theme
+        return {
+            "bg": "#ffffff",
+            "surface": "#f6f8fa",
+            "text": "#24292f",
+            "text_secondary": "#57606a",
+            "border": "#d0d7de",
+            "accent": "#0969da",  # Blue accent
+            "accent_secondary": "#1a7f64",  # Teal
+            "success": "#1a7f37",
+            "error": "#cf222e",
+            "warning": "#9a6700",
+            "header_bg": "#f6f8fa",
+            "input_bg": "#ffffff",
+            "chart_grid": "rgba(0, 0, 0, 0.1)",
+        }
+
+
+def get_plotly_template(theme: str = "light") -> str:
+    """Get Plotly template name for given theme.
+
+    Args:
+        theme: 'light' or 'dark'
+
+    Returns:
+        Plotly template string
+    """
+    return "plotly_dark" if theme == "dark" else "plotly_white"
+
+
+def get_plotly_layout(theme: str = "light") -> dict[str, Any]:
+    """Get common Plotly layout settings for given theme.
+
+    Args:
+        theme: 'light' or 'dark'
+
+    Returns:
+        Dictionary with layout settings
+    """
+    colors = get_theme_colors(theme)
+    return {
+        "template": get_plotly_template(theme),
+        "paper_bgcolor": colors["bg"],
+        "plot_bgcolor": colors["bg"],
+        "font": {"family": 'Monaco, "Courier New", monospace', "color": colors["text"]},
+        "margin": {"t": 50, "r": 20, "b": 50, "l": 60},
+        "xaxis": {"gridcolor": colors["chart_grid"], "zerolinecolor": colors["border"]},
+        "yaxis": {"gridcolor": colors["chart_grid"], "zerolinecolor": colors["border"]},
+    }
 
 
 # =============================================================================
 # SETTINGS LAYOUT
 # =============================================================================
 
+
 @dash_prism.register_layout(
-    id='settings',
-    name='Settings',
-    description='Configure Prism theme and interface settings',
-    keywords=['settings', 'config', 'configuration', 'theme', 'preferences'],
+    id="settings",
+    name="Settings",
+    description="Configure Prism theme and interface settings",
+    keywords=["settings", "config", "configuration", "theme", "preferences"],
     allow_multiple=False,
 )
 def settings_layout():
     """Settings page to configure theme and size."""
-    return html.Div([
-        html.Div([
-            html.H1('⚙️ Settings', style={'margin': '0'}),
-            html.P('Configure your workspace', style={'color': '#666', 'margin': '5px 0 0 0'}),
-        ], style={'padding': '20px', 'borderBottom': '1px solid #eee'}),
+    colors = get_theme_colors("light")
 
-        html.Div([
-            # Theme
-            html.Div([
-                html.Label('Theme', style={'fontWeight': 'bold', 'display': 'block', 'marginBottom': '8px'}),
-                dcc.Dropdown(
-                    id='settings-theme',
-                    options=[
-                        {'label': '☀️ Light', 'value': 'light'},
-                        {'label': '🌙 Dark', 'value': 'dark'},
-                    ],
-                    value='light',
-                    clearable=False,
-                    style={'width': '200px'},
-                ),
-            ], style={'marginBottom': '20px'}),
-
-            # Size
-            html.Div([
-                html.Label('Interface Size', style={'fontWeight': 'bold', 'display': 'block', 'marginBottom': '8px'}),
-                dcc.Dropdown(
-                    id='settings-size',
-                    options=[
-                        {'label': 'Small', 'value': 'sm'},
-                        {'label': 'Medium', 'value': 'md'},
-                        {'label': 'Large', 'value': 'lg'},
-                    ],
-                    value='md',
-                    clearable=False,
-                    style={'width': '200px'},
-                ),
-            ], style={'marginBottom': '20px'}),
-
-            # Apply button
-            html.Button(
-                '✓ Apply Settings',
-                id='settings-apply-btn',
-                n_clicks=0,
-                style={
-                    'padding': '12px 24px',
-                    'backgroundColor': '#4CAF50',
-                    'color': 'white',
-                    'border': 'none',
-                    'borderRadius': '4px',
-                    'cursor': 'pointer',
-                    'fontWeight': 'bold',
-                },
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.H1("[SETTINGS]", style={"margin": "0", "fontFamily": 'Monaco, "Courier New", monospace'}),
+                    html.P(
+                        "Configure your workspace",
+                        style={"color": colors["text_secondary"], "margin": "5px 0 0 0"},
+                    ),
+                ],
+                style={"padding": "20px", "borderBottom": f'1px solid {colors["border"]}'},
             ),
-            html.Span(id='settings-status', style={'marginLeft': '15px', 'color': '#4CAF50'}),
-        ], style={'padding': '20px', 'maxWidth': '400px'}),
-    ], style={'backgroundColor': 'white', 'minHeight': '100%'})
+            html.Div(
+                [
+                    # Theme
+                    html.Div(
+                        [
+                            html.Label(
+                                "Theme",
+                                style={
+                                    "fontWeight": "bold",
+                                    "display": "block",
+                                    "marginBottom": "8px",
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="settings-theme",
+                                options=[
+                                    {"label": "Light", "value": "light"},
+                                    {"label": "Dark", "value": "dark"},
+                                ],
+                                value="light",
+                                clearable=False,
+                                style={"width": "200px"},
+                            ),
+                        ],
+                        style={"marginBottom": "20px"},
+                    ),
+                    # Size
+                    html.Div(
+                        [
+                            html.Label(
+                                "Interface Size",
+                                style={
+                                    "fontWeight": "bold",
+                                    "display": "block",
+                                    "marginBottom": "8px",
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="settings-size",
+                                options=[
+                                    {"label": "Small", "value": "sm"},
+                                    {"label": "Medium", "value": "md"},
+                                    {"label": "Large", "value": "lg"},
+                                ],
+                                value="md",
+                                clearable=False,
+                                style={"width": "200px"},
+                            ),
+                        ],
+                        style={"marginBottom": "20px"},
+                    ),
+                    # Apply button
+                    html.Button(
+                        "Apply Settings",
+                        id="settings-apply-btn",
+                        n_clicks=0,
+                        style={
+                            "padding": "12px 24px",
+                            "backgroundColor": colors["accent"],
+                            "color": "white",
+                            "border": "none",
+                            "borderRadius": "4px",
+                            "cursor": "pointer",
+                            "fontWeight": "bold",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                        },
+                    ),
+                    html.Span(
+                        id="settings-status",
+                        style={"marginLeft": "15px", "color": colors["success"]},
+                    ),
+                ],
+                style={"padding": "20px", "maxWidth": "400px"},
+            ),
+        ],
+        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+    )
 
 
 # =============================================================================
@@ -94,630 +223,890 @@ def settings_layout():
 # =============================================================================
 
 # Simple in-memory chat store
-_chat_messages = [
-    {'username': 'System', 'text': 'Welcome to the chat room!', 'timestamp': datetime.now().isoformat()},
+_chat_messages: list[dict[str, str]] = [
+    {"username": "System", "text": "Welcome to the terminal chat.", "timestamp": datetime.now().isoformat()},
 ]
 
 
 @dash_prism.register_layout(
-    id='chat',
-    name='Chat Room',
-    description='Old-school chat room with text formatting',
-    keywords=['chat', 'messaging', 'communication', 'talk'],
+    id="chat",
+    name="Terminal Chat",
+    description="Terminal-style chat room with Bloomberg/CLI aesthetics",
+    keywords=["chat", "messaging", "communication", "terminal", "cli"],
     allow_multiple=True,
+    param_options={
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
+    },
 )
-def chat_layout(username: str = 'Anonymous', theme: str = 'dark'):
-    """Chat room layout with theme support.
+def chat_layout(username: str = "user", theme: str = "dark"):
+    """Terminal-style chat room layout.
+
+    Inspired by Claude CLI and Bloomberg IB Chat aesthetics.
 
     Args:
         username: Display name for the user
         theme: 'light' or 'dark' theme
     """
-    # Define theme colors
-    if theme == 'light':
-        bg_color = '#ffffff'
-        text_color = '#2c3e50'
-        surface_color = '#f5f7f8'
-        input_bg = '#ffffff'
-        border_color = '#d5dbdf'
-        header_text = '#2c3e50'
-        subtext_color = '#7f8c8d'
-    else:  # dark
-        bg_color = '#0f1419'
-        text_color = '#00ff00'
-        surface_color = '#16213e'
-        input_bg = '#0f1419'
-        border_color = '#00ff00'
-        header_text = '#00ff00'
-        subtext_color = '#00ff00'
+    colors = get_theme_colors(theme)
 
-    return html.Div([
-        # Header
-        html.Div([
-            html.H3('Chat Room', style={
-                'margin': '0',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'color': header_text,
-                'fontSize': '18px',
-            }),
-            html.Span(f'User: {username}', style={
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'color': subtext_color,
-                'fontSize': '13px',
-            }),
-        ], style={
-            'display': 'flex',
-            'justifyContent': 'space-between',
-            'alignItems': 'center',
-            'padding': '12px 16px',
-            'backgroundColor': surface_color,
-            'borderBottom': f'1px solid {border_color}',
-        }),
+    # Terminal prompt style
+    prompt_color = colors["accent"] if theme == "dark" else colors["accent"]
 
-        dcc.Store(id='chat-username', data=username),
-
-        # Messages container
-        html.Div(
-            id='chat-messages',
-            children='*** No messages yet. Start chatting! ***\n',
-            style={
-                'flex': '1',
-                'overflow': 'auto',
-                'padding': '16px',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '13px',
-                'lineHeight': '1.6',
-                'backgroundColor': bg_color,
-                'color': text_color,
-                'whiteSpace': 'pre-wrap',
-                'wordWrap': 'break-word',
-            },
-        ),
-
-        # Input area
-        html.Div([
-            dcc.Textarea(
-                id='chat-input',
-                placeholder='Type a message...',
+    return html.Div(
+        [
+            # Header - terminal title bar style
+            html.Div(
+                [
+                    html.Span(
+                        "TERMINAL",
+                        style={
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontWeight": "bold",
+                            "fontSize": "12px",
+                            "letterSpacing": "1px",
+                            "color": colors["text_secondary"],
+                        },
+                    ),
+                    html.Span(
+                        f"@{username}",
+                        style={
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontSize": "12px",
+                            "color": prompt_color,
+                        },
+                    ),
+                ],
                 style={
-                    'width': '100%',
-                    'minHeight': '60px',
-                    'padding': '12px',
-                    'fontFamily': 'Monaco, "Courier New", monospace',
-                    'fontSize': '13px',
-                    'backgroundColor': input_bg,
-                    'color': text_color,
-                    'border': f'1px solid {border_color}',
-                    'borderRadius': '4px',
-                    'resize': 'none',
-                    'outline': 'none',
-                },
-                rows=2,
-            ),
-            html.Button(
-                'Send',
-                id='chat-send-btn',
-                n_clicks=0,
-                style={
-                    'marginTop': '8px',
-                    'padding': '8px 24px',
-                    'fontFamily': 'Monaco, "Courier New", monospace',
-                    'backgroundColor': '#4CAF50',
-                    'color': '#ffffff',
-                    'border': 'none',
-                    'borderRadius': '4px',
-                    'cursor': 'pointer',
-                    'fontSize': '13px',
-                    'fontWeight': 'bold',
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "padding": "8px 16px",
+                    "backgroundColor": colors["header_bg"],
+                    "borderBottom": f'1px solid {colors["border"]}',
                 },
             ),
-        ], style={
-            'padding': '12px 16px',
-            'backgroundColor': surface_color,
-            'borderTop': f'1px solid {border_color}',
-        }),
-
-        dcc.Interval(id='chat-interval', interval=2000, n_intervals=0),
-    ], style={
-        'height': '100%',
-        'display': 'flex',
-        'flexDirection': 'column',
-        'backgroundColor': bg_color,
-    })
+            dcc.Store(id="chat-username", data=username),
+            dcc.Store(id="chat-theme", data=theme),
+            # Messages container - terminal output style
+            html.Div(
+                id="chat-messages",
+                children="[SYS] No messages yet. Start chatting.\n",
+                style={
+                    "flex": "1",
+                    "overflow": "auto",
+                    "padding": "16px",
+                    "fontFamily": 'Monaco, "Courier New", monospace',
+                    "fontSize": "13px",
+                    "lineHeight": "1.8",
+                    "backgroundColor": colors["bg"],
+                    "color": colors["text"],
+                    "whiteSpace": "pre-wrap",
+                    "wordWrap": "break-word",
+                },
+            ),
+            # Input area - command line style
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                "> ",
+                                style={
+                                    "color": prompt_color,
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                    "fontSize": "14px",
+                                    "fontWeight": "bold",
+                                    "marginRight": "4px",
+                                },
+                            ),
+                            dcc.Input(
+                                id="chat-input",
+                                type="text",
+                                placeholder="Enter message...",
+                                style={
+                                    "flex": "1",
+                                    "padding": "8px",
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                    "fontSize": "13px",
+                                    "backgroundColor": colors["input_bg"],
+                                    "color": colors["text"],
+                                    "border": f'1px solid {colors["border"]}',
+                                    "borderRadius": "2px",
+                                    "outline": "none",
+                                },
+                                debounce=False,
+                            ),
+                        ],
+                        style={"display": "flex", "alignItems": "center", "flex": "1"},
+                    ),
+                    html.Button(
+                        "SEND",
+                        id="chat-send-btn",
+                        n_clicks=0,
+                        style={
+                            "marginLeft": "8px",
+                            "padding": "8px 16px",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "backgroundColor": colors["accent"],
+                            "color": "#ffffff" if theme == "dark" else "#ffffff",
+                            "border": "none",
+                            "borderRadius": "2px",
+                            "cursor": "pointer",
+                            "fontSize": "12px",
+                            "fontWeight": "bold",
+                            "letterSpacing": "1px",
+                        },
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "padding": "12px 16px",
+                    "backgroundColor": colors["surface"],
+                    "borderTop": f'1px solid {colors["border"]}',
+                },
+            ),
+            dcc.Interval(id="chat-interval", interval=2000, n_intervals=0),
+        ],
+        style={
+            "height": "100%",
+            "display": "flex",
+            "flexDirection": "column",
+            "backgroundColor": colors["bg"],
+        },
+    )
 
 
 # =============================================================================
 # ASSET LAYOUT
 # =============================================================================
 
-ASSET_CONFIG = {
-    'BTC': (45000.0, 0.02),
-    'ETH': (3000.0, 0.025),
-    'AAPL': (175.0, 0.015),
-    'GOOGL': (140.0, 0.018),
-    'TSLA': (250.0, 0.03),
-    'MSFT': (380.0, 0.012),
-    'GOLD': (2000.0, 0.008),
-    'OIL': (75.0, 0.02),
-}
+# Random asset name generator
+_ASSET_PREFIXES = ["ALPHA", "BETA", "GAMMA", "DELTA", "OMEGA", "SIGMA", "THETA", "ZETA"]
+_ASSET_SUFFIXES = ["X", "Q", "Z", "V", "K", "J", "W", "Y"]
 
 
+def _generate_asset_name() -> str:
+    """Generate a random asset ticker symbol."""
+    return f"{random.choice(_ASSET_PREFIXES)}-{random.choice(_ASSET_SUFFIXES)}"
 
 
 @dash_prism.register_layout(
-    id='asset',
-    name='Asset Price',
-    description='Real-time asset price dashboard with GBM or RM simulation',
-    keywords=['asset', 'price', 'stock', 'crypto', 'trading', 'finance'],
+    id="asset",
+    name="Asset Price",
+    description="Real-time asset price chart with GBM simulation",
+    keywords=["asset", "price", "stock", "crypto", "trading", "finance", "chart"],
     allow_multiple=True,
     param_options={
-        'btc': ('Bitcoin (BTC)', {'asset': 'BTC'}),
-        'eth': ('Ethereum (ETH)', {'asset': 'ETH'}),
-        'aapl': ('Apple (AAPL)', {'asset': 'AAPL'}),
-        'googl': ('Google (GOOGL)', {'asset': 'GOOGL'}),
-        'tsla': ('Tesla (TSLA)', {'asset': 'TSLA'}),
-        'msft': ('Microsoft (MSFT)', {'asset': 'MSFT'}),
-        'gold': ('Gold', {'asset': 'GOLD'}),
-        'oil': ('Oil', {'asset': 'OIL'}),
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
     },
 )
-def asset_layout(asset: str = 'BTC', model_type: str = 'GBM'):
-    """Real-time asset price dashboard with model selection.
+def asset_layout(theme: str = "light"):
+    """Real-time asset price dashboard with random asset name.
 
     Args:
-        asset: Asset name (BTC, ETH, AAPL, etc.)
-        model_type: 'GBM' (Geometric Brownian Motion) or 'RM' (Random Model/Mean Reversion)
+        theme: 'light' or 'dark' theme
     """
-    asset = asset.upper() if asset else 'BTC'
-    if asset not in ASSET_CONFIG:
-        asset = 'BTC'
+    colors = get_theme_colors(theme)
+    asset_name = _generate_asset_name()
+    base_price = random.uniform(50, 500)
+    volatility = random.uniform(0.01, 0.03)
 
-    base_price, volatility = ASSET_CONFIG[asset]
-
-    return html.Div([
-        # Header
-        html.Div([
-            html.H3(f'{asset} Price Tracker', style={
-                'margin': '0',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '18px',
-            }),
-            html.Div([
-                html.Span(f'Model: {model_type}', style={
-                    'marginRight': '16px',
-                    'fontSize': '13px',
-                    'fontFamily': 'Monaco, "Courier New", monospace',
-                }),
-                html.Span('LIVE', style={
-                    'padding': '4px 8px',
-                    'backgroundColor': '#dc3545',
-                    'color': 'white',
-                    'borderRadius': '4px',
-                    'fontSize': '12px',
-                    'fontFamily': 'Monaco, "Courier New", monospace',
-                    'fontWeight': 'bold',
-                }),
-            ], style={'display': 'flex', 'alignItems': 'center'}),
-        ], style={
-            'display': 'flex',
-            'justifyContent': 'space-between',
-            'alignItems': 'center',
-            'padding': '16px',
-            'backgroundColor': '#f5f7f8',
-            'borderBottom': '1px solid #d5dbdf',
-        }),
-
-        # Store data
-        dcc.Store(id='asset-name', data=asset),
-        dcc.Store(id='asset-model', data=model_type),
-        dcc.Store(id='asset-data', data={
-            'timestamps': [],
-            'prices': [],
-            'base_price': base_price,
-            'volatility': volatility,
-            'current_price': base_price,
-        }),
-
-        # Single price chart
-        html.Div([
-            dcc.Graph(
-                id='asset-chart',
-                config={'displayModeBar': False},
-                style={'height': '100%'},
+    return html.Div(
+        [
+            # Minimal header
+            html.Div(
+                [
+                    html.Span(
+                        asset_name,
+                        style={
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontWeight": "bold",
+                            "fontSize": "14px",
+                            "color": colors["text"],
+                        },
+                    ),
+                    html.Span(
+                        "LIVE",
+                        style={
+                            "padding": "2px 8px",
+                            "backgroundColor": colors["error"],
+                            "color": "#ffffff",
+                            "borderRadius": "2px",
+                            "fontSize": "10px",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontWeight": "bold",
+                            "letterSpacing": "1px",
+                        },
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "padding": "12px 16px",
+                    "backgroundColor": colors["header_bg"],
+                    "borderBottom": f'1px solid {colors["border"]}',
+                },
             ),
-        ], style={
-            'flex': '1',
-            'padding': '16px',
-            'overflow': 'hidden',
-        }),
-
-        dcc.Interval(id='asset-interval', interval=1000, n_intervals=0),
-    ], style={
-        'height': '100%',
-        'display': 'flex',
-        'flexDirection': 'column',
-        'backgroundColor': '#ffffff',
-    })
+            # Store data
+            dcc.Store(id="asset-name", data=asset_name),
+            dcc.Store(id="asset-theme", data=theme),
+            dcc.Store(
+                id="asset-data",
+                data={
+                    "timestamps": [],
+                    "prices": [],
+                    "base_price": base_price,
+                    "volatility": volatility,
+                    "current_price": base_price,
+                },
+            ),
+            # Chart - fills remaining space
+            html.Div(
+                [
+                    dcc.Graph(
+                        id="asset-chart",
+                        config={"displayModeBar": False},
+                        style={"height": "100%"},
+                    ),
+                ],
+                style={
+                    "flex": "1",
+                    "padding": "8px",
+                    "overflow": "hidden",
+                    "backgroundColor": colors["bg"],
+                },
+            ),
+            dcc.Interval(id="asset-interval", interval=1000, n_intervals=0),
+        ],
+        style={
+            "height": "100%",
+            "display": "flex",
+            "flexDirection": "column",
+            "backgroundColor": colors["bg"],
+        },
+    )
 
 
 # =============================================================================
 # IRIS LAYOUT
 # =============================================================================
 
+
 @dash_prism.register_layout(
-    id='iris',
-    name='Iris Dataset',
-    description='Classic machine learning dataset dashboard',
-    keywords=['iris', 'dataset', 'machine learning', 'flowers', 'classification'],
-    allow_multiple=False,
+    id="iris",
+    name="Iris Dataset",
+    description="Classic machine learning dataset visualization",
+    keywords=["iris", "dataset", "machine learning", "flowers", "classification"],
+    allow_multiple=True,
+    param_options={
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
+    },
 )
-def iris_layout():
-    """Iris dataset dashboard."""
+def iris_layout(theme: str = "light"):
+    """Iris dataset dashboard with theme support.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
     df = px.data.iris()
 
     scatter_fig = px.scatter(
-        df, x='sepal_width', y='sepal_length', color='species', size='petal_length',
-        hover_data=['petal_width'], title='Iris Dataset: Sepal Dimensions',
+        df,
+        x="sepal_width",
+        y="sepal_length",
+        color="species",
+        size="petal_length",
+        hover_data=["petal_width"],
+        title="Sepal Dimensions by Species",
     )
-    scatter_fig.update_layout(legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1))
+    scatter_fig.update_layout(**layout_settings)
+    scatter_fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 
-    box_fig = px.box(df, x='species', y='petal_length', color='species', title='Petal Length by Species')
+    box_fig = px.box(df, x="species", y="petal_length", color="species", title="Petal Length Distribution")
+    box_fig.update_layout(**layout_settings)
     box_fig.update_layout(showlegend=False)
 
-    hist_fig = px.histogram(df, x='petal_width', color='species', nbins=20, title='Petal Width Distribution', barmode='overlay', opacity=0.7)
+    hist_fig = px.histogram(
+        df, x="petal_width", color="species", nbins=20, title="Petal Width Histogram", barmode="overlay", opacity=0.7
+    )
+    hist_fig.update_layout(**layout_settings)
 
-    return html.Div([
-        html.Div([
-            html.H1('🌸 Iris Dataset Dashboard', style={'margin': '0'}),
-            html.P('150 samples of 3 iris species', style={'color': '#666', 'margin': '5px 0 0 0'}),
-        ], style={'padding': '20px', 'borderBottom': '1px solid #eee'}),
-
-        html.Div([
-            html.Div([dcc.Graph(figure=scatter_fig, style={'height': '400px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-            html.Div([dcc.Graph(figure=box_fig, style={'height': '400px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-        ], style={'display': 'flex', 'gap': '20px', 'padding': '20px'}),
-
-        html.Div([
-            dcc.Graph(figure=hist_fig, style={'height': '300px'}, config={'displayModeBar': False}),
-        ], style={'padding': '0 20px 20px 20px'}),
-    ], style={'backgroundColor': 'white', 'minHeight': '100%'})
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.H2(
+                        "IRIS DATASET",
+                        style={
+                            "margin": "0",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontSize": "16px",
+                            "letterSpacing": "1px",
+                        },
+                    ),
+                    html.Span(
+                        "150 samples | 3 species",
+                        style={
+                            "color": colors["text_secondary"],
+                            "fontSize": "12px",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                        },
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "padding": "12px 20px",
+                    "borderBottom": f'1px solid {colors["border"]}',
+                    "backgroundColor": colors["header_bg"],
+                },
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [dcc.Graph(figure=scatter_fig, style={"height": "350px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                    html.Div(
+                        [dcc.Graph(figure=box_fig, style={"height": "350px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={"display": "flex", "gap": "16px", "padding": "16px"},
+            ),
+            html.Div(
+                [
+                    dcc.Graph(figure=hist_fig, style={"height": "250px"}, config={"displayModeBar": False}),
+                ],
+                style={"padding": "0 16px 16px 16px"},
+            ),
+        ],
+        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+    )
 
 
 # =============================================================================
 # OPTIONS LAYOUT
 # =============================================================================
 
+
 @dash_prism.register_layout(
-    id='options',
-    name='Options Calculator',
-    description='Option pricing and payoff diagrams',
-    keywords=['options', 'derivatives', 'finance', 'trading'],
+    id="options",
+    name="Options Payoff",
+    description="Option payoff diagram visualization",
+    keywords=["options", "derivatives", "finance", "trading", "payoff"],
     allow_multiple=True,
     param_options={
-        'call': ('Call Option', {'option_type': 'call'}),
-        'put': ('Put Option', {'option_type': 'put'}),
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
     },
 )
-def options_layout(option_type: str = 'call', strike: float = 100.0):
-    """Options calculator with payoff diagram.
+def options_layout(theme: str = "light"):
+    """Options payoff diagram with random parameters.
 
     Args:
-        option_type: 'call' or 'put'
-        strike: Strike price
+        theme: 'light' or 'dark' theme
     """
-    import numpy as np
-    import plotly.graph_objects as go
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
+
+    # Random option parameters
+    option_type = random.choice(["call", "put"])
+    strike = round(random.uniform(80, 120), 2)
 
     # Price range around strike
     spot_prices = np.linspace(strike * 0.5, strike * 1.5, 100)
 
     # Calculate payoff
-    if option_type == 'call':
+    if option_type == "call":
         payoffs = np.maximum(spot_prices - strike, 0)
-        title = f'Call Option Payoff (Strike: ${strike:.2f})'
-        color = '#18bc9c'
-    else:  # put
+        title = f"CALL OPTION | Strike: ${strike:.2f}"
+        line_color = colors["success"]
+    else:
         payoffs = np.maximum(strike - spot_prices, 0)
-        title = f'Put Option Payoff (Strike: ${strike:.2f})'
-        color = '#e74c3c'
+        title = f"PUT OPTION | Strike: ${strike:.2f}"
+        line_color = colors["error"]
 
     # Create figure
     fig = go.Figure()
 
     # Payoff line
-    fig.add_trace(go.Scatter(
-        x=spot_prices,
-        y=payoffs,
-        mode='lines',
-        name='Payoff',
-        line={'color': color, 'width': 3},
-        fill='tozeroy',
-        fillcolor=f'rgba{tuple(list(int(color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)) + [0.2])}',
-    ))
-
-    # Strike price line
-    fig.add_shape(
-        type='line',
-        x0=strike, x1=strike,
-        y0=0, y1=max(payoffs),
-        line={'color': '#95a5a6', 'width': 2, 'dash': 'dash'},
-        name='Strike',
+    fig.add_trace(
+        go.Scatter(
+            x=spot_prices,
+            y=payoffs,
+            mode="lines",
+            name="Payoff",
+            line={"color": line_color, "width": 2},
+            fill="tozeroy",
+            fillcolor=f"rgba{(*[int(line_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], 0.15)}",
+        )
     )
 
-    # Zero line
-    fig.add_shape(
-        type='line',
-        x0=min(spot_prices), x1=max(spot_prices),
-        y0=0, y1=0,
-        line={'color': 'rgba(128, 128, 128, 0.3)', 'width': 1},
-    )
+    # Strike price vertical line
+    fig.add_vline(x=strike, line_dash="dash", line_color=colors["text_secondary"], line_width=1)
 
-    # Add annotations
-    fig.add_annotation(
-        x=strike,
-        y=max(payoffs) * 0.95,
-        text=f'Strike: ${strike:.2f}',
-        showarrow=False,
-        font={'family': 'Monaco, "Courier New", monospace', 'size': 12},
-        bgcolor='rgba(255, 255, 255, 0.8)',
-        bordercolor='#95a5a6',
-        borderwidth=1,
-    )
-
+    fig.update_layout(**layout_settings)
     fig.update_layout(
-        title={
-            'text': title,
-            'font': {'family': 'Monaco, "Courier New", monospace', 'size': 18},
-        },
-        xaxis_title='Spot Price (USD)',
-        yaxis_title='Payoff (USD)',
-        plot_bgcolor='#ffffff',
-        paper_bgcolor='#ffffff',
-        font={'family': 'Monaco, "Courier New", monospace'},
+        title={"text": title, "font": {"size": 14}},
+        xaxis_title="Spot Price ($)",
+        yaxis_title="Payoff ($)",
         showlegend=False,
-        margin={'t': 60, 'r': 20, 'b': 60, 'l': 60},
-        hovermode='x unified',
+        hovermode="x unified",
     )
 
-    return html.Div([
-        # Header
-        html.Div([
-            html.H3(f'{option_type.capitalize()} Option', style={
-                'margin': '0',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '18px',
-            }),
-            html.Span(f'Strike: ${strike:.2f}', style={
-                'fontSize': '13px',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'color': '#7f8c8d',
-            }),
-        ], style={
-            'display': 'flex',
-            'justifyContent': 'space-between',
-            'alignItems': 'center',
-            'padding': '16px',
-            'backgroundColor': '#f5f7f8',
-            'borderBottom': '1px solid #d5dbdf',
-        }),
-
-        # Payoff diagram
-        html.Div([
+    return html.Div(
+        [
             dcc.Graph(
                 figure=fig,
-                config={'displayModeBar': False},
-                style={'height': '100%'},
+                config={"displayModeBar": False},
+                style={"height": "100%"},
             ),
-        ], style={
-            'flex': '1',
-            'padding': '16px',
-        }),
-
-        # Info panel
-        html.Div([
-            html.Div([
-                html.Span('Type:', style={'fontWeight': 'bold'}),
-                html.Span(option_type.upper(), style={'marginLeft': '8px'}),
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'padding': '8px 0',
-                'borderBottom': '1px solid #ecf0f1',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '13px',
-            }),
-            html.Div([
-                html.Span('Strike:', style={'fontWeight': 'bold'}),
-                html.Span(f'${strike:.2f}', style={'marginLeft': '8px'}),
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'padding': '8px 0',
-                'borderBottom': '1px solid #ecf0f1',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '13px',
-            }),
-            html.Div([
-                html.Span('Max Profit:', style={'fontWeight': 'bold'}),
-                html.Span('Unlimited' if option_type == 'call' else f'${strike:.2f}', style={'marginLeft': '8px', 'color': '#27ae60'}),
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'padding': '8px 0',
-                'borderBottom': '1px solid #ecf0f1',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '13px',
-            }),
-            html.Div([
-                html.Span('Max Loss:', style={'fontWeight': 'bold'}),
-                html.Span('Premium', style={'marginLeft': '8px', 'color': '#e74c3c'}),
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'padding': '8px 0',
-                'fontFamily': 'Monaco, "Courier New", monospace',
-                'fontSize': '13px',
-            }),
-        ], style={
-            'padding': '16px',
-            'backgroundColor': '#f5f7f8',
-            'borderTop': '1px solid #d5dbdf',
-        }),
-    ], style={
-        'height': '100%',
-        'display': 'flex',
-        'flexDirection': 'column',
-        'backgroundColor': '#ffffff',
-    })
+        ],
+        style={
+            "height": "100%",
+            "backgroundColor": colors["bg"],
+            "padding": "8px",
+        },
+    )
 
 
 # =============================================================================
 # COUNTRY LAYOUT
 # =============================================================================
 
+_SAMPLE_COUNTRIES = [
+    "United States",
+    "China",
+    "Germany",
+    "Japan",
+    "Brazil",
+    "India",
+    "United Kingdom",
+    "France",
+    "Canada",
+    "Australia",
+]
+
+
 @dash_prism.register_layout(
-    id='country',
-    name='Country Explorer',
-    description='Explore data for a specific country and year',
-    keywords=['country', 'gapminder', 'gdp', 'population', 'world'],
+    id="country",
+    name="Country Explorer",
+    description="Explore economic data for a random country",
+    keywords=["country", "gapminder", "gdp", "population", "world", "economy"],
     allow_multiple=True,
     param_options={
-        'usa_2007': ('United States (2007)', {'country': 'United States', 'year': '2007'}),
-        'china_2007': ('China (2007)', {'country': 'China', 'year': '2007'}),
-        'germany_2007': ('Germany (2007)', {'country': 'Germany', 'year': '2007'}),
-        'japan_2007': ('Japan (2007)', {'country': 'Japan', 'year': '2007'}),
-        'brazil_2007': ('Brazil (2007)', {'country': 'Brazil', 'year': '2007'}),
-        'india_2007': ('India (2007)', {'country': 'India', 'year': '2007'}),
-        'uk_2007': ('United Kingdom (2007)', {'country': 'United Kingdom', 'year': '2007'}),
-        'france_2007': ('France (2007)', {'country': 'France', 'year': '2007'}),
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
     },
 )
-def country_layout(country: str, year: str = '2007'):
-    """Country explorer dashboard."""
+def country_layout(theme: str = "light"):
+    """Country explorer dashboard with random country selection.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
     df = px.data.gapminder()
 
-    try:
-        year_int = int(year)
-    except (ValueError, TypeError):
-        year_int = 2007
+    # Random country selection
+    country = random.choice(_SAMPLE_COUNTRIES)
+    year = 2007
 
-    available_years = sorted(df['year'].unique())
-    if year_int not in available_years:
-        year_int = available_years[-1]
+    # Find country data
+    country_df = df[df["country"] == country]
 
-    # Find country
-    matched = country
-    for c in df['country'].unique():
-        if c.lower() == country.lower():
-            matched = c
-            break
+    life_fig = px.line(country_df, x="year", y="lifeExp", title="Life Expectancy (years)", markers=True)
+    life_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
+    life_fig.update_layout(**layout_settings)
 
-    country_df = df[df['country'] == matched]
+    gdp_fig = px.line(country_df, x="year", y="gdpPercap", title="GDP per Capita ($)", markers=True)
+    gdp_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
+    gdp_fig.update_layout(**layout_settings)
 
-    life_fig = px.line(country_df, x='year', y='lifeExp', title=f'{matched}: Life Expectancy', markers=True)
-    life_fig.add_vline(x=year_int, line_dash='dash', line_color='red')
+    pop_fig = px.area(country_df, x="year", y="pop", title="Population")
+    pop_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
+    pop_fig.update_layout(**layout_settings)
 
-    gdp_fig = px.line(country_df, x='year', y='gdpPercap', title=f'{matched}: GDP per Capita', markers=True)
-    gdp_fig.add_vline(x=year_int, line_dash='dash', line_color='red')
-
-    pop_fig = px.area(country_df, x='year', y='pop', title=f'{matched}: Population')
-    pop_fig.add_vline(x=year_int, line_dash='dash', line_color='red')
-
-    return html.Div([
-        html.Div([
-            html.H1(f'🌍 {matched}', style={'margin': '0'}),
-            html.P(f'Data for year {year_int}', style={'color': '#666', 'margin': '5px 0 0 0'}),
-        ], style={'padding': '20px', 'borderBottom': '1px solid #eee'}),
-
-        html.Div([
-            html.Div([dcc.Graph(figure=life_fig, style={'height': '300px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-            html.Div([dcc.Graph(figure=gdp_fig, style={'height': '300px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-        ], style={'display': 'flex', 'gap': '20px', 'padding': '20px'}),
-
-        html.Div([
-            dcc.Graph(figure=pop_fig, style={'height': '250px'}, config={'displayModeBar': False}),
-        ], style={'padding': '0 20px 20px 20px'}),
-    ], style={'backgroundColor': 'white', 'minHeight': '100%'})
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.H2(
+                        country.upper(),
+                        style={
+                            "margin": "0",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontSize": "16px",
+                            "letterSpacing": "1px",
+                        },
+                    ),
+                    html.Span(
+                        f"Reference: {year}",
+                        style={
+                            "color": colors["text_secondary"],
+                            "fontSize": "12px",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                        },
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "padding": "12px 20px",
+                    "borderBottom": f'1px solid {colors["border"]}',
+                    "backgroundColor": colors["header_bg"],
+                },
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [dcc.Graph(figure=life_fig, style={"height": "280px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                    html.Div(
+                        [dcc.Graph(figure=gdp_fig, style={"height": "280px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={"display": "flex", "gap": "16px", "padding": "16px"},
+            ),
+            html.Div(
+                [
+                    dcc.Graph(figure=pop_fig, style={"height": "220px"}, config={"displayModeBar": False}),
+                ],
+                style={"padding": "0 16px 16px 16px"},
+            ),
+        ],
+        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+    )
 
 
 # =============================================================================
 # CONTINENT LAYOUT
 # =============================================================================
 
+
 @dash_prism.register_layout(
-    id='continent',
-    name='Continent Explorer',
-    description='Compare data across continents',
-    keywords=['continent', 'comparison', 'gapminder', 'world', 'global'],
+    id="continent",
+    name="Continent Comparison",
+    description="Compare data across continents",
+    keywords=["continent", "comparison", "gapminder", "world", "global"],
     allow_multiple=True,
     param_options={
-        'all': ('All Continents', {'continents': 'Africa,Americas,Asia,Europe,Oceania'}),
-        'europe_asia': ('Europe vs Asia', {'continents': 'Europe,Asia'}),
-        'americas': ('Americas', {'continents': 'Americas'}),
-        'africa_europe': ('Africa vs Europe', {'continents': 'Africa,Europe'}),
-        'asia_oceania': ('Asia vs Oceania', {'continents': 'Asia,Oceania'}),
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
     },
 )
-def continent_layout(continents: str = 'Europe,Asia'):
-    """Continent comparison dashboard."""
+def continent_layout(theme: str = "light"):
+    """Continent comparison dashboard.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
     df = px.data.gapminder()
-    latest_year = df['year'].max()
-    latest_df = df[df['year'] == latest_year]
+    latest_year = df["year"].max()
+    latest_df = df[df["year"] == latest_year]
 
-    selected = [c.strip() for c in continents.split(',')]
-    all_continents = df['continent'].unique().tolist()
-    matched = [c for c in all_continents if c in selected or any(s.lower() == c.lower() for s in selected)]
-    if not matched:
-        matched = ['Europe', 'Asia']
+    # Random continent pair selection
+    all_continents = df["continent"].unique().tolist()
+    selected = random.sample(all_continents, min(2, len(all_continents)))
 
-    filtered_df = df[df['continent'].isin(matched)]
-    filtered_latest = latest_df[latest_df['continent'].isin(matched)]
+    filtered_df = df[df["continent"].isin(selected)]
+    filtered_latest = latest_df[latest_df["continent"].isin(selected)]
 
     bubble_fig = px.scatter(
-        filtered_latest, x='gdpPercap', y='lifeExp', size='pop', color='continent',
-        hover_name='country', log_x=True, size_max=60, title=f'GDP vs Life Expectancy ({latest_year})',
+        filtered_latest,
+        x="gdpPercap",
+        y="lifeExp",
+        size="pop",
+        color="continent",
+        hover_name="country",
+        log_x=True,
+        size_max=50,
+        title=f"GDP vs Life Expectancy ({latest_year})",
+    )
+    bubble_fig.update_layout(**layout_settings)
+
+    agg = filtered_df.groupby(["continent", "year"]).agg({"lifeExp": "mean", "gdpPercap": "mean"}).reset_index()
+    line_fig = px.line(agg, x="year", y="lifeExp", color="continent", title="Life Expectancy Trend", markers=True)
+    line_fig.update_layout(**layout_settings)
+
+    gdp_fig = px.line(agg, x="year", y="gdpPercap", color="continent", title="GDP per Capita Trend", markers=True)
+    gdp_fig.update_layout(**layout_settings)
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.H2(
+                        " vs ".join(selected).upper(),
+                        style={
+                            "margin": "0",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontSize": "16px",
+                            "letterSpacing": "1px",
+                        },
+                    ),
+                    html.Span(
+                        "Continent Comparison",
+                        style={
+                            "color": colors["text_secondary"],
+                            "fontSize": "12px",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                        },
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "padding": "12px 20px",
+                    "borderBottom": f'1px solid {colors["border"]}',
+                    "backgroundColor": colors["header_bg"],
+                },
+            ),
+            html.Div(
+                [
+                    dcc.Graph(figure=bubble_fig, style={"height": "350px"}, config={"displayModeBar": False}),
+                ],
+                style={"padding": "16px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [dcc.Graph(figure=line_fig, style={"height": "280px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                    html.Div(
+                        [dcc.Graph(figure=gdp_fig, style={"height": "280px"}, config={"displayModeBar": False})],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={"display": "flex", "gap": "16px", "padding": "0 16px 16px 16px"},
+            ),
+        ],
+        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
     )
 
-    agg = filtered_df.groupby(['continent', 'year']).agg({'lifeExp': 'mean', 'gdpPercap': 'mean'}).reset_index()
-    line_fig = px.line(agg, x='year', y='lifeExp', color='continent', title='Life Expectancy Over Time', markers=True)
-    gdp_fig = px.line(agg, x='year', y='gdpPercap', color='continent', title='GDP per Capita Over Time', markers=True)
 
-    return html.Div([
-        html.Div([
-            html.H1(f'🌐 {" vs ".join(matched)}', style={'margin': '0'}),
-            html.P('Continent comparison', style={'color': '#666', 'margin': '5px 0 0 0'}),
-        ], style={'padding': '20px', 'borderBottom': '1px solid #eee'}),
+# =============================================================================
+# WORLD MAP LAYOUT
+# =============================================================================
 
-        html.Div([
-            dcc.Graph(figure=bubble_fig, style={'height': '400px'}, config={'displayModeBar': False}),
-        ], style={'padding': '20px'}),
 
-        html.Div([
-            html.Div([dcc.Graph(figure=line_fig, style={'height': '300px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-            html.Div([dcc.Graph(figure=gdp_fig, style={'height': '300px'}, config={'displayModeBar': False})], style={'flex': '1'}),
-        ], style={'display': 'flex', 'gap': '20px', 'padding': '0 20px 20px 20px'}),
-    ], style={'backgroundColor': 'white', 'minHeight': '100%'})
+@dash_prism.register_layout(
+    id="world",
+    name="World Map",
+    description="Global choropleth map visualization",
+    keywords=["world", "map", "globe", "choropleth", "global", "countries"],
+    allow_multiple=True,
+    param_options={
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
+    },
+)
+def world_layout(theme: str = "light"):
+    """World map choropleth visualization.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    df = px.data.gapminder()
+    latest_year = df["year"].max()
+    latest_df = df[df["year"] == latest_year]
+
+    # Random metric selection
+    metric = random.choice(["gdpPercap", "lifeExp", "pop"])
+    metric_labels = {
+        "gdpPercap": "GDP per Capita",
+        "lifeExp": "Life Expectancy",
+        "pop": "Population",
+    }
+
+    fig = px.choropleth(
+        latest_df,
+        locations="iso_alpha",
+        color=metric,
+        hover_name="country",
+        color_continuous_scale="Viridis" if theme == "light" else "Plasma",
+        title=f"{metric_labels[metric]} ({latest_year})",
+    )
+
+    fig.update_layout(
+        template=get_plotly_template(theme),
+        paper_bgcolor=colors["bg"],
+        geo=dict(
+            bgcolor=colors["bg"],
+            showframe=False,
+            showcoastlines=True,
+            coastlinecolor=colors["border"],
+            landcolor=colors["surface"],
+            countrycolor=colors["border"],
+        ),
+        font={"family": 'Monaco, "Courier New", monospace', "color": colors["text"]},
+        margin={"t": 50, "r": 10, "b": 10, "l": 10},
+        coloraxis_colorbar=dict(
+            title=metric_labels[metric],
+            tickfont=dict(size=10),
+        ),
+    )
+
+    return html.Div(
+        [
+            dcc.Graph(
+                figure=fig,
+                config={"displayModeBar": False},
+                style={"height": "100%"},
+            ),
+        ],
+        style={
+            "height": "100%",
+            "backgroundColor": colors["bg"],
+        },
+    )
+
+
+# =============================================================================
+# CANDLESTICK CHART LAYOUT
+# =============================================================================
+
+
+def _generate_ohlc_data(n_periods: int = 100) -> dict[str, list]:
+    """Generate random OHLC candlestick data."""
+    dates = []
+    opens = []
+    highs = []
+    lows = []
+    closes = []
+
+    base_price = random.uniform(100, 200)
+    current_price = base_price
+
+    base_date = datetime(2024, 1, 1)
+
+    for i in range(n_periods):
+        dates.append(base_date + __import__("datetime").timedelta(days=i))
+
+        open_price = current_price
+        change = random.gauss(0, 0.02) * current_price
+        close_price = open_price + change
+
+        high_price = max(open_price, close_price) * (1 + abs(random.gauss(0, 0.01)))
+        low_price = min(open_price, close_price) * (1 - abs(random.gauss(0, 0.01)))
+
+        opens.append(round(open_price, 2))
+        highs.append(round(high_price, 2))
+        lows.append(round(low_price, 2))
+        closes.append(round(close_price, 2))
+
+        current_price = close_price
+
+    return {"dates": dates, "opens": opens, "highs": highs, "lows": lows, "closes": closes}
+
+
+@dash_prism.register_layout(
+    id="market",
+    name="Market Chart",
+    description="Candlestick OHLC chart visualization",
+    keywords=["market", "candlestick", "ohlc", "trading", "finance", "stocks"],
+    allow_multiple=True,
+    param_options={
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
+    },
+)
+def market_layout(theme: str = "light"):
+    """Candlestick market chart visualization.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
+
+    # Generate random ticker and data
+    ticker = _generate_asset_name()
+    data = _generate_ohlc_data(60)
+
+    fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=data["dates"],
+                open=data["opens"],
+                high=data["highs"],
+                low=data["lows"],
+                close=data["closes"],
+                increasing_line_color=colors["success"],
+                decreasing_line_color=colors["error"],
+                increasing_fillcolor=colors["success"],
+                decreasing_fillcolor=colors["error"],
+            )
+        ]
+    )
+
+    fig.update_layout(**layout_settings)
+    fig.update_layout(
+        title={"text": f"{ticker} | OHLC", "font": {"size": 14}},
+        xaxis_title="Date",
+        yaxis_title="Price ($)",
+        xaxis_rangeslider_visible=False,
+        showlegend=False,
+    )
+
+    return html.Div(
+        [
+            dcc.Graph(
+                figure=fig,
+                config={"displayModeBar": False},
+                style={"height": "100%"},
+            ),
+        ],
+        style={
+            "height": "100%",
+            "backgroundColor": colors["bg"],
+            "padding": "8px",
+        },
+    )
 
 
 # =============================================================================
 # DELAYED LAYOUT
 # =============================================================================
 
+
 @dash_prism.register_layout(
-    id='delayed',
-    name='Delayed Layout',
-    description='A layout that takes time to load (simulates heavy computation)',
-    keywords=['delay', 'loading', 'slow', 'test'],
+    id="delayed",
+    name="Delayed Layout",
+    description="A layout that takes time to load (simulates heavy computation)",
+    keywords=["delay", "loading", "slow", "test"],
     allow_multiple=True,
     param_options={
-        'quick': ('Quick (1 second)', {'delay': '1'}),
-        'medium': ('Medium (3 seconds)', {'delay': '3'}),
-        'slow': ('Slow (5 seconds)', {'delay': '5'}),
-        'very_slow': ('Very Slow (10 seconds)', {'delay': '10'}),
+        "quick": ("Quick (1 second)", {"delay": "1"}),
+        "medium": ("Medium (3 seconds)", {"delay": "3"}),
+        "slow": ("Slow (5 seconds)", {"delay": "5"}),
     },
 )
-def delayed_layout(delay: str = '3'):
-    """Layout that simulates heavy computation."""
+def delayed_layout(delay: str = "3"):
+    """Layout that simulates heavy computation.
+
+    Args:
+        delay: Delay in seconds as string
+    """
+    colors = get_theme_colors("light")
+
     try:
         delay_seconds = min(int(delay), 30)
     except (ValueError, TypeError):
@@ -725,24 +1114,55 @@ def delayed_layout(delay: str = '3'):
 
     time.sleep(delay_seconds)
 
-    return html.Div([
-        html.Div([
-            html.H1('⏱️ Delayed Layout', style={'margin': '0 0 10px 0'}),
-            html.P(f'This layout took {delay_seconds} seconds to load.', style={'color': '#666'}),
-        ], style={'textAlign': 'center', 'padding': '40px'}),
-
-        html.Div([
-            html.Div([
-                html.H3('✅ Successfully Loaded', style={'color': '#4CAF50'}),
-                html.P('The layout has finished loading after the specified delay.'),
-            ], style={
-                'backgroundColor': '#f0fff0',
-                'padding': '20px',
-                'borderRadius': '8px',
-                'border': '1px solid #4CAF50',
-            }),
-        ], style={'maxWidth': '600px', 'margin': '0 auto', 'padding': '20px'}),
-    ])
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.H1(
+                        "[DELAYED LAYOUT]",
+                        style={
+                            "margin": "0 0 10px 0",
+                            "fontFamily": 'Monaco, "Courier New", monospace',
+                            "fontSize": "18px",
+                        },
+                    ),
+                    html.P(
+                        f"This layout took {delay_seconds} seconds to load.",
+                        style={"color": colors["text_secondary"]},
+                    ),
+                ],
+                style={"textAlign": "center", "padding": "40px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.H3(
+                                "[OK] Successfully Loaded",
+                                style={
+                                    "color": colors["success"],
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                    "fontSize": "14px",
+                                },
+                            ),
+                            html.P(
+                                "The layout has finished loading after the specified delay.",
+                                style={"fontFamily": 'Monaco, "Courier New", monospace', "fontSize": "12px"},
+                            ),
+                        ],
+                        style={
+                            "backgroundColor": colors["surface"],
+                            "padding": "20px",
+                            "borderRadius": "4px",
+                            "border": f'1px solid {colors["success"]}',
+                        },
+                    ),
+                ],
+                style={"maxWidth": "500px", "margin": "0 auto", "padding": "20px"},
+            ),
+        ],
+        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+    )
 
 
 # =============================================================================

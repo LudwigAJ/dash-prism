@@ -41,6 +41,21 @@ Dash Prism addresses these issues by providing:
 - **Minimal boilerplate** - A decorator-based API keeps layout registration
   concise and readable.
 
+## Features
+
+- **Tab Customization** - Style tabs with colors and assign icons from the
+  built-in icon library for visual organization.
+- **Share Links** - Generate shareable URLs for individual tabs, enabling
+  collaboration and quick access to specific views.
+- **Custom Actions** - Define toolbar actions that trigger callbacks, extending
+  the workspace with application-specific functionality.
+- **Workspace State** - Access and manipulate workspace state programmatically
+  for long-term persistence, team sharing, or backup/restore workflows.
+- **Keyboard Shortcuts** - Navigate, rename, and manage tabs efficiently with
+  built-in keyboard shortcuts.
+- **Layout Search** - Quickly find and open layouts via the integrated search
+  bar with keyword filtering.
+
 ## Installation
 
 **Requirements:** Python 3.10+, Dash 3.1.1+
