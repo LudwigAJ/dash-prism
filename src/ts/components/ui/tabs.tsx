@@ -20,6 +20,7 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
+    data-slot="tabs-list"
     className={cn('bg-surface text-secondary flex items-stretch', className)}
     {...props}
   />
@@ -44,6 +45,7 @@ const TabsTrigger = React.forwardRef<
 >(({ className, isLocked, isLoading, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
+    data-slot="tabs-trigger"
     data-locked={isLocked || undefined}
     data-loading={isLoading || undefined}
     className={cn(
@@ -62,6 +64,8 @@ const TabsTrigger = React.forwardRef<
       'border-border border-r',
       // Locked state
       'data-[locked=true]:opacity-80',
+      // Prevent shrinking when tabs overflow
+      'shrink-0',
       className
     )}
     {...props}

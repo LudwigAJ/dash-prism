@@ -185,13 +185,46 @@ Enable workspace persistence:
 - ``'session'`` — Persists for current tab only (sessionStorage)
 - ``'memory'`` — No persistence
 
+Initial Layout
+--------------
+
+Set a default layout to display in the first tab on initial page load:
+
+.. code-block:: python
+
+   dash_prism.Prism(
+       id='workspace',
+       initialLayout='dashboard',  # Must match a registered layout ID
+   )
+
+The specified layout will load automatically when users first visit the page.
+
+.. note::
+
+   If ``persistence`` is enabled and a saved workspace exists, the persisted
+   state takes precedence over ``initialLayout``. The initial layout only
+   applies on the very first visit before any workspace is saved.
+
+Example with persistence:
+
+.. code-block:: python
+
+   dash_prism.Prism(
+       id='workspace',
+       initialLayout='dashboard',
+       persistence=True,
+       persistence_type='local',
+   )
+   # First visit: shows 'dashboard' layout
+   # Subsequent visits: restores user's saved workspace
+
 Workspace State
 ---------------
 
 Prism exposes two properties for reading and writing workspace state:
 
 - ``readWorkspace`` — Output property containing the current workspace state
-- ``writeWorkspace`` — Input property for programmatically updating the workspace
+- ``updateWorkspace`` — Input property for programmatically updating the workspace
 
 Reading State with Actions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -228,7 +261,7 @@ Use an Action to trigger reading the workspace. The Action provides the
 Writing State with Actions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Use ``writeWorkspace`` to restore a previously saved workspace:
+Use ``updateWorkspace`` to restore a previously saved workspace:
 
 .. code-block:: python
 
@@ -245,7 +278,7 @@ Use ``writeWorkspace`` to restore a previously saved workspace:
    )
 
    @app.callback(
-       Output('workspace', 'writeWorkspace'),
+       Output('workspace', 'updateWorkspace'),
        Input('import-btn', 'n_clicks'),
        prevent_initial_call=True
    )
@@ -254,7 +287,7 @@ Use ``writeWorkspace`` to restore a previously saved workspace:
        saved_workspace = load_from_storage()
        return saved_workspace
 
-``writeWorkspace`` accepts partial updates. You can update specific fields
+``updateWorkspace`` accepts partial updates. You can update specific fields
 without replacing the entire workspace:
 
 .. code-block:: python
@@ -268,7 +301,7 @@ without replacing the entire workspace:
 Server-Side Persistence Pattern
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Combine ``readWorkspace`` and ``writeWorkspace`` with Actions for server-side
+Combine ``readWorkspace`` and ``updateWorkspace`` with Actions for server-side
 persistence (useful when users access their workspace from multiple devices):
 
 .. code-block:: python
@@ -293,7 +326,7 @@ persistence (useful when users access their workspace from multiple devices):
        return False
 
    @app.callback(
-       Output('workspace', 'writeWorkspace'),
+       Output('workspace', 'updateWorkspace'),
        Input('load-btn', 'n_clicks'),
        prevent_initial_call=True
    )
@@ -311,7 +344,7 @@ Use ``validate_workspace`` to check workspace data before writing:
    from dash_prism.utils import validate_workspace, InvalidWorkspace
 
    @app.callback(
-       Output('workspace', 'writeWorkspace'),
+       Output('workspace', 'updateWorkspace'),
        Output('error-msg', 'children'),
        Input('import-btn', 'n_clicks'),
        prevent_initial_call=True

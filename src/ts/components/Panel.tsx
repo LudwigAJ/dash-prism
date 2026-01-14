@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { usePrism, usePanelTabs, useActiveTab } from '@hooks/usePrism';
+import { useConfig } from '@context/ConfigContext';
 import { SplitPane, Pane } from 'react-split-pane';
 import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
@@ -17,50 +18,81 @@ type PanelProps = {
   onOpenInfo?: (tab: Tab) => void;
 };
 
-function makeSpec(tab: Tab): DashComponent {
+function makeSpec(
+  id: string,
+  layoutId: string | undefined,
+  layoutParams: Record<string, string> | undefined,
+  layoutOption: string | undefined
+): DashComponent {
   return {
     namespace: 'dash_prism',
     type: 'PrismContent',
     props: {
       // CRITICAL: ID must be an OBJECT, not stringified!
-      id: { type: 'prism-content', index: tab.id },
+      id: { type: 'prism-content', index: id },
       data: {
-        tabId: tab.id,
-        layoutId: tab.layoutId,
-        layoutParams: tab.layoutParams || {},
-        layoutOption: tab.layoutOption || '',
+        tabId: id,
+        layoutId,
+        // Use null instead of {} for stable references
+        layoutParams: layoutParams ?? null,
+        layoutOption: layoutOption ?? null,
       },
     },
   };
 }
 
-export function makeComponentPath(tab: Tab): string[] {
-  return ['prism', 'content', tab.id];
+export function makeComponentPath(componentId: string, tabId: string): string[] {
+  return [componentId, 'content', tabId];
 }
 
-// Memoized component - only re-renders when tab props actually change
-const DashContentRenderer = memo(({ tab }: { tab: Tab }) => {
-  const api: DashComponentApi | undefined = window.dash_component_api;
+/**
+ * Memoized Dash content renderer.
+ * Only re-renders when layout-affecting properties change (id, layoutId, layoutParams, layoutOption).
+ * UI-only properties like `locked`, `name`, `icon`, `style` do NOT trigger re-renders.
+ */
+const DashContentRenderer = memo(
+  ({ tab }: { tab: Tab }) => {
+    const api: DashComponentApi | undefined = window.dash_component_api;
+    const { componentId = 'prism' } = useConfig();
 
-  const spec = useMemo<DashComponent>(() => makeSpec(tab), [tab]);
-  const componentPath = useMemo(() => makeComponentPath(tab), [tab]);
+    // Destructure only layout-affecting properties for stable memoization
+    const { id, layoutId, layoutParams, layoutOption } = tab;
 
-  if (!api?.ExternalWrapper) {
+    const spec = useMemo<DashComponent>(
+      () => makeSpec(id, layoutId, layoutParams, layoutOption),
+      [id, layoutId, layoutParams, layoutOption]
+    );
+
+    const componentPath = useMemo(() => makeComponentPath(componentId, id), [componentId, id]);
+
+    if (!api?.ExternalWrapper) {
+      return (
+        <div className="text-muted-foreground flex h-full items-center justify-center">
+          <p>Dash API not available. Ensure you're using Dash 3.1.1+.</p>
+        </div>
+      );
+    }
+
+    const { ExternalWrapper } = api;
+
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center">
-        <p>Dash API not available. Ensure you're using Dash 3.1.1+.</p>
+      <div className="prism-content-container h-full">
+        <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
       </div>
     );
+  },
+  // Custom comparator: only re-render when layout-affecting properties change
+  (prevProps, nextProps) => {
+    const prev = prevProps.tab;
+    const next = nextProps.tab;
+    return (
+      prev.id === next.id &&
+      prev.layoutId === next.layoutId &&
+      prev.layoutOption === next.layoutOption &&
+      JSON.stringify(prev.layoutParams) === JSON.stringify(next.layoutParams)
+    );
   }
-
-  const { ExternalWrapper } = api;
-
-  return (
-    <div className="prism-content-container h-full">
-      <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
-    </div>
-  );
-});
+);
 
 DashContentRenderer.displayName = 'DashContentRenderer';
 
@@ -100,7 +132,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
 
   return (
     <div
-      className={cn('prism-panel h-full w-full', isActive && 'prism-panel-active')}
+      className={cn('prism-panel', isActive && 'prism-panel-active')}
       onClick={handlePanelClick}
       data-testid={`prism-panel-${panel.id}`}
       data-panel-id={panel.id}
@@ -147,14 +179,6 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
   const { dispatch } = usePrism();
   const isLeaf = isLeafPanel(panel);
 
-  // DEBUG: Log panel structure on every render
-  console.log('Panel render:', {
-    id: panel.id,
-    isLeaf,
-    childCount: panel.children.length,
-    children: panel.children.map((c) => ({ id: c.id, isLeaf: c.children.length === 0 })),
-  });
-
   const handleResizeEnd = useCallback(
     (sizes: (string | number)[]) => {
       panel.children.forEach((child, index) => {
@@ -180,20 +204,20 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
 
   // Container panel → SplitPane
   // Children: Pane for leaves, SplitPane (via recursion) for containers
-  console.log('Rendering SplitPane with children:', panel.children.length);
 
   const renderedChildren = panel.children.map((child, index) => {
     const childIsLeaf = isLeafPanel(child);
-    console.log('Rendering child pane:', { id: child.id, childIsLeaf });
 
     // Calculate size - use stored size or distribute evenly
     if (childIsLeaf) {
       // Leaf → wrap in Pane with error boundary
-      // Use explicit size prop (controlled mode) to ensure rendering in headless browsers
+      // Use stored size or default to 50% for even distribution
+      const storedSize = child.size ?? '50%';
       return (
         <Pane
           key={child.id}
-          defaultSize="50%"
+          size={storedSize}
+          defaultSize={storedSize}
           minSize="10%"
           maxSize="100%"
           className="h-full w-full overflow-hidden"
@@ -212,12 +236,6 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
       );
     }
   });
-
-  console.log('Rendered children array length:', renderedChildren.length);
-  console.log(
-    'Rendered children types:',
-    renderedChildren.map((c) => c?.type?.name || c?.type || 'unknown')
-  );
 
   return (
     <SplitPane

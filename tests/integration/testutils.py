@@ -31,10 +31,12 @@ CONTEXT_MENU = "[data-testid='prism-context-menu']"
 PRISM_ROOT = ".prism-root"
 
 # DnD Drop Zone Selectors
-DROP_ZONE_LEFT = "[data-testid='prism-drop-zone-left']"
-DROP_ZONE_RIGHT = "[data-testid='prism-drop-zone-right']"
-DROP_ZONE_TOP = "[data-testid='prism-drop-zone-top']"
-DROP_ZONE_BOTTOM = "[data-testid='prism-drop-zone-bottom']"
+# Note: Actual DOM uses data-testid="prism-drop-zone-{edge}-{panelId}"
+# so we use ^= (starts-with) prefix matching
+DROP_ZONE_LEFT = "[data-testid^='prism-drop-zone-left']"
+DROP_ZONE_RIGHT = "[data-testid^='prism-drop-zone-right']"
+DROP_ZONE_TOP = "[data-testid^='prism-drop-zone-top']"
+DROP_ZONE_BOTTOM = "[data-testid^='prism-drop-zone-bottom']"
 
 
 # =============================================================================
@@ -369,9 +371,8 @@ def set_input_value_react(dash_duo, selector: str, value: str):
     value : str
         Value to set.
     """
-    dash_duo.driver.execute_async_script(
+    dash_duo.driver.execute_script(
         """
-        var callback = arguments[arguments.length - 1];
         var input = document.querySelector(arguments[0]);
         if (input) {
             // Focus the input first
@@ -386,15 +387,16 @@ def set_input_value_react(dash_duo, selector: str, value: str):
             // Trigger React's onChange - need both 'input' and 'change' events
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Wait for React to process the state update
-            setTimeout(function() { callback(true); }, 200);
-        } else {
-            callback(false);
         }
-    """,
+        """,
         selector,
         value,
+    )
+
+    # explicit wait for the value to be set, replacing the hardcoded JS timeout
+    WebDriverWait(dash_duo.driver, 2.0).until(
+        lambda d: d.find_element(By.CSS_SELECTOR, selector).get_attribute("value") == value,
+        message=f"Value '{value}' was not set on element '{selector}'",
     )
 
 
@@ -414,7 +416,11 @@ def press_enter_on_element(dash_duo, selector: str):
         var input = document.querySelector(arguments[0]);
         if (input) {
             input.dispatchEvent(new KeyboardEvent('keydown', {
-                key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
+                key: 'Enter',
+                code: 'Enter',
+                bubbles: true,
+                cancelable: true,
+                view: window
             }));
         }
     """,

@@ -6,6 +6,8 @@ import type { RegisteredLayouts, Theme, Size, StatusBarPosition, PersistenceType
 // =============================================================================
 
 type ConfigContextValue = {
+  /** Component ID for namespacing persistence storage */
+  componentId?: string;
   registeredLayouts: RegisteredLayouts;
   /** Tab content specs from Dash callback - keyed by tab ID */
   theme: Theme;
@@ -15,6 +17,8 @@ type ConfigContextValue = {
   persistenceType: PersistenceType;
   searchBarPlaceholder?: string;
   statusBarPosition?: StatusBarPosition;
+  /** Layout ID to load in the first tab on initial load */
+  initialLayout?: string;
 };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -25,6 +29,7 @@ const ConfigContext = createContext<ConfigContextValue | null>(null);
 
 type ConfigProviderProps = {
   children: React.ReactNode;
+  componentId?: string;
   registeredLayouts: RegisteredLayouts;
   theme?: Theme;
   size?: Size;
@@ -33,10 +38,12 @@ type ConfigProviderProps = {
   persistenceType?: PersistenceType;
   searchBarPlaceholder?: string;
   statusBarPosition?: StatusBarPosition;
+  initialLayout?: string;
 };
 
 export function ConfigProvider({
   children,
+  componentId,
   registeredLayouts,
   theme = 'light',
   size = 'md',
@@ -45,9 +52,11 @@ export function ConfigProvider({
   statusBarPosition = 'bottom',
   persistence = false,
   persistenceType = 'memory',
+  initialLayout,
 }: ConfigProviderProps) {
   const value = useMemo(
     () => ({
+      componentId,
       registeredLayouts,
       theme,
       size,
@@ -56,8 +65,10 @@ export function ConfigProvider({
       statusBarPosition: statusBarPosition,
       persistence,
       persistenceType,
+      initialLayout,
     }),
     [
+      componentId,
       registeredLayouts,
       persistence,
       persistenceType,
@@ -66,6 +77,7 @@ export function ConfigProvider({
       maxTabs,
       searchBarPlaceholder,
       statusBarPosition,
+      initialLayout,
     ]
   );
 

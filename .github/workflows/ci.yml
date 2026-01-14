@@ -43,6 +43,9 @@ jobs:
       - name: Build JavaScript bundle
         run: npm run build
 
+      - name: Run TypeScript unit tests
+        run: npm run test:ts
+
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v1
         with:

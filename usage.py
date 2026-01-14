@@ -941,32 +941,38 @@ def update_asset_price(n, data, model_type):
 # =============================================================================
 
 @callback(
-    Output('prism', 'writeWorkspace'),
-    Output('saved-workspace', 'data'),
-    Input('prism', 'actionClicked'),
-    State('prism', 'readWorkspace'),
-    State('saved-workspace', 'data'),
+    Output('prism-action-save', 'n_clicks'),
+    Input('prism-action-save', 'n_clicks'),
     prevent_initial_call=True,
 )
-def handle_actions(action_id, current_workspace, saved_workspace):
-    """Handle toolbar actions."""
-    if action_id == 'save':
-        return None, current_workspace
-    elif action_id == 'load':
-        if saved_workspace:
-            return saved_workspace, saved_workspace
-        return None, saved_workspace
-    elif action_id == 'clear':
-        return {
-            'version': 1,
-            'tabs': [],
-            'panels': {'id': 'panel-main'},
-            'activeTabs': {},
-            'activePanel': 'panel-main',
-            'hideSearchbar': False,
-            'favoriteLayouts': [],
-        }, saved_workspace
-    return None, saved_workspace
+def handle_save(n_clicks: int) -> int:
+    """Handle save action."""
+    if n_clicks:
+        print("Workspace saved.")
+    return n_clicks
+
+@callback(
+    Output('prism-action-load', 'n_clicks'),
+    Input('prism-action-load', 'n_clicks'),
+    prevent_initial_call=True,
+)
+def handle_load(n_clicks: int) -> int:
+    """Handle load action."""
+    if n_clicks:
+        print("Workspace loaded.")
+    return n_clicks
+
+
+@callback(
+    Output('prism-action-clear', 'n_clicks'),
+    Input('prism-action-clear', 'n_clicks'),
+    prevent_initial_call=True,
+)
+def handle_clear(n_clicks: int) -> int:
+    """Handle clear action."""
+    if n_clicks:
+        print("Workspace cleared.")
+    return n_clicks
 
 
 # =============================================================================

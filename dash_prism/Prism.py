@@ -60,15 +60,21 @@ class Prism(PrismComponent):
         ``'memory'`` (no persistence, state lost on page refresh).
         Defaults to ``'memory'``.
     :type persistence_type: str
+    :param initialLayout: Layout ID to automatically load in the first tab on
+        initial page load. Must match a layout registered via
+        :func:`dash_prism.register_layout` before calling :func:`dash_prism.init`.
+        Only applies on the very first load; if ``persistence`` is enabled and a
+        saved workspace exists, the persisted state takes precedence.
+    :type initialLayout: str or None
     :param readWorkspace: **Output property** - Read-only workspace state from Dash.
         Use as an ``Output`` in callbacks to react to workspace changes.
         The workspace dict contains: ``tabs`` (list of dict), ``panel`` (dict),
         ``activePanelId`` (str), ``activeTabIds`` (dict).
     :type readWorkspace: dict or None
-    :param writeWorkspace: **Input property** - Write workspace state to Prism.
+    :param updateWorkspace: **Input property** - Write workspace state to Prism.
         Use as an ``Input`` in callbacks to programmatically update the workspace.
         Partial updates are supported.
-    :type writeWorkspace: dict or None
+    :type updateWorkspace: dict or None
     :param children: Child components (typically :class:`PrismContent` instances).
         **Advanced** - Usually managed automatically by :func:`dash_prism.init`.
     :type children: list or None

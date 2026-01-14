@@ -36,6 +36,12 @@ Keyword arguments:
     Array of PrismAction components to display in the status bar. Each
     PrismAction has its own id and n_clicks for individual callbacks.
 
+- initialLayout (string; optional):
+    Layout ID to automatically load in the first tab on initial load.
+    Must match a registered layout ID. If persistence is enabled and a
+    saved workspace exists, the persisted state takes precedence over
+    initialLayout.
+
 - layoutTimeout (number; default 30):
     Timeout in seconds for layout loading. If children don't arrive
     within this time after a layout is selected, an error state is
@@ -157,11 +163,11 @@ Keyword arguments:
 - theme (a value equal to: 'light', 'dark'; default 'light'):
     Visual theme for the workspace.
 
-- writeWorkspace (dict; optional):
+- updateWorkspace (dict; optional):
     Write-only output property. Workspace state changes are written
     here for Dash callbacks.
 
-    `writeWorkspace` is a dict with keys:
+    `updateWorkspace` is a dict with keys:
 
     - tabs (list of dicts; optional)
 
@@ -294,8 +300,8 @@ Keyword arguments:
         }
     )
 
-    WriteWorkspaceTabs = TypedDict(
-        "WriteWorkspaceTabs",
+    UpdateWorkspaceTabs = TypedDict(
+        "UpdateWorkspaceTabs",
             {
             "id": str,
             "name": str,
@@ -311,8 +317,8 @@ Keyword arguments:
         }
     )
 
-    WriteWorkspacePanel = TypedDict(
-        "WriteWorkspacePanel",
+    UpdateWorkspacePanel = TypedDict(
+        "UpdateWorkspacePanel",
             {
             "id": str,
             "order": Literal[0, 1],
@@ -323,11 +329,11 @@ Keyword arguments:
         }
     )
 
-    WriteWorkspace = TypedDict(
-        "WriteWorkspace",
+    UpdateWorkspace = TypedDict(
+        "UpdateWorkspace",
             {
-            "tabs": NotRequired[typing.Sequence["WriteWorkspaceTabs"]],
-            "panel": NotRequired["WriteWorkspacePanel"],
+            "tabs": NotRequired[typing.Sequence["UpdateWorkspaceTabs"]],
+            "panel": NotRequired["UpdateWorkspacePanel"],
             "panelTabs": NotRequired[typing.Dict[typing.Union[str, float, int], typing.Sequence[str]]],
             "activeTabIds": NotRequired[typing.Dict[typing.Union[str, float, int], str]],
             "activePanelId": NotRequired[str],
@@ -350,16 +356,17 @@ Keyword arguments:
         layoutTimeout: typing.Optional[NumberType] = None,
         statusBarPosition: typing.Optional[Literal["top", "bottom"]] = None,
         readWorkspace: typing.Optional["ReadWorkspace"] = None,
-        writeWorkspace: typing.Optional["WriteWorkspace"] = None,
+        updateWorkspace: typing.Optional["UpdateWorkspace"] = None,
         actions: typing.Optional[typing.Sequence[ComponentType]] = None,
         persistence: typing.Optional[bool] = None,
         persistence_type: typing.Optional[Literal["memory", "session", "local"]] = None,
+        initialLayout: typing.Optional[str] = None,
         style: typing.Optional[typing.Any] = None,
         **kwargs
     ):
-        self._prop_names = ['children', 'id', 'actions', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'writeWorkspace']
+        self._prop_names = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
         self._valid_wildcard_attributes =            []
-        self.available_properties = ['children', 'id', 'actions', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'writeWorkspace']
+        self.available_properties = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
         self.available_wildcard_properties =            []
         _explicit_args = kwargs.pop('_explicit_args')
         _locals = locals()

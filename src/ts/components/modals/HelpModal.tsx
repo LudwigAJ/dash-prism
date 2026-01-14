@@ -90,22 +90,21 @@ export function HelpModal({
               <span className="text-foreground text-sm">Duplicate tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
-                <kbd className={kbdClass}>⇧</kbd>
-                <kbd className={kbdClass}>D</kbd>
+                <kbd className={kbdClass}>B</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className="text-foreground text-sm">Undo close</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
-                <kbd className={kbdClass}>Z</kbd>
+                <kbd className={kbdClass}>U</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className="text-foreground text-sm">Lock / unlock tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
-                <kbd className={kbdClass}>L</kbd>
+                <kbd className={kbdClass}>O</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
@@ -116,7 +115,7 @@ export function HelpModal({
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Tab info</span>
+              <span className="text-foreground text-sm">Pin / unpin panel</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>I</kbd>
@@ -126,11 +125,11 @@ export function HelpModal({
               <span className="text-foreground text-sm">Toggle search bars</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
-                <kbd className={kbdClass}>H</kbd>
+                <kbd className={kbdClass}>Y</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Switch tabs</span>
+              <span className="text-foreground text-sm">Previous / next tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>J</kbd>

@@ -91,14 +91,16 @@ export function NewLayout({ tabId }: NewLayoutProps) {
       </button>
 
       <CardHeader className="flex-1 pr-10 pb-2">
-        <CardTitle className="text-base">{meta.name}</CardTitle>
+        <CardTitle className="prism-newlayout-card-title">{meta.name}</CardTitle>
         {meta.description && (
-          <CardDescription className="line-clamp-3">{meta.description}</CardDescription>
+          <CardDescription className="prism-newlayout-card-description line-clamp-3">
+            {meta.description}
+          </CardDescription>
         )}
       </CardHeader>
       {meta.params && meta.params.length > 0 && (
         <CardContent className="pt-0">
-          <p className="text-muted-foreground text-xs">
+          <p className="prism-newlayout-card-meta text-muted-foreground">
             {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
@@ -106,18 +108,15 @@ export function NewLayout({ tabId }: NewLayoutProps) {
     </Card>
   );
 
-  // Flexible grid: cards fill available space, min 200px, grow up to 1fr (flexible)
-  const gridClassName = cn('grid gap-4', 'grid-cols-[repeat(auto-fill,minmax(200px,1fr))]');
-
   return (
-    <div className="flex min-h-full flex-col overflow-auto p-6">
+    <div className="prism-newlayout flex min-h-full flex-col overflow-auto">
       {/* Favorites Section */}
       {favoriteEntries.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+        <section className="prism-newlayout-section">
+          <h2 className="prism-newlayout-heading text-muted-foreground font-medium tracking-wide uppercase">
             Favorites
           </h2>
-          <div className={gridClassName}>
+          <div className="prism-newlayout-grid">
             {favoriteEntries.map(([id, meta]) => (
               <LayoutCard key={id} id={id} meta={meta} />
             ))}
@@ -127,11 +126,11 @@ export function NewLayout({ tabId }: NewLayoutProps) {
 
       {/* Layouts Section */}
       {otherEntries.length > 0 && (
-        <section>
-          <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+        <section className="prism-newlayout-section">
+          <h2 className="prism-newlayout-heading text-muted-foreground font-medium tracking-wide uppercase">
             Layouts
           </h2>
-          <div className={gridClassName}>
+          <div className="prism-newlayout-grid">
             {otherEntries.map(([id, meta]) => (
               <LayoutCard key={id} id={id} meta={meta} />
             ))}

@@ -395,6 +395,19 @@ def init(prism_id: str, app: "Dash") -> None:
     # Find and validate Prism component
     prism_component = _validate_prism_component(app, prism_id)
 
+    # Validate initialLayout if provided
+    if prism_component is not None:
+        initial_layout = getattr(prism_component, "initialLayout", None)
+        if initial_layout is not None:
+            layout_ids = list(registry.layouts.keys())
+            if initial_layout not in layout_ids:
+                raise InitializationError(
+                    f"initialLayout '{initial_layout}' not found in registered layouts. "
+                    f"Available layouts: {layout_ids}. "
+                    "Register the layout with @dash_prism.register_layout() before calling init()."
+                )
+            logger.info(f"Initial layout '{initial_layout}' validated successfully")
+
     # Inject registered layouts metadata
     if prism_component is not None:
         prism_component.registeredLayouts = get_registered_layouts_metadata()
