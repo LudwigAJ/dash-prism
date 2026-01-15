@@ -41,6 +41,29 @@ Dash Prism addresses these issues by providing:
 - **Minimal boilerplate** - A decorator-based API keeps layout registration
   concise and readable.
 
+## Features
+
+- **User-Driven Layout** - Users style tabs with colors and icons, reorder them
+  freely, and drag to panel edges to split the view. You create the content;
+  they make the dashboard.
+- **Favorites & Search** - Find layouts instantly with the integrated search
+  bar. Mark frequently-used ones as favorites to pin them at the top.
+- **On-Demand Loading** - Tab content loads dynamically when selected, keeping
+  initial page load fast even with many registered layouts.
+- **Parameterized Layouts** - Capture user options before loading a layout,
+  minimizing server round-trips and delivering exactly what the user wants.
+- **Custom Actions** - Add status bar buttons that trigger Dash callbacks for
+  saving workspaces, exporting data, or any custom functionality.
+- **Persistence & Workspace State** - State saves to localStorage, sessionStorage,
+  or memory. Use `readWorkspace` and `updateWorkspace` for programmatic backup,
+  restore, or team sharing.
+- **Context Menus** - Right-click tabs to rename, duplicate, lock, style, or
+  generate a shareable link to send a specific tab to someone else.
+- **Keyboard Shortcuts** - Full keyboard navigation: new tab, close, rename,
+  undo close, switch tabs, and more.
+- **Error Resilience** - Errors are captured at the tab level, guarding against
+  crashes that would otherwise take down the workspace. Retry with one click.
+
 ## Installation
 
 **Requirements:** Python 3.10+, Dash 3.1.1+

@@ -181,6 +181,9 @@ def _render_tab_layout(
     if not layout_id:
         return None
 
+    # Defensive: ensure layout_params is never None (can happen from JSON null)
+    layout_params = layout_params or {}
+
     registration = get_layout(layout_id)
     if not registration:
         return _create_error_component(f"Layout '{layout_id}' not found")
@@ -227,6 +230,9 @@ async def _render_tab_layout_async(
 
     if not layout_id:
         return None
+
+    # Defensive: ensure layout_params is never None (can happen from JSON null)
+    layout_params = layout_params or {}
 
     registration = get_layout(layout_id)
     if not registration:
@@ -437,7 +443,6 @@ def init(prism_id: str, app: "Dash") -> None:
         )
         async def render_prism_content_async(content_id, data):
             """Async callback to render a tab's content."""
-            print("render_prism_content_async %s, %s" % (content_id, data))
             logger.info("render_prism_content_async %s, %s", content_id, data)
 
             if not content_id or not data:
@@ -446,8 +451,9 @@ def init(prism_id: str, app: "Dash") -> None:
             tab_id = content_id.get("index")
 
             layout_id = data.get("layoutId")
-            layout_params = data.get("layoutParams", {})
-            layout_options = data.get("layoutOptions", "")
+            # Use `or {}` to handle both missing keys AND explicit null from JSON
+            layout_params = data.get("layoutParams") or {}
+            layout_option = data.get("layoutOption") or ""
 
             if not layout_id:
                 raise PreventUpdate
@@ -468,15 +474,15 @@ def init(prism_id: str, app: "Dash") -> None:
         )
         def render_prism_content(content_id, data):
             """Sync callback to render a tab's content."""
-            print("render_prism_content_async %s, %s" % (content_id, data))
             logger.info("render_prism_content %s, %s", content_id, data)
             if not content_id or not data:
                 raise PreventUpdate
 
             tab_id = content_id.get("index")
             layout_id = data.get("layoutId")
-            layout_params = data.get("layoutParams", {})
-            layout_options = data.get("layoutOption", "")
+            # Use `or {}` to handle both missing keys AND explicit null from JSON
+            layout_params = data.get("layoutParams") or {}
+            layout_option = data.get("layoutOption") or ""
 
             if not layout_id:
                 raise PreventUpdate
@@ -490,4 +496,4 @@ def init(prism_id: str, app: "Dash") -> None:
     # Log success
     layout_count = len(registry)
     mode = "async" if use_async else "sync"
-    print(f"✓ Prism initialized with {layout_count} layout(s) [{mode} mode]")
+    logger.info("Prism initialized with %d layout(s) [%s mode]", layout_count, mode)

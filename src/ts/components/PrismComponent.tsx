@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ConfigProvider } from '@context/ConfigContext';
 import { PrismProvider } from '@context/PrismContext';
 import { DndProvider } from '@context/DndProvider';
 import { WorkspaceView } from '@components/WorkspaceView';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 import type {
   RegisteredLayouts,
   Theme,
@@ -17,6 +18,20 @@ import type {
 } from '@types';
 import '../global.css';
 import { DashComponentProps } from 'props';
+
+/** Storage key prefix - must match PrismContext */
+const STORAGE_KEY_PREFIX = 'prism-workspace';
+
+/** Clear workspace from storage (used by workspace-level error boundary) */
+function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: string): void {
+  const key = componentId ? `${STORAGE_KEY_PREFIX}-${componentId}` : STORAGE_KEY_PREFIX;
+  try {
+    if (persistenceType === 'local') localStorage.removeItem(key);
+    else if (persistenceType === 'session') sessionStorage.removeItem(key);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 /**
  * Prism is an advanced multi-panel workspace manager for Plotly Dash.
@@ -132,7 +147,7 @@ export function Prism({
   registeredLayouts = {},
   theme = 'light',
   size = 'md',
-  maxTabs = 8,
+  maxTabs = 16,
   statusBarPosition = 'bottom',
   searchBarPlaceholder = 'Search layouts...',
   layoutTimeout = 30,
@@ -145,30 +160,40 @@ export function Prism({
   style,
   children,
 }: PrismProps) {
+  // Create stable callback for clearing storage from error boundary
+  const handleClearStorage = useCallback(() => {
+    clearWorkspaceStorage(persistence_type, id);
+  }, [persistence_type, id]);
+
   return (
     <div
       id={id}
       className={`prism-root prism-container prism-theme-${theme} prism-size-${size} bg-background text-foreground`}
       style={style}
     >
-      <ConfigProvider
-        componentId={id}
-        registeredLayouts={registeredLayouts}
-        theme={theme}
-        size={size}
-        maxTabs={maxTabs}
-        persistence={persistence}
-        persistenceType={persistence_type}
-        searchBarPlaceholder={searchBarPlaceholder}
-        statusBarPosition={statusBarPosition}
-        initialLayout={initialLayout}
+      <ErrorBoundary
+        level="workspace"
+        onClearStorage={persistence ? handleClearStorage : undefined}
       >
-        <PrismProvider updateWorkspace={updateWorkspace} setProps={setProps}>
-          <DndProvider>
-            <WorkspaceView actions={actions}>{children}</WorkspaceView>
-          </DndProvider>
-        </PrismProvider>
-      </ConfigProvider>
+        <ConfigProvider
+          componentId={id}
+          registeredLayouts={registeredLayouts}
+          theme={theme}
+          size={size}
+          maxTabs={maxTabs}
+          persistence={persistence}
+          persistenceType={persistence_type}
+          searchBarPlaceholder={searchBarPlaceholder}
+          statusBarPosition={statusBarPosition}
+          initialLayout={initialLayout}
+        >
+          <PrismProvider updateWorkspace={updateWorkspace} setProps={setProps}>
+            <DndProvider>
+              <WorkspaceView actions={actions}>{children}</WorkspaceView>
+            </DndProvider>
+          </PrismProvider>
+        </ConfigProvider>
+      </ErrorBoundary>
     </div>
   );
 }

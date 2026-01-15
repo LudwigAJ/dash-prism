@@ -5,6 +5,84 @@ import { useConfig } from '@context/ConfigContext';
 import type { Tab, ShareData } from '@types';
 
 /**
+ * Maximum size for share link data in bytes (~4KB).
+ * Base64 encoding adds ~33% overhead, so this keeps URLs reasonable.
+ */
+const MAX_SHARE_DATA_BYTES = 4096;
+
+/**
+ * Encode string to base64 using TextEncoder (modern, UTF-8 safe).
+ * Returns null if encoding fails or data exceeds size limit.
+ */
+function encodeShareData(data: string): string | null {
+  try {
+    const bytes = new TextEncoder().encode(data);
+    if (bytes.length > MAX_SHARE_DATA_BYTES) {
+      console.warn(`Share data exceeds ${MAX_SHARE_DATA_BYTES} bytes (${bytes.length})`);
+      return null;
+    }
+    // Convert Uint8Array to base64
+    const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join('');
+    return btoa(binString);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decode base64 string using TextDecoder (modern, UTF-8 safe).
+ * Returns null if decoding fails.
+ */
+function decodeShareData(encoded: string): string | null {
+  try {
+    // Validate base64 format (only valid characters)
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+      return null;
+    }
+    const binString = atob(encoded);
+    const bytes = Uint8Array.from(binString, (char) => char.codePointAt(0) ?? 0);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Type guard to validate ShareData structure.
+ * Ensures required fields exist and have correct types.
+ */
+function isValidShareData(data: unknown): data is ShareData {
+  if (typeof data !== 'object' || data === null) return false;
+
+  const obj = data as Record<string, unknown>;
+
+  // Required: layoutId must be a non-empty string
+  if (typeof obj.layoutId !== 'string' || obj.layoutId.trim() === '') {
+    return false;
+  }
+
+  // Optional: name must be string if present
+  if (obj.name !== undefined && typeof obj.name !== 'string') {
+    return false;
+  }
+
+  // Optional: layoutParams must be object if present
+  if (
+    obj.layoutParams !== undefined &&
+    (typeof obj.layoutParams !== 'object' || obj.layoutParams === null)
+  ) {
+    return false;
+  }
+
+  // Optional: layoutOption must be string if present
+  if (obj.layoutOption !== undefined && typeof obj.layoutOption !== 'string') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * useShareLinks - URL hash-based tab sharing
  *
  * - generateShareLink: Pure function (tab → URL string)
@@ -34,9 +112,13 @@ export function useShareLinks() {
       shareData.layoutOption = tab.layoutOption;
     }
 
-    // Encode as base64 JSON (UTF-8 safe)
+    // Encode as base64 JSON (UTF-8 safe, with size limit)
     const jsonStr = JSON.stringify(shareData);
-    const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+    const encoded = encodeShareData(jsonStr);
+    if (!encoded) {
+      console.warn('Share data too large or encoding failed');
+      return null;
+    }
     const currentUrl = window.location.href.split('#')[0];
     return `${currentUrl}#p:${encoded}`;
   }, []);
@@ -126,19 +208,29 @@ export function useShareLinks() {
 
     const encoded = hash.slice(3); // Remove '#p:'
 
+    // Validate and decode
+    const decoded = decodeShareData(encoded);
+    if (!decoded) {
+      toast.error('Invalid share link: decoding failed');
+      return;
+    }
+
+    let shareData: unknown;
     try {
-      // Decode base64 (UTF-8 safe)
-      const decoded = decodeURIComponent(escape(atob(encoded)));
-      const shareData = JSON.parse(decoded) as ShareData;
-
-      if (!shareData.layoutId) {
-        toast.error('Invalid share link: missing layout');
-        return;
-      }
-
-      spawnSharedTab(shareData);
+      shareData = JSON.parse(decoded);
     } catch {
-      toast.error('Invalid share link');
+      toast.error('Invalid share link: malformed data');
+      return;
+    }
+
+    // Type-safe validation
+    if (!isValidShareData(shareData)) {
+      toast.error('Invalid share link: missing or invalid fields');
+      return;
+    }
+
+    try {
+      spawnSharedTab(shareData);
     } finally {
       // Clear hash from URL (side effect, not Redux)
       if (window.history.replaceState) {

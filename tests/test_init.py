@@ -352,3 +352,76 @@ def test_init_with_mixed_content(dash_app: Dash) -> None:
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
     dash_prism.init("mixed-prism", dash_app)
     assert len(dash_app.callback_map) > 0
+
+
+# =============================================================================
+# layoutParams Null-Handling Tests
+# =============================================================================
+
+
+def test_zero_arg_layout_with_none_params(prism_app: Dash) -> None:
+    """Regression test: zero-argument layouts work when layoutParams is None.
+
+    This tests the fix for the critical bug where `data.get("layoutParams", {})`
+    returned None (not {}) when layoutParams was explicitly null from JSON,
+    causing `callback(**None)` to raise TypeError.
+    """
+    callback_invoked = []
+
+    @dash_prism.register_layout(id="zero-arg", name="Zero Arg Layout")
+    def zero_arg_layout():
+        callback_invoked.append(True)
+        return html.Div("Zero argument layout")
+
+    dash_prism.init("test-prism", prism_app)
+
+    # Simulate the internal _render_tab_layout call with None params
+    # (this is what happens when frontend sends layoutParams: null)
+    from dash_prism.init import _render_tab_layout
+
+    result = _render_tab_layout("tab-1", "zero-arg", None)
+
+    assert result is not None
+    assert len(callback_invoked) == 1
+
+
+def test_layout_with_empty_dict_params(prism_app: Dash) -> None:
+    """Test that layouts work correctly with empty dict params."""
+    callback_invoked = []
+
+    @dash_prism.register_layout(id="empty-params", name="Empty Params Layout")
+    def empty_params_layout():
+        callback_invoked.append(True)
+        return html.Div("Empty params layout")
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout
+
+    result = _render_tab_layout("tab-1", "empty-params", {})
+
+    assert result is not None
+    assert len(callback_invoked) == 1
+
+
+def test_layout_with_actual_params(prism_app: Dash) -> None:
+    """Test that layouts correctly receive actual parameters."""
+    received_params = {}
+
+    @dash_prism.register_layout(id="with-params", name="With Params Layout")
+    def with_params_layout(user_id: str, count: str = "10"):
+        received_params["user_id"] = user_id
+        received_params["count"] = count
+        return html.Div(f"User: {user_id}, Count: {count}")
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout
+
+    result = _render_tab_layout(
+        "tab-1", "with-params", {"user_id": "abc123", "count": "5"}
+    )
+
+    assert result is not None
+    assert received_params["user_id"] == "abc123"
+    assert received_params["count"] == "5"

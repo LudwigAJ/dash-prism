@@ -7,13 +7,11 @@ in integration tests. These utilities follow Dash testing best practices:
 - Use reliable CSS selectors (data-testid)
 - Use ActionChains with .pause() for DnD operations
 - Check for browser console errors
-
-See DASH_TESTING_GUIDELINES.md for more details.
 """
 
 from __future__ import annotations
 
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
@@ -40,9 +38,52 @@ DROP_ZONE_BOTTOM = "[data-testid^='prism-drop-zone-bottom']"
 
 
 # =============================================================================
-# Wait Helpers - explicit waits per Dash testing best practices
+# Layout Stabilization Helpers
 # =============================================================================
-def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 5.0) -> bool:
+def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> bool:
+    """
+    Wait until panels have non-zero dimensions (layout is stable).
+
+    This is critical for headless Chrome where ResizeObserver may not fire
+    immediately, causing react-split-pane to not render children.
+
+    Parameters
+    ----------
+    dash_duo : DashComposite
+        The dash testing fixture.
+    timeout : float
+        Maximum wait time in seconds.
+
+    Returns
+    -------
+    bool
+        True if all panels have non-zero dimensions.
+    """
+
+    def panels_have_size(driver):
+        panels = driver.find_elements(By.CSS_SELECTOR, PANEL_SELECTOR)
+        if not panels:
+            return False
+        for panel in panels:
+            rect = panel.rect
+            if rect["width"] <= 0 or rect["height"] <= 0:
+                return False
+        return True
+
+    try:
+        WebDriverWait(dash_duo.driver, timeout).until(
+            panels_have_size, message="Panels do not have non-zero dimensions"
+        )
+        return True
+    except Exception:
+        return False
+
+
+# =============================================================================
+# Wait Helpers - explicit waits per Dash testing best practices
+# Default timeout is 10s for reliability in headless Chrome.
+# =============================================================================
+def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> bool:
     """
     Wait until the number of tabs equals expected_count.
 
@@ -78,7 +119,7 @@ def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 5.0) -> b
     return True
 
 
-def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 5.0) -> bool:
+def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -> bool:
     """
     Wait until the number of panels equals expected_count.
 
@@ -89,7 +130,7 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 5.0) ->
     expected_count : int
         Expected number of panels.
     timeout : float
-        Maximum wait time in seconds.
+        Maximum wait time in seconds (default 10s).
 
     Returns
     -------
@@ -107,7 +148,7 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 5.0) ->
     return True
 
 
-def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 3.0) -> bool:
+def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) -> bool:
     """
     Wait until an element is no longer visible.
 
@@ -118,7 +159,7 @@ def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 3.0) ->
     selector : str
         CSS selector for the element.
     timeout : float
-        Maximum wait time in seconds.
+        Maximum wait time in seconds (default 5s).
 
     Returns
     -------
@@ -132,7 +173,7 @@ def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 3.0) ->
     return True
 
 
-def wait_for_drop_zones_visible(dash_duo, timeout: float = 3.0) -> bool:
+def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> bool:
     """
     Wait for drop zone elements to appear during drag.
 
@@ -144,7 +185,7 @@ def wait_for_drop_zones_visible(dash_duo, timeout: float = 3.0) -> bool:
     dash_duo : DashComposite
         The dash testing fixture.
     timeout : float
-        Maximum wait time.
+        Maximum wait time (default 5s).
 
     Returns
     -------
@@ -477,6 +518,8 @@ def perform_drag_and_drop(
 
     @dnd-kit's PointerSensor requires >8px initial movement to activate drag.
     This function uses ActionChains chaining with .pause() for reliable event processing.
+    Uses incremental "wiggle" motion to ensure multiple pointermove events fire,
+    which helps headless Chrome reliably exceed the activation threshold.
 
     Per DASH_TESTING_GUIDELINES.md:
     - Use ActionChains chaining (not time.sleep)
@@ -496,18 +539,34 @@ def perform_drag_and_drop(
         Y offset from target center (default 0).
     initial_offset : int
         Initial movement to trigger drag (must be >8px, default 15).
+        Note: Now uses incremental 5px moves regardless of this value.
 
     Returns
     -------
     bool
         True if drag completed without error.
     """
+    # Scroll source element into view to prevent MoveTargetOutOfBoundsException
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});", source_element
+    )
+
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_element).pause(0.5).move_by_offset(
-        initial_offset, initial_offset
-    ).pause(0.3).move_to_element_with_offset(target_element, offset_x, offset_y).pause(
-        0.5
-    ).release().perform()
+
+    # Grab the element
+    actions.click_and_hold(source_element).pause(0.2)
+
+    # Incremental "wiggle" movement to reliably exceed 8px activation threshold
+    # Multiple small moves generate multiple mousemove/pointermove events
+    actions.move_by_offset(5, 0).pause(0.1)
+    actions.move_by_offset(5, 0).pause(0.1)
+    actions.move_by_offset(5, 0).pause(0.1)
+
+    # Move to target with optional offset
+    actions.move_to_element_with_offset(target_element, offset_x, offset_y).pause(0.3)
+
+    # Release
+    actions.release().perform()
     return True
 
 
@@ -554,6 +613,12 @@ def drag_tab_to_position(
     source_tab = tabs[source_tab_index]
     target_tab = tabs[target_tab_index]
 
+    # Scroll tab bar into view to prevent MoveTargetOutOfBoundsException
+    # Scroll the source tab into view first
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", source_tab
+    )
+
     # Calculate offset direction based on position (drop to left or right of target)
     # Moving forward: drop on right side of target
     # Moving backward: drop on left side of target
@@ -564,11 +629,37 @@ def drag_tab_to_position(
         # Moving backward - offset to left side of target
         offset_x = -10
 
-    # Use ActionChains chaining with pauses for @dnd-kit event processing
+    # Use JavaScript to get accurate element centers for reliable drag
+    source_rect = dash_duo.driver.execute_script(
+        "var r = arguments[0].getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2};",
+        source_tab,
+    )
+    target_rect = dash_duo.driver.execute_script(
+        "var r = arguments[0].getBoundingClientRect(); return {x: r.x + r.width/2 + arguments[1], y: r.y + r.height/2};",
+        target_tab,
+        offset_x,
+    )
+
+    # Use ActionChains with move_by_offset for more reliable headless Chrome behavior
+    # All movements relative, no element-based positioning
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 0).pause(
-        0.3
-    ).move_to_element_with_offset(target_tab, offset_x, 0).pause(0.5).release().perform()
+    actions.move_to_element(source_tab).pause(0.1)
+    actions.click_and_hold().pause(0.2)
+
+    # Incremental "wiggle" movement to reliably exceed 8px activation threshold
+    actions.move_by_offset(5, 0).pause(0.1)
+    actions.move_by_offset(5, 0).pause(0.1)
+    actions.move_by_offset(5, 0).pause(0.1)
+
+    # Calculate relative offset from current position to target
+    # Current position after wiggle: source center + 15px
+    current_x = source_rect["x"] + 15
+    current_y = source_rect["y"]
+    delta_x = int(target_rect["x"] - current_x)
+    delta_y = int(target_rect["y"] - current_y)
+
+    actions.move_by_offset(delta_x, delta_y).pause(0.3)
+    actions.release().perform()
 
     return True
 
@@ -583,13 +674,10 @@ def drag_tab_to_panel_edge(
     """
     Drag a tab to a panel edge to trigger panel splitting.
 
-    NOTE: Panel split tests are currently skipped due to react-split-pane
-    ResizeObserver issues in headless Chrome. This function is retained
-    for future use when the issue is resolved.
-
     Uses a two-phase approach:
-    1. Start drag to make drop zones appear
-    2. Move to the target drop zone and release
+    1. Wait for layout to stabilize (panels have non-zero dimensions)
+    2. Start drag to make drop zones appear
+    3. Move to the target drop zone and release
 
     Parameters
     ----------
@@ -609,6 +697,12 @@ def drag_tab_to_panel_edge(
     bool
         True if operation completed.
     """
+    # Wait for layout to stabilize before attempting drag
+    wait_for_panel_layout_stable(dash_duo, timeout=5.0)
+
+    # Extra wait for React to settle under parallel execution
+    dash_duo.wait_for_element(PANEL_SELECTOR, timeout=5)
+
     panels = get_panels(dash_duo)
     if source_panel_index >= len(panels) or target_panel_index >= len(panels):
         return False
@@ -627,11 +721,20 @@ def drag_tab_to_panel_edge(
     source_y = source_rect["y"] + source_rect["height"] / 2
 
     # Phase 1: Start drag to make drop zones appear
+    # Use longer pauses for stability under parallel execution
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(0.5).perform()
+    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(1.0).perform()
 
-    # Find the drop zone element now that drag is active
+    # Wait for drop zones to appear (they only exist during active drag)
     drop_zone_selector = f"[data-testid^='prism-drop-zone-{edge}']"
+    try:
+        WebDriverWait(dash_duo.driver, 5.0).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, drop_zone_selector))
+        )
+    except Exception:
+        ActionChains(dash_duo.driver).release().perform()
+        return False
+
     drop_zones = dash_duo.driver.find_elements(By.CSS_SELECTOR, drop_zone_selector)
 
     if not drop_zones:
@@ -653,9 +756,13 @@ def drag_tab_to_panel_edge(
     delta_x = int(dz_center_x - current_x)
     delta_y = int(dz_center_y - current_y)
 
-    # Move to drop zone and release
+    # Move to drop zone and release with longer pause
     actions2 = ActionChains(dash_duo.driver)
-    actions2.move_by_offset(delta_x, delta_y).pause(0.3).release().perform()
+    actions2.move_by_offset(delta_x, delta_y).pause(1.0).release().pause(1.0).perform()
+
+    # Wait for React to process the drop action and re-render
+    # This explicit wait is critical for parallel test execution
+    wait_for_panel_layout_stable(dash_duo, timeout=10.0)
 
     return True
 
@@ -708,17 +815,17 @@ def drag_tab_to_other_panel(
 
     # Use ActionChains for the drag operation
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(0.3)
+    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(1.0)
 
     if target_tabs:
         # Drop onto the first tab in target panel
-        actions.move_to_element(target_tabs[0]).pause(0.5).release().perform()
+        actions.move_to_element(target_tabs[0]).pause(1.0).release().pause(1.0).perform()
     else:
         # No tabs in target panel - drop on the panel itself (upper area)
         target_panel_rect = target_panel.rect
         actions.move_to_element_with_offset(
             target_panel, 0, -target_panel_rect["height"] // 3
-        ).pause(0.5).release().perform()
+        ).pause(1.0).release().pause(1.0).perform()
 
     return True
 
@@ -753,9 +860,7 @@ def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> N
 
     # Use chained ActionChains with pause() - not time.sleep()
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(
-        0.5
-    ).perform()  # >8px to trigger PointerSensor
+    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(1.0).perform()  # >8px to trigger PointerSensor
 
 
 def cancel_drag_with_escape(dash_duo) -> None:
@@ -770,4 +875,4 @@ def cancel_drag_with_escape(dash_duo) -> None:
         The dash testing fixture.
     """
     actions = ActionChains(dash_duo.driver)
-    actions.send_keys(Keys.ESCAPE).pause(0.3).perform()
+    actions.send_keys(Keys.ESCAPE).pause(1.0).perform()

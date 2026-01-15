@@ -13,10 +13,24 @@ Utility functions are defined in testutils.py.
 
 from __future__ import annotations
 
+import socket
 import pytest
 from dash import Dash, html, Input, Output
 from selenium.webdriver.chrome.options import Options
 import dash_prism
+
+
+def get_free_port() -> int:
+    """
+    Find and return an available port by binding to port 0.
+
+    This is thread-safe and avoids port conflicts in parallel test execution.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+    return port
 
 # Import all test utilities from testutils module
 from testutils import (
@@ -36,6 +50,7 @@ from testutils import (
     wait_for_panel_count,
     wait_for_element_invisible,
     wait_for_drop_zones_visible,
+    wait_for_panel_layout_stable,
     # Element getters
     get_tabs,
     get_panels,
@@ -80,7 +95,11 @@ def pytest_setup_options():
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-infobars")
     options.add_argument("--disable-browser-side-navigation")
-    options.add_argument("--disable-features=VizDisplayCompositor")
+    # Headless stability flags for @dnd-kit pointer/mouse event handling
+    options.add_argument("--force-device-scale-factor=1")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--disable-backgrounding-occluded-windows")
     return options
 
 
@@ -162,58 +181,88 @@ def prism_app_with_layouts(dash_duo):
     # Initialize Prism with callbacks
     dash_prism.init("prism", app)
 
-    # Start server and navigate to app
-    dash_duo.start_server(app)
+    # Get a free port to avoid conflicts in parallel test execution
+    port = get_free_port()
 
-    # Explicitly set window size after launch (critical for headless mode!)
-    # --window-size argument alone may not be respected in all cases
-    dash_duo.driver.set_window_size(1920, 1080)
+    # CRITICAL: Inject ResizeObserver patch BEFORE app mount via Chrome DevTools Protocol
+    # This ensures all observers created during React mount use the patched implementation.
+    # The previous approach of patching after start_server() was too late - react-split-pane
+    # creates its observers during initial mount and never picks up the post-hoc patch.
+    dash_duo.driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+            (function() {
+                const OriginalResizeObserver = window.ResizeObserver;
+                if (!OriginalResizeObserver) return;
 
-    # Patch ResizeObserver to fire immediately in headless mode
-    # react-split-pane relies on ResizeObserver to measure container before rendering children
-    dash_duo.driver.execute_script(
-        """
-        // Store original ResizeObserver
-        const OriginalResizeObserver = window.ResizeObserver;
+                window.ResizeObserver = class PatchedResizeObserver {
+                    constructor(callback) {
+                        this.callback = callback;
+                        this.observer = new OriginalResizeObserver((entries, observer) => {
+                            callback(entries, observer);
+                        });
+                    }
 
-        // Create patched version that fires callback immediately
-        window.ResizeObserver = class PatchedResizeObserver {
-            constructor(callback) {
-                this.callback = callback;
-                this.observer = new OriginalResizeObserver((entries, observer) => {
-                    callback(entries, observer);
-                });
-            }
+                    observe(target, options) {
+                        this.observer.observe(target, options);
 
-            observe(target, options) {
-                this.observer.observe(target, options);
+                        // Fire callback immediately AND retry until non-zero dimensions
+                        // This is critical for headless Chrome where initial rects may be 0x0
+                        const fireCallback = (attempt = 0) => {
+                            const rect = target.getBoundingClientRect();
+                            const entry = {
+                                target,
+                                contentRect: rect,
+                                borderBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
+                                contentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }]
+                            };
+                            this.callback([entry], this.observer);
 
-                // Fire callback immediately with current dimensions
-                // This ensures react-split-pane renders children in headless mode
-                requestAnimationFrame(() => {
-                    const rect = target.getBoundingClientRect();
-                    if (rect.width > 0 || rect.height > 0) {
-                        const entry = {
-                            target,
-                            contentRect: rect,
-                            borderBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
-                            contentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }]
+                            // Retry up to 10 times if dimensions are zero
+                            if ((rect.width === 0 && rect.height === 0) && attempt < 10) {
+                                requestAnimationFrame(() => fireCallback(attempt + 1));
+                            }
                         };
-                        this.callback([entry], this.observer);
+                        requestAnimationFrame(() => fireCallback(0));
+                    }
+
+                    unobserve(target) {
+                        this.observer.unobserve(target);
+                    }
+
+                    disconnect() {
+                        this.observer.disconnect();
+                    }
+                };
+
+                // Suppress ResizeObserver loop errors
+                window.addEventListener('error', e => {
+                    if (e.message && e.message.includes('ResizeObserver loop')) {
+                        e.stopImmediatePropagation();
                     }
                 });
-            }
 
-            unobserve(target) {
-                this.observer.unobserve(target);
-            }
+                console.log('[Test] ResizeObserver patched via CDP before app mount');
+            })();
+            """
+        },
+    )
 
-            disconnect() {
-                this.observer.disconnect();
-            }
-        };
+    # Explicitly set window size BEFORE server start (critical for headless mode!)
+    dash_duo.driver.set_window_size(1920, 1080)
 
-        console.log('ResizeObserver patched for headless mode');
+    # Start server on the dynamically assigned port
+    dash_duo.start_server(app, port=port)
+
+    # Force a resize event after mount to trigger any pending observers
+    dash_duo.driver.execute_script("window.dispatchEvent(new Event('resize'));")
+    
+    # Log container dimensions for debugging
+    dash_duo.driver.execute_script(
+        """
+        console.log('[Test] Initial container dimensions:', 
+            document.querySelector('.prism-container')?.getBoundingClientRect() || 'not found');
     """
     )
 

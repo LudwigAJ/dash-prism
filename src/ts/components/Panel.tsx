@@ -11,7 +11,8 @@ import type { TabId, DashComponent } from '@types';
 import { cn } from '@utils/cn';
 import { isLeafPanel, getLeafPanelIds } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
-import { ErrorLayout, NewLayout } from '@components/layouts';
+import { NewLayout } from '@components/layouts';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 
 type PanelProps = {
   panel: PanelType;
@@ -157,9 +158,9 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                 forceMount={true}
                 className="min-h-full data-[state=inactive]:hidden"
               >
-                <ErrorLayout>
+                <ErrorBoundary>
                   {!tab.layoutId ? <NewLayout tabId={tab.id} /> : <DashContentRenderer tab={tab} />}
-                </ErrorLayout>
+                </ErrorBoundary>
               </TabsContent>
             ))}
           </div>
@@ -196,9 +197,9 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
   // Leaf panel → render LeafPanel directly (caller wraps in Pane if needed)
   if (isLeaf) {
     return (
-      <ErrorLayout>
+      <ErrorBoundary>
         <LeafPanel panel={panel} />
-      </ErrorLayout>
+      </ErrorBoundary>
     );
   }
 
@@ -222,17 +223,17 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
           maxSize="100%"
           className="h-full w-full overflow-hidden"
         >
-          <ErrorLayout>
+          <ErrorBoundary>
             <LeafPanel panel={child} />
-          </ErrorLayout>
+          </ErrorBoundary>
         </Pane>
       );
     } else {
       // Container → recurse directly (no Pane wrapper) with error boundary
       return (
-        <ErrorLayout key={child.id}>
+        <ErrorBoundary key={child.id}>
           <Panel panel={child} />
-        </ErrorLayout>
+        </ErrorBoundary>
       );
     }
   });

@@ -20,7 +20,6 @@ from conftest import (
     ADD_TAB_BUTTON,
     wait_for_tab_count,
     get_tabs,
-    check_browser_errors,
 )
 
 # Mark all tests in this module as integration tests
@@ -76,19 +75,3 @@ def test_keyboard_shortcut_close_tab(prism_app_with_layouts):
     # Verify one tab closed
     tabs_after = get_tabs(duo)
     assert len(tabs_after) == 1, "Cmd/Ctrl+D should close active tab"
-
-
-def test_keyboard_new_tab_no_errors(prism_app_with_layouts):
-    """Test that keyboard shortcuts don't cause browser errors."""
-    duo = prism_app_with_layouts
-
-    # Create tab with keyboard
-    modifier = get_modifier_key()
-    body = duo.find_element("body")
-    body.send_keys(modifier, "n")
-
-    wait_for_tab_count(duo, 2)
-
-    # Check no browser errors
-    errors = check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"

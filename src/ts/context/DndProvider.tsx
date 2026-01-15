@@ -4,9 +4,11 @@ import {
   DragOverlay,
   closestCenter,
   KeyboardSensor,
+  MouseSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  MeasuringStrategy,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
@@ -36,11 +38,17 @@ export function DndProvider({ children }: DndProviderProps) {
     return tabCount === 1 && leafPanelIds.length === 1;
   }, [state.tabs?.length, state.panel]);
 
-  // Configure sensors (pointer + keyboard for accessibility)
+  // Configure sensors (pointer + mouse fallback + keyboard for accessibility)
+  // MouseSensor added as fallback for headless Chrome where PointerEvents may not fire reliably
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8, // Start drag after 8px movement
+      },
+    }),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8, // Same constraint for Selenium ActionChains compatibility
       },
     }),
     useSensor(KeyboardSensor, {
@@ -190,6 +198,11 @@ export function DndProvider({ children }: DndProviderProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.Always,
+        },
+      }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

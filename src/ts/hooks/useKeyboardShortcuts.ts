@@ -43,7 +43,8 @@ export function useKeyboardShortcuts() {
   const createTab = useCallback(
     (panelId: PanelId) => {
       const panelTabIds = state.panelTabs[panelId] ?? [];
-      if (panelTabIds.length >= maxTabs) return;
+      // maxTabs < 1 means unlimited; reducer also enforces this
+      if (maxTabs >= 1 && panelTabIds.length >= maxTabs) return;
 
       dispatch({ type: 'ADD_TAB', payload: { panelId } });
     },
@@ -136,7 +137,8 @@ export function useKeyboardShortcuts() {
     if (!tab) return;
 
     const panelTabIds = state.panelTabs[state.activePanelId] ?? [];
-    if (panelTabIds.length >= maxTabs) return;
+    // maxTabs < 1 means unlimited; reducer also enforces this
+    if (maxTabs >= 1 && panelTabIds.length >= maxTabs) return;
 
     dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
   }, [getActiveTab, state.panelTabs, state.activePanelId, maxTabs, dispatch]);

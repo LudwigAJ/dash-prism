@@ -1,0 +1,11 @@
+# Test/Demo dependencies
+# Install with: pip install -r requirements-test.txt
+# Use this to run usage.py demos
+
+# Include dev dependencies
+-r requirements-dev.txt
+
+# Additional dependencies for usage.py demos
+dash-ag-grid>=31.0.0
+pandas>=2.0.0
+numpy>=1.24.0

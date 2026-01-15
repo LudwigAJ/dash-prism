@@ -366,10 +366,20 @@ Configuration
        id='workspace',
        theme='light',           # or 'dark'
        size='md',               # 'xs', 'sm', 'md', 'lg', 'xl'
-       maxTabs=8,               # Max tabs per panel
+       maxTabs=16,              # Max tabs globally (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
        statusBarPosition='bottom',  # or 'top'
    )
+
+Tab Limits
+^^^^^^^^^^
+
+The ``maxTabs`` parameter controls the maximum number of tabs allowed in
+the entire workspace. This is a **global** limit, not per-panel.
+
+- Default: ``16``
+- Set to ``0`` (or any value less than ``1``) for unlimited tabs
+- When the limit is reached, new tab actions are blocked with a console warning
 
 Caveats
 -------
