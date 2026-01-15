@@ -1,0 +1,28 @@
+name: Build Documentation
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm ci
+      - run: pip install -e . sphinx sphinx-rtd-theme
+      - run: npm run build:js
+
+      - name: Build docs
+        run: cd docs && make html
