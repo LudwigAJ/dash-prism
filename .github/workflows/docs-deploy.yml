@@ -1,9 +1,7 @@
-name: Documentation
+name: Deploy Documentation
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 permissions:
@@ -16,8 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,18 +41,5 @@ jobs:
         with:
           path: docs/_build/html
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
         id: deployment
-
-      - name: Skip deployment (not main branch)
-        if: github.ref != 'refs/heads/main' || github.event_name != 'push'
-        run: echo "Skipping deployment - only deploys on main branch"
