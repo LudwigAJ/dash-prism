@@ -1,7 +1,7 @@
 # Dash Prism
 
 [![CI](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml)
-[![Docs](https://github.com/LudwigAJ/dash-prism/actions/workflows/docs.yml/badge.svg)](https://ludwigaj.github.io/dash-prism/)
+[![Docs](https://github.com/LudwigAJ/dash-prism/actions/workflows/docs-build.yml/badge.svg)](https://ludwigaj.github.io/dash-prism/)
 [![PyPI](https://img.shields.io/pypi/v/dash-prism)](https://pypi.org/project/dash-prism/)
 [![Python](https://img.shields.io/pypi/pyversions/dash-prism)](https://pypi.org/project/dash-prism/)
 
