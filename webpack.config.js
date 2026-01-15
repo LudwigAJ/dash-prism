@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
 
 const packagejson = require('./package.json');
@@ -45,6 +46,9 @@ module.exports = function (env, argv) {
             minimize: true,
         },
         plugins: [
+            new webpack.DefinePlugin({
+                'process.env.APP_VERSION': JSON.stringify(packagejson.version),
+            }),
             new CopyPlugin({
                 patterns: [
                     {
