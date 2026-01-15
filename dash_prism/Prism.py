@@ -200,47 +200,6 @@ class Prism(PrismComponent):
     # Override _type to match what init.py expects
     _type = "Prism"
 
-    def __init__(
-        self,
-        id: str | dict[Unknown, Unknown],
-        *,
-        actions: list[Any] | None = None,
-        initialLayout: str | None = None,
-        layoutTimeout: int = 30,
-        maxTabs: int = -1,
-        persistence: bool = False,
-        persistence_type: Literal["local", "session", "memory"] = "memory",
-        searchBarPlaceholder: str = "Search...",
-        size: Literal["sm", "md", "lg"] = "md",
-        statusBarPosition: Literal["top", "bottom"] = "bottom",
-        style: dict[str, Any] | None = None,
-        theme: Literal["light", "dark"] = "light",
-        # Output properties (read-only, set by component)
-        readWorkspace=None,
-        # Input properties (set via callbacks)
-        updateWorkspace=None,
-        # Internal properties (managed by dash_prism.init)
-        registeredLayouts=None,
-        children: list[Any] | None = None,
-        **kwargs: Any,
-    ):
+    def __init__(self, **kwargs: Any):
         """Initialize Prism component"""
-        super().__init__(
-            id=id,
-            actions=actions,
-            initialLayout=initialLayout,
-            layoutTimeout=layoutTimeout,
-            maxTabs=maxTabs,
-            persistence=persistence,
-            persistence_type=persistence_type,
-            searchBarPlaceholder=searchBarPlaceholder,
-            size=size,
-            statusBarPosition=statusBarPosition,
-            style=style,
-            theme=theme,
-            readWorkspace=readWorkspace,
-            updateWorkspace=updateWorkspace,
-            registeredLayouts=registeredLayouts,
-            children=children,
-            **kwargs,
-        )
+        super().__init__(**kwargs)

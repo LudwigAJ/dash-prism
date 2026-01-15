@@ -50,10 +50,11 @@ jobs:
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
+          install-chromedriver: true
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
+          pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
