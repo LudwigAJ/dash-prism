@@ -35,7 +35,8 @@ export function useTabs(panelId: string) {
 
   const createTab = useCallback(
     (name = 'New Tab', layoutId?: string) => {
-      if (panelTabs.length >= maxTabs) {
+      // maxTabs < 1 means unlimited; reducer also enforces this
+      if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
         console.warn(`Max tabs (${maxTabs}) reached for panel ${panelId}`);
         return;
       }
@@ -56,8 +57,8 @@ export function useTabs(panelId: string) {
 
   const duplicateTab = useCallback(
     (tabId: string) => {
-      // Check maxTabs locally since it's a config constraint, not state-dependent
-      if (panelTabs.length >= maxTabs) {
+      // maxTabs < 1 means unlimited; reducer also enforces this
+      if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
         console.warn(`Max tabs (${maxTabs}) reached for panel ${panelId}`);
         return;
       }

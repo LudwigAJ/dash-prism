@@ -1,5 +1,10 @@
 import React, { createContext, useReducer, useEffect, useMemo, useState, useCallback } from 'react';
-import { prismReducer, initialState, type PrismState, type Action } from '@context/prismReducer';
+import {
+  createPrismReducer,
+  initialState,
+  type PrismState,
+  type Action,
+} from '@context/prismReducer';
 import { useConfig } from '@context/ConfigContext';
 import type {
   Workspace,
@@ -9,7 +14,6 @@ import type {
   Tab,
   RegisteredLayouts,
 } from '@types';
-import { getLeafPanelIds } from '@utils/panels';
 
 // ========== Persistence Helpers ==========
 
@@ -106,6 +110,8 @@ function createInitialState(
     return baseState;
   }
 
+  // Default: return initialState which already has one tab
+  // This guarantees there's always at least one tab on initial load
   return initialState;
 }
 
@@ -143,12 +149,18 @@ type PrismProviderProps = {
 
 export function PrismProvider({ children, updateWorkspace, setProps }: PrismProviderProps) {
   // Initialize from storage on mount
-  const { persistenceType, componentId, initialLayout, registeredLayouts } = useConfig();
+  const { persistence, persistenceType, componentId, initialLayout, registeredLayouts, maxTabs } =
+    useConfig();
+
+  // Create reducer with maxTabs config for global tab limit enforcement
+  const reducer = useMemo(() => createPrismReducer({ maxTabs }), [maxTabs]);
+
   const [state, dispatch] = useReducer(
-    prismReducer,
-    { persistenceType, componentId, initialLayout, registeredLayouts },
+    reducer,
+    { persistence, persistenceType, componentId, initialLayout, registeredLayouts },
     (deps) => {
-      const stored = getWorkspace(deps.persistenceType, deps.componentId);
+      // Only load from storage if persistence is enabled
+      const stored = deps.persistence ? getWorkspace(deps.persistenceType, deps.componentId) : null;
       return createInitialState(stored ?? undefined, deps.initialLayout, deps.registeredLayouts);
     }
   );
@@ -181,19 +193,10 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     }
   }, [updateWorkspace]);
 
-  // ===== ENSURE AT LEAST ONE TAB hook =====
-  useEffect(() => {
-    const leafPanelIds = getLeafPanelIds(state.panel);
-    const hasNoTabs = leafPanelIds.every((panelId) => !state.panelTabs[panelId]?.length);
-
-    if (hasNoTabs && leafPanelIds.length > 0) {
-      // Use setTimeout to avoid dispatching during render
-      const timer = setTimeout(() => {
-        dispatch({ type: 'ADD_TAB', payload: { panelId: leafPanelIds[0] } });
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [state.panel, state.panelTabs, dispatch]);
+  // Note: "Ensure at least one tab" logic is handled by createInitialState.
+  // The initialState always has one tab, and we only restore from storage
+  // if storedWorkspace.tabs has items. This eliminates the need for a
+  // useEffect that dispatches ADD_TAB with setTimeout.
 
   // ===== UPDATE readWorkspace (Prism → Dash) =====
   // Handled by useDashSync hook: immediate on mount, 500ms debounce thereafter
@@ -201,7 +204,8 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
   // ===== AUTO-SAVE TO STORAGE =====
   // Save state changes to storage based on persistence mode
   useEffect(() => {
-    if (persistenceType === 'memory') return; // No persistence needed
+    // Skip if persistence is disabled or using memory mode
+    if (!persistence || persistenceType === 'memory') return;
 
     const workspace: Partial<Workspace> = {
       tabs: state.tabs,
@@ -222,6 +226,7 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     state.activePanelId,
     state.favoriteLayouts,
     state.searchBarsHidden,
+    persistence,
     persistenceType,
     componentId,
   ]);

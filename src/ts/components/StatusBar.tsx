@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Info, Undo2, Lock } from 'lucide-react';
+import { Info, Undo2, Lock, Trash2 } from 'lucide-react';
 import { countLeafPanels } from '@utils/panels';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
@@ -57,8 +57,38 @@ export function StatusBar({
     if (canUndo) dispatch({ type: 'POP_UNDO' });
   }, [canUndo, dispatch]);
 
+  const { clearPersistedState } = usePrism();
+
+  const handleReset = useCallback(() => {
+    const confirmed = window.confirm(
+      'Are you sure you want to reset the workspace?\n\n' +
+        'This will clear all saved state and restore default settings.\n' +
+        'This action cannot be undone.'
+    );
+
+    if (confirmed) {
+      // Clear persisted storage (localStorage/sessionStorage)
+      clearPersistedState();
+      // Reset reducer state to initial
+      dispatch({ type: 'RESET_WORKSPACE' });
+    }
+  }, [clearPersistedState, dispatch]);
+
   return (
     <div className="prism-status-bar bg-surface border-border text-secondary flex items-center gap-2 border-t px-3 py-1.5 text-xs">
+      {/* Reset Button */}
+      <Tooltip content="Reset workspace (clear saved state)" delayDuration={300}>
+        <button
+          data-testid="prism-statusbar-reset"
+          className="text-secondary hover:text-destructive hover:bg-surface-dim rounded-sm p-1 transition-colors"
+          onClick={handleReset}
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </Tooltip>
+
+      <span className="text-border opacity-60">|</span>
+
       {/* Help Button */}
       <Tooltip content="Help" delayDuration={300}>
         <button
@@ -149,7 +179,9 @@ export function StatusBar({
 
       {/* Tab Count */}
       <div className="flex items-center gap-1">
-        <span className="text-foreground">{maxTabs > 0 ? `${tabCount}/${maxTabs}` : tabCount}</span>
+        <span className="text-foreground">
+          {maxTabs >= 1 ? `${tabCount}/${maxTabs}` : tabCount}
+        </span>
         {tabCount === 1 ? 'tab' : 'tabs'}
       </div>
 

@@ -6,7 +6,12 @@ This file provides a clean Python API that wraps the auto-generated PrismCompone
 
 from __future__ import annotations
 
+from typing import Any, Literal, TypedDict
+
+from narwhals import Unknown
+
 from .PrismComponent import PrismComponent
+
 
 
 class Prism(PrismComponent):
@@ -36,8 +41,9 @@ class Prism(PrismComponent):
         Options: ``'xs'`` (extra small), ``'sm'`` (small), ``'md'`` (medium, default),
         ``'lg'`` (large), ``'xl'`` (extra large). Defaults to ``'md'``.
     :type size: str
-    :param maxTabs: Maximum number of tabs allowed per panel. Prevents users from
-        creating too many tabs which could impact performance. Defaults to ``8``.
+    :param maxTabs: Maximum number of tabs allowed in the workspace. Prevents users
+        from creating too many tabs which could impact performance. Values less than
+        ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``.
     :type maxTabs: int
     :param searchBarPlaceholder: Placeholder text shown in the layout search bar.
         Defaults to ``'Search layouts...'``.
@@ -195,11 +201,46 @@ class Prism(PrismComponent):
     # Override _type to match what init.py expects
     _type = "Prism"
 
-    def __init__(self, **kwargs):
-        """Initialize Prism component.
-
-        :param kwargs: All parameters accepted by the Prism component.
-            See class docstring for full parameter list.
-        :type kwargs: dict
-        """
-        super().__init__(**kwargs)
+    def __init__(
+        self, 
+        id: str | dict[Unknown, Unknown],
+        *,
+        actions: list[Any] | None = None,
+        initialLayout: str | None = None,
+        layoutTimeout: int = 30,
+        maxTabs: int = -1,
+        persistence: bool = False,
+        persistence_type: Literal["local", "session", "memory"] = "memory",
+        searchBarPlaceholder: str = "Search...",
+        size: Literal["sm", "md", "lg"] = "md",
+        statusBarPosition: Literal["top", "bottom"] = "bottom",
+        style: dict[str, Any] | None = None,
+        theme: Literal["light", "dark"] = "light",
+        # Output properties (read-only, set by component)
+        readWorkspace: dict[str, Any] | None = None,
+        # Input properties (set via callbacks)
+        updateWorkspace: dict[str, Any] | None = None,
+        # Internal properties (managed by dash_prism.init)
+        registeredLayouts: dict[str, Any] | None = None,
+        children: list[Any] | None = None,
+        **kwargs: Any
+    ):
+        """Initialize Prism component"""
+        super().__init__(
+            id=id,
+            actions=actions,
+            initialLayout=initialLayout,
+            layoutTimeout=layoutTimeout,
+            maxTabs=maxTabs,
+            persistence=persistence,
+            persistence_type=persistence_type,
+            searchBarPlaceholder=searchBarPlaceholder,
+            size=size,
+            statusBarPosition=statusBarPosition,
+            style=style,
+            theme=theme,
+            readWorkspace=readWorkspace,    # pyright: ignore[reportArgumentType]
+            updateWorkspace=updateWorkspace,  # pyright: ignore[reportArgumentType]
+            registeredLayouts=registeredLayouts,  # pyright: ignore[reportArgumentType]
+            children=children,
+            **kwargs)

@@ -6,10 +6,17 @@
  * - Panel operations: SPLIT, COLLAPSE, RESIZE
  * - State invariants: panelTabs, activeTabIds consistency
  * - Edge cases: locked tabs, max tabs, undo stack
+ * - maxTabs enforcement: ADD_TAB, DUPLICATE_TAB blocked at limit
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { prismReducer, initialState, type PrismState, type Action } from './prismReducer';
+import {
+  prismReducer,
+  createPrismReducer,
+  initialState,
+  type PrismState,
+  type Action,
+} from './prismReducer';
 import type { Tab, Panel, PanelId, TabId } from '@types';
 
 // =============================================================================
@@ -884,6 +891,274 @@ describe('prismReducer', () => {
 
       expect(result.tabs).toEqual(state.tabs);
       expect(result.panel).toEqual(state.panel);
+    });
+  });
+
+  // ===========================================================================
+  // maxTabs Enforcement Tests
+  // ===========================================================================
+
+  describe('maxTabs enforcement', () => {
+    /**
+     * Create a state with a specific number of tabs for testing maxTabs limits.
+     */
+    function createStateWithTabs(tabCount: number): PrismState {
+      const panelId = 'test-panel' as PanelId;
+      const tabs: Tab[] = Array.from({ length: tabCount }, (_, i) => ({
+        id: `tab-${i}` as TabId,
+        name: `Tab ${i}`,
+        panelId,
+        createdAt: Date.now(),
+      }));
+
+      return {
+        tabs,
+        panel: {
+          id: panelId,
+          order: 0,
+          direction: 'horizontal',
+          children: [],
+          size: '100%',
+        },
+        panelTabs: { [panelId]: tabs.map((t) => t.id) },
+        activeTabIds: { [panelId]: tabs[0]?.id ?? ('' as TabId) },
+        activePanelId: panelId,
+        favoriteLayouts: [],
+        theme: 'light',
+        searchBarsHidden: false,
+        undoStack: [],
+        searchBarModes: {},
+        renamingTabId: null,
+      };
+    }
+
+    describe('ADD_TAB with maxTabs', () => {
+      it('blocks ADD_TAB when at maxTabs limit', () => {
+        const reducer = createPrismReducer({ maxTabs: 3 });
+        const state = createStateWithTabs(3); // Already at limit
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        // Tab count should remain at 3
+        expect(result.tabs).toHaveLength(3);
+      });
+
+      it('allows ADD_TAB when below maxTabs limit', () => {
+        const reducer = createPrismReducer({ maxTabs: 5 });
+        const state = createStateWithTabs(3);
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        expect(result.tabs).toHaveLength(4);
+      });
+
+      it('allows unlimited tabs when maxTabs is 0', () => {
+        const reducer = createPrismReducer({ maxTabs: 0 });
+        const state = createStateWithTabs(100);
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        expect(result.tabs).toHaveLength(101);
+      });
+
+      it('allows unlimited tabs when maxTabs is negative', () => {
+        const reducer = createPrismReducer({ maxTabs: -1 });
+        const state = createStateWithTabs(50);
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        expect(result.tabs).toHaveLength(51);
+      });
+    });
+
+    describe('DUPLICATE_TAB with maxTabs', () => {
+      it('blocks DUPLICATE_TAB when at maxTabs limit', () => {
+        const reducer = createPrismReducer({ maxTabs: 3 });
+        const state = createStateWithTabs(3);
+
+        const result = reducer(state, {
+          type: 'DUPLICATE_TAB',
+          payload: { tabId: 'tab-0' as TabId },
+        });
+
+        expect(result.tabs).toHaveLength(3);
+      });
+
+      it('allows DUPLICATE_TAB when below maxTabs limit', () => {
+        const reducer = createPrismReducer({ maxTabs: 5 });
+        const state = createStateWithTabs(3);
+
+        const result = reducer(state, {
+          type: 'DUPLICATE_TAB',
+          payload: { tabId: 'tab-0' as TabId },
+        });
+
+        expect(result.tabs).toHaveLength(4);
+        expect(result.tabs[3].name).toBe('Tab 0 (copy)');
+      });
+
+      it('allows unlimited duplicates when maxTabs is 0', () => {
+        const reducer = createPrismReducer({ maxTabs: 0 });
+        const state = createStateWithTabs(100);
+
+        const result = reducer(state, {
+          type: 'DUPLICATE_TAB',
+          payload: { tabId: 'tab-0' as TabId },
+        });
+
+        expect(result.tabs).toHaveLength(101);
+      });
+    });
+
+    describe('MOVE_TAB does not check maxTabs', () => {
+      it('allows MOVE_TAB regardless of tab count (no new tabs created)', () => {
+        const reducer = createPrismReducer({ maxTabs: 2 });
+        const state = createTwoPanelState(); // 3 tabs total
+
+        const result = reducer(state, {
+          type: 'MOVE_TAB',
+          payload: { tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId },
+        });
+
+        // Tab should be moved, not blocked
+        expect(result.tabs).toHaveLength(3);
+        const movedTab = result.tabs.find((t) => t.id === 'tab-1');
+        expect(movedTab?.panelId).toBe('panel-2');
+      });
+    });
+
+    describe('default maxTabs configuration', () => {
+      it('uses maxTabs of 16 by default', () => {
+        const reducer = createPrismReducer(); // No config
+        const state = createStateWithTabs(16);
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId },
+        });
+
+        // Should be blocked at 16
+        expect(result.tabs).toHaveLength(16);
+      });
+
+      it('allows 15th tab with default config', () => {
+        const reducer = createPrismReducer();
+        const state = createStateWithTabs(15);
+
+        const result = reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId },
+        });
+
+        expect(result.tabs).toHaveLength(16);
+      });
+    });
+  });
+
+  // ===========================================================================
+  // RESET_WORKSPACE Tests
+  // ===========================================================================
+
+  describe('RESET_WORKSPACE', () => {
+    it('resets state to initialState', () => {
+      const state = createTwoPanelState();
+      // Add some modifications
+      state.favoriteLayouts = ['layout-1', 'layout-2'];
+      state.searchBarsHidden = true;
+      state.undoStack = [{ tab: state.tabs[0], position: 0, panelId: state.tabs[0].panelId }];
+
+      const action: Action = { type: 'RESET_WORKSPACE' };
+      const result = prismReducer(state, action);
+
+      expect(result.tabs).toHaveLength(1); // initialState has 1 tab
+      expect(result.favoriteLayouts).toEqual([]);
+      expect(result.searchBarsHidden).toBe(false);
+      expect(result.undoStack).toEqual([]);
+    });
+
+    it('clears all ephemeral state', () => {
+      const state = createTestState();
+      state.renamingTabId = 'test-tab-1' as TabId;
+      state.searchBarModes = { 'test-panel-1': 'search' };
+
+      const action: Action = { type: 'RESET_WORKSPACE' };
+      const result = prismReducer(state, action);
+
+      expect(result.renamingTabId).toBeNull();
+      expect(result.searchBarModes).toEqual({});
+    });
+  });
+
+  // ===========================================================================
+  // DUPLICATE_TAB Deep Copy Tests
+  // ===========================================================================
+
+  describe('DUPLICATE_TAB layoutParams deep copy', () => {
+    it('creates an independent copy of layoutParams', () => {
+      const state = createTestState();
+      const originalParams = { key: 'original' };
+      state.tabs[0].layoutParams = originalParams;
+
+      const action: Action = {
+        type: 'DUPLICATE_TAB',
+        payload: { tabId: 'test-tab-1' as TabId },
+      };
+
+      const result = prismReducer(state, action);
+      const duplicate = result.tabs[1];
+
+      // Verify values are equal
+      expect(duplicate.layoutParams).toEqual({ key: 'original' });
+
+      // Verify it's a different object (deep copy)
+      expect(duplicate.layoutParams).not.toBe(originalParams);
+    });
+
+    it('mutating duplicate layoutParams does not affect original', () => {
+      const state = createTestState();
+      state.tabs[0].layoutParams = { key: 'original' };
+
+      const action: Action = {
+        type: 'DUPLICATE_TAB',
+        payload: { tabId: 'test-tab-1' as TabId },
+      };
+
+      const result = prismReducer(state, action);
+
+      // Mutate the duplicate's params (simulating what might happen)
+      // Note: In practice, immutability is enforced by Immer, but this tests the copy
+      const duplicateParams = result.tabs[1].layoutParams as Record<string, string>;
+      expect(duplicateParams.key).toBe('original');
+
+      // Original should still be unchanged
+      expect(result.tabs[0].layoutParams).toEqual({ key: 'original' });
+    });
+
+    it('handles undefined layoutParams correctly', () => {
+      const state = createTestState();
+      state.tabs[0].layoutParams = undefined;
+
+      const action: Action = {
+        type: 'DUPLICATE_TAB',
+        payload: { tabId: 'test-tab-1' as TabId },
+      };
+
+      const result = prismReducer(state, action);
+      const duplicate = result.tabs[1];
+
+      expect(duplicate.layoutParams).toBeUndefined();
     });
   });
 });

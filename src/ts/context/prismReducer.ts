@@ -210,6 +210,7 @@ const INITIAL_PANEL_ID: PanelId = generateShortId();
 const INITIAL_TAB_ID: TabId = generateShortId();
 
 export const initialState: PrismState = {
+  // PERSISTED STATE
   tabs: [
     {
       id: INITIAL_TAB_ID,
@@ -230,8 +231,10 @@ export const initialState: PrismState = {
   activeTabIds: { [INITIAL_PANEL_ID]: INITIAL_TAB_ID },
   activePanelId: INITIAL_PANEL_ID,
   favoriteLayouts: [],
-  theme: 'light',
   searchBarsHidden: false,
+  // NOT PERSISTED
+  theme: 'light',
+  // size: 'md',
   undoStack: [],
   searchBarModes: {},
   renamingTabId: null,
@@ -337,457 +340,534 @@ export type Action =
   | { type: 'TOGGLE_FAVORITE_LAYOUT'; payload: { layoutId: LayoutId } }
   | { type: 'POP_UNDO' }
   | { type: 'START_RENAME_TAB'; payload: { tabId: TabId } }
-  | { type: 'CLEAR_RENAME_TAB' };
+  | { type: 'CLEAR_RENAME_TAB' }
+  | { type: 'RESET_WORKSPACE' };
 
 // =============================================================================
-// Reducer
+// Reducer Config
 // =============================================================================
 
-export function prismReducer(state: PrismState, action: Action): PrismState {
-  return produce(state, (draft) => {
-    switch (action.type) {
-      // -----------------------------------------------------------------------
-      // Workspace Sync (Dash → Prism)
-      // -----------------------------------------------------------------------
-      case 'SYNC_WORKSPACE': {
-        const {
-          tabs,
-          panel,
-          activeTabIds,
-          activePanelId,
-          panelTabs,
-          favoriteLayouts,
-          searchBarsHidden,
-          theme,
-        } = action.payload;
-        // Use explicit undefined checks (not truthiness) to allow syncing empty arrays/strings
-        if (tabs !== undefined) draft.tabs = tabs;
-        if (panel !== undefined) draft.panel = panel;
-        if (panelTabs !== undefined) draft.panelTabs = panelTabs;
-        if (activeTabIds !== undefined) draft.activeTabIds = activeTabIds;
-        if (activePanelId !== undefined) draft.activePanelId = activePanelId;
-        if (favoriteLayouts !== undefined) draft.favoriteLayouts = favoriteLayouts;
-        if (searchBarsHidden !== undefined) draft.searchBarsHidden = searchBarsHidden;
-        if (theme !== undefined) draft.theme = theme;
-        break;
-      }
-
-      // -----------------------------------------------------------------------
-      // Tab Actions
-      // -----------------------------------------------------------------------
-
-      case 'ADD_TAB': {
-        const { panelId, name = 'New Tab', layoutId = undefined, params, option } = action.payload;
-        const newTab: Tab = {
-          id: generateShortId(),
-          name,
-          panelId,
-          layoutId,
-          layoutParams: params ?? undefined,
-          layoutOption: option ?? undefined,
-          createdAt: Date.now(),
-        };
-        draft.tabs.push(newTab);
-        handleAddTabToPanelTracking(draft, newTab.id, panelId);
-        draft.activeTabIds[panelId] = newTab.id;
-        draft.activePanelId = panelId;
-        break;
-      }
-
-      case 'REORDER_TAB': {
-        const { panelId, fromIndex, toIndex } = action.payload;
-        const panelTabIds = draft.panelTabs[panelId];
-        if (!panelTabIds || fromIndex < 0 || fromIndex >= panelTabIds.length) break;
-
-        const clampedToIndex = Math.max(0, Math.min(toIndex, panelTabIds.length - 1));
-        const [movedId] = panelTabIds.splice(fromIndex, 1);
-        panelTabIds.splice(clampedToIndex, 0, movedId);
-        break;
-      }
-
-      case 'REMOVE_TAB': {
-        const { tabId } = action.payload;
-        const tabIndex = findTabIndex(draft.tabs, tabId);
-        if (tabIndex === -1) break;
-
-        const tab = draft.tabs[tabIndex];
-        if (tab.locked) break;
-
-        const panelId = tab.panelId;
-
-        // Push to undo stack
-        const panelTabIds = draft.panelTabs[panelId] ?? [];
-        const position = panelTabIds.indexOf(tabId);
-        if (draft.undoStack.length >= 10) draft.undoStack.shift();
-        draft.undoStack.push({ tab: { ...tab } as Tab, position, panelId });
-
-        // Remove from tabs array
-        draft.tabs.splice(tabIndex, 1);
-
-        // Remove from panelTabs tracking
-        handleRemoveTabFromPanelTracking(draft, tabId, panelId);
-
-        // Update active tab
-        handleUpdateActiveTabAfterRemoval(draft, panelId, tabId);
-
-        // Collapse or spawn new tab
-        handleEnsurePanelHasTab(draft, panelId);
-        break;
-      }
-
-      case 'SELECT_TAB': {
-        const { tabId, panelId } = action.payload;
-        draft.activeTabIds[panelId] = tabId;
-        draft.activePanelId = panelId;
-        break;
-      }
-
-      case 'RENAME_TAB': {
-        const { tabId, name } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.name = name;
-        // Clear rename mode after committing
-        draft.renamingTabId = null;
-        break;
-      }
-
-      case 'LOCK_TAB': {
-        const { tabId } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.locked = true;
-        break;
-      }
-
-      case 'UNLOCK_TAB': {
-        const { tabId } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.locked = false;
-        break;
-      }
-
-      case 'TOGGLE_TAB_LOCK': {
-        const { tabId } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.locked = !tab.locked;
-        break;
-      }
-
-      case 'DUPLICATE_TAB': {
-        const { tabId } = action.payload;
-        const originalTab = findTabById(draft.tabs, tabId);
-        if (!originalTab) break;
-
-        const newTab: Tab = {
-          ...originalTab,
-          id: generateShortId(),
-          name: `${originalTab.name} (copy)`,
-          createdAt: Date.now(),
-          locked: false,
-        };
-        draft.tabs.push(newTab);
-        handleAddTabToPanelTracking(draft, newTab.id, newTab.panelId);
-        draft.activeTabIds[newTab.panelId] = newTab.id;
-        break;
-      }
-
-      case 'UPDATE_TAB_LAYOUT': {
-        const { tabId, layoutId, name, params } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) {
-          tab.layoutId = layoutId;
-          tab.name = name;
-          tab.layoutParams = params;
-          tab.loading = true;
-        }
-        break;
-      }
-
-      case 'MOVE_TAB': {
-        const { tabId, targetPanelId, targetIndex } = action.payload;
-
-        const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId, targetIndex);
-        if (!sourcePanelId) break; // No-op or tab not found
-
-        // Update active tabs
-        draft.activeTabIds[targetPanelId] = tabId;
-        draft.activePanelId = targetPanelId;
-        handleUpdateActiveTabAfterRemoval(draft, sourcePanelId, tabId);
-
-        // Collapse source if empty
-        handleCollapseIfEmpty(draft, sourcePanelId);
-        break;
-      }
-
-      case 'SET_TAB_ICON': {
-        const { tabId, icon } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.icon = icon;
-        break;
-      }
-
-      case 'SET_TAB_STYLE': {
-        const { tabId, style } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.style = style;
-        break;
-      }
-
-      case 'SET_LOADING': {
-        const { tabId, loading } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        if (tab) tab.loading = loading;
-        break;
-      }
-
-      // -----------------------------------------------------------------------
-      // Panel Actions
-      // -----------------------------------------------------------------------
-
-      case 'SPLIT_PANEL': {
-        const { panelId, direction, tabId, position = 'after' } = action.payload;
-
-        const panelToSplit = findPanelById(draft.panel, panelId);
-        if (!panelToSplit) break;
-
-        const tabToMove = findTabById(draft.tabs, tabId);
-        if (!tabToMove) break;
-
-        // Determine source panel (where tab is coming from)
-        const sourcePanelId = tabToMove.panelId;
-        const sourcePanelTabs = draft.panelTabs[sourcePanelId] ?? [];
-        const isSamePanelSplit = sourcePanelId === panelId;
-
-        // Block same-panel split if panel only has one tab
-        // (can't split a panel by dragging its only tab onto itself)
-        if (isSamePanelSplit && sourcePanelTabs.length <= 1) break;
-
-        // Generate IDs for container and new sibling panel only
-        // The original panel KEEPS its ID to avoid re-renders
-        const containerId = generateShortId();
-        const newPanelId = generateShortId();
-
-        // Determine ordering based on drop position:
-        // - 'before' (left/top): new panel first (order: 0), original second (order: 1)
-        // - 'after' (right/bottom): original first (order: 0), new panel second (order: 1)
-        const newPanelOrder = position === 'before' ? 0 : 1;
-        const originalPanelOrder = position === 'before' ? 1 : 0;
-
-        // Create the original panel as a child (keeps same ID!)
-        const originalPanelAsChild: Panel = {
-          id: panelId, // KEEP ORIGINAL ID - prevents tab re-renders
-          order: originalPanelOrder,
-          direction: panelToSplit.direction,
-          children: [], // Leaf panel has no children
-          size: '50%',
-        };
-
-        // Create new sibling panel for the moved tab
-        const newSiblingPanel: Panel = {
-          id: newPanelId,
-          order: newPanelOrder,
-          direction,
-          children: [],
-          size: '50%',
-        };
-
-        // Build children array sorted by order
-        const children =
-          position === 'before'
-            ? [newSiblingPanel, originalPanelAsChild]
-            : [originalPanelAsChild, newSiblingPanel];
-
-        // Transform the original panel location into a container
-        updatePanelInTree(draft.panel, panelId, (panel) => {
-          panel.id = containerId;
-          panel.direction = direction;
-          panel.children = children;
-          // Root panel keeps size, nested containers don't need it
-          if (panel !== draft.panel) {
-            delete panel.size;
-          }
-        });
-
-        // Initialize new panel's state
-        draft.panelTabs[newPanelId] = [];
-        // Don't set activeTabIds yet - will be set after tab is moved
-
-        // Move the tab to the new panel
-        // This updates tab.panelId and panelTabs atomically
-        handleMoveTabToPanel(draft, tabId, newPanelId);
-
-        // Update active states
-        draft.activeTabIds[newPanelId] = tabId;
-        draft.activePanelId = newPanelId;
-
-        // Update active tab in original panel if needed
-        // (in case we moved the currently active tab)
-        if (draft.activeTabIds[panelId] === tabId) {
-          const remainingTabs = draft.panelTabs[panelId] ?? [];
-          const lastTabId = remainingTabs[remainingTabs.length - 1];
-          if (lastTabId) {
-            draft.activeTabIds[panelId] = lastTabId;
-          } else {
-            delete draft.activeTabIds[panelId];
-          }
-        }
-
-        // For cross-panel splits, update active tab in SOURCE panel if we moved its active tab
-        if (!isSamePanelSplit && draft.activeTabIds[sourcePanelId] === tabId) {
-          const remainingSourceTabs = draft.panelTabs[sourcePanelId] ?? [];
-          const lastSourceTabId = remainingSourceTabs[remainingSourceTabs.length - 1];
-          if (lastSourceTabId) {
-            draft.activeTabIds[sourcePanelId] = lastSourceTabId;
-          } else {
-            delete draft.activeTabIds[sourcePanelId];
-          }
-        }
-
-        // For cross-panel splits, collapse the source panel if it's now empty
-        // (handleCollapseIfEmpty already checks it's not the last panel)
-        if (!isSamePanelSplit) {
-          handleCollapseIfEmpty(draft, sourcePanelId);
-        } else {
-          // For same-panel splits, ensure original panel still has tabs (safety check)
-          handleEnsurePanelHasTab(draft, panelId);
-        }
-        break;
-      }
-
-      case 'COLLAPSE_PANEL': {
-        const { panelId } = action.payload;
-
-        const leafPanels = getLeafPanelIds(draft.panel).filter((id) => id !== panelId);
-        if (leafPanels.length === 0) break; // Can't collapse last panel
-
-        const targetPanelId = leafPanels[0];
-
-        // Move all tabs from collapsing panel to target
-        const tabsToMove = [...(draft.panelTabs[panelId] ?? [])];
-        for (const tid of tabsToMove) {
-          handleMoveTabToPanel(draft, tid, targetPanelId);
-        }
-
-        // Remove panel from tree
-        removePanelFromTree(draft.panel, panelId);
-
-        // Clean up
-        delete draft.activeTabIds[panelId];
-        delete draft.panelTabs[panelId];
-
-        // Update active states
-        if (tabsToMove.length > 0) {
-          // Only set active tab if target panel doesn't already have a valid one
-          const targetHasActiveTab =
-            draft.activeTabIds[targetPanelId] &&
-            draft.panelTabs[targetPanelId]?.includes(draft.activeTabIds[targetPanelId]);
-          if (!targetHasActiveTab) {
-            draft.activeTabIds[targetPanelId] = tabsToMove[0];
-          }
-        }
-        draft.activePanelId = targetPanelId;
-        break;
-      }
-
-      case 'RESIZE_PANEL': {
-        const { panelId, size } = action.payload;
-        updatePanelInTree(draft.panel, panelId, (panel) => {
-          panel.size = size;
-        });
-        break;
-      }
-
-      case 'PIN_PANEL': {
-        const { panelId } = action.payload;
-        const panel = findPanelById(draft.panel, panelId);
-        if (panel) panel.pinned = true;
-        break;
-      }
-
-      case 'UNPIN_PANEL': {
-        const { panelId } = action.payload;
-        const panel = findPanelById(draft.panel, panelId);
-        if (panel) panel.pinned = false;
-        break;
-      }
-
-      case 'SET_ACTIVE_PANEL': {
-        draft.activePanelId = action.payload.panelId;
-        break;
-      }
-
-      case 'TOGGLE_SEARCH_BARS': {
-        draft.searchBarsHidden = !draft.searchBarsHidden;
-        break;
-      }
-
-      case 'SET_SEARCHBAR_MODE': {
-        const { panelId, mode } = action.payload;
-        draft.searchBarModes[panelId] = mode;
-        break;
-      }
-
-      // -----------------------------------------------------------------------
-      // Favorites
-      // -----------------------------------------------------------------------
-      case 'TOGGLE_FAVORITE_LAYOUT': {
-        const { layoutId } = action.payload;
-        const favorites = draft.favoriteLayouts ?? [];
-        const index = favorites.indexOf(layoutId);
-        if (index === -1) {
-          draft.favoriteLayouts = [...favorites, layoutId];
-        } else {
-          draft.favoriteLayouts = favorites.filter((id) => id !== layoutId);
-        }
-        break;
-      }
-
-      // -----------------------------------------------------------------------
-      // Undo
-      // -----------------------------------------------------------------------
-      case 'POP_UNDO': {
-        const lastUndo = draft.undoStack.pop();
-        if (!lastUndo) break;
-
-        const { tab, position, panelId } = lastUndo;
-
-        // Check if panel still exists, otherwise use active panel
-        const targetPanelId = isPanelExists(draft, panelId) ? panelId : draft.activePanelId;
-
-        // Re-add the tab with correct panelId
-        const restoredTab: Tab = { ...tab, panelId: targetPanelId };
-        draft.tabs.push(restoredTab);
-
-        // Add to panelTabs at original position (or end if position invalid)
-        if (!draft.panelTabs[targetPanelId]) draft.panelTabs[targetPanelId] = [];
-        const insertPos = Math.min(position, draft.panelTabs[targetPanelId].length);
-        draft.panelTabs[targetPanelId].splice(insertPos, 0, restoredTab.id);
-
-        // Update active states
-        draft.activeTabIds[targetPanelId] = restoredTab.id;
-        draft.activePanelId = targetPanelId;
-        break;
-      }
-
-      // -----------------------------------------------------------------------
-      // Rename Tab UI State
-      // -----------------------------------------------------------------------
-      case 'START_RENAME_TAB': {
-        const { tabId } = action.payload;
-        const tab = findTabById(draft.tabs, tabId);
-        // Only allow rename if tab exists and is not locked
-        if (tab && !tab.locked) {
-          draft.renamingTabId = tabId;
-        }
-        break;
-      }
-
-      case 'CLEAR_RENAME_TAB': {
-        draft.renamingTabId = null;
-        break;
-      }
-    }
-
-    // Validate state consistency in development mode
-    validateState(draft);
-  });
+export type ReducerConfig = {
+  /** Maximum number of tabs allowed globally. Values < 1 mean unlimited. */
+  maxTabs: number;
+};
+
+const DEFAULT_REDUCER_CONFIG: ReducerConfig = {
+  maxTabs: 16,
+};
+
+/**
+ * Check if adding a new tab would exceed the maxTabs limit.
+ * Returns true if the action should be blocked.
+ */
+function isMaxTabsExceeded(draft: DraftState, maxTabs: number): boolean {
+  // maxTabs < 1 means unlimited
+  if (maxTabs < 1) return false;
+  return draft.tabs.length >= maxTabs;
 }
+
+// =============================================================================
+// Reducer Factory
+// =============================================================================
+
+/**
+ * Create a prism reducer with the given configuration.
+ * Use this factory to inject config (like maxTabs) into the reducer.
+ *
+ * @param config - Configuration options for the reducer
+ * @returns A reducer function for use with useReducer
+ */
+export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
+  const { maxTabs } = { ...DEFAULT_REDUCER_CONFIG, ...config };
+
+  return function prismReducer(state: PrismState, action: Action): PrismState {
+    return produce(state, (draft) => {
+      switch (action.type) {
+        // -----------------------------------------------------------------------
+        // Workspace Sync (Dash → Prism)
+        // -----------------------------------------------------------------------
+        case 'SYNC_WORKSPACE': {
+          const {
+            tabs,
+            panel,
+            activeTabIds,
+            activePanelId,
+            panelTabs,
+            favoriteLayouts,
+            searchBarsHidden,
+            theme,
+          } = action.payload;
+          // Use explicit undefined checks (not truthiness) to allow syncing empty arrays/strings
+          if (tabs !== undefined) draft.tabs = tabs;
+          if (panel !== undefined) draft.panel = panel;
+          if (panelTabs !== undefined) draft.panelTabs = panelTabs;
+          if (activeTabIds !== undefined) draft.activeTabIds = activeTabIds;
+          if (activePanelId !== undefined) draft.activePanelId = activePanelId;
+          if (favoriteLayouts !== undefined) draft.favoriteLayouts = favoriteLayouts;
+          if (searchBarsHidden !== undefined) draft.searchBarsHidden = searchBarsHidden;
+          if (theme !== undefined) draft.theme = theme;
+          break;
+        }
+
+        // -----------------------------------------------------------------------
+        // Tab Actions
+        // -----------------------------------------------------------------------
+
+        case 'ADD_TAB': {
+          // Enforce maxTabs limit (< 1 means unlimited)
+          if (isMaxTabsExceeded(draft, maxTabs)) {
+            console.warn(`ADD_TAB blocked: workspace at maxTabs limit (${maxTabs})`);
+            break;
+          }
+
+          const {
+            panelId,
+            name = 'New Tab',
+            layoutId = undefined,
+            params,
+            option,
+          } = action.payload;
+          const newTab: Tab = {
+            id: generateShortId(),
+            name,
+            panelId,
+            layoutId,
+            layoutParams: params ?? undefined,
+            layoutOption: option ?? undefined,
+            createdAt: Date.now(),
+          };
+          draft.tabs.push(newTab);
+          handleAddTabToPanelTracking(draft, newTab.id, panelId);
+          draft.activeTabIds[panelId] = newTab.id;
+          draft.activePanelId = panelId;
+          break;
+        }
+
+        case 'REORDER_TAB': {
+          const { panelId, fromIndex, toIndex } = action.payload;
+          const panelTabIds = draft.panelTabs[panelId];
+          if (!panelTabIds || fromIndex < 0 || fromIndex >= panelTabIds.length) break;
+
+          const clampedToIndex = Math.max(0, Math.min(toIndex, panelTabIds.length - 1));
+          const [movedId] = panelTabIds.splice(fromIndex, 1);
+          panelTabIds.splice(clampedToIndex, 0, movedId);
+          break;
+        }
+
+        case 'REMOVE_TAB': {
+          const { tabId } = action.payload;
+          const tabIndex = findTabIndex(draft.tabs, tabId);
+          if (tabIndex === -1) break;
+
+          const tab = draft.tabs[tabIndex];
+          if (tab.locked) break;
+
+          const panelId = tab.panelId;
+
+          // Push to undo stack
+          const panelTabIds = draft.panelTabs[panelId] ?? [];
+          const position = panelTabIds.indexOf(tabId);
+          if (draft.undoStack.length >= 10) draft.undoStack.shift();
+          draft.undoStack.push({ tab: { ...tab } as Tab, position, panelId });
+
+          // Remove from tabs array
+          draft.tabs.splice(tabIndex, 1);
+
+          // Remove from panelTabs tracking
+          handleRemoveTabFromPanelTracking(draft, tabId, panelId);
+
+          // Update active tab
+          handleUpdateActiveTabAfterRemoval(draft, panelId, tabId);
+
+          // Collapse or spawn new tab
+          handleEnsurePanelHasTab(draft, panelId);
+          break;
+        }
+
+        case 'SELECT_TAB': {
+          const { tabId, panelId } = action.payload;
+          draft.activeTabIds[panelId] = tabId;
+          draft.activePanelId = panelId;
+          break;
+        }
+
+        case 'RENAME_TAB': {
+          const { tabId, name } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.name = name;
+          // Clear rename mode after committing
+          draft.renamingTabId = null;
+          break;
+        }
+
+        case 'LOCK_TAB': {
+          const { tabId } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.locked = true;
+          break;
+        }
+
+        case 'UNLOCK_TAB': {
+          const { tabId } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.locked = false;
+          break;
+        }
+
+        case 'TOGGLE_TAB_LOCK': {
+          const { tabId } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.locked = !tab.locked;
+          break;
+        }
+
+        case 'DUPLICATE_TAB': {
+          // Enforce maxTabs limit (< 1 means unlimited)
+          if (isMaxTabsExceeded(draft, maxTabs)) {
+            console.warn(`DUPLICATE_TAB blocked: workspace at maxTabs limit (${maxTabs})`);
+            break;
+          }
+
+          const { tabId } = action.payload;
+          const originalTab = findTabById(draft.tabs, tabId);
+          if (!originalTab) break;
+
+          const newTab: Tab = {
+            ...originalTab,
+            id: generateShortId(),
+            name: `${originalTab.name} (copy)`,
+            createdAt: Date.now(),
+            locked: false,
+            // Deep copy layoutParams to prevent shared references
+            layoutParams: originalTab.layoutParams ? { ...originalTab.layoutParams } : undefined,
+          };
+          draft.tabs.push(newTab);
+          handleAddTabToPanelTracking(draft, newTab.id, newTab.panelId);
+          draft.activeTabIds[newTab.panelId] = newTab.id;
+          break;
+        }
+
+        case 'UPDATE_TAB_LAYOUT': {
+          const { tabId, layoutId, name, params } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) {
+            tab.layoutId = layoutId;
+            tab.name = name;
+            tab.layoutParams = params;
+            tab.loading = true;
+          }
+          break;
+        }
+
+        case 'MOVE_TAB': {
+          const { tabId, targetPanelId, targetIndex } = action.payload;
+
+          const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId, targetIndex);
+          if (!sourcePanelId) break; // No-op or tab not found
+
+          // Update active tabs
+          draft.activeTabIds[targetPanelId] = tabId;
+          draft.activePanelId = targetPanelId;
+          handleUpdateActiveTabAfterRemoval(draft, sourcePanelId, tabId);
+
+          // Collapse source if empty
+          handleCollapseIfEmpty(draft, sourcePanelId);
+          break;
+        }
+
+        case 'SET_TAB_ICON': {
+          const { tabId, icon } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.icon = icon;
+          break;
+        }
+
+        case 'SET_TAB_STYLE': {
+          const { tabId, style } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.style = style;
+          break;
+        }
+
+        case 'SET_LOADING': {
+          const { tabId, loading } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          if (tab) tab.loading = loading;
+          break;
+        }
+
+        // -----------------------------------------------------------------------
+        // Panel Actions
+        // -----------------------------------------------------------------------
+
+        case 'SPLIT_PANEL': {
+          const { panelId, direction, tabId, position = 'after' } = action.payload;
+
+          const panelToSplit = findPanelById(draft.panel, panelId);
+          if (!panelToSplit) break;
+
+          const tabToMove = findTabById(draft.tabs, tabId);
+          if (!tabToMove) break;
+
+          // Determine source panel (where tab is coming from)
+          const sourcePanelId = tabToMove.panelId;
+          const sourcePanelTabs = draft.panelTabs[sourcePanelId] ?? [];
+          const isSamePanelSplit = sourcePanelId === panelId;
+
+          // Block same-panel split if panel only has one tab
+          // (can't split a panel by dragging its only tab onto itself)
+          if (isSamePanelSplit && sourcePanelTabs.length <= 1) break;
+
+          // Generate IDs for container and new sibling panel only
+          // The original panel KEEPS its ID to avoid re-renders
+          const containerId = generateShortId();
+          const newPanelId = generateShortId();
+
+          // Determine ordering based on drop position:
+          // - 'before' (left/top): new panel first (order: 0), original second (order: 1)
+          // - 'after' (right/bottom): original first (order: 0), new panel second (order: 1)
+          const newPanelOrder = position === 'before' ? 0 : 1;
+          const originalPanelOrder = position === 'before' ? 1 : 0;
+
+          // Create the original panel as a child (keeps same ID!)
+          const originalPanelAsChild: Panel = {
+            id: panelId, // KEEP ORIGINAL ID - prevents tab re-renders
+            order: originalPanelOrder,
+            direction: panelToSplit.direction,
+            children: [], // Leaf panel has no children
+            size: '50%',
+          };
+
+          // Create new sibling panel for the moved tab
+          const newSiblingPanel: Panel = {
+            id: newPanelId,
+            order: newPanelOrder,
+            direction,
+            children: [],
+            size: '50%',
+          };
+
+          // Build children array sorted by order
+          const children =
+            position === 'before'
+              ? [newSiblingPanel, originalPanelAsChild]
+              : [originalPanelAsChild, newSiblingPanel];
+
+          // Transform the original panel location into a container
+          updatePanelInTree(draft.panel, panelId, (panel) => {
+            panel.id = containerId;
+            panel.direction = direction;
+            panel.children = children;
+            // Root panel keeps size, nested containers don't need it
+            if (panel !== draft.panel) {
+              delete panel.size;
+            }
+          });
+
+          // Initialize new panel's state
+          draft.panelTabs[newPanelId] = [];
+          // Don't set activeTabIds yet - will be set after tab is moved
+
+          // Move the tab to the new panel
+          // This updates tab.panelId and panelTabs atomically
+          handleMoveTabToPanel(draft, tabId, newPanelId);
+
+          // Update active states
+          draft.activeTabIds[newPanelId] = tabId;
+          draft.activePanelId = newPanelId;
+
+          // Update active tab in original panel if needed
+          // (in case we moved the currently active tab)
+          if (draft.activeTabIds[panelId] === tabId) {
+            const remainingTabs = draft.panelTabs[panelId] ?? [];
+            const lastTabId = remainingTabs[remainingTabs.length - 1];
+            if (lastTabId) {
+              draft.activeTabIds[panelId] = lastTabId;
+            } else {
+              delete draft.activeTabIds[panelId];
+            }
+          }
+
+          // For cross-panel splits, update active tab in SOURCE panel if we moved its active tab
+          if (!isSamePanelSplit && draft.activeTabIds[sourcePanelId] === tabId) {
+            const remainingSourceTabs = draft.panelTabs[sourcePanelId] ?? [];
+            const lastSourceTabId = remainingSourceTabs[remainingSourceTabs.length - 1];
+            if (lastSourceTabId) {
+              draft.activeTabIds[sourcePanelId] = lastSourceTabId;
+            } else {
+              delete draft.activeTabIds[sourcePanelId];
+            }
+          }
+
+          // For cross-panel splits, collapse the source panel if it's now empty
+          // (handleCollapseIfEmpty already checks it's not the last panel)
+          if (!isSamePanelSplit) {
+            handleCollapseIfEmpty(draft, sourcePanelId);
+          } else {
+            // For same-panel splits, ensure original panel still has tabs (safety check)
+            handleEnsurePanelHasTab(draft, panelId);
+          }
+          break;
+        }
+
+        case 'COLLAPSE_PANEL': {
+          const { panelId } = action.payload;
+
+          const leafPanels = getLeafPanelIds(draft.panel).filter((id) => id !== panelId);
+          if (leafPanels.length === 0) break; // Can't collapse last panel
+
+          const targetPanelId = leafPanels[0];
+
+          // Move all tabs from collapsing panel to target
+          const tabsToMove = [...(draft.panelTabs[panelId] ?? [])];
+          for (const tid of tabsToMove) {
+            handleMoveTabToPanel(draft, tid, targetPanelId);
+          }
+
+          // Remove panel from tree
+          removePanelFromTree(draft.panel, panelId);
+
+          // Clean up
+          delete draft.activeTabIds[panelId];
+          delete draft.panelTabs[panelId];
+
+          // Update active states
+          if (tabsToMove.length > 0) {
+            // Only set active tab if target panel doesn't already have a valid one
+            const targetHasActiveTab =
+              draft.activeTabIds[targetPanelId] &&
+              draft.panelTabs[targetPanelId]?.includes(draft.activeTabIds[targetPanelId]);
+            if (!targetHasActiveTab) {
+              draft.activeTabIds[targetPanelId] = tabsToMove[0];
+            }
+          }
+          draft.activePanelId = targetPanelId;
+          break;
+        }
+
+        case 'RESIZE_PANEL': {
+          const { panelId, size } = action.payload;
+          updatePanelInTree(draft.panel, panelId, (panel) => {
+            panel.size = size;
+          });
+          break;
+        }
+
+        case 'PIN_PANEL': {
+          const { panelId } = action.payload;
+          const panel = findPanelById(draft.panel, panelId);
+          if (panel) panel.pinned = true;
+          break;
+        }
+
+        case 'UNPIN_PANEL': {
+          const { panelId } = action.payload;
+          const panel = findPanelById(draft.panel, panelId);
+          if (panel) panel.pinned = false;
+          break;
+        }
+
+        case 'SET_ACTIVE_PANEL': {
+          draft.activePanelId = action.payload.panelId;
+          break;
+        }
+
+        case 'TOGGLE_SEARCH_BARS': {
+          draft.searchBarsHidden = !draft.searchBarsHidden;
+          break;
+        }
+
+        case 'SET_SEARCHBAR_MODE': {
+          const { panelId, mode } = action.payload;
+          draft.searchBarModes[panelId] = mode;
+          break;
+        }
+
+        // -----------------------------------------------------------------------
+        // Favorites
+        // -----------------------------------------------------------------------
+        case 'TOGGLE_FAVORITE_LAYOUT': {
+          const { layoutId } = action.payload;
+          const favorites = draft.favoriteLayouts ?? [];
+          const index = favorites.indexOf(layoutId);
+          if (index === -1) {
+            draft.favoriteLayouts = [...favorites, layoutId];
+          } else {
+            draft.favoriteLayouts = favorites.filter((id) => id !== layoutId);
+          }
+          break;
+        }
+
+        // -----------------------------------------------------------------------
+        // Undo
+        // -----------------------------------------------------------------------
+        case 'POP_UNDO': {
+          const lastUndo = draft.undoStack.pop();
+          if (!lastUndo) break;
+
+          const { tab, position, panelId } = lastUndo;
+
+          // Check if panel still exists, otherwise use active panel
+          const targetPanelId = isPanelExists(draft, panelId) ? panelId : draft.activePanelId;
+
+          // Re-add the tab with correct panelId
+          const restoredTab: Tab = { ...tab, panelId: targetPanelId };
+          draft.tabs.push(restoredTab);
+
+          // Add to panelTabs at original position (or end if position invalid)
+          if (!draft.panelTabs[targetPanelId]) draft.panelTabs[targetPanelId] = [];
+          const insertPos = Math.min(position, draft.panelTabs[targetPanelId].length);
+          draft.panelTabs[targetPanelId].splice(insertPos, 0, restoredTab.id);
+
+          // Update active states
+          draft.activeTabIds[targetPanelId] = restoredTab.id;
+          draft.activePanelId = targetPanelId;
+          break;
+        }
+
+        // -----------------------------------------------------------------------
+        // Rename Tab UI State
+        // -----------------------------------------------------------------------
+        case 'START_RENAME_TAB': {
+          const { tabId } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+          // Only allow rename if tab exists and is not locked
+          if (tab && !tab.locked) {
+            draft.renamingTabId = tabId;
+          }
+          break;
+        }
+
+        case 'CLEAR_RENAME_TAB': {
+          draft.renamingTabId = null;
+          break;
+        }
+
+        case 'RESET_WORKSPACE': {
+          // Reset to initial state - used when clearing persisted storage
+          draft.tabs = initialState.tabs;
+          draft.panel = initialState.panel;
+          draft.panelTabs = initialState.panelTabs;
+          draft.activeTabIds = initialState.activeTabIds;
+          draft.activePanelId = initialState.activePanelId;
+          draft.favoriteLayouts = initialState.favoriteLayouts;
+          draft.theme = initialState.theme;
+          draft.searchBarsHidden = initialState.searchBarsHidden;
+          draft.undoStack = [];
+          draft.searchBarModes = {};
+          draft.renamingTabId = null;
+          break;
+        }
+      }
+
+      // Validate state consistency in development mode
+      validateState(draft);
+    });
+  };
+}
+
+/**
+ * Default prism reducer with standard configuration (maxTabs: 16).
+ * For custom configuration, use createPrismReducer({ maxTabs: ... }).
+ */
+export const prismReducer = createPrismReducer();

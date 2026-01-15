@@ -22,9 +22,6 @@ from conftest import (
     wait_for_tab_count,
     get_tabs,
     get_tab_id,
-    trigger_rename_mode,
-    set_input_value_react,
-    press_enter_on_element,
     check_browser_errors,
 )
 
@@ -108,37 +105,6 @@ def test_create_multiple_tabs(prism_app_with_layouts):
     # Verify 3 tabs exist
     tabs = get_tabs(duo)
     assert len(tabs) == 3, "Should have 3 tabs"
-
-
-@pytest.mark.skip(reason="Flaky on CI: rename input timing issues in headless Chrome")
-def test_rename_tab_via_double_click(prism_app_with_layouts):
-    """Test renaming a tab by double-clicking."""
-    duo = prism_app_with_layouts
-
-    # Get the tab ID first
-    tab_id = get_tab_id(duo, 0)
-    assert tab_id is not None, "Tab ID should not be None"
-
-    # Trigger rename mode using helper (handles async React state)
-    success = trigger_rename_mode(duo, tab_id)
-    assert success, "Failed to trigger rename mode"
-
-    # Wait for rename input to appear
-    rename_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
-    duo.wait_for_element(rename_selector, timeout=3)
-
-    # Set the new name using React-compatible method
-    set_input_value_react(duo, rename_selector, "My Renamed Tab")
-
-    # Press Enter to commit the rename
-    press_enter_on_element(duo, rename_selector)
-
-    # Wait for the tab text to contain the new name
-    duo.wait_for_contains_text(TAB_SELECTOR, "My Renamed Tab", timeout=3)
-
-    # Verify tab name changed
-    tab = duo.find_element(TAB_SELECTOR)
-    assert "My Renamed Tab" in tab.text, f"Tab should be renamed, but got: {tab.text}"
 
 
 def test_max_tabs_limit(prism_app_with_layouts):

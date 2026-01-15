@@ -47,7 +47,7 @@ Keyword arguments:
     within this time after a layout is selected, an error state is
     shown. Default is 30 seconds.
 
-- maxTabs (number; default 8):
+- maxTabs (number; default 16):
     Maximum number of tabs allowed per panel.
 
 - persistence (boolean; default False):

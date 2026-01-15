@@ -9,8 +9,12 @@ export { PrismContent } from './components/PrismContentComponent';
 export { PanelDropZone } from './components/PanelDropzone';
 
 // Layout Components
-export { ErrorLayout } from './components/layouts/ErrorLayout';
 export { NewLayout } from './components/layouts/NewLayout';
+
+// Error Boundary
+export { ErrorBoundary, type ErrorBoundaryLevel } from './components/ErrorBoundary';
+/** @deprecated Use ErrorBoundary instead */
+export { ErrorBoundary as ErrorLayout } from './components/ErrorBoundary';
 
 // Context
 export { PrismProvider, PrismContext } from './context/PrismContext';

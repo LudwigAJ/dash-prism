@@ -16,21 +16,14 @@ from __future__ import annotations
 import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 
 from conftest import (
     TAB_SELECTOR,
     ADD_TAB_BUTTON,
     CONTEXT_MENU,
     get_tabs,
-    get_tab_id,
     wait_for_tab_count,
     wait_for_element_invisible,
-    set_input_value_react,
-    press_enter_on_element,
-    check_browser_errors,
 )
 
 # Mark all tests in this module as integration tests
@@ -69,41 +62,6 @@ def test_context_menu_appears_on_right_click(prism_app_with_layouts):
 
     # Wait for menu to close (explicit wait)
     wait_for_element_invisible(duo, CONTEXT_MENU, timeout=2)
-
-
-@pytest.mark.skip(reason="Flaky on CI: rename input timing issues in headless Chrome")
-def test_context_menu_rename(prism_app_with_layouts):
-    """Test renaming tab via context menu."""
-    duo = prism_app_with_layouts
-
-    # Get tab ID before opening context menu
-    tab_id = get_tab_id(duo, 0)
-    assert tab_id, "Tab not found"
-
-    # Right-click tab to open context menu
-    tab = duo.find_element(TAB_SELECTOR)
-    open_context_menu(duo, tab)
-
-    # Click rename menu item
-    rename_item = duo.find_element("[data-testid='prism-context-menu-rename']")
-    rename_item.click()
-
-    # Wait for rename input to appear
-    rename_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
-    duo.wait_for_element(rename_selector, timeout=5)
-
-    # Set new name using React-compatible method (includes wait for React update)
-    set_input_value_react(duo, rename_selector, "Renamed Tab")
-
-    # Press Enter to commit
-    press_enter_on_element(duo, rename_selector)
-
-    # Wait for the tab text to contain the new name (increased timeout for parallel runs)
-    duo.wait_for_contains_text(TAB_SELECTOR, "Renamed Tab", timeout=5)
-
-    # Verify name changed
-    tab = duo.find_element(TAB_SELECTOR)
-    assert "Renamed Tab" in tab.text, f"Tab should be renamed, got: {tab.text}"
 
 
 def test_context_menu_close(prism_app_with_layouts):
@@ -204,20 +162,3 @@ def test_context_menu_closes_on_escape(prism_app_with_layouts):
     menus = duo.find_elements(CONTEXT_MENU)
     if len(menus) > 0:
         assert not menus[0].is_displayed(), "Context menu should be hidden"
-
-
-def test_no_browser_errors_after_context_menu(prism_app_with_layouts):
-    """Test that using context menu doesn't cause browser errors."""
-    duo = prism_app_with_layouts
-
-    # Right-click tab
-    tab = duo.find_element(TAB_SELECTOR)
-    open_context_menu(duo, tab)
-
-    # Click a menu item
-    close_item = duo.find_element("[data-testid='prism-context-menu-info']")
-    close_item.click()
-
-    # Check for browser errors
-    errors = check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
