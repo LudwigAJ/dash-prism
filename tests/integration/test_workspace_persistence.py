@@ -441,7 +441,9 @@ def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
-@pytest.mark.skip(reason="Feature not implemented: auto-create tab when updateWorkspace provides empty tabs")
+@pytest.mark.skip(
+    reason="Feature not implemented: auto-create tab when updateWorkspace provides empty tabs"
+)
 def test_updateWorkspace_handles_empty_tabs_gracefully(dash_duo):
     """
     Test that updateWorkspace handles empty tabs array without crashing.

@@ -154,7 +154,7 @@ if not hasattr(_dash, "__plotly_dash") and not hasattr(_dash, "development"):
     _sys.exit(1)
 
 # Package metadata - use importlib.metadata for robust version detection
-  
+
 from importlib.metadata import PackageNotFoundError
 
 try:
