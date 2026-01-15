@@ -217,11 +217,11 @@ class Prism(PrismComponent):
         style: dict[str, Any] | None = None,
         theme: Literal["light", "dark"] = "light",
         # Output properties (read-only, set by component)
-        readWorkspace: dict[str, Any] | None = None,
+        readWorkspace = None,
         # Input properties (set via callbacks)
-        updateWorkspace: dict[str, Any] | None = None,
+        updateWorkspace = None,
         # Internal properties (managed by dash_prism.init)
-        registeredLayouts: dict[str, Any] | None = None,
+        registeredLayouts = None,
         children: list[Any] | None = None,
         **kwargs: Any
     ):
@@ -239,8 +239,8 @@ class Prism(PrismComponent):
             statusBarPosition=statusBarPosition,
             style=style,
             theme=theme,
-            readWorkspace=readWorkspace,    # pyright: ignore[reportArgumentType]
-            updateWorkspace=updateWorkspace,  # pyright: ignore[reportArgumentType]
-            registeredLayouts=registeredLayouts,  # pyright: ignore[reportArgumentType]
+            readWorkspace=readWorkspace,  
+            updateWorkspace=updateWorkspace,  
+            registeredLayouts=registeredLayouts, 
             children=children,
             **kwargs)
