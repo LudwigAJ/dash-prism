@@ -6,14 +6,7 @@ This file provides a clean Python API that wraps the auto-generated PrismActionC
 
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict
-
-from narwhals import Unknown
-
 from .PrismActionComponent import PrismActionComponent
-
-
-Styles = Literal["default", "primary", "secondary", "success", "warning", "danger"]
 
 
 class Action(PrismActionComponent):
@@ -182,38 +175,17 @@ class Action(PrismActionComponent):
         - Icons use the Lucide icon library - ensure icon names match exactly
     """
 
+    # Override _type to match what init.py expects (internal wire protocol)
     _type = "PrismAction"
 
-    def __init__(
-        self,
-        id: str | dict[Unknown, Unknown],
-        label: str,
-        *,
-        icon: str | None = None,
-        tooltip: str | None = None,
-        style: Styles | str | None = None,
-        disabled: bool = False,
-        loading: bool = False,
-        n_clicks: int = 0,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, **kwargs):
         """Initialize Action component.
 
         :param kwargs: All parameters accepted by the Action component.
             See class docstring for full parameter list.
         :type kwargs: dict
         """
-        super().__init__(
-            id=id,
-            label=label,
-            icon=icon,
-            tooltip=tooltip,
-            style=style,
-            disabled=disabled,
-            loading=loading,
-            n_clicks=n_clicks,
-            **kwargs,
-        )
+        super().__init__(**kwargs)
 
 
 # Backwards compatibility alias
