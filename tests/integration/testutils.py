@@ -860,7 +860,9 @@ def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> N
 
     # Use chained ActionChains with pause() - not time.sleep()
     actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(1.0).perform()  # >8px to trigger PointerSensor
+    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(
+        1.0
+    ).perform()  # >8px to trigger PointerSensor
 
 
 def cancel_drag_with_escape(dash_duo) -> None:

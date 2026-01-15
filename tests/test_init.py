@@ -418,9 +418,7 @@ def test_layout_with_actual_params(prism_app: Dash) -> None:
 
     from dash_prism.init import _render_tab_layout
 
-    result = _render_tab_layout(
-        "tab-1", "with-params", {"user_id": "abc123", "count": "5"}
-    )
+    result = _render_tab_layout("tab-1", "with-params", {"user_id": "abc123", "count": "5"})
 
     assert result is not None
     assert received_params["user_id"] == "abc123"

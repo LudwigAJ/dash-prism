@@ -13,7 +13,6 @@ from narwhals import Unknown
 from .PrismComponent import PrismComponent
 
 
-
 class Prism(PrismComponent):
     """Advanced multi-panel workspace manager for Plotly Dash.
 
@@ -202,7 +201,7 @@ class Prism(PrismComponent):
     _type = "Prism"
 
     def __init__(
-        self, 
+        self,
         id: str | dict[Unknown, Unknown],
         *,
         actions: list[Any] | None = None,
@@ -217,13 +216,13 @@ class Prism(PrismComponent):
         style: dict[str, Any] | None = None,
         theme: Literal["light", "dark"] = "light",
         # Output properties (read-only, set by component)
-        readWorkspace = None,
+        readWorkspace=None,
         # Input properties (set via callbacks)
-        updateWorkspace = None,
+        updateWorkspace=None,
         # Internal properties (managed by dash_prism.init)
-        registeredLayouts = None,
+        registeredLayouts=None,
         children: list[Any] | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """Initialize Prism component"""
         super().__init__(
@@ -239,8 +238,9 @@ class Prism(PrismComponent):
             statusBarPosition=statusBarPosition,
             style=style,
             theme=theme,
-            readWorkspace=readWorkspace,  
-            updateWorkspace=updateWorkspace,  
-            registeredLayouts=registeredLayouts, 
+            readWorkspace=readWorkspace,
+            updateWorkspace=updateWorkspace,
+            registeredLayouts=registeredLayouts,
             children=children,
-            **kwargs)
+            **kwargs,
+        )

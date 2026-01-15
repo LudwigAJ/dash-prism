@@ -32,6 +32,7 @@ def get_free_port() -> int:
         port = s.getsockname()[1]
     return port
 
+
 # Import all test utilities from testutils module
 from testutils import (
     # Selectors
@@ -257,7 +258,7 @@ def prism_app_with_layouts(dash_duo):
 
     # Force a resize event after mount to trigger any pending observers
     dash_duo.driver.execute_script("window.dispatchEvent(new Event('resize'));")
-    
+
     # Log container dimensions for debugging
     dash_duo.driver.execute_script(
         """
