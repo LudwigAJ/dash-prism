@@ -11,8 +11,8 @@ import { Button } from '@components/ui/button';
 import { cn } from '@utils/cn';
 import type { Theme } from '@types';
 
-// Version can be imported from a constants file or package.json
-const VERSION = '0.1.2';
+// Version injected at build time from package.json via webpack DefinePlugin
+const VERSION = process.env.APP_VERSION ?? '0.0.0';
 
 export type HelpModalProps = {
   /** Whether the modal is open */
