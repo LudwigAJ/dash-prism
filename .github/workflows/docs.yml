@@ -41,12 +41,17 @@ jobs:
           path: docs/_build/html
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/deploy-pages@v4
         id: deployment
+
+      - name: Skip deployment (not main branch)
+        if: github.ref != 'refs/heads/main' || github.event_name != 'push'
+        run: echo "Skipping deployment - only deploys on main branch"
