@@ -1,4 +1,13 @@
-import React, { createContext, useReducer, useEffect, useMemo, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useReducer,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
+import { createHtmlPortalNode, HtmlPortalNode } from 'react-reverse-portal';
 import {
   createPrismReducer,
   initialState,
@@ -6,6 +15,7 @@ import {
   type Action,
 } from '@context/prismReducer';
 import { useConfig } from '@context/ConfigContext';
+import { generateShortId } from '@utils/uuid';
 import type {
   Workspace,
   PersistenceType,
@@ -77,8 +87,13 @@ function createInitialState(
 ): PrismState {
   // Persisted state takes precedence over initialLayout
   if (storedWorkspace?.tabs?.length) {
+    // Hydrate tabs with mountKey if missing (for tabs restored from storage)
+    const hydratedTabs = storedWorkspace.tabs.map((tab) => ({
+      ...tab,
+      mountKey: tab.mountKey ?? generateShortId(),
+    }));
     return {
-      tabs: storedWorkspace.tabs ?? initialState.tabs,
+      tabs: hydratedTabs,
       panel: storedWorkspace.panel ?? initialState.panel,
       panelTabs: storedWorkspace.panelTabs ?? initialState.panelTabs,
       activeTabIds: storedWorkspace.activeTabIds ?? initialState.activeTabIds,
@@ -103,7 +118,6 @@ function createInitialState(
           ...baseState.tabs[0],
           layoutId: initialLayout,
           name: layoutInfo.name,
-          loading: true, // Trigger layout fetch
         },
       ];
     }
@@ -123,6 +137,8 @@ type PrismContextValue = {
   dispatch: React.Dispatch<Action>;
   setProps?: (props: Record<string, unknown>) => void;
   clearPersistedState: () => void;
+  // Portal management
+  getPortalNode: (tabId: TabId) => HtmlPortalNode | undefined;
   // Modal actions
   openInfoModal: (tab: Tab) => void;
   closeInfoModal: () => void;
@@ -182,6 +198,44 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
   const closeSetIconModal = useCallback(() => setSetIconModalTab(null), []);
 
   // ================================================================================
+  // PORTAL NODE MANAGEMENT (for react-reverse-portal)
+  // ================================================================================
+
+  // Portal nodes stored in ref (mutations don't trigger re-renders)
+  const portalNodesRef = useRef<Map<TabId, HtmlPortalNode>>(new Map());
+
+  // Lazy initialization: create portal node on first access if tab exists
+  // This is synchronous - no loading flash on new tabs
+  const getPortalNode = useCallback(
+    (tabId: TabId): HtmlPortalNode | undefined => {
+      // Guard: only create for tabs that exist
+      const tabExists = state.tabs.some((t) => t.id === tabId);
+      if (!tabExists) return undefined;
+
+      // Lazy initialization pattern
+      let node = portalNodesRef.current.get(tabId);
+      if (!node) {
+        node = createHtmlPortalNode({
+          attributes: { class: 'prism-portal-node h-full w-full' },
+        });
+        portalNodesRef.current.set(tabId, node);
+      }
+      return node;
+    },
+    [state.tabs]
+  );
+
+  // Cleanup stale portal nodes when tabs are removed
+  useEffect(() => {
+    const currentIds = new Set(state.tabs.map((t) => t.id));
+    for (const id of portalNodesRef.current.keys()) {
+      if (!currentIds.has(id)) {
+        portalNodesRef.current.delete(id);
+      }
+    }
+  }, [state.tabs]);
+
+  // ================================================================================
   // EFFECTS FOR SYNCING WITH DASH PROPS
   // ================================================================================
 
@@ -237,6 +291,8 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
       dispatch,
       setProps,
       clearPersistedState: () => clearWorkspace(persistenceType, componentId),
+      // Portal management
+      getPortalNode,
       // Modal state & actions
       infoModalTab,
       helpModalOpen,
@@ -254,6 +310,7 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
       setProps,
       persistenceType,
       componentId,
+      getPortalNode,
       infoModalTab,
       helpModalOpen,
       setIconModalTab,

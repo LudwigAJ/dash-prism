@@ -37,7 +37,8 @@ export function useTabs(panelId: string) {
     (name = 'New Tab', layoutId?: string) => {
       // maxTabs < 1 means unlimited; reducer also enforces this
       if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
-        console.warn(`Max tabs (${maxTabs}) reached for panel ${panelId}`);
+        // TODO: Replace with toast.warning when Sonner is integrated
+        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
         return;
       }
 
@@ -59,7 +60,8 @@ export function useTabs(panelId: string) {
     (tabId: string) => {
       // maxTabs < 1 means unlimited; reducer also enforces this
       if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
-        console.warn(`Max tabs (${maxTabs}) reached for panel ${panelId}`);
+        // TODO: Replace with toast.warning when Sonner is integrated
+        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
         return;
       }
       // Dispatch intent - reducer handles ID generation and copying

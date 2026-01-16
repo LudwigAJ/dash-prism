@@ -85,7 +85,11 @@ Keyword arguments:
 
         - locked (boolean; optional)
 
-        - loading (boolean; optional)
+        - mountKey (string; optional):
+
+            UUID for React key; regenerated on refresh to force remount.
+
+            Auto-generated if missing.
 
         - icon (string; optional)
 
@@ -191,7 +195,11 @@ Keyword arguments:
 
         - locked (boolean; optional)
 
-        - loading (boolean; optional)
+        - mountKey (string; optional):
+
+            UUID for React key; regenerated on refresh to force remount.
+
+            Auto-generated if missing.
 
         - icon (string; optional)
 
@@ -268,7 +276,7 @@ Keyword arguments:
             "layoutOption": NotRequired[str],
             "layoutParams": NotRequired[typing.Dict[typing.Union[str, float, int], str]],
             "locked": NotRequired[bool],
-            "loading": NotRequired[bool],
+            "mountKey": NotRequired[str],
             "icon": NotRequired[str],
             "style": NotRequired[str]
         }
@@ -311,7 +319,7 @@ Keyword arguments:
             "layoutOption": NotRequired[str],
             "layoutParams": NotRequired[typing.Dict[typing.Union[str, float, int], str]],
             "locked": NotRequired[bool],
-            "loading": NotRequired[bool],
+            "mountKey": NotRequired[str],
             "icon": NotRequired[str],
             "style": NotRequired[str]
         }

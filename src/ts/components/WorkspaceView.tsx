@@ -1,14 +1,94 @@
-import React, { ReactElement } from 'react';
+import React, { memo, useMemo } from 'react';
+import { InPortal } from 'react-reverse-portal';
 import { usePrism } from '@hooks/usePrism';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { useDashSync } from '@hooks/useDashSync';
 import { useConfig } from '@context/ConfigContext';
-import { Panel } from '@components/Panel';
+import { Panel, makeComponentPath } from '@components/Panel';
 import { StatusBar } from '@components/StatusBar';
 import { HelpModal } from '@components/modals/HelpModal';
 import { InfoModal } from '@components/modals/InfoModal';
 import { SetIconModal } from '@components/modals/SetIconModal';
-import type { Tab } from '@types';
+import { ErrorBoundary } from '@components/ErrorBoundary';
+import type { Tab, DashComponent, DashComponentApi } from '@types';
+
+// =============================================================================
+// DashContentRenderer - Memoized component that renders Dash layout content
+// =============================================================================
+
+function makeSpec(
+  id: string,
+  layoutId: string | undefined,
+  layoutParams: Record<string, string> | undefined,
+  layoutOption: string | undefined
+): DashComponent {
+  return {
+    namespace: 'dash_prism',
+    type: 'PrismContent',
+    props: {
+      // CRITICAL: ID must be an OBJECT, not stringified!
+      id: { type: 'prism-content', index: id },
+      data: {
+        tabId: id,
+        layoutId,
+        // Use null instead of {} for stable references
+        layoutParams: layoutParams ?? null,
+        layoutOption: layoutOption ?? null,
+      },
+    },
+  };
+}
+
+/**
+ * Memoized Dash content renderer.
+ * Only re-renders when layout-affecting properties change (id, layoutId, layoutParams, layoutOption).
+ * UI-only properties like `locked`, `name`, `icon`, `style` do NOT trigger re-renders.
+ */
+const DashContentRenderer = memo(
+  ({ tab }: { tab: Tab }) => {
+    const api: DashComponentApi | undefined = window.dash_component_api;
+    const { componentId = 'prism' } = useConfig();
+
+    // Destructure only layout-affecting properties for stable memoization
+    const { id, layoutId, layoutParams, layoutOption } = tab;
+
+    const spec = useMemo<DashComponent>(
+      () => makeSpec(id, layoutId, layoutParams, layoutOption),
+      [id, layoutId, layoutParams, layoutOption]
+    );
+
+    const componentPath = useMemo(() => makeComponentPath(componentId, id), [componentId, id]);
+
+    if (!api?.ExternalWrapper) {
+      return (
+        <div className="text-muted-foreground flex h-full items-center justify-center">
+          <p>Dash API not available. Ensure you're using Dash 3.1.1+.</p>
+        </div>
+      );
+    }
+
+    const { ExternalWrapper } = api;
+
+    return (
+      <div className="prism-content-container h-full">
+        <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
+      </div>
+    );
+  },
+  // Custom comparator: only re-render when layout-affecting properties change
+  (prevProps, nextProps) => {
+    const prev = prevProps.tab;
+    const next = nextProps.tab;
+    return (
+      prev.id === next.id &&
+      prev.layoutId === next.layoutId &&
+      prev.layoutOption === next.layoutOption &&
+      JSON.stringify(prev.layoutParams) === JSON.stringify(next.layoutParams)
+    );
+  }
+);
+
+DashContentRenderer.displayName = 'DashContentRenderer';
 
 type WorkspaceViewProps = {
   /** Array of PrismAction component specs */
@@ -24,6 +104,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
     state,
     dispatch,
     setProps,
+    getPortalNode,
     infoModalTab,
     helpModalOpen,
     setIconModalTab,
@@ -37,6 +118,23 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
 
   return (
     <div className="prism-view-workspace">
+      {/* PORTAL HOST: Stable mount point for all tab content with layouts.
+          Content rendered here stays mounted even when tabs move between panels.
+          Uses mountKey in key to force remount when user triggers refresh. */}
+      {state.tabs
+        .filter((tab) => Boolean(tab.layoutId))
+        .map((tab) => {
+          const node = getPortalNode(tab.id);
+          if (!node) return null;
+          return (
+            <InPortal key={tab.mountKey ?? tab.id} node={node}>
+              <ErrorBoundary>
+                <DashContentRenderer tab={tab} />
+              </ErrorBoundary>
+            </InPortal>
+          );
+        })}
+
       {statusBarPosition === 'top' && (
         <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
       )}

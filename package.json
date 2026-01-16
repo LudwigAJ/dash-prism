@@ -1,6 +1,6 @@
 {
   "name": "dash_prism",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Prism: Powerful multi-panel workspace manager for Plotly Dash",
   "main": "index.ts",
   "repository": {
@@ -81,6 +81,7 @@
     "fast-deep-equal": "^3.1.3",
     "immer": "^11.1.3",
     "lucide-react": "^0.562.0",
+    "react-reverse-portal": "^2.3.0",
     "react-split-pane": "^3.0.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"

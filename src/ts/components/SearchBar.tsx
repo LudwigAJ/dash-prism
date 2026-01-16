@@ -158,6 +158,21 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
       const layout = registeredLayouts[layoutId];
       if (!layout) return;
 
+      // Check allowMultiple constraint - if layout already open, switch to it instead
+      if (!layout.allowMultiple) {
+        const existingTab = state.tabs?.find((t) => t.layoutId === layoutId);
+        if (existingTab) {
+          // TODO: Replace with toast.info when Sonner is integrated
+          console.log(`[Prism] Layout "${layout.name}" already open. Switching to existing tab.`);
+          dispatch({
+            type: 'SELECT_TAB',
+            payload: { tabId: existingTab.id, panelId: existingTab.panelId },
+          });
+          resetState();
+          return;
+        }
+      }
+
       setSelectedLayoutId(layoutId);
 
       const hasParams = layout.params && layout.params.length > 0;
@@ -185,7 +200,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
         return;
       }
     },
-    [registeredLayouts, applyLayout]
+    [registeredLayouts, state.tabs, dispatch, resetState, applyLayout]
   );
 
   const handleOptionSelect = useCallback(

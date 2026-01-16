@@ -43,7 +43,8 @@ export type Tab = {
   layoutParams?: Record<string, string>;
 
   locked?: boolean;
-  loading?: boolean;
+  /** UUID for React key; regenerated on refresh to force remount. Auto-generated if missing. */
+  mountKey?: string;
 
   icon?: string;
   style?: string;

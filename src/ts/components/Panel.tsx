@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import { OutPortal } from 'react-reverse-portal';
 import { usePrism, usePanelTabs, useActiveTab } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { SplitPane, Pane } from 'react-split-pane';
@@ -6,8 +7,8 @@ import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
 import { SearchBar } from '@components/SearchBar';
 import { PanelDropZone } from '@components/PanelDropzone';
-import type { Panel as PanelType, Tab, DashComponentApi } from '@types';
-import type { TabId, DashComponent } from '@types';
+import type { Panel as PanelType, Tab } from '@types';
+import type { TabId } from '@types';
 import { cn } from '@utils/cn';
 import { isLeafPanel, getLeafPanelIds } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
@@ -19,83 +20,9 @@ type PanelProps = {
   onOpenInfo?: (tab: Tab) => void;
 };
 
-function makeSpec(
-  id: string,
-  layoutId: string | undefined,
-  layoutParams: Record<string, string> | undefined,
-  layoutOption: string | undefined
-): DashComponent {
-  return {
-    namespace: 'dash_prism',
-    type: 'PrismContent',
-    props: {
-      // CRITICAL: ID must be an OBJECT, not stringified!
-      id: { type: 'prism-content', index: id },
-      data: {
-        tabId: id,
-        layoutId,
-        // Use null instead of {} for stable references
-        layoutParams: layoutParams ?? null,
-        layoutOption: layoutOption ?? null,
-      },
-    },
-  };
-}
-
 export function makeComponentPath(componentId: string, tabId: string): string[] {
   return [componentId, 'content', tabId];
 }
-
-/**
- * Memoized Dash content renderer.
- * Only re-renders when layout-affecting properties change (id, layoutId, layoutParams, layoutOption).
- * UI-only properties like `locked`, `name`, `icon`, `style` do NOT trigger re-renders.
- */
-const DashContentRenderer = memo(
-  ({ tab }: { tab: Tab }) => {
-    const api: DashComponentApi | undefined = window.dash_component_api;
-    const { componentId = 'prism' } = useConfig();
-
-    // Destructure only layout-affecting properties for stable memoization
-    const { id, layoutId, layoutParams, layoutOption } = tab;
-
-    const spec = useMemo<DashComponent>(
-      () => makeSpec(id, layoutId, layoutParams, layoutOption),
-      [id, layoutId, layoutParams, layoutOption]
-    );
-
-    const componentPath = useMemo(() => makeComponentPath(componentId, id), [componentId, id]);
-
-    if (!api?.ExternalWrapper) {
-      return (
-        <div className="text-muted-foreground flex h-full items-center justify-center">
-          <p>Dash API not available. Ensure you're using Dash 3.1.1+.</p>
-        </div>
-      );
-    }
-
-    const { ExternalWrapper } = api;
-
-    return (
-      <div className="prism-content-container h-full">
-        <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
-      </div>
-    );
-  },
-  // Custom comparator: only re-render when layout-affecting properties change
-  (prevProps, nextProps) => {
-    const prev = prevProps.tab;
-    const next = nextProps.tab;
-    return (
-      prev.id === next.id &&
-      prev.layoutId === next.layoutId &&
-      prev.layoutOption === next.layoutOption &&
-      JSON.stringify(prev.layoutParams) === JSON.stringify(next.layoutParams)
-    );
-  }
-);
-
-DashContentRenderer.displayName = 'DashContentRenderer';
 
 // =============================================================================
 // LeafPanel - Renders a leaf panel with tabs
@@ -106,7 +33,7 @@ type LeafPanelProps = {
 };
 
 const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
-  const { state, dispatch } = usePrism();
+  const { state, dispatch, getPortalNode } = usePrism();
 
   const panelTabIds = state.panelTabs[panel.id] || [];
   const tabs = panelTabIds
@@ -151,18 +78,31 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
 
         <PanelDropZone panelId={panel.id} isPinned={isPinned}>
           <div className="relative flex-1 overflow-auto">
-            {tabs.map((tab) => (
-              <TabsContent
-                key={tab.id}
-                value={tab.id}
-                forceMount={true}
-                className="min-h-full data-[state=inactive]:hidden"
-              >
-                <ErrorBoundary>
-                  {!tab.layoutId ? <NewLayout tabId={tab.id} /> : <DashContentRenderer tab={tab} />}
-                </ErrorBoundary>
-              </TabsContent>
-            ))}
+            {tabs.map((tab) => {
+              // Get portal node for tabs with layouts (content rendered via InPortal in WorkspaceView)
+              const portalNode = tab.layoutId ? getPortalNode(tab.id) : null;
+
+              return (
+                <TabsContent
+                  key={tab.id}
+                  value={tab.id}
+                  forceMount={true}
+                  className="min-h-full data-[state=inactive]:hidden"
+                >
+                  <ErrorBoundary>
+                    {!tab.layoutId ? (
+                      <NewLayout tabId={tab.id} />
+                    ) : portalNode ? (
+                      <OutPortal node={portalNode} />
+                    ) : (
+                      <div className="text-muted-foreground flex h-full items-center justify-center">
+                        <p>Loading...</p>
+                      </div>
+                    )}
+                  </ErrorBoundary>
+                </TabsContent>
+              );
+            })}
           </div>
         </PanelDropZone>
       </Tabs>

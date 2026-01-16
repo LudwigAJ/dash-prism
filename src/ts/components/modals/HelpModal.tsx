@@ -115,6 +115,14 @@ export function HelpModal({
               </div>
             </div>
             <div className={shortcutRowClass}>
+              <span className="text-foreground text-sm">Refresh tab</span>
+              <div className="flex items-center gap-1">
+                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>⇧</kbd>
+                <kbd className={kbdClass}>R</kbd>
+              </div>
+            </div>
+            <div className={shortcutRowClass}>
               <span className="text-foreground text-sm">Pin / unpin panel</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
