@@ -304,7 +304,6 @@ export type Action =
         option?: string;
       };
     }
-  | { type: 'SET_LOADING'; payload: { tabId: TabId; loading: boolean } }
   | { type: 'REMOVE_TAB'; payload: { tabId: TabId } }
   | { type: 'SELECT_TAB'; payload: { tabId: TabId; panelId: PanelId } }
   | { type: 'RENAME_TAB'; payload: { tabId: TabId; name: string } }
@@ -341,7 +340,8 @@ export type Action =
   | { type: 'POP_UNDO' }
   | { type: 'START_RENAME_TAB'; payload: { tabId: TabId } }
   | { type: 'CLEAR_RENAME_TAB' }
-  | { type: 'RESET_WORKSPACE' };
+  | { type: 'RESET_WORKSPACE' }
+  | { type: 'REFRESH_TAB'; payload: { tabId: TabId } };
 
 // =============================================================================
 // Reducer Config
@@ -398,7 +398,13 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
             theme,
           } = action.payload;
           // Use explicit undefined checks (not truthiness) to allow syncing empty arrays/strings
-          if (tabs !== undefined) draft.tabs = tabs;
+          if (tabs !== undefined) {
+            // Hydrate mountKey for tabs that don't have one (e.g., from external updateWorkspace)
+            draft.tabs = tabs.map((tab) => ({
+              ...tab,
+              mountKey: tab.mountKey ?? generateShortId(),
+            }));
+          }
           if (panel !== undefined) draft.panel = panel;
           if (panelTabs !== undefined) draft.panelTabs = panelTabs;
           if (activeTabIds !== undefined) draft.activeTabIds = activeTabIds;
@@ -435,6 +441,7 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
             layoutParams: params ?? undefined,
             layoutOption: option ?? undefined,
             createdAt: Date.now(),
+            mountKey: generateShortId(),
           };
           draft.tabs.push(newTab);
           handleAddTabToPanelTracking(draft, newTab.id, panelId);
@@ -540,6 +547,8 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
             locked: false,
             // Deep copy layoutParams to prevent shared references
             layoutParams: originalTab.layoutParams ? { ...originalTab.layoutParams } : undefined,
+            // New mountKey for fresh React mount
+            mountKey: generateShortId(),
           };
           draft.tabs.push(newTab);
           handleAddTabToPanelTracking(draft, newTab.id, newTab.panelId);
@@ -554,7 +563,6 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
             tab.layoutId = layoutId;
             tab.name = name;
             tab.layoutParams = params;
-            tab.loading = true;
           }
           break;
         }
@@ -586,13 +594,6 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           const { tabId, style } = action.payload;
           const tab = findTabById(draft.tabs, tabId);
           if (tab) tab.style = style;
-          break;
-        }
-
-        case 'SET_LOADING': {
-          const { tabId, loading } = action.payload;
-          const tab = findTabById(draft.tabs, tabId);
-          if (tab) tab.loading = loading;
           break;
         }
 
@@ -856,6 +857,21 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           draft.undoStack = [];
           draft.searchBarModes = {};
           draft.renamingTabId = null;
+          break;
+        }
+
+        case 'REFRESH_TAB': {
+          const { tabId } = action.payload;
+          const tab = findTabById(draft.tabs, tabId);
+
+          // Guard: tab must exist
+          if (!tab) break;
+
+          // Guard: must have layout to refresh
+          if (!tab.layoutId) break;
+
+          // Regenerate mountKey to force React remount
+          tab.mountKey = generateShortId();
           break;
         }
       }

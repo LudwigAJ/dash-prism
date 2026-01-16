@@ -15,6 +15,7 @@ import type { PanelId, TabId } from '@types';
  * - O: Toggle lock on active tab
  * - I: Toggle pin on active panel
  * - R: Rename active tab (opens rename dialog)
+ * - Shift+R: Refresh active tab (force refetch layout from server)
  * - Y: Toggle search bars visibility
  * - B: Duplicate active tab
  * - U: Undo last closed tab
@@ -44,7 +45,11 @@ export function useKeyboardShortcuts() {
     (panelId: PanelId) => {
       const panelTabIds = state.panelTabs[panelId] ?? [];
       // maxTabs < 1 means unlimited; reducer also enforces this
-      if (maxTabs >= 1 && panelTabIds.length >= maxTabs) return;
+      if (maxTabs >= 1 && panelTabIds.length >= maxTabs) {
+        // TODO: Replace with toast.warning when Sonner is integrated
+        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
+        return;
+      }
 
       dispatch({ type: 'ADD_TAB', payload: { panelId } });
     },
@@ -138,10 +143,25 @@ export function useKeyboardShortcuts() {
 
     const panelTabIds = state.panelTabs[state.activePanelId] ?? [];
     // maxTabs < 1 means unlimited; reducer also enforces this
-    if (maxTabs >= 1 && panelTabIds.length >= maxTabs) return;
+    if (maxTabs >= 1 && panelTabIds.length >= maxTabs) {
+      // TODO: Replace with toast.warning when Sonner is integrated
+      console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
+      return;
+    }
 
     dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
   }, [getActiveTab, state.panelTabs, state.activePanelId, maxTabs, dispatch]);
+
+  // ========== Action: Refresh tab (force refetch layout) ==========
+  const refreshActiveTab = useCallback(() => {
+    const tab = getActiveTab();
+
+    // Guards: tab must exist and have a layout
+    if (!tab) return;
+    if (!tab.layoutId) return;
+
+    dispatch({ type: 'REFRESH_TAB', payload: { tabId: tab.id } });
+  }, [getActiveTab, dispatch]);
 
   // ========== Keyboard event handler ==========
   useEffect(() => {
@@ -193,9 +213,14 @@ export function useKeyboardShortcuts() {
           break;
 
         case 'r':
-          // Rename active tab
           e.preventDefault();
-          renameActiveTab();
+          if (e.shiftKey) {
+            // Ctrl/Cmd + Shift + R: Refresh active tab (force refetch layout)
+            refreshActiveTab();
+          } else {
+            // Ctrl/Cmd + R: Rename active tab
+            renameActiveTab();
+          }
           break;
 
         case 'y':
@@ -228,6 +253,7 @@ export function useKeyboardShortcuts() {
     toggleTabLock,
     togglePanelPin,
     renameActiveTab,
+    refreshActiveTab,
     toggleSearchBars,
     duplicateActiveTab,
     undoCloseTab,

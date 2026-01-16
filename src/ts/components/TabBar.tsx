@@ -256,6 +256,17 @@ const TabItem = memo(function TabItem({
           </ContextMenuItem>
         )}
 
+        {/* Refresh - force refetch layout from server */}
+        {tab.layoutId && (
+          <ContextMenuItem
+            data-testid="prism-context-menu-refresh"
+            onSelect={() => dispatch({ type: 'REFRESH_TAB', payload: { tabId: tab.id } })}
+          >
+            Refresh
+            <ContextMenuShortcut>⌃⇧R</ContextMenuShortcut>
+          </ContextMenuItem>
+        )}
+
         <ContextMenuSeparator />
 
         {/* Icon submenu */}

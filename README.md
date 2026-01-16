@@ -21,8 +21,8 @@ Building dashboards with Plotly Dash typically means:
 
 - **Fragmented applications** - Each dashboard lives in isolation, requiring
   users to switch between browser tabs or navigate complex menus.
-- **Repetitive UI work** - Developers spend time on layout scaffolding, tab
-  systems, and panel management instead of business logic.
+- **Repetitive UI work** - Developers spend time on layout scaffolding, content
+  management, and styling instead of business logic.
 - **One-size-fits-all layouts** - Users get a fixed arrangement that may not
   match their workflow.
 - **No personalization** - Workspaces reset on every visit; users cannot save
@@ -62,7 +62,7 @@ Dash Prism addresses these issues by providing:
 - **Keyboard Shortcuts** - Full keyboard navigation: new tab, close, rename,
   undo close, switch tabs, and more.
 - **Error Resilience** - Errors are captured at the tab level, guarding against
-  crashes that would otherwise take down the workspace. Retry with one click.
+  crashes that would otherwise take down the workspace.
 
 ## Installation
 
