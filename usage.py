@@ -451,10 +451,11 @@ def asset_layout(theme: str = "light"):
                 },
             ),
             # Store data
-            dcc.Store(id="asset-name", data=asset_name),
-            dcc.Store(id="asset-theme", data=theme),
+            dcc.Store(id={'type': 'asset-name', 'index': MATCH}, data=asset_name),
+            dcc.Store(id={'type': 'asset-theme', 'index': MATCH}, data=theme),
+            dcc.Store(id={'type': 'asset-model', 'index': MATCH}, data='GBM'),
             dcc.Store(
-                id="asset-data",
+                id={'type': 'asset-data', 'index': MATCH},
                 data={
                     "timestamps": [],
                     "prices": [],
@@ -467,7 +468,7 @@ def asset_layout(theme: str = "light"):
             html.Div(
                 [
                     dcc.Graph(
-                        id="asset-chart",
+                        id={'type': 'asset-chart', 'index': MATCH},
                         config={"displayModeBar": False},
                         style={"height": "100%"},
                     ),
@@ -479,7 +480,7 @@ def asset_layout(theme: str = "light"):
                     "backgroundColor": colors["bg"],
                 },
             ),
-            dcc.Interval(id="asset-interval", interval=1000, n_intervals=0),
+            dcc.Interval(id={'type': 'asset-interval', 'index': MATCH}, interval=1000, n_intervals=0),
         ],
         style={
             "height": "100%",
@@ -1175,7 +1176,7 @@ app.layout = html.Div([
     dash_prism.Prism(
         id='prism',
         style={'height': '100vh', 'width': '100%'},
-        theme='light',
+        theme='dark',
         size='md',
         actions=[
             dash_prism.Action(id='save', label='Save', icon='Save', tooltip='Save workspace'),

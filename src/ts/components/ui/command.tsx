@@ -16,7 +16,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      'prism-command bg-popover text-popover-foreground flex h-full w-full flex-row overflow-hidden rounded-md',
+      'prism-command bg-background text-foreground flex h-full w-full flex-row overflow-hidden',
       className
     )}
     {...props}
@@ -41,7 +41,7 @@ const CommandInput = React.forwardRef<
       ref={ref}
       className={cn(
         'flex h-10 w-full rounded-md bg-transparent text-sm outline-none',
-        'placeholder:text-muted-foreground',
+        'text-foreground placeholder:text-muted-foreground',
         'disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
