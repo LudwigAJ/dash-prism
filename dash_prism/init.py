@@ -210,9 +210,7 @@ def _resolve_layout_params(
 
         option_entry = registration.param_options.get(layout_option)
         if not option_entry:
-            raise ValueError(
-                f"Layout option '{layout_option}' not found for layout '{layout_id}'."
-            )
+            raise ValueError(f"Layout option '{layout_option}' not found for layout '{layout_id}'.")
 
         _, option_params = option_entry
         if not isinstance(option_params, dict):
