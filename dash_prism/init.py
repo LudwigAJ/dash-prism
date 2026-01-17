@@ -162,7 +162,7 @@ def _create_error_component(message: str) -> Any:
 def _resolve_layout_params(
     registration: Any,
     layout_id: str,
-    layout_params: Dict[str, Any],
+    layout_params: Optional[Dict[str, Any]],
     layout_option: Optional[str],
 ) -> Dict[str, Any]:
     """Resolve effective layout parameters.
@@ -233,8 +233,8 @@ def _resolve_layout_params(
 def _render_tab_layout(
     tab_id: str,
     layout_id: str,
-    layout_params: Dict[str, Any],
-    layout_option: Optional[str],
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str] = None,
 ) -> Any:
     """Render a tab's layout (SYNC version).
 
@@ -292,8 +292,8 @@ def _render_tab_layout(
 async def _render_tab_layout_async(
     tab_id: str,
     layout_id: str,
-    layout_params: Dict[str, Any],
-    layout_option: Optional[str],
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str] = None,
 ) -> Any:
     """Render a tab's layout (ASYNC version).
 

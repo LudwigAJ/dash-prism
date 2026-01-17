@@ -550,10 +550,8 @@ def register_layout(
         parameters = _extract_parameters(func)
         is_async = _is_async_function(func)
 
-        parameters_for_metadata = parameters
         if param_options:
             _validate_param_options(param_options, parameters)
-            parameters_for_metadata = []
 
         registry.register(
             LayoutRegistration(
@@ -565,7 +563,7 @@ def register_layout(
                 layout=None,
                 callback=func,
                 is_async=is_async,
-                parameters=parameters_for_metadata,
+                parameters=parameters,
                 param_options=param_options,
             )
         )

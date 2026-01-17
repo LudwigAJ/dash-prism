@@ -83,9 +83,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
         className={cn(
           'absolute top-2 right-2 rounded-md p-1.5 transition-colors',
           'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-          isFavorite(id)
-            ? 'text-primary'
-            : 'text-muted-foreground hover:text-primary'
+          isFavorite(id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
         )}
         aria-label={isFavorite(id) ? 'Remove from favorites' : 'Add to favorites'}
       >

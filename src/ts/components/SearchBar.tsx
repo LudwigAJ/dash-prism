@@ -657,9 +657,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                         className={cn(
                           'mr-2 shrink-0 rounded p-0.5 transition-colors',
                           'hover:bg-muted focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-none',
-                          isFavorite
-                            ? 'text-primary'
-                            : 'text-muted-foreground hover:text-primary'
+                          isFavorite ? 'text-primary' : 'text-muted-foreground hover:text-primary'
                         )}
                         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
