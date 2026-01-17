@@ -1,5 +1,5 @@
 import React, { useCallback, memo } from 'react';
-import { Tooltip, Spinner } from '@components/ui';
+import { Tooltip, TooltipContent, TooltipTrigger, Spinner } from '@components/ui';
 import { getTabIcon } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
 import { DashComponentProps } from 'props';
@@ -9,8 +9,6 @@ const ACTION_STYLE_CLASSES: Record<string, string> = {
   default: '',
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-  success: 'bg-success text-success-foreground hover:bg-success/90',
-  warning: 'bg-warning text-warning-foreground hover:bg-warning/90',
   danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
 };
 
@@ -41,7 +39,7 @@ type PrismActionProps = {
 
   /**
    * Button style variant.
-   * Can be a preset ('default', 'primary', 'secondary', 'success', 'warning', 'danger')
+   * Can be a preset ('default', 'primary', 'secondary', 'danger')
    * or a hex color (e.g., '#FF5500').
    */
   style?: string;
@@ -102,30 +100,33 @@ export function PrismAction({
   const testId = id ? `prism-action-${id}` : undefined;
 
   return (
-    <Tooltip content={tooltipContent} delayDuration={300}>
-      <button
-        id={id}
-        data-testid={testId}
-        className={cn(
-          'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
-          'hover:bg-surface-dim border border-transparent',
-          'flex items-center gap-1.5',
-          styleClasses,
-          disabled && 'cursor-not-allowed opacity-50',
-          loading && 'cursor-wait'
-        )}
-        style={customStyle}
-        onClick={handleClick}
-        disabled={disabled || loading}
-        aria-busy={loading}
-      >
-        {loading ? (
-          <Spinner size="sm" className="h-3 w-3" />
-        ) : IconComponent ? (
-          <IconComponent className="h-3 w-3" />
-        ) : null}
-        <span>{label}</span>
-      </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          id={id}
+          data-testid={testId}
+          className={cn(
+            'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
+            'hover:bg-muted/70 border border-transparent',
+            'flex items-center gap-1.5',
+            styleClasses,
+            disabled && 'cursor-not-allowed opacity-50',
+            loading && 'cursor-wait'
+          )}
+          style={customStyle}
+          onClick={handleClick}
+          disabled={disabled || loading}
+          aria-busy={loading}
+        >
+          {loading ? (
+            <Spinner size="sm" className="h-3 w-3" />
+          ) : IconComponent ? (
+            <IconComponent className="h-3 w-3" />
+          ) : null}
+          <span>{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltipContent}</TooltipContent>
     </Tooltip>
   );
 }

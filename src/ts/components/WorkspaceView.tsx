@@ -114,7 +114,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
     openHelpModal,
   } = usePrism();
 
-  const { statusBarPosition, theme } = useConfig();
+  const { statusBarPosition } = useConfig();
 
   return (
     <div className="prism-view-workspace">
@@ -147,13 +147,8 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
       )}
       {/* Modals - local state only */}
-      <HelpModal open={helpModalOpen} onOpenChange={closeHelpModal} theme={theme} />
-      <InfoModal
-        open={infoModalTab !== null}
-        tab={infoModalTab}
-        onOpenChange={closeInfoModal}
-        theme={theme}
-      />
+      <HelpModal open={helpModalOpen} onOpenChange={closeHelpModal} />
+      <InfoModal open={infoModalTab !== null} tab={infoModalTab} onOpenChange={closeInfoModal} />
       <SetIconModal
         open={setIconModalTab !== null}
         tab={setIconModalTab}
@@ -161,7 +156,6 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         onSelectIcon={(tabId, icon) => {
           dispatch({ type: 'SET_TAB_ICON', payload: { tabId, icon } });
         }}
-        theme={theme}
       />
 
       {/* Render children (layout components from Dash) */}

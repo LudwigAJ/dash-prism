@@ -19,14 +19,20 @@ export type StatusBarPosition = 'top' | 'bottom';
 
 export type styles =
   | 'default'
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'info'
-  | 'warning'
-  | 'danger'
-  | 'light'
-  | 'dark';
+  | 'rosewater'
+  | 'flamingo'
+  | 'pink'
+  | 'mauve'
+  | 'red'
+  | 'maroon'
+  | 'peach'
+  | 'yellow'
+  | 'green'
+  | 'teal'
+  | 'sky'
+  | 'sapphire'
+  | 'blue'
+  | 'lavender';
 
 // =============================================================================
 // Core Types

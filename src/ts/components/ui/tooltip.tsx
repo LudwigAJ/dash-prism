@@ -2,63 +2,57 @@ import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '../../utils/cn';
 
-const TooltipProvider = TooltipPrimitive.Provider;
+function TooltipProvider({
+  delayDuration = 800,
+  skipDelayDuration = 0,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+  return (
+    <TooltipPrimitive.Provider
+      data-slot="tooltip-provider"
+      delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
+      {...props}
+    />
+  );
+}
+
+function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+  return (
+    <TooltipProvider>
+      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+    </TooltipProvider>
+  );
+}
+
+function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+}
+
 const TooltipRoot = TooltipPrimitive.Root;
-const TooltipTrigger = TooltipPrimitive.Trigger;
 
-export type TooltipContentProps = React.ComponentPropsWithoutRef<
-  typeof TooltipPrimitive.Content
-> & {
-  theme?: 'light' | 'dark';
-};
-
-const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  TooltipContentProps
->(({ className, sideOffset = 4, theme = 'light', ...props }, ref) => {
-  const themeClass = theme === 'dark' ? 'prism-theme-dark' : 'prism-theme-light';
+function TooltipContent({
+  className,
+  sideOffset = 0,
+  children,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
-        ref={ref}
+        data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          themeClass,
-          'border-border bg-popover text-popover-foreground z-50 overflow-hidden rounded-md border px-3 py-1.5 text-xs shadow-md',
-          'animate-in fade-in-0 zoom-in-95',
+          'bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance',
           className
         )}
         {...props}
-      />
+      >
+        {children}
+        <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+      </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );
-});
-TooltipContent.displayName = 'TooltipContent';
+}
 
-// Convenience wrapper
-export type TooltipProps = {
-  children: React.ReactNode;
-  content: React.ReactNode;
-  side?: 'top' | 'right' | 'bottom' | 'left';
-  delayDuration?: number;
-  theme?: 'light' | 'dark';
-};
-
-const Tooltip = ({
-  children,
-  content,
-  side = 'top',
-  delayDuration = 200,
-  theme = 'light',
-}: TooltipProps) => (
-  <TooltipProvider delayDuration={delayDuration}>
-    <TooltipRoot>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side} theme={theme}>
-        {content}
-      </TooltipContent>
-    </TooltipRoot>
-  </TooltipProvider>
-);
-
-export { Tooltip, TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent };
+export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent, TooltipRoot };

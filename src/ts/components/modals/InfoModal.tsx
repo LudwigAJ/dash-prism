@@ -8,7 +8,7 @@ import {
 } from '@components/ui/dialog';
 import { Button } from '@components/ui/button';
 import { cn } from '@utils/cn';
-import type { Tab, Theme } from 'types';
+import type { Tab } from 'types';
 
 export type InfoModalProps = {
   /** Whether the modal is open */
@@ -17,8 +17,6 @@ export type InfoModalProps = {
   onOpenChange: (open: boolean) => void;
   /** Tab data to display */
   tab: Tab | null;
-  /** Current theme for portal styling */
-  theme?: Theme;
 };
 
 /**
@@ -30,7 +28,7 @@ export type InfoModalProps = {
  * Note: Modal state is managed via local useState in PrismView,
  * NOT in Redux (see Reversibility Philosophy section).
  */
-export function InfoModal({ open, onOpenChange, tab, theme = 'light' }: InfoModalProps) {
+export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
   const rowClass = cn(
     'flex items-center justify-between gap-4 py-2.5',
     'border-b border-border/50 last:border-0'
@@ -41,7 +39,7 @@ export function InfoModal({ open, onOpenChange, tab, theme = 'light' }: InfoModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" theme={theme}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Tab Information</DialogTitle>
         </DialogHeader>

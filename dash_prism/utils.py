@@ -402,7 +402,8 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     For callback-based rendering, see :func:`init.init`.
 
     :param data: Tab data dict containing ``tabId`` (unique ID), ``layoutId``
-        (registered layout ID), and ``layoutParams`` (callback parameters).
+        (registered layout ID), ``layoutParams`` (callback parameters), and
+        ``layoutOption`` (selected option key).
     :type data: dict[str, Any]
     :returns: The rendered Dash component tree.
     :rtype: Any
@@ -418,6 +419,7 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     tab_id = data.get("tabId")
     layout_id = data.get("layoutId")
     layout_params = data.get("layoutParams", {})
+    layout_option = data.get("layoutOption") or None
 
     if not layout_id:
         return html.Div(
@@ -434,8 +436,45 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
         )
 
     try:
+        resolved_params = layout_params or {}
+        if registration.param_options:
+            if layout_option is None:
+                raise ValueError(
+                    f"Layout '{layout_id}' requires layoutOption when param_options is defined."
+                )
+            if resolved_params:
+                raise ValueError(
+                    f"Layout '{layout_id}' only accepts parameters via param_options; "
+                    "layoutParams are not supported."
+                )
+            if not isinstance(layout_option, str):
+                raise ValueError(
+                    f"layoutOption must be a string for layout '{layout_id}', "
+                    f"got {type(layout_option).__name__}"
+                )
+            if not registration.is_callable or registration.callback is None:
+                raise ValueError(
+                    f"Layout options are only supported for callback layouts. "
+                    f"Layout '{layout_id}' is static."
+                )
+            option_entry = registration.param_options.get(layout_option)
+            if not option_entry:
+                raise ValueError(
+                    f"Layout option '{layout_option}' not found for layout '{layout_id}'."
+                )
+            _, option_params = option_entry
+            if not isinstance(option_params, dict):
+                raise ValueError(
+                    f"param_options for layout '{layout_id}' must map to a dict of params."
+                )
+            resolved_params = dict(option_params)
+        elif layout_option is not None:
+            raise ValueError(
+                f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
+            )
+
         if registration.is_callable and registration.callback is not None:
-            layout = registration.callback(**layout_params)
+            layout = registration.callback(**resolved_params)
         else:
             layout = copy.deepcopy(registration.layout)
 
@@ -449,6 +488,14 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
             [
                 html.H3("Layout Error"),
                 html.Pre(f"Error rendering layout: {e}\nCheck required parameters."),
+            ],
+            className="prism-error-tab",
+        )
+    except ValueError as e:
+        return html.Div(
+            [
+                html.H3("Layout Error"),
+                html.Pre(str(e)),
             ],
             className="prism-error-tab",
         )

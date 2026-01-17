@@ -235,7 +235,7 @@ function DraggedTabPreview({ tab }: { tab: Tab }) {
   return (
     <div
       className={cn(
-        'bg-surface border-border flex cursor-grabbing items-center gap-2 rounded-sm border px-3 py-1.5 shadow-lg',
+        'bg-card border-border flex cursor-grabbing items-center gap-2 rounded-sm border px-3 py-1.5 shadow-lg',
         'opacity-80',
         styleClasses
       )}

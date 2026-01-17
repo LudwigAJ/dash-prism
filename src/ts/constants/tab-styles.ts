@@ -11,45 +11,75 @@ export const TAB_STYLE_VARIANTS = {
     light: '',
     dark: '',
   },
-  primary: {
-    label: 'Primary',
-    light: 'bg-primary/10 border-primary/30 data-[state=active]:bg-primary/20',
-    dark: 'bg-primary/20 border-primary/40 data-[state=active]:bg-primary/30',
+  rosewater: {
+    label: 'Rosewater',
+    light: 'bg-rosewater/20 border-rosewater/40 data-[state=active]:bg-rosewater/30',
+    dark: 'bg-rosewater/15 border-rosewater/35 data-[state=active]:bg-rosewater/25',
   },
-  secondary: {
-    label: 'Secondary',
-    light: 'bg-secondary/20 border-secondary/30 data-[state=active]:bg-secondary/30',
-    dark: 'bg-secondary/30 border-secondary/40 data-[state=active]:bg-secondary/40',
+  flamingo: {
+    label: 'Flamingo',
+    light: 'bg-flamingo/20 border-flamingo/40 data-[state=active]:bg-flamingo/30',
+    dark: 'bg-flamingo/15 border-flamingo/35 data-[state=active]:bg-flamingo/25',
   },
-  success: {
-    label: 'Success',
-    light: 'bg-emerald-100 border-emerald-300 data-[state=active]:bg-emerald-200',
-    dark: 'bg-emerald-900/30 border-emerald-700 data-[state=active]:bg-emerald-800/40',
+  pink: {
+    label: 'Pink',
+    light: 'bg-pink/20 border-pink/40 data-[state=active]:bg-pink/30',
+    dark: 'bg-pink/15 border-pink/35 data-[state=active]:bg-pink/25',
   },
-  danger: {
-    label: 'Danger',
-    light: 'bg-red-100 border-red-300 data-[state=active]:bg-red-200',
-    dark: 'bg-red-900/30 border-red-700 data-[state=active]:bg-red-800/40',
+  mauve: {
+    label: 'Mauve',
+    light: 'bg-mauve/20 border-mauve/40 data-[state=active]:bg-mauve/30',
+    dark: 'bg-mauve/15 border-mauve/35 data-[state=active]:bg-mauve/25',
   },
-  warning: {
-    label: 'Warning',
-    light: 'bg-amber-100 border-amber-300 data-[state=active]:bg-amber-200',
-    dark: 'bg-amber-900/30 border-amber-700 data-[state=active]:bg-amber-800/40',
+  red: {
+    label: 'Red',
+    light: 'bg-red/20 border-red/40 data-[state=active]:bg-red/30',
+    dark: 'bg-red/15 border-red/35 data-[state=active]:bg-red/25',
   },
-  info: {
-    label: 'Info',
-    light: 'bg-blue-100 border-blue-300 data-[state=active]:bg-blue-200',
-    dark: 'bg-blue-900/30 border-blue-700 data-[state=active]:bg-blue-800/40',
+  maroon: {
+    label: 'Maroon',
+    light: 'bg-maroon/20 border-maroon/40 data-[state=active]:bg-maroon/30',
+    dark: 'bg-maroon/15 border-maroon/35 data-[state=active]:bg-maroon/25',
   },
-  light: {
-    label: 'Light',
-    light: 'bg-gray-100 border-gray-300 data-[state=active]:bg-gray-200',
-    dark: 'bg-gray-700 border-gray-600 data-[state=active]:bg-gray-600',
+  peach: {
+    label: 'Peach',
+    light: 'bg-peach/20 border-peach/40 data-[state=active]:bg-peach/30',
+    dark: 'bg-peach/15 border-peach/35 data-[state=active]:bg-peach/25',
   },
-  dark: {
-    label: 'Dark',
-    light: 'bg-gray-700 border-gray-600 text-white data-[state=active]:bg-gray-800',
-    dark: 'bg-gray-900 border-gray-800 text-white data-[state=active]:bg-gray-950',
+  yellow: {
+    label: 'Yellow',
+    light: 'bg-yellow/20 border-yellow/40 data-[state=active]:bg-yellow/30',
+    dark: 'bg-yellow/15 border-yellow/35 data-[state=active]:bg-yellow/25',
+  },
+  green: {
+    label: 'Green',
+    light: 'bg-green/20 border-green/40 data-[state=active]:bg-green/30',
+    dark: 'bg-green/15 border-green/35 data-[state=active]:bg-green/25',
+  },
+  teal: {
+    label: 'Teal',
+    light: 'bg-teal/20 border-teal/40 data-[state=active]:bg-teal/30',
+    dark: 'bg-teal/15 border-teal/35 data-[state=active]:bg-teal/25',
+  },
+  sky: {
+    label: 'Sky',
+    light: 'bg-sky/20 border-sky/40 data-[state=active]:bg-sky/30',
+    dark: 'bg-sky/15 border-sky/35 data-[state=active]:bg-sky/25',
+  },
+  sapphire: {
+    label: 'Sapphire',
+    light: 'bg-sapphire/20 border-sapphire/40 data-[state=active]:bg-sapphire/30',
+    dark: 'bg-sapphire/15 border-sapphire/35 data-[state=active]:bg-sapphire/25',
+  },
+  blue: {
+    label: 'Blue',
+    light: 'bg-blue/20 border-blue/40 data-[state=active]:bg-blue/30',
+    dark: 'bg-blue/15 border-blue/35 data-[state=active]:bg-blue/25',
+  },
+  lavender: {
+    label: 'Lavender',
+    light: 'bg-lavender/20 border-lavender/40 data-[state=active]:bg-lavender/30',
+    dark: 'bg-lavender/15 border-lavender/35 data-[state=active]:bg-lavender/25',
   },
 } as const;
 

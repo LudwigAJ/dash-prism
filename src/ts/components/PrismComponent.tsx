@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { ConfigProvider } from '@context/ConfigContext';
 import { PrismProvider } from '@context/PrismContext';
 import { DndProvider } from '@context/DndProvider';
@@ -165,10 +165,24 @@ export function Prism({
     clearWorkspaceStorage(persistence_type, id);
   }, [persistence_type, id]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousTheme = root.getAttribute('data-prism-theme');
+    root.setAttribute('data-prism-theme', theme);
+
+    return () => {
+      if (previousTheme === null) {
+        root.removeAttribute('data-prism-theme');
+      } else {
+        root.setAttribute('data-prism-theme', previousTheme);
+      }
+    };
+  }, [theme]);
+
   return (
     <div
       id={id}
-      className={`prism-root prism-container prism-theme-${theme} prism-size-${size} bg-background text-foreground`}
+      className={`prism-root prism-container ${theme === 'dark' ? 'dark' : ''} prism-size-${size} text-foreground`}
       style={style}
     >
       <ErrorBoundary

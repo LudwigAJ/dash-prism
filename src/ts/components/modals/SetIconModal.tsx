@@ -9,7 +9,7 @@ import {
 import { Button } from '@components/ui/button';
 import { TAB_ICON_NAMES, getTabIcon, getIconLabel } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
-import type { Tab, Theme } from '@types';
+import type { Tab } from '@types';
 
 export type SetIconModalProps = {
   /** Whether the modal is open */
@@ -20,8 +20,6 @@ export type SetIconModalProps = {
   tab: Tab | null;
   /** Callback when an icon is selected */
   onSelectIcon: (tabId: string, icon: string | undefined) => void;
-  /** Current theme for portal styling */
-  theme?: Theme;
 };
 
 /**
@@ -31,13 +29,7 @@ export type SetIconModalProps = {
  * Shows all available Lucide icons from TAB_ICONS constant.
  * Includes "Remove Icon" option if tab already has an icon.
  */
-export function SetIconModal({
-  open,
-  onOpenChange,
-  tab,
-  onSelectIcon,
-  theme = 'light',
-}: SetIconModalProps) {
+export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconModalProps) {
   if (!tab) return null;
 
   const handleSelectIcon = (iconName: string) => {
@@ -52,7 +44,7 @@ export function SetIconModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" theme={theme}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Choose Icon</DialogTitle>
         </DialogHeader>
@@ -74,7 +66,7 @@ export function SetIconModal({
                   title={getIconLabel(iconName)}
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-md transition-colors',
-                    'hover:bg-accent focus:ring-ring focus:ring-2 focus:outline-none',
+                    'hover:bg-accent dark:hover:bg-muted focus:ring-ring focus:ring-2 focus:outline-none',
                     isSelected && 'bg-primary/20 ring-primary ring-2'
                   )}
                 >

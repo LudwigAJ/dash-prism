@@ -313,7 +313,13 @@ export type Action =
   | { type: 'DUPLICATE_TAB'; payload: { tabId: TabId } }
   | {
       type: 'UPDATE_TAB_LAYOUT';
-      payload: { tabId: TabId; layoutId: LayoutId; name: string; params?: Record<string, string> };
+      payload: {
+        tabId: TabId;
+        layoutId: LayoutId;
+        name: string;
+        params?: Record<string, string>;
+        option?: string;
+      };
     }
   | { type: 'MOVE_TAB'; payload: { tabId: TabId; targetPanelId: PanelId; targetIndex?: number } }
   | { type: 'REORDER_TAB'; payload: { panelId: PanelId; fromIndex: number; toIndex: number } }
@@ -557,12 +563,13 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         }
 
         case 'UPDATE_TAB_LAYOUT': {
-          const { tabId, layoutId, name, params } = action.payload;
+          const { tabId, layoutId, name, params, option } = action.payload;
           const tab = findTabById(draft.tabs, tabId);
           if (tab) {
             tab.layoutId = layoutId;
             tab.name = name;
-            tab.layoutParams = params;
+            tab.layoutParams = params ?? undefined;
+            tab.layoutOption = option ?? undefined;
           }
           break;
         }

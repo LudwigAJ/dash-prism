@@ -3,7 +3,14 @@ import { Info, Undo2, Lock, Trash2 } from 'lucide-react';
 import { countLeafPanels } from '@utils/panels';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
-import { Tooltip, Popover, PopoverTrigger, PopoverContent } from '@components/ui';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@components/ui';
 import { cn } from '@utils/cn';
 import type { DashComponent, DashComponentApi } from '@types';
 import { isDashComponent } from '@types';
@@ -23,7 +30,7 @@ export function StatusBar({
   onOpenInfo,
 }: StatusBarProps) {
   const { state, dispatch } = usePrism();
-  const { theme, maxTabs, componentId = 'prism' } = useConfig();
+  const { maxTabs, componentId = 'prism' } = useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Get Dash API for rendering action components
@@ -75,61 +82,72 @@ export function StatusBar({
   }, [clearPersistedState, dispatch]);
 
   return (
-    <div className="prism-status-bar bg-surface border-border text-secondary flex items-center gap-2 border-t px-3 py-1.5 text-xs">
+    <div className="prism-status-bar bg-card text-card-foreground border-border flex items-center gap-2 border-t px-3 py-1.5 text-xs">
       {/* Reset Button */}
-      <Tooltip content="Reset workspace (clear saved state)" delayDuration={300}>
-        <button
-          data-testid="prism-statusbar-reset"
-          className="text-secondary hover:text-destructive hover:bg-surface-dim rounded-sm p-1 transition-colors"
-          onClick={handleReset}
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            data-testid="prism-statusbar-reset"
+            className="text-muted-foreground hover:text-destructive hover:bg-muted/70 rounded-sm p-1 transition-colors"
+            onClick={handleReset}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Reset workspace (clear saved state)</TooltipContent>
       </Tooltip>
 
       <span className="text-border opacity-60">|</span>
 
       {/* Help Button */}
-      <Tooltip content="Help" delayDuration={300}>
-        <button
-          data-testid="prism-statusbar-help"
-          className="text-secondary hover:text-foreground hover:bg-surface-dim rounded-sm p-1 transition-colors"
-          onClick={() => onOpenHelp?.()}
-        >
-          <Info className="h-3 w-3" />
-        </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            data-testid="prism-statusbar-help"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-sm p-1 transition-colors"
+            onClick={() => onOpenHelp?.()}
+          >
+            <Info className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Help</TooltipContent>
       </Tooltip>
 
       <span className="text-border opacity-60">|</span>
 
       {/* Undo Button */}
-      <Tooltip
-        content={canUndo ? 'Undo last closed tab (Ctrl+Z)' : 'No tabs to undo'}
-        delayDuration={300}
-      >
-        <button
-          data-testid="prism-statusbar-undo"
-          className={cn(
-            'rounded-sm p-1 transition-colors',
-            canUndo
-              ? 'text-secondary hover:text-foreground hover:bg-surface-dim cursor-pointer'
-              : 'text-muted-foreground/40 cursor-not-allowed'
-          )}
-          onClick={handleUndo}
-          disabled={!canUndo}
-        >
-          <Undo2 className="h-3 w-3" />
-        </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            data-testid="prism-statusbar-undo"
+            className={cn(
+              'rounded-sm p-1 transition-colors',
+              canUndo
+                ? 'text-muted-foreground hover:text-foreground hover:bg-muted/70 cursor-pointer'
+                : 'text-muted-foreground/40 cursor-not-allowed'
+            )}
+            onClick={handleUndo}
+            disabled={!canUndo}
+          >
+            <Undo2 className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canUndo ? 'Undo last closed tab (Ctrl+Z)' : 'No tabs to undo'}
+        </TooltipContent>
       </Tooltip>
 
       <span className="text-border opacity-60">|</span>
 
       {/* SearchBar Mode */}
-      <Tooltip content="SearchBar mode for active panel" delayDuration={300}>
-        <div className="flex items-center gap-1">
-          <span className="text-secondary">Mode:</span>
-          <span className="text-foreground font-medium">{searchBarMode}</span>
-        </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">Mode:</span>
+            <span className="text-foreground font-medium">{searchBarMode}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>SearchBar mode for active panel</TooltipContent>
       </Tooltip>
 
       <span className="text-border opacity-60">|</span>
@@ -138,7 +156,7 @@ export function StatusBar({
       <div className="flex items-center gap-1">
         Panels: <span className="text-foreground font-medium">{panelCount}</span>
         {panelCount > 1 && (
-          <span className="text-secondary">({state.activePanelId.slice(0, 8)})</span>
+          <span className="text-muted-foreground">({state.activePanelId.slice(0, 8)})</span>
         )}
       </div>
 
@@ -147,19 +165,13 @@ export function StatusBar({
       {/* Active Tab Info with Popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <div className="hover:bg-surface-dim flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
+          <div className="hover:bg-muted/70 flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
             Tab: <span className="text-foreground">{activeTab?.name || '--'}</span>
-            {activeTab?.locked && <Lock className="text-secondary h-3 w-3" />}
+            {activeTab?.locked && <Lock className="text-muted-foreground h-3 w-3" />}
           </div>
         </PopoverTrigger>
         {activeTab && (
-          <PopoverContent
-            className="w-auto min-w-48 p-3"
-            side="top"
-            sideOffset={0}
-            align="start"
-            theme={theme}
-          >
+          <PopoverContent className="w-auto min-w-48 p-3" side="top" sideOffset={0} align="start">
             <div className="space-y-0">
               <InfoRow label="Name" value={activeTab.name} />
               <InfoRow label="Tab ID" value={activeTab.id} mono />
@@ -237,7 +249,7 @@ export function StatusBar({
       )}
 
       {/* Last Updated */}
-      <div className="text-secondary flex items-center gap-1">
+      <div className="text-muted-foreground flex items-center gap-1">
         Updated: <span className="text-foreground">{syncTimeDisplay}</span>
       </div>
     </div>
@@ -248,9 +260,12 @@ export function StatusBar({
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="border-border/50 flex items-center justify-between gap-4 border-b py-2 last:border-0">
-      <span className="text-secondary text-xs">{label}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
       <span
-        className={cn('text-foreground text-xs font-medium', mono && 'text-secondary font-mono')}
+        className={cn(
+          'text-foreground text-xs font-medium',
+          mono && 'text-muted-foreground font-mono'
+        )}
       >
         {value}
       </span>

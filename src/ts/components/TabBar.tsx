@@ -22,6 +22,8 @@ import {
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
   Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   Spinner,
 } from '@components/ui';
 import { TAB_STYLE_VARIANTS, getTabStyleClasses } from '@constants/tab-styles';
@@ -98,6 +100,8 @@ const TabItem = memo(function TabItem({
 
   const TabIcon = tab.icon ? getTabIcon(tab.icon) : null;
   const styleClasses = getTabStyleClasses(tab.style, theme);
+  const styleValue = tab.style && tab.style in TAB_STYLE_VARIANTS ? tab.style : 'default';
+  const isDefaultStyle = styleValue === 'default';
   const isLocked = tab.locked ?? false;
   const isEditing = editingTabId === tab.id;
 
@@ -109,7 +113,7 @@ const TabItem = memo(function TabItem({
       tab,
       panelId: tab.panelId,
     },
-    disabled: isLocked || isPinned || isLoading,
+    disabled: isLocked || isPinned || isLoading || isEditing,
   });
 
   const style = {
@@ -144,7 +148,14 @@ const TabItem = memo(function TabItem({
               e.stopPropagation();
               if (!isLocked && !isPinned) onStartRename(tab);
             }}
-            className={cn('h-full', styleClasses, isPinned && 'flex-1')}
+            className={cn(
+              'h-full border-none shadow-none data-[state=active]:shadow-none',
+              styleClasses,
+              isPinned && 'flex-1',
+              isDefaultStyle && 'prism-tab-default'
+            )}
+            data-default-style={isDefaultStyle || undefined}
+            data-tab-style={styleValue}
           >
             {/* Tab name (hidden when editing) */}
             <span
@@ -153,7 +164,7 @@ const TabItem = memo(function TabItem({
                 isEditing && 'invisible'
               )}
             >
-              {TabIcon ? <TabIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+              {TabIcon ? <TabIcon className="h-2.5 w-2.5 shrink-0" /> : null}
               {tab.name.length > 24 ? `${tab.name.slice(0, 24)}…` : tab.name}
             </span>
 
@@ -171,55 +182,64 @@ const TabItem = memo(function TabItem({
                   if (e.key === 'Escape') onCancelRename();
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                autoFocus
               />
             )}
 
             {/* Lock icon or close button or spinner*/}
             {isLocked ? (
-              <Tooltip content="Tab is locked">
-                <span className="text-secondary flex items-center">
-                  <Lock className="h-3.5 w-3.5" />
-                </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground flex items-center">
+                    <Lock className="h-2.5 w-2.5" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Tab is locked</TooltipContent>
               </Tooltip>
             ) : !isPinned ? (
-              <Tooltip content={isLoading ? 'Cancel' : 'Close tab'}>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  data-testid={`prism-tab-close-${tab.id}`}
-                  className={cn(
-                    'group/close text-secondary flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
-                    'hover:text-foreground hover:bg-destructive/20',
-                    isLoading ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCloseTab(tab.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    data-testid={`prism-tab-close-${tab.id}`}
+                    className={cn(
+                      'group/close text-muted-foreground flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
+                      'hover:text-foreground hover:bg-muted/70',
+                      isLoading ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
+                    )}
+                    onClick={(e) => {
                       e.stopPropagation();
                       onCloseTab(tab.id);
-                    }
-                  }}
-                >
-                  {/* Show spinner when loading, but X on hover to allow cancellation */}
-                  {isLoading ? (
-                    <>
-                      <Spinner
-                        size="sm"
-                        className="h-3.5 w-3.5 shrink-0 group-hover/close:hidden"
-                      />
-                      <X className="hidden h-3.5 w-3.5 group-hover/close:block" />
-                    </>
-                  ) : (
-                    <X className="h-3.5 w-3.5" />
-                  )}
-                </span>
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onCloseTab(tab.id);
+                      }
+                    }}
+                  >
+                    {/* Show spinner when loading, but X on hover to allow cancellation */}
+                    {isLoading ? (
+                      <>
+                        <Spinner
+                          size="sm"
+                          className="h-3.5 w-3.5 shrink-0 group-hover/close:hidden"
+                        />
+                        <X className="hidden h-3.5 w-3.5 group-hover/close:block" />
+                      </>
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
               </Tooltip>
             ) : isLoading ? (
-              <LoaderCircle className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="text-mauve h-3.5 w-3.5 animate-spin" />
             ) : null}
           </TabsTrigger>
         </div>
@@ -280,16 +300,16 @@ const TabItem = memo(function TabItem({
         {/* Style submenu */}
         <ContextMenuSub>
           <ContextMenuSubTrigger>Style</ContextMenuSubTrigger>
-          <ContextMenuSubContent>
-            <ContextMenuRadioGroup value={tab.style || 'default'}>
-              {Object.keys(TAB_STYLE_VARIANTS).map((styleKey) => (
+          <ContextMenuSubContent theme={theme}>
+            <ContextMenuRadioGroup value={styleValue}>
+              {Object.entries(TAB_STYLE_VARIANTS).map(([styleKey, variant]) => (
                 <ContextMenuRadioItem
                   key={styleKey}
                   value={styleKey}
                   data-testid={`prism-context-menu-style-${styleKey}`}
                   onSelect={() => onSetTabStyle(tab, styleKey)}
                 >
-                  {styleKey.charAt(0).toUpperCase() + styleKey.slice(1)}
+                  {variant.label}
                 </ContextMenuRadioItem>
               ))}
             </ContextMenuRadioGroup>
@@ -497,7 +517,7 @@ export const TabBar = memo(function TabBar({
   return (
     <div
       ref={setNodeRef}
-      className="bg-surface border-border relative flex w-full shrink-0 items-stretch border-b"
+      className="prism-tabbar border-border relative flex w-full shrink-0 items-stretch"
     >
       {/* Drop zone highlight overlay */}
       {isOver && (
@@ -507,7 +527,12 @@ export const TabBar = memo(function TabBar({
       <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden">
         {/* Radix TabsList - provides keyboard navigation and ARIA */}
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
-          <TabsList className={cn('flex-nowrap gap-0', isPinned && 'flex-1')}>
+          <TabsList
+            className={cn(
+              'flex-nowrap gap-0 rounded-none bg-transparent p-0',
+              isPinned && 'flex-1'
+            )}
+          >
             {tabs.map((tab) => (
               <TabItem
                 key={tab.id}
@@ -537,27 +562,30 @@ export const TabBar = memo(function TabBar({
 
         {/* Add tab button - inside scroll area, hidden when pinned */}
         {!isPinned && (
-          <Tooltip content={maxTabs > 0 && tabs.length >= maxTabs ? 'Max tabs reached' : 'New tab'}>
-            <button
-              data-testid="prism-tabbar-add-button"
-              className="prism-tabbar-add hover:bg-accent flex w-7 shrink-0 items-center justify-center transition-colors"
-              onClick={addTab}
-              disabled={maxTabs > 0 && tabs.length >= maxTabs}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                data-testid="prism-tabbar-add-button"
+                className="prism-tabbar-add hover:bg-muted flex h-full shrink-0 items-center justify-center transition-colors"
+                onClick={addTab}
+                disabled={maxTabs > 0 && tabs.length >= maxTabs}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {maxTabs > 0 && tabs.length >= maxTabs ? 'Max tabs reached' : 'New tab'}
+            </TooltipContent>
           </Tooltip>
         )}
+        {!isPinned && (
+          <div
+            className="h-full min-w-8 flex-1 cursor-pointer"
+            onDoubleClick={addTab}
+            title="Double-click to add new tab"
+          />
+        )}
       </div>
-
-      {/* Spacer - double-click to create new tab */}
-      {!isPinned && (
-        <div
-          className="h-full min-w-8 flex-grow cursor-pointer"
-          onDoubleClick={addTab}
-          title="Double-click to add new tab"
-        />
-      )}
     </div>
   );
 });

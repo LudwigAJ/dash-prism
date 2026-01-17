@@ -138,12 +138,13 @@ class LayoutRegistration:
         :returns: Metadata dictionary with camelCase keys.
         :rtype: dict[str, Any]
         """
+        params = [] if self.param_options else [p.to_dict() for p in self.parameters]
         result: Dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "keywords": self.keywords,
             "allowMultiple": self.allow_multiple,
-            "params": [p.to_dict() for p in self.parameters],  # Changed from 'parameters'
+            "params": params,  # Changed from 'parameters'
             "paramOptions": None,  # Changed from 'parameterOptions'
         }
 
@@ -361,6 +362,9 @@ def _validate_registration(
             "dynamic layouts."
         )
 
+    if param_options is not None and layout is not None:
+        raise ValueError("'param_options' is only supported for callback layouts")
+
     if param_options is not None:
         if not isinstance(param_options, dict):
             raise ValueError("'param_options' must be a dict")
@@ -546,9 +550,10 @@ def register_layout(
         parameters = _extract_parameters(func)
         is_async = _is_async_function(func)
 
-        # Validate param_options against function signature
+        parameters_for_metadata = parameters
         if param_options:
             _validate_param_options(param_options, parameters)
+            parameters_for_metadata = []
 
         registry.register(
             LayoutRegistration(
@@ -560,7 +565,7 @@ def register_layout(
                 layout=None,
                 callback=func,
                 is_async=is_async,
-                parameters=parameters,
+                parameters=parameters_for_metadata,
                 param_options=param_options,
             )
         )

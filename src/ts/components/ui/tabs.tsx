@@ -7,7 +7,15 @@ import { cn } from '../../utils/cn';
  *
  * Wraps content in a tab container. Use `value` and `onValueChange` for controlled tabs.
  */
-const Tabs = TabsPrimitive.Root;
+function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  return (
+    <TabsPrimitive.Root
+      data-slot="tabs"
+      className={cn('flex flex-col gap-2', className)}
+      {...props}
+    />
+  );
+}
 
 /**
  * TabsList
@@ -21,7 +29,10 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     data-slot="tabs-list"
-    className={cn('bg-surface text-secondary flex items-stretch', className)}
+    className={cn(
+      'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-none p-[3px]',
+      className
+    )}
     {...props}
   />
 ));
@@ -49,23 +60,8 @@ const TabsTrigger = React.forwardRef<
     data-locked={isLocked || undefined}
     data-loading={isLoading || undefined}
     className={cn(
-      // Base styles
-      'inline-flex items-center justify-center gap-2',
-      'px-3 py-1.5 whitespace-nowrap',
-      'text-foreground text-xs font-medium',
-      'ring-offset-background transition-all',
-      'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-      'disabled:pointer-events-none disabled:opacity-50',
-      // Inactive state
-      'bg-surface hover:bg-surface-dim',
-      // Active state (Radix sets data-state="active")
-      'data-[state=active]:bg-background data-[state=active]:font-semibold',
-      // Border styling
-      'border-border border-r',
-      // Locked state
-      'data-[locked=true]:opacity-80',
-      // Prevent shrinking when tabs overflow
-      'shrink-0',
+      'bg-secondary text-secondary-foreground data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-none border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow,opacity] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:opacity-100 data-[state=active]:shadow-sm data-[state=inactive]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+      'data-[loading=true]:opacity-80 data-[locked=true]:opacity-80',
       className
     )}
     {...props}
@@ -85,10 +81,9 @@ const TabsContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
+    data-slot="tabs-content"
     className={cn(
-      'bg-background flex-1 overflow-auto',
-      'ring-offset-background',
-      'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+      'flex-1 outline-none',
       // Hide inactive tabs using visibility (not display:none) to keep Dash components mounted
       'data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=inactive]:absolute data-[state=inactive]:inset-0',
       className
