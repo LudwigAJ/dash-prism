@@ -159,10 +159,82 @@ def _create_error_component(message: str) -> Any:
     )
 
 
+def _resolve_layout_params(
+    registration: Any,
+    layout_id: str,
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str],
+) -> Dict[str, Any]:
+    """Resolve effective layout parameters.
+
+    If ``layout_option`` is provided, it will be mapped to parameters via
+    ``registration.param_options`` on the Python side.
+
+    :param registration: Layout registration metadata.
+    :type registration: Any
+    :param layout_id: The registered layout ID.
+    :type layout_id: str
+    :param layout_params: Parameters supplied from the client.
+    :type layout_params: dict[str, Any]
+    :param layout_option: Selected option key from ``param_options``.
+    :type layout_option: str | None
+    :returns: Resolved parameters to pass to the layout callback.
+    :rtype: dict[str, Any]
+    :raises ValueError: If the layout option is invalid or unsupported.
+    """
+    resolved_params = layout_params or {}
+
+    if registration.param_options:
+        if layout_option is None:
+            raise ValueError(
+                f"Layout '{layout_id}' requires layoutOption when param_options is defined."
+            )
+
+        if resolved_params:
+            raise ValueError(
+                f"Layout '{layout_id}' only accepts parameters via param_options; "
+                "layoutParams are not supported."
+            )
+
+        if not isinstance(layout_option, str):
+            raise ValueError(
+                f"layoutOption must be a string for layout '{layout_id}', "
+                f"got {type(layout_option).__name__}"
+            )
+
+        if not registration.is_callable or registration.callback is None:
+            raise ValueError(
+                f"Layout options are only supported for callback layouts. "
+                f"Layout '{layout_id}' is static."
+            )
+
+        option_entry = registration.param_options.get(layout_option)
+        if not option_entry:
+            raise ValueError(
+                f"Layout option '{layout_option}' not found for layout '{layout_id}'."
+            )
+
+        _, option_params = option_entry
+        if not isinstance(option_params, dict):
+            raise ValueError(
+                f"param_options for layout '{layout_id}' must map to a dict of params."
+            )
+
+        return dict(option_params)
+
+    if layout_option is not None:
+        raise ValueError(
+            f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
+        )
+
+    return resolved_params
+
+
 def _render_tab_layout(
     tab_id: str,
     layout_id: str,
-    layout_params: Dict[str, Any],
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str] = None,
 ) -> Any:
     """Render a tab's layout (SYNC version).
 
@@ -172,6 +244,8 @@ def _render_tab_layout(
     :type layout_id: str
     :param layout_params: Parameters to pass to layout callback.
     :type layout_params: dict[str, Any]
+    :param layout_option: Selected option key from ``param_options``.
+    :type layout_option: str | None
     :returns: The rendered Dash component tree.
     :rtype: Any
     """
@@ -181,19 +255,23 @@ def _render_tab_layout(
     if not layout_id:
         return None
 
-    # Defensive: ensure layout_params is never None (can happen from JSON null)
-    layout_params = layout_params or {}
-
     registration = get_layout(layout_id)
     if not registration:
         return _create_error_component(f"Layout '{layout_id}' not found")
 
     try:
+        resolved_params = _resolve_layout_params(
+            registration,
+            layout_id,
+            layout_params,
+            layout_option,
+        )
+
         if registration.is_callable and registration.callback is not None:
             layout = _run_callback(
                 registration.callback,
                 registration.is_async,
-                layout_params,
+                resolved_params,
             )
         else:
             layout = copy.deepcopy(registration.layout)
@@ -205,6 +283,8 @@ def _render_tab_layout(
             f"Error rendering layout '{layout_id}': {e}\n"
             "Check that all required parameters are provided."
         )
+    except ValueError as e:
+        return _create_error_component(str(e))
     except Exception as e:
         return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
 
@@ -212,7 +292,8 @@ def _render_tab_layout(
 async def _render_tab_layout_async(
     tab_id: str,
     layout_id: str,
-    layout_params: Dict[str, Any],
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str] = None,
 ) -> Any:
     """Render a tab's layout (ASYNC version).
 
@@ -222,6 +303,8 @@ async def _render_tab_layout_async(
     :type layout_id: str
     :param layout_params: Parameters to pass to layout callback.
     :type layout_params: dict[str, Any]
+    :param layout_option: Selected option key from ``param_options``.
+    :type layout_option: str | None
     :returns: The rendered Dash component tree.
     :rtype: Any
     """
@@ -231,19 +314,23 @@ async def _render_tab_layout_async(
     if not layout_id:
         return None
 
-    # Defensive: ensure layout_params is never None (can happen from JSON null)
-    layout_params = layout_params or {}
-
     registration = get_layout(layout_id)
     if not registration:
         return _create_error_component(f"Layout '{layout_id}' not found")
 
     try:
+        resolved_params = _resolve_layout_params(
+            registration,
+            layout_id,
+            layout_params,
+            layout_option,
+        )
+
         if registration.is_callable and registration.callback is not None:
             layout = await _run_callback_async(
                 registration.callback,
                 registration.is_async,
-                layout_params,
+                resolved_params,
             )
         else:
             layout = copy.deepcopy(registration.layout)
@@ -255,6 +342,8 @@ async def _render_tab_layout_async(
             f"Error rendering layout '{layout_id}': {e}\n"
             "Check that all required parameters are provided."
         )
+    except ValueError as e:
+        return _create_error_component(str(e))
     except Exception as e:
         return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
 
@@ -453,12 +542,17 @@ def init(prism_id: str, app: "Dash") -> None:
             layout_id = data.get("layoutId")
             # Use `or {}` to handle both missing keys AND explicit null from JSON
             layout_params = data.get("layoutParams") or {}
-            layout_option = data.get("layoutOption") or ""
+            layout_option = data.get("layoutOption") or None
 
             if not layout_id:
                 raise PreventUpdate
 
-            result = await _render_tab_layout_async(tab_id, layout_id, layout_params)
+            result = await _render_tab_layout_async(
+                tab_id,
+                layout_id,
+                layout_params,
+                layout_option,
+            )
             if result is None:
                 raise PreventUpdate
 
@@ -482,12 +576,17 @@ def init(prism_id: str, app: "Dash") -> None:
             layout_id = data.get("layoutId")
             # Use `or {}` to handle both missing keys AND explicit null from JSON
             layout_params = data.get("layoutParams") or {}
-            layout_option = data.get("layoutOption") or ""
+            layout_option = data.get("layoutOption") or None
 
             if not layout_id:
                 raise PreventUpdate
 
-            result = _render_tab_layout(tab_id, layout_id, layout_params)
+            result = _render_tab_layout(
+                tab_id,
+                layout_id,
+                layout_params,
+                layout_option,
+            )
             if result is None:
                 raise PreventUpdate
 

@@ -1,6 +1,6 @@
 {
   "name": "dash_prism",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Prism: Powerful multi-panel workspace manager for Plotly Dash",
   "main": "index.ts",
   "repository": {
@@ -76,6 +76,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "fast-deep-equal": "^3.1.3",

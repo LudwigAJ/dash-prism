@@ -9,7 +9,6 @@ import {
 } from '@components/ui/dialog';
 import { Button } from '@components/ui/button';
 import { cn } from '@utils/cn';
-import type { Theme } from '@types';
 
 // Version injected at build time from package.json via webpack DefinePlugin
 const VERSION = process.env.APP_VERSION ?? '0.0.0';
@@ -19,8 +18,6 @@ export type HelpModalProps = {
   open: boolean;
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
-  /** Current theme for portal styling */
-  theme?: Theme;
   /** Version string to display */
   version?: string;
 };
@@ -34,12 +31,7 @@ export type HelpModalProps = {
  * Note: Modal state is managed via local useState in PrismView,
  * NOT in Redux (see Reversibility Philosophy section).
  */
-export function HelpModal({
-  open,
-  onOpenChange,
-  theme = 'light',
-  version = VERSION,
-}: HelpModalProps) {
+export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalProps) {
   const kbdClass = cn(
     'inline-flex items-center justify-center',
     'px-2 py-1 min-w-[1.5rem] h-6',
@@ -53,6 +45,8 @@ export function HelpModal({
     'py-2 border-b border-border/50 last:border-0'
   );
 
+  const shortcutLabelClass = cn('text-foreground text-sm');
+
   const sectionTitleClass = cn(
     'text-xs font-semibold uppercase tracking-wider text-muted-foreground',
     'mt-6 mb-3 first:mt-0'
@@ -62,7 +56,7 @@ export function HelpModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] max-w-md flex-col" theme={theme}>
+      <DialogContent className="flex max-h-[85vh] max-w-md flex-col">
         <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle>Prism</DialogTitle>
           <DialogDescription>Version {version}</DialogDescription>
@@ -73,49 +67,49 @@ export function HelpModal({
           <h4 className={sectionTitleClass}>Keyboard Shortcuts</h4>
           <div className={sectionBoxClass}>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">New tab</span>
+              <span className={shortcutLabelClass}>New tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>N</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Close tab</span>
+              <span className={shortcutLabelClass}>Close tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>D</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Duplicate tab</span>
+              <span className={shortcutLabelClass}>Duplicate tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>B</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Undo close</span>
+              <span className={shortcutLabelClass}>Undo close</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>U</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Lock / unlock tab</span>
+              <span className={shortcutLabelClass}>Lock / unlock tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>O</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Rename tab</span>
+              <span className={shortcutLabelClass}>Rename tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>R</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Refresh tab</span>
+              <span className={shortcutLabelClass}>Refresh tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>⇧</kbd>
@@ -123,21 +117,21 @@ export function HelpModal({
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Pin / unpin panel</span>
+              <span className={shortcutLabelClass}>Pin / unpin panel</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>I</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Toggle search bars</span>
+              <span className={shortcutLabelClass}>Toggle search bars</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>Y</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Previous / next tab</span>
+              <span className={shortcutLabelClass}>Previous / next tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>⌃</kbd>
                 <kbd className={kbdClass}>J</kbd>
@@ -146,13 +140,14 @@ export function HelpModal({
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Focus search</span>
+              <span className={shortcutLabelClass}>Focus search</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>Tab</kbd>
+                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>Space</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Navigate results</span>
+              <span className={shortcutLabelClass}>Navigate results</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>↑</kbd>
                 <span className="text-muted-foreground text-xs">/</span>
@@ -160,13 +155,13 @@ export function HelpModal({
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className="text-foreground text-sm">Select layout</span>
+              <span className={shortcutLabelClass}>Select layout</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>Enter</kbd>
               </div>
             </div>
             <div className={cn(shortcutRowClass, 'border-b-0')}>
-              <span className="text-foreground text-sm">Cancel / Close modal</span>
+              <span className={shortcutLabelClass}>Cancel / Close modal</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>Esc</kbd>
               </div>
@@ -175,39 +170,46 @@ export function HelpModal({
 
           <h4 className={sectionTitleClass}>Tab Management</h4>
           <div className={cn(sectionBoxClass, 'space-y-2')}>
-            <p className="text-foreground text-sm">
-              <strong>Right-click</strong> a tab for context menu options
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Right-click</strong> a tab for context menu
+              options
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Double-click</strong> a tab to rename it
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Double-click</strong> a tab to rename it
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Drag tabs</strong> to reorder them within a panel
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Drag tabs</strong> to reorder them within a panel
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Locked tabs</strong> cannot be closed or renamed
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Locked tabs</strong> cannot be closed or renamed
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Share</strong> a tab to copy a link that opens the same layout
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Share</strong> a tab to copy a link that opens the
+              same layout
             </p>
           </div>
 
           <h4 className={sectionTitleClass}>Panel Management</h4>
           <div className={cn(sectionBoxClass, 'space-y-2')}>
-            <p className="text-foreground text-sm">
-              <strong>Split panels</strong> by dragging a tab to the edge of another panel
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Split panels</strong> by dragging a tab to the
+              edge of another panel
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Move tabs</strong> between panels by dragging to the tab bar
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Move tabs</strong> between panels by dragging to
+              the tab bar
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Pin a panel</strong> via context menu to prevent tab changes
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Pin a panel</strong> via context menu to prevent
+              tab changes
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Close a panel</strong> by closing all its tabs (or drag tabs away)
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Close a panel</strong> by closing all its tabs (or
+              drag tabs away)
             </p>
-            <p className="text-foreground text-sm">
-              <strong>Resize panels</strong> by dragging the divider between them
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Resize panels</strong> by dragging the divider
+              between them
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { Loader2 as Loader2Icon } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const spinnerSizes = {
@@ -18,11 +18,11 @@ export type SpinnerProps = React.ComponentProps<'svg'> & {
 
 const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>(
   ({ className, size = 'sm', ...props }, ref) => (
-    <LoaderCircle
+    <Loader2Icon
       ref={ref}
       role="status"
       aria-label="Loading"
-      className={cn('text-muted-foreground animate-spin', spinnerSizes[size], className)}
+      className={cn('animate-spin', spinnerSizes[size], className)}
       {...props}
     />
   )

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
-import { ChevronRight, ArrowLeft, X, Star } from 'lucide-react';
+import { ChevronRight, ArrowLeft, X, Star, List } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { cn } from '@utils/cn';
@@ -44,7 +44,9 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
   }, [activeTab, registeredLayouts]);
 
   // ===== LOCAL STATE =====
-  const [mode, setMode] = useState<Mode>(currentLayout ? 'display' : 'search');
+  const [mode, setMode] = useState<Mode>(() =>
+    state.searchBarsHidden ? 'hidden' : currentLayout ? 'display' : 'search'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedLayoutId, setSelectedLayoutId] = useState<string | null>(null);
@@ -53,6 +55,9 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
   const inputRef = useRef<HTMLInputElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
+  const pendingLayoutRef = useRef<string | null>(null);
+  const suppressAutoOpenRef = useRef(false);
+  const manualSearchRef = useRef(false);
 
   // ===== DROPDOWN RESIZE STATE =====
   const DEFAULT_DROPDOWN_HEIGHT = 300;
@@ -140,13 +145,14 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
   }, []);
 
   const applyLayout = useCallback(
-    (layoutId: string, name: string, params: Record<string, string> = {}) => {
+    (layoutId: string, name: string, params?: Record<string, string>, option?: string) => {
       if (activeTabId) {
         dispatch({
           type: 'UPDATE_TAB_LAYOUT',
-          payload: { tabId: activeTabId, layoutId, name, params },
+          payload: { tabId: activeTabId, layoutId, name, params, option },
         });
       }
+      manualSearchRef.current = false;
       setMode('display');
       resetState();
     },
@@ -168,6 +174,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
             type: 'SELECT_TAB',
             payload: { tabId: existingTab.id, panelId: existingTab.panelId },
           });
+          manualSearchRef.current = false;
+          setMode('display');
           resetState();
           return;
         }
@@ -190,6 +198,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
         setParamValues({});
         setCurrentParamIndex(0);
         setSearchQuery('');
+        setShowDropdown(false);
+        requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
         return;
       }
 
@@ -197,6 +207,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
       if (hasOptions) {
         setMode('options');
         setSearchQuery('');
+        setShowDropdown(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
         return;
       }
     },
@@ -206,20 +218,22 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
   const handleOptionSelect = useCallback(
     (optionKey: string) => {
       if (!selectedLayoutId || !paramOptions?.[optionKey]) return;
-      const option = paramOptions[optionKey];
       const layout = registeredLayouts[selectedLayoutId];
-      applyLayout(selectedLayoutId, layout?.name ?? selectedLayoutId, option.params);
+      applyLayout(selectedLayoutId, layout?.name ?? selectedLayoutId, undefined, optionKey);
     },
     [selectedLayoutId, paramOptions, registeredLayouts, applyLayout]
   );
 
   const handleBackToLayouts = useCallback(() => {
+    manualSearchRef.current = true;
     setMode('search');
     setSelectedLayoutId(null);
     setParamValues({});
     setCurrentParamIndex(0);
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+    setShowDropdown(true);
+    setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
+    requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
+  }, [DEFAULT_DROPDOWN_HEIGHT]);
 
   const handleParamSubmit = useCallback(() => {
     if (!currentParam || !selectedLayoutId) return;
@@ -249,11 +263,16 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
   ]);
 
   const handleDisplayClick = useCallback(() => {
+    manualSearchRef.current = true;
     setMode('search');
     setShowDropdown(true);
     setSearchQuery('');
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+    setSelectedLayoutId(null);
+    setParamValues({});
+    setCurrentParamIndex(0);
+    setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
+    requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
+  }, [DEFAULT_DROPDOWN_HEIGHT]);
 
   const handleFocus = useCallback(() => {
     if (mode !== 'display') {
@@ -265,6 +284,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
     (e: React.FocusEvent) => {
       const relatedTarget = e.relatedTarget as HTMLElement;
       if (!commandRef.current?.contains(relatedTarget)) {
+        manualSearchRef.current = false;
         setShowDropdown(false);
         // Cancel any param/options collection on blur
         if (mode === 'params' || mode === 'options') {
@@ -308,29 +328,94 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
   useEffect(() => {
     const handleLayoutSelection = (e: CustomEvent) => {
-      if (e.detail.tabId === activeTabId) {
-        handleLayoutSelect(e.detail.layoutId);
+      if (e.detail.tabId !== activeTabId) return;
+
+      const layout = registeredLayouts[e.detail.layoutId];
+      if (!layout) return;
+
+      const hasParams = layout.params && layout.params.length > 0;
+      const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
+
+      if (state.searchBarsHidden && (hasParams || hasOptions)) {
+        pendingLayoutRef.current = e.detail.layoutId;
+        dispatch({ type: 'TOGGLE_SEARCH_BARS' });
+        return;
       }
+
+      handleLayoutSelect(e.detail.layoutId);
     };
     window.addEventListener('prism:select-layout', handleLayoutSelection as EventListener);
     return () =>
       window.removeEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-  }, [activeTabId, handleLayoutSelect]);
+  }, [activeTabId, handleLayoutSelect, registeredLayouts, state.searchBarsHidden, dispatch]);
 
   useEffect(() => {
-    if (activeTab?.layoutId && currentLayout) {
-      setMode('display');
-      resetState();
-    } else if (!activeTab?.layoutId) {
-      setMode('search');
-      setShowDropdown(true);
+    if (state.searchBarsHidden) {
+      setMode('hidden');
+      setShowDropdown(false);
+      return;
     }
-  }, [activeTab?.layoutId, currentLayout, resetState]);
+
+    if (pendingLayoutRef.current) {
+      const pendingLayoutId = pendingLayoutRef.current;
+      pendingLayoutRef.current = null;
+      suppressAutoOpenRef.current = true;
+      handleLayoutSelect(pendingLayoutId);
+      requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
+      return;
+    }
+    suppressAutoOpenRef.current = true;
+  }, [state.searchBarsHidden, handleLayoutSelect]);
+
+  useEffect(() => {
+    if (state.searchBarsHidden) return;
+
+    if (activeTab?.layoutId && currentLayout) {
+      if (!(manualSearchRef.current && mode === 'search')) {
+        manualSearchRef.current = false;
+        setMode('display');
+        resetState();
+      }
+    } else if (!activeTab?.layoutId) {
+      if (mode === 'params' || mode === 'options') {
+        return;
+      }
+      setMode('search');
+      if (suppressAutoOpenRef.current) {
+        setShowDropdown(false);
+        suppressAutoOpenRef.current = false;
+      } else {
+        setShowDropdown(true);
+      }
+    }
+  }, [activeTab?.layoutId, currentLayout, mode, resetState, state.searchBarsHidden]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {
     dispatch({ type: 'SET_SEARCHBAR_MODE', payload: { panelId, mode } });
   }, [mode, panelId, dispatch]);
+
+  // Focus request from global shortcut (handled in useKeyboardShortcuts)
+  useEffect(() => {
+    const handleFocusSearchbar = (event: Event) => {
+      const customEvent = event as CustomEvent<{ panelId?: string }>;
+      if (customEvent.detail?.panelId !== panelId) return;
+      if (state.searchBarsHidden) return;
+
+      setMode('search');
+      setShowDropdown(true);
+      setSearchQuery('');
+      setSelectedLayoutId(null);
+      setParamValues({});
+      setCurrentParamIndex(0);
+      manualSearchRef.current = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
+    };
+
+    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
+    return () =>
+      window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
+  }, [panelId, state.searchBarsHidden]);
 
   // ===== CLICK OUTSIDE HANDLER =====
   // Close dropdown when clicking outside the command wrapper
@@ -340,6 +425,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
     const handleClickOutside = (e: MouseEvent) => {
       if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
+        manualSearchRef.current = false;
         setShowDropdown(false);
         if (mode === 'params' || mode === 'options') {
           resetState();
@@ -378,20 +464,25 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
     return (
       <div
-        className="prism-searchbar prism-searchbar-display"
+        className={cn('prism-searchbar prism-searchbar-display')}
         onClick={handleDisplayClick}
         onKeyDown={(e) => {
           if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            manualSearchRef.current = true;
             setMode('search');
             setSearchQuery(e.key);
             setShowDropdown(true);
+            setSelectedLayoutId(null);
+            setParamValues({});
+            setCurrentParamIndex(0);
+            setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
+            requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
             e.preventDefault();
           }
         }}
         tabIndex={0}
         role="button"
       >
-        <span className="prism-searchbar-prompt">{'>'}</span>
         <span className="prism-searchbar-layout-name">{currentLayout.name}</span>
         {hasOption && (
           <>
@@ -420,7 +511,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
     const showDefaultHint = hasDefault && currentValue === '';
 
     return (
-      <div className="prism-searchbar">
+      <div className={cn('prism-searchbar pl-3')}>
         {/* Counter - muted to match surrounding text */}
         <span className="text-muted-foreground text-sm whitespace-nowrap">
           ({currentParamIndex + 1}/{allParams.length})
@@ -473,15 +564,12 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
 
   if (mode === 'options' && paramOptions) {
     return (
-      <div className="prism-searchbar" ref={commandRef}>
-        <span className="prism-searchbar-prompt">{'>'}</span>
-
-        <Command shouldFilter={false} className="prism-command ml-1.5 flex-1">
+      <div className={cn('prism-searchbar')} ref={commandRef}>
+        <Command shouldFilter={false} className="prism-command flex-1 overflow-visible">
           <CommandInput
             ref={inputRef}
             value=""
             placeholder={`Select option for ${selectedLayout?.name}...`}
-            showIcon={false}
             readOnly
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
@@ -489,7 +577,10 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
           />
 
           {showDropdown && (
-            <CommandList className="prism-searchbar-dropdown" style={{ maxHeight: dropdownHeight }}>
+            <CommandList
+              className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border shadow-lg"
+              style={{ maxHeight: dropdownHeight }}
+            >
               <CommandItem onSelect={handleBackToLayouts}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 <span>Back to layouts</span>
@@ -498,10 +589,12 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
               <CommandGroup heading={`Options for ${selectedLayout?.name}`}>
                 {Object.entries(paramOptions).map(([key, option]) => (
                   <CommandItem key={key} value={key} onSelect={() => handleOptionSelect(key)}>
-                    <span className="flex-1 font-medium">{key}</span>
-                    {option.description && (
-                      <span className="text-muted-foreground text-xs">{option.description}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{key}</span>
+                      {option.description && (
+                        <span className="text-muted-foreground text-xs">{option.description}</span>
+                      )}
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -519,10 +612,8 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
   // ================================================================================
 
   return (
-    <div className="prism-searchbar" ref={commandRef} data-testid="prism-searchbar">
-      <span className="prism-searchbar-prompt">{'>'}</span>
-
-      <Command shouldFilter={false} className="prism-command ml-1.5 flex-1">
+    <div className={cn('prism-searchbar')} ref={commandRef} data-testid="prism-searchbar">
+      <Command shouldFilter={false} className="prism-command flex-1 overflow-visible">
         <CommandInput
           ref={inputRef}
           data-testid="prism-searchbar-input"
@@ -532,12 +623,14 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder={searchBarPlaceholder}
-          showIcon={false}
-          autoFocus={!currentLayout}
+          autoFocus={false}
         />
 
         {showDropdown && (
-          <CommandList className="prism-searchbar-dropdown" style={{ maxHeight: dropdownHeight }}>
+          <CommandList
+            className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border shadow-lg"
+            style={{ maxHeight: dropdownHeight }}
+          >
             {filteredLayouts.length === 0 ? (
               <CommandEmpty>No layouts found</CommandEmpty>
             ) : (
@@ -564,13 +657,13 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                         className={cn(
                           'mr-2 shrink-0 rounded p-0.5 transition-colors',
                           'hover:bg-muted focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-none',
-                          isFavorite
-                            ? 'text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
+                          isFavorite ? 'text-primary' : 'text-muted-foreground hover:text-primary'
                         )}
                         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
-                        <Star className={cn('h-4 w-4', isFavorite && 'fill-primary')} />
+                        <Star
+                          className={cn('h-4 w-4 text-current', isFavorite && 'fill-current')}
+                        />
                       </button>
                       <div className="flex flex-1 items-center gap-3 overflow-hidden">
                         <span className="shrink-0 font-medium">{meta.name}</span>
@@ -580,10 +673,16 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
                           </span>
                         )}
                       </div>
-                      {hasParams && <ChevronRight className="text-muted-foreground h-4 w-4" />}
-                      {hasOptions && !hasParams && (
-                        <span className="text-muted-foreground text-xs">options</span>
-                      )}
+                      {hasParams ? (
+                        <span className="text-muted-foreground ml-auto text-xs" aria-hidden="true">
+                          {'>'}
+                        </span>
+                      ) : hasOptions ? (
+                        <List
+                          className="text-muted-foreground ml-auto h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      ) : null}
                     </CommandItem>
                   );
                 })}

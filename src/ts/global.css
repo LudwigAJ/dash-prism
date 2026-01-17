@@ -1,21 +1,6 @@
 /**
- * Prism Global Styles
- *
- * Contents:
- * 1. Tailwind v4 configuration (@import, @source, @theme)
- * 2. CSS custom properties (.prism-container)
- * 3. Theme definitions (.prism-theme-light/dark)
- * 4. Size variants (.prism-size-sm/lg)
- * 5. Root layout (.prism-root, .prism-view-*)
- * 6. Third-party overrides (react-split-pane, cmdk, sonner)
- * 7. Component styles (tab bar, search bar, panels)
- * 8. Keyframes (for potential use)
- * 9. Print styles
+ * Prism Global Styles - shadcn/ui base + Catppuccin accents
  */
-
-/* =============================================================================
-   TAILWIND CONFIGURATION
-   ============================================================================= */
 
 @import 'tailwindcss';
 
@@ -23,215 +8,235 @@
 @source '../**/*.{ts,tsx}';
 @source './**/*.{ts,tsx,css}';
 
-/* Dark mode variant - activated by .prism-theme-dark class */
-@custom-variant dark (&:is(.prism-theme-dark *));
+/* Dark mode variant */
+@custom-variant dark (&:is(.dark *, [data-prism-theme='dark'] *));
 
-/* Theme: map CSS variables to Tailwind utilities */
+/* =============================================================================
+  THEME VARIABLES - Light Mode (shadcn base + Catppuccin accents)
+  ============================================================================= */
+
+:root {
+  /* Base colors (shadcn) */
+  --background: oklch(0.96 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(1 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.205 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.96 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Prism surface zones (light) */
+  --prism-zone-tabbar: var(--background);
+  --prism-zone-workspace: var(--background);
+  --prism-zone-searchbar: var(--background);
+
+  /* Accents (Catppuccin Latte) */
+  --rosewater: oklch(0.715 0.118 21.8);
+  --flamingo: oklch(0.687 0.132 15.8);
+  --pink: oklch(0.728 0.117 344.6);
+  --mauve: oklch(0.556 0.157 247.3);
+  --red: oklch(0.551 0.206 13.5);
+  --maroon: oklch(0.626 0.192 14.2);
+  --peach: oklch(0.692 0.205 24.4);
+  --yellow: oklch(0.714 0.145 37);
+  --green: oklch(0.628 0.084 116.4);
+  --teal: oklch(0.606 0.071 190.6);
+  --sky: oklch(0.686 0.134 210.7);
+  --sapphire: oklch(0.651 0.085 198.7);
+  --blue: oklch(0.559 0.243 216.7);
+  --lavender: oklch(0.666 0.139 230.6);
+}
+
+/* =============================================================================
+  THEME VARIABLES - Dark Mode (shadcn base + Catppuccin accents)
+  ============================================================================= */
+
+.dark,
+[data-prism-theme='dark'] {
+  /* Base colors (shadcn) */
+  --background: oklch(0.22 0 0);
+  --foreground: oklch(0.87 0 0);
+  --card: oklch(0.26 0 0);
+  --card-foreground: oklch(0.87 0 0);
+  --popover: oklch(0.26 0 0);
+  --popover-foreground: oklch(0.87 0 0);
+  --primary: oklch(0.87 0 0);
+  --primary-foreground: oklch(0.22 0 0);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.87 0 0);
+  --muted: oklch(0.28 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.87 0 0);
+  --accent-foreground: oklch(0.22 0 0);
+  --destructive: oklch(0.56 0.2 27.5);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.33 0 0);
+  --input: oklch(0.33 0 0);
+  --ring: oklch(0.44 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.22 0 0);
+  --sidebar-foreground: oklch(0.87 0 0);
+  --sidebar-primary: oklch(0.87 0 0);
+  --sidebar-primary-foreground: oklch(0.22 0 0);
+  --sidebar-accent: oklch(0.26 0 0);
+  --sidebar-accent-foreground: oklch(0.87 0 0);
+  --sidebar-border: oklch(0.33 0 0);
+  --sidebar-ring: oklch(0.44 0 0);
+
+  /* Prism surface zones (dark) */
+  --prism-zone-tabbar: var(--background);
+  --prism-zone-workspace: var(--background);
+  --prism-zone-searchbar: var(--muted);
+
+  /* Accents (Catppuccin Mocha) */
+  --rosewater: oklch(0.925 0.05 24.6);
+  --flamingo: oklch(0.882 0.063 19.2);
+  --pink: oklch(0.873 0.062 353.8);
+  --mauve: oklch(0.79 0.056 292.4);
+  --red: oklch(0.757 0.123 6.6);
+  --maroon: oklch(0.784 0.097 11.6);
+  --peach: oklch(0.825 0.118 30.1);
+  --yellow: oklch(0.921 0.081 43.8);
+  --green: oklch(0.861 0.055 103.3);
+  --teal: oklch(0.862 0.039 164.1);
+  --sky: oklch(0.851 0.054 194.7);
+  --sapphire: oklch(0.794 0.074 208.1);
+  --blue: oklch(0.77 0.082 227.4);
+  --lavender: oklch(0.82 0.049 249.8);
+}
+
+/* =============================================================================
+   TAILWIND THEME MAPPING
+   ============================================================================= */
+
 @theme inline {
-  /* Colors - map to CSS variables */
-  --color-background: var(--prism-background);
-  --color-foreground: var(--prism-foreground);
-  --color-card: var(--prism-surface);
-  --color-card-foreground: var(--prism-surface-foreground);
-  --color-popover: var(--prism-popover);
-  --color-popover-foreground: var(--prism-popover-foreground);
-  --color-primary: var(--prism-primary);
-  --color-primary-foreground: var(--prism-background);
-  --color-secondary: var(--prism-secondary);
-  --color-secondary-foreground: var(--prism-foreground);
-  --color-muted: var(--prism-muted);
-  --color-muted-foreground: var(--prism-muted-foreground);
-  --color-accent: var(--prism-accent);
-  --color-accent-foreground: var(--prism-accent-foreground);
-  --color-destructive: var(--prism-destructive);
-  --color-destructive-foreground: var(--prism-background);
-  --color-border: var(--prism-border);
-  --color-input: var(--prism-input);
-  --color-ring: var(--prism-primary);
-
-  /* Additional custom colors */
-  --color-surface: var(--prism-surface);
-  --color-surface-foreground: var(--prism-surface-foreground);
-  --color-surface-dim: var(--prism-surface-dim);
-  --color-tertiary: var(--prism-tertiary);
-
-  /* Border radius */
-  --radius-sm: var(--prism-radius-sm);
-  --radius-md: var(--prism-radius-md);
-  --radius-lg: var(--prism-radius-lg);
-
-  /* Shadows */
-  --shadow-sm: var(--prism-shadow-sm);
-  --shadow-md: var(--prism-shadow-md);
-  --shadow-lg: var(--prism-shadow-lg);
-}
-
-/* =============================================================================
-   SHARED VARIABLES (Non-theme-specific)
-   Applied to .prism-container, inherited by children
-   ============================================================================= */
-
-.prism-container {
-  /* Typography */
-  --prism-font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif;
-  --prism-font-size-xs: 11px;
-  --prism-font-size-sm: 12px;
-  --prism-font-size-base: 14px;
-  --prism-font-size-lg: 16px;
-  --prism-font-size-xl: 18px;
-
-  /* Shadows (light theme defaults, overridden in dark) */
-  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
-
-  /* Spacing */
-  --prism-spacing-xs: 4px;
-  --prism-spacing-sm: 8px;
-  --prism-spacing-md: 12px;
-  --prism-spacing-lg: 16px;
-  --prism-spacing-xl: 20px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-rosewater: var(--rosewater);
+  --color-flamingo: var(--flamingo);
+  --color-pink: var(--pink);
+  --color-mauve: var(--mauve);
+  --color-red: var(--red);
+  --color-maroon: var(--maroon);
+  --color-peach: var(--peach);
+  --color-yellow: var(--yellow);
+  --color-green: var(--green);
+  --color-teal: var(--teal);
+  --color-sky: var(--sky);
+  --color-sapphire: var(--sapphire);
+  --color-blue: var(--blue);
+  --color-lavender: var(--lavender);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
   /* Border radius */
-  --prism-radius-sm: 4px;
-  --prism-radius-md: 8px;
-  --prism-radius-lg: 12px;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Apply base font */
-  font-family: var(--prism-font-family);
-  font-size: var(--prism-font-size-base);
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 /* =============================================================================
-   LIGHT THEME (Flatly-inspired)
-   Based on Bootswatch Flatly with teal accents
+   BASE LAYER
    ============================================================================= */
 
-.prism-theme-light {
-  /* Core backgrounds */
-  --prism-background: #ffffff;
-  --prism-foreground: #2c3e50;
-  --prism-surface: #f5f7f8;
-  --prism-surface-foreground: #2c3e50;
-  --prism-surface-dim: #e8ebed;
-  --prism-popover: #ffffff;
-  --prism-popover-foreground: #2c3e50;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
 
-  /* Accent colors */
-  --prism-primary: #18bc9c;
-  --prism-secondary: #5d6d7e;
-  --prism-tertiary: #e67e22;
-  --prism-accent: #f0f3f4;
-  --prism-accent-foreground: #2c3e50;
-  --prism-muted: #f0f3f4;
-  --prism-muted-foreground: #6c7a89;
-  --prism-destructive: #c0392b;
-
-  /* Borders and inputs */
-  --prism-border: #d5dbdf;
-  --prism-input: #f0f3f4;
-
-  /* Shadows */
-  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 /* =============================================================================
-   DARK THEME (Darkly-inspired)
-   Based on Bootswatch Darkly with teal accents
-   ============================================================================= */
-
-.prism-theme-dark {
-  /* Core backgrounds */
-  --prism-background: #1e1e1e;
-  --prism-foreground: #e8e8e8;
-  --prism-surface: #2d2d2d;
-  --prism-surface-foreground: #e8e8e8;
-  --prism-surface-dim: #3d3d3d;
-  --prism-popover: #2d2d2d;
-  --prism-popover-foreground: #e8e8e8;
-
-  /* Accent colors */
-  --prism-primary: #00bc8c;
-  --prism-secondary: #9ca3af;
-  --prism-tertiary: #f39c12;
-  --prism-accent: #3d3d3d;
-  --prism-accent-foreground: #e8e8e8;
-  --prism-muted: #2d2d2d;
-  --prism-muted-foreground: #a1a1aa;
-  --prism-destructive: #ef4444;
-
-  /* Borders and inputs */
-  --prism-border: #404040;
-  --prism-input: #2d2d2d;
-
-  /* Shadows */
-  --prism-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --prism-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --prism-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.6);
-}
-
-/* =============================================================================
-   SIZE VARIANTS
-   Override spacing and font sizes for sm/lg
-   ============================================================================= */
-
-.prism-size-sm {
-  --prism-font-size-base: 13px;
-  --prism-font-size-sm: 10px;
-  --prism-font-size-lg: 14px;
-  --prism-font-size-xl: 14px;
-  --prism-spacing-sm: 6px;
-  --prism-spacing-md: 8px;
-  --prism-spacing-lg: 12px;
-  --prism-spacing-xl: 14px;
-}
-
-.prism-size-lg {
-  --prism-font-size-base: 16px;
-  --prism-font-size-sm: 13px;
-  --prism-font-size-lg: 18px;
-  --prism-font-size-xl: 22px;
-  --prism-spacing-sm: 10px;
-  --prism-spacing-md: 14px;
-  --prism-spacing-lg: 20px;
-  --prism-spacing-xl: 28px;
-}
-
-/* =============================================================================
-   ROOT LAYOUT
-   Full-height layout structure for the Prism workspace
-   Uses Tailwind utilities via @apply
+   PRISM ROOT LAYOUT
    ============================================================================= */
 
 .prism-root {
-  @apply flex min-h-0 w-full flex-col overflow-hidden;
-  background-color: var(--prism-background);
-  color: var(--prism-foreground);
-  font-family: var(--prism-font-family);
+  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
+  background: var(--background);
 }
 
 .prism-view-workspace {
   @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  background: var(--background);
 }
 
 .prism-view-panels {
   @apply flex min-h-0 w-full flex-1;
+  background: var(--background);
 }
 
 /* =============================================================================
    SCROLLBAR STYLING
-   Custom scrollbar appearance for Prism containers
    ============================================================================= */
 
-/* Scrollbar utility class for layout containers */
 .prism-scrollable {
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--prism-border) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 .prism-scrollable::-webkit-scrollbar {
@@ -245,41 +250,29 @@
 }
 
 .prism-scrollable::-webkit-scrollbar-thumb {
-  background-color: var(--prism-border);
+  background-color: var(--border);
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 .prism-scrollable::-webkit-scrollbar-thumb:hover {
-  background-color: var(--prism-muted-foreground);
+  background-color: var(--muted-foreground);
 }
 
-/* Dark theme scrollbar adjustments */
-.prism-theme-dark .prism-scrollable::-webkit-scrollbar-thumb {
-  background-color: var(--prism-border);
-}
-
-.prism-theme-dark .prism-scrollable::-webkit-scrollbar-thumb:hover {
-  background-color: var(--prism-muted-foreground);
-}
-
-/* Hidden scrollbar utility - keeps scroll functionality without visible scrollbar */
 .scrollbar-none {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .scrollbar-none::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
 /* =============================================================================
    REACT SPLIT PANE
-   Styles for the react-split-pane library 
    ============================================================================= */
 
-/* react-split-pane styles */
 .SplitPane {
   position: relative !important;
 }
@@ -287,7 +280,6 @@
 .Resizer {
   z-index: 1;
   box-sizing: border-box;
-  /* Background handled by dividerClassName prop in Panel.tsx */
 }
 
 .Resizer.horizontal {
@@ -308,19 +300,29 @@
 
 /* =============================================================================
    TAB BAR SIZING
-   Size-specific heights and padding for tab bar
    ============================================================================= */
 
-/* Default (md) tab bar */
+.prism-tabbar {
+  background: var(--background);
+}
+
 .prism-container [data-slot='tabs-list'] {
   height: 32px;
   min-height: 32px;
-  font-size: var(--prism-font-size-sm);
+  font-size: 12px;
 }
 
 .prism-container [data-slot='tabs-trigger'] {
-  font-size: var(--prism-font-size-sm);
+  font-size: 12px;
   padding: 4px 12px;
+}
+
+.prism-container [data-slot='tabs-trigger'].prism-tab-default {
+  border-color: var(--border);
+}
+
+.prism-container [data-slot='tabs-trigger'].prism-tab-default[data-state='active'] {
+  border-color: var(--border);
 }
 
 /* Small tabs */
@@ -361,7 +363,6 @@
 
 /* =============================================================================
    STATUS BAR SIZING
-   Fixed heights for status bar
    ============================================================================= */
 
 .prism-status-bar {
@@ -390,58 +391,34 @@
    ============================================================================= */
 
 .prism-searchbar {
-  @apply border-border flex items-center border-b px-3;
+  @apply border-border flex w-full items-center border-b;
   height: 36px;
   min-height: 36px;
-  background-color: var(--prism-background);
-  position: relative; /* Positioning context for dropdown */
+  position: relative;
+  z-index: 40;
+  overflow: visible;
+  box-shadow: none;
+  background: var(--background);
 }
 
-/* SearchBar size variants */
 .prism-size-sm .prism-searchbar {
   height: 30px;
   min-height: 30px;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-.prism-size-sm .prism-searchbar-prompt {
-  font-size: 11px;
-}
-
-.prism-size-sm .prism-command input {
-  font-size: 11px;
 }
 
 .prism-size-lg .prism-searchbar {
   height: 44px;
   min-height: 44px;
-  padding-left: 16px;
-  padding-right: 16px;
 }
 
-.prism-size-lg .prism-searchbar-prompt {
-  font-size: 15px;
-}
-
-.prism-size-lg .prism-command input {
-  font-size: 15px;
-}
-
-.prism-searchbar-prompt {
-  @apply font-mono text-sm font-semibold;
-  color: var(--prism-primary);
-  line-height: 1;
-  user-select: none;
-}
-
-/* Display mode - clickable bar showing current layout */
 .prism-searchbar-display {
-  @apply cursor-pointer;
+  @apply cursor-pointer transition-colors;
+  background-color: var(--popover);
+  padding-left: 2px;
 }
 
 .prism-searchbar-display:hover {
-  background-color: var(--prism-accent);
+  background-color: var(--muted);
 }
 
 .prism-searchbar-display:focus {
@@ -450,46 +427,10 @@
 
 .prism-searchbar-layout-name {
   @apply truncate text-sm font-medium;
-  color: var(--prism-foreground);
+  color: var(--foreground);
   margin-left: 6px;
 }
 
-/* Command input wrapper - align with prompt */
-.prism-searchbar .prism-command {
-  @apply flex items-center;
-}
-
-.prism-searchbar [cmdk-input-wrapper] {
-  @apply flex flex-1 flex-row items-center;
-}
-
-.prism-searchbar [cmdk-input] {
-  @apply w-full border-none bg-transparent text-sm outline-none;
-  color: var(--prism-foreground);
-  font-family: inherit;
-  caret-color: var(--prism-primary);
-  padding: 0;
-  margin: 0;
-  height: auto;
-  line-height: 1;
-}
-
-.prism-searchbar [cmdk-input]::placeholder {
-  @apply opacity-50;
-  color: var(--prism-secondary);
-}
-
-/* Dropdown list */
-.prism-searchbar-dropdown {
-  @apply absolute top-full right-0 left-0 z-50;
-  @apply bg-popover border-border rounded-b-md border shadow-lg;
-  max-height: 300px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Resize handle at bottom of dropdown - invisible, just changes cursor on hover */
 .prism-searchbar-resize-handle {
   height: 6px;
   cursor: ns-resize;
@@ -503,19 +444,21 @@
 
 .prism-panel {
   @apply flex h-full w-full flex-col;
+  background: var(--background);
 }
 
 .prism-panel-container {
   @apply flex h-full w-full;
+  background: var(--background);
 }
 
 .prism-panel-child {
   @apply min-h-0 min-w-0 overflow-hidden;
+  background: var(--background);
 }
 
 /* =============================================================================
    TAB RENAME INPUT
-   Inline editing input for tab names
    ============================================================================= */
 
 .prism-tab-rename-input {
@@ -524,37 +467,37 @@
   right: 28px;
   top: 50%;
   transform: translateY(-50%);
-  background-color: var(--prism-input);
-  border: 1px solid var(--prism-primary);
+  background-color: var(--input);
+  border: 1px solid var(--mauve);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: inherit;
   font-family: inherit;
-  color: var(--prism-foreground);
+  color: var(--foreground);
   outline: none;
   box-sizing: border-box;
   z-index: 10;
 }
 
 .prism-tab-rename-input:focus {
-  border-color: var(--prism-primary);
+  border-color: var(--mauve);
 }
 
 /* =============================================================================
    NEW TAB BUTTON
-   Styles for the "add new tab" button in the tab bar
    ============================================================================= */
 
 .prism-tabbar-add {
   @apply flex items-center justify-center;
-  width: 28px;
-  height: 28px;
-  color: var(--prism-muted-foreground);
+  min-width: 28px;
+  min-height: 28px;
+  height: 100%;
+  color: var(--muted-foreground);
 }
 
 .prism-tabbar-add:hover:not(:disabled) {
-  color: var(--prism-foreground);
-  background-color: var(--prism-accent);
+  color: var(--foreground);
+  background-color: var(--muted);
 }
 
 .prism-tabbar-add:disabled {
@@ -563,90 +506,36 @@
 }
 
 /* =============================================================================
-   CMDK OVERRIDES
-   External library requires CSS overrides
-   ============================================================================= */
-
-[cmdk-root].prism-command {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  position: static;
-  width: 100%;
-}
-
-[cmdk-root].prism-param-options-command {
-  position: static;
-  flex: 1;
-}
-
-[cmdk-list] {
-  overflow: auto;
-  max-height: 300px;
-  transition: height 100ms ease;
-}
-
-[cmdk-input]:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-[cmdk-item] {
-  cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-[cmdk-item][data-selected='true'] {
-  background: var(--prism-accent);
-}
-
-[cmdk-item][data-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-[cmdk-empty] {
-  padding: 0.5rem 0.75rem;
-  color: var(--prism-muted-foreground);
-  font-size: var(--prism-font-size-sm);
-  text-align: center;
-}
-
-/* =============================================================================
    NOTIFICATIONS (Sonner Toasts)
-   Override Sonner toast styles to match Prism theme
    ============================================================================= */
 
 [data-sonner-toaster] {
-  font-family: var(--prism-font-family);
+  font-family: inherit;
 }
 
 [data-sonner-toast] {
-  background: var(--prism-popover);
-  border: 1px solid var(--prism-border);
-  color: var(--prism-popover-foreground);
+  background: var(--popover);
+  border: 1px solid var(--border);
+  color: var(--popover-foreground);
 }
 
 [data-sonner-toast][data-type='success'] {
-  background: var(--prism-surface);
-  border-color: var(--prism-primary);
+  background: var(--card);
+  border-color: var(--green);
 }
 
 [data-sonner-toast][data-type='error'] {
-  background: var(--prism-surface);
-  border-color: var(--prism-destructive);
+  background: var(--card);
+  border-color: var(--red);
 }
 
 /* =============================================================================
-   NEW LAYOUT COMPONENT SIZING
-   Card grid and typography for layout selection view
+   NEW LAYOUT COMPONENT
    ============================================================================= */
 
 .prism-newlayout {
   padding: 24px;
+  background: var(--background);
 }
 
 .prism-newlayout-section {
@@ -665,7 +554,7 @@
 .prism-newlayout-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
 }
 
 .prism-newlayout-card-title {
@@ -696,7 +585,7 @@
 
 .prism-size-sm .prism-newlayout-grid {
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
 }
 
 .prism-size-sm .prism-newlayout-card-title {
@@ -727,7 +616,7 @@
 
 .prism-size-lg .prism-newlayout-grid {
   gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(279px, 1fr));
 }
 
 .prism-size-lg .prism-newlayout-card-title {
@@ -744,7 +633,6 @@
 
 /* =============================================================================
    PRINT STYLES
-   Hide UI chrome when printing
    ============================================================================= */
 
 @media print {

@@ -62,7 +62,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
     <Card
       key={id}
       className={cn(
-        'hover:border-primary/50 relative cursor-pointer transition-all hover:shadow-md',
+        'hover:border-accent relative cursor-pointer transition-all hover:shadow-md',
         'focus-within:ring-ring focus-within:ring-2 focus-within:ring-offset-2',
         'flex flex-col'
       )}
@@ -83,11 +83,11 @@ export function NewLayout({ tabId }: NewLayoutProps) {
         className={cn(
           'absolute top-2 right-2 rounded-md p-1.5 transition-colors',
           'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-          isFavorite(id) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+          isFavorite(id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
         )}
         aria-label={isFavorite(id) ? 'Remove from favorites' : 'Add to favorites'}
       >
-        <Star className={cn('h-4 w-4', isFavorite(id) && 'fill-primary')} />
+        <Star className={cn('h-4 w-4', isFavorite(id) && 'fill-current')} />
       </button>
 
       <CardHeader className="flex-1 pr-10 pb-2">
@@ -109,7 +109,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   );
 
   return (
-    <div className="prism-newlayout flex min-h-full flex-col overflow-auto">
+    <div className="prism-newlayout flex h-full w-full flex-col overflow-auto">
       {/* Favorites Section */}
       {favoriteEntries.length > 0 && (
         <section className="prism-newlayout-section">

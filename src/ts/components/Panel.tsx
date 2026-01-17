@@ -70,14 +70,14 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
         value={activeTabId ?? ''}
         onValueChange={handleTabChange}
         activationMode="manual"
-        className="flex h-full flex-col overflow-hidden"
+        className="flex h-full flex-col gap-0 overflow-hidden"
       >
         <TabBar panelId={panel.id} tabs={tabs} activeTabId={activeTabId} isPinned={isPinned} />
 
-        {!state.searchBarsHidden && <SearchBar panelId={panel.id} isPinned={isPinned} />}
+        <SearchBar panelId={panel.id} isPinned={isPinned} />
 
         <PanelDropZone panelId={panel.id} isPinned={isPinned}>
-          <div className="relative flex-1 overflow-auto">
+          <div className="relative flex h-full w-full flex-col overflow-auto">
             {tabs.map((tab) => {
               // Get portal node for tabs with layouts (content rendered via InPortal in WorkspaceView)
               const portalNode = tab.layoutId ? getPortalNode(tab.id) : null;
@@ -87,7 +87,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                   key={tab.id}
                   value={tab.id}
                   forceMount={true}
-                  className="min-h-full data-[state=inactive]:hidden"
+                  className="h-full min-h-full w-full data-[state=inactive]:hidden"
                 >
                   <ErrorBoundary>
                     {!tab.layoutId ? (

@@ -109,6 +109,26 @@ def get_plotly_layout(theme: str = "light") -> dict[str, Any]:
     }
 
 
+def full_panel_style(extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return a base style dict that fills the Prism panel.
+
+    Args:
+        extra: Additional CSS properties to merge into the style.
+
+    Returns:
+        Style dictionary sized to fill the parent panel.
+    """
+    style: dict[str, Any] = {
+        "height": "100%",
+        "width": "100%",
+        "minHeight": "100%",
+        "minWidth": "100%",
+    }
+    if extra:
+        style.update(extra)
+    return style
+
+
 # =============================================================================
 # SETTINGS LAYOUT
 # =============================================================================
@@ -214,7 +234,15 @@ def settings_layout():
                 style={"padding": "20px", "maxWidth": "400px"},
             ),
         ],
-        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "color": colors["text"],
+                "display": "flex",
+                "flexDirection": "column",
+                "overflow": "auto",
+            }
+        ),
     )
 
 
@@ -294,6 +322,7 @@ def chat_layout(username: str = "user", theme: str = "dark"):
                 children="[SYS] No messages yet. Start chatting.\n",
                 style={
                     "flex": "1",
+                    "minHeight": "0",
                     "overflow": "auto",
                     "padding": "16px",
                     "fontFamily": 'Monaco, "Courier New", monospace',
@@ -368,12 +397,13 @@ def chat_layout(username: str = "user", theme: str = "dark"):
             ),
             dcc.Interval(id="chat-interval", interval=2000, n_intervals=0),
         ],
-        style={
-            "height": "100%",
-            "display": "flex",
-            "flexDirection": "column",
-            "backgroundColor": colors["bg"],
-        },
+        style=full_panel_style(
+            {
+                "display": "flex",
+                "flexDirection": "column",
+                "backgroundColor": colors["bg"],
+            }
+        ),
     )
 
 
@@ -451,11 +481,11 @@ def asset_layout(theme: str = "light"):
                 },
             ),
             # Store data
-            dcc.Store(id={'type': 'asset-name', 'index': MATCH}, data=asset_name),
-            dcc.Store(id={'type': 'asset-theme', 'index': MATCH}, data=theme),
-            dcc.Store(id={'type': 'asset-model', 'index': MATCH}, data='GBM'),
+            dcc.Store(id="asset-name", data=asset_name),
+            dcc.Store(id="asset-theme", data=theme),
+            dcc.Store(id="asset-model", data="GBM"),
             dcc.Store(
-                id={'type': 'asset-data', 'index': MATCH},
+                id="asset-data",
                 data={
                     "timestamps": [],
                     "prices": [],
@@ -468,26 +498,28 @@ def asset_layout(theme: str = "light"):
             html.Div(
                 [
                     dcc.Graph(
-                        id={'type': 'asset-chart', 'index': MATCH},
+                        id="asset-chart",
                         config={"displayModeBar": False},
-                        style={"height": "100%"},
+                        style={"height": "100%", "width": "100%"},
                     ),
                 ],
                 style={
                     "flex": "1",
+                    "minHeight": "0",
                     "padding": "8px",
                     "overflow": "hidden",
                     "backgroundColor": colors["bg"],
                 },
             ),
-            dcc.Interval(id={'type': 'asset-interval', 'index': MATCH}, interval=1000, n_intervals=0),
+            dcc.Interval(id="asset-interval", interval=1000, n_intervals=0),
         ],
-        style={
-            "height": "100%",
-            "display": "flex",
-            "flexDirection": "column",
-            "backgroundColor": colors["bg"],
-        },
+        style=full_panel_style(
+            {
+                "display": "flex",
+                "flexDirection": "column",
+                "backgroundColor": colors["bg"],
+            }
+        ),
     )
 
 
@@ -515,6 +547,10 @@ def iris_layout(theme: str = "light"):
     """
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
+    compact_layout = {
+        **layout_settings,
+        "margin": {"t": 32, "r": 20, "b": 40, "l": 50},
+    }
     df = px.data.iris()
 
     scatter_fig = px.scatter(
@@ -524,72 +560,156 @@ def iris_layout(theme: str = "light"):
         color="species",
         size="petal_length",
         hover_data=["petal_width"],
-        title="Sepal Dimensions by Species",
     )
-    scatter_fig.update_layout(**layout_settings)
-    scatter_fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    scatter_fig.update_layout(**compact_layout)
+    scatter_fig.update_layout(
+        title=None,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
 
-    box_fig = px.box(df, x="species", y="petal_length", color="species", title="Petal Length Distribution")
-    box_fig.update_layout(**layout_settings)
-    box_fig.update_layout(showlegend=False)
+    box_fig = px.box(df, x="species", y="petal_length", color="species")
+    box_fig.update_layout(**compact_layout)
+    box_fig.update_layout(title=None, showlegend=False)
 
     hist_fig = px.histogram(
-        df, x="petal_width", color="species", nbins=20, title="Petal Width Histogram", barmode="overlay", opacity=0.7
+        df,
+        x="petal_width",
+        color="species",
+        nbins=20,
+        barmode="overlay",
+        opacity=0.7,
     )
-    hist_fig.update_layout(**layout_settings)
+    hist_fig.update_layout(**compact_layout)
+    hist_fig.update_layout(title=None, showlegend=False)
+
+    section_style = {
+        "backgroundColor": colors["surface"],
+        "border": f'1px solid {colors["border"]}',
+        "borderRadius": "8px",
+        "padding": "12px",
+        "display": "flex",
+        "flexDirection": "column",
+        "gap": "8px",
+    }
+    chart_container_style = {
+        "flex": "1",
+        "minHeight": "220px",
+    }
 
     return html.Div(
         [
             html.Div(
                 [
-                    html.H2(
-                        "IRIS DATASET",
-                        style={
-                            "margin": "0",
-                            "fontFamily": 'Monaco, "Courier New", monospace',
-                            "fontSize": "16px",
-                            "letterSpacing": "1px",
-                        },
+                    html.P(
+                        "150 samples across three species. Use these panels to compare relationships and"
+                        " distributions between measurements.",
+                        style={"margin": "0", "color": colors["text_secondary"], "fontSize": "12px"},
                     ),
-                    html.Span(
-                        "150 samples | 3 species",
-                        style={
-                            "color": colors["text_secondary"],
-                            "fontSize": "12px",
-                            "fontFamily": 'Monaco, "Courier New", monospace',
-                        },
+                ],
+                style=section_style,
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                "Feature relationships",
+                                style={"fontSize": "12px", "fontWeight": "bold"},
+                            ),
+                            html.P(
+                                "Sepal width vs. sepal length with petal length encoding size.",
+                                style={
+                                    "margin": "0",
+                                    "color": colors["text_secondary"],
+                                    "fontSize": "11px",
+                                },
+                            ),
+                            html.Div(
+                                [
+                                    dcc.Graph(
+                                        figure=scatter_fig,
+                                        style={"height": "100%", "width": "100%"},
+                                        config={"displayModeBar": False},
+                                    )
+                                ],
+                                style=chart_container_style,
+                            ),
+                        ],
+                        style=section_style,
+                    ),
+                    html.Div(
+                        [
+                            html.Span(
+                                "Petal length distribution",
+                                style={"fontSize": "12px", "fontWeight": "bold"},
+                            ),
+                            html.P(
+                                "Box plots by species highlight median and spread.",
+                                style={
+                                    "margin": "0",
+                                    "color": colors["text_secondary"],
+                                    "fontSize": "11px",
+                                },
+                            ),
+                            html.Div(
+                                [
+                                    dcc.Graph(
+                                        figure=box_fig,
+                                        style={"height": "100%", "width": "100%"},
+                                        config={"displayModeBar": False},
+                                    )
+                                ],
+                                style=chart_container_style,
+                            ),
+                        ],
+                        style=section_style,
                     ),
                 ],
                 style={
-                    "display": "flex",
-                    "justifyContent": "space-between",
-                    "alignItems": "center",
-                    "padding": "12px 20px",
-                    "borderBottom": f'1px solid {colors["border"]}',
-                    "backgroundColor": colors["header_bg"],
+                    "display": "grid",
+                    "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))",
+                    "gap": "16px",
                 },
             ),
             html.Div(
                 [
-                    html.Div(
-                        [dcc.Graph(figure=scatter_fig, style={"height": "350px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                    html.Span(
+                        "Petal width histogram",
+                        style={"fontSize": "12px", "fontWeight": "bold"},
+                    ),
+                    html.P(
+                        "Overlayed histograms show how petal widths separate species.",
+                        style={
+                            "margin": "0",
+                            "color": colors["text_secondary"],
+                            "fontSize": "11px",
+                        },
                     ),
                     html.Div(
-                        [dcc.Graph(figure=box_fig, style={"height": "350px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                        [
+                            dcc.Graph(
+                                figure=hist_fig,
+                                style={"height": "100%", "width": "100%"},
+                                config={"displayModeBar": False},
+                            )
+                        ],
+                        style={"flex": "1", "minHeight": "220px"},
                     ),
                 ],
-                style={"display": "flex", "gap": "16px", "padding": "16px"},
-            ),
-            html.Div(
-                [
-                    dcc.Graph(figure=hist_fig, style={"height": "250px"}, config={"displayModeBar": False}),
-                ],
-                style={"padding": "0 16px 16px 16px"},
+                style=section_style,
             ),
         ],
-        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "color": colors["text"],
+                "display": "flex",
+                "flexDirection": "column",
+                "gap": "16px",
+                "padding": "16px",
+                "overflow": "auto",
+            }
+        ),
     )
 
 
@@ -617,6 +737,7 @@ def options_layout(theme: str = "light"):
     """
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
 
     # Random option parameters
     option_type = random.choice(["call", "put"])
@@ -628,11 +749,9 @@ def options_layout(theme: str = "light"):
     # Calculate payoff
     if option_type == "call":
         payoffs = np.maximum(spot_prices - strike, 0)
-        title = f"CALL OPTION | Strike: ${strike:.2f}"
         line_color = colors["success"]
     else:
         payoffs = np.maximum(strike - spot_prices, 0)
-        title = f"PUT OPTION | Strike: ${strike:.2f}"
         line_color = colors["error"]
 
     # Create figure
@@ -656,26 +775,166 @@ def options_layout(theme: str = "light"):
 
     fig.update_layout(**layout_settings)
     fig.update_layout(
-        title={"text": title, "font": {"size": 14}},
         xaxis_title="Spot Price ($)",
         yaxis_title="Payoff ($)",
         showlegend=False,
         hovermode="x unified",
+        title=None,
     )
 
     return html.Div(
         [
-            dcc.Graph(
-                figure=fig,
-                config={"displayModeBar": False},
-                style={"height": "100%"},
-            ),
+            html.Div(
+                [
+                    dcc.Graph(
+                        figure=fig,
+                        config={"displayModeBar": False},
+                        style={"height": "100%", "width": "100%"},
+                    ),
+                ],
+                style={"flex": "1", "minHeight": "0"},
+            )
         ],
-        style={
-            "height": "100%",
-            "backgroundColor": colors["bg"],
-            "padding": "8px",
-        },
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "padding": "8px",
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
+    )
+
+
+# =============================================================================
+# SCATTER PLOT LAYOUT
+# =============================================================================
+
+
+@dash_prism.register_layout(
+    id="scatter",
+    name="Scatter Plot",
+    description="Random scatter plot with regression line",
+    keywords=["scatter", "regression", "trend", "plot", "statistics"],
+    allow_multiple=True,
+    param_options={
+        "light": ("Light Theme", {"theme": "light"}),
+        "dark": ("Dark Theme", {"theme": "dark"}),
+    },
+)
+def scatter_layout(theme: str = "light"):
+    """Random scatter plot with a regression line.
+
+    Args:
+        theme: 'light' or 'dark' theme
+    """
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
+
+    n_points = random.randint(60, 140)
+    slope = random.uniform(0.4, 2.5) * random.choice([-1, 1])
+    intercept = random.uniform(-20, 20)
+    noise_scale = random.uniform(6, 18)
+
+    x = np.linspace(0, 100, n_points)
+    y = slope * x + intercept + np.random.normal(0, noise_scale, size=n_points)
+
+    # Regression line
+    reg = np.polyfit(x, y, 1)
+    y_hat = reg[0] * x + reg[1]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            mode="markers",
+            name="Samples",
+            marker={"color": colors["accent"], "size": 6, "opacity": 0.8},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y_hat,
+            mode="lines",
+            name="Regression",
+            line={"color": colors["accent_secondary"], "width": 2},
+        )
+    )
+
+    fig.update_layout(**layout_settings)
+    fig.update_layout(
+        showlegend=False,
+        title=None,
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    dcc.Graph(
+                        figure=fig,
+                        config={"displayModeBar": False},
+                        style={"height": "100%", "width": "100%"},
+                    )
+                ],
+                style={"flex": "1", "minHeight": "0"},
+            )
+        ],
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "padding": "8px",
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
+    )
+
+
+# =============================================================================
+# IFRAME LAYOUT
+# =============================================================================
+
+
+@dash_prism.register_layout(
+    id="iframe",
+    name="Embed URL",
+    description="Render a URL inside an iframe",
+    keywords=["iframe", "embed", "url", "web"],
+    allow_multiple=True,
+)
+def iframe_layout(url: str = "https://example.com"):
+    """Embed a URL in an iframe.
+
+    Args:
+        url: URL to embed in the iframe
+    """
+    if not url:
+        return html.Div(
+            [
+                html.P("No URL provided.", style={"margin": 0}),
+            ],
+            style=full_panel_style(
+                {
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                }
+            ),
+        )
+
+    return html.Div(
+        [
+            html.Iframe(
+                src=url,
+                style={"height": "100%", "width": "100%", "border": "none"},
+                title="Embedded URL",
+            )
+        ],
+        style=full_panel_style({"backgroundColor": "#ffffff"}),
     )
 
 
@@ -716,6 +975,7 @@ def country_layout(theme: str = "light"):
     """
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
     df = px.data.gapminder()
 
     # Random country selection
@@ -728,14 +988,17 @@ def country_layout(theme: str = "light"):
     life_fig = px.line(country_df, x="year", y="lifeExp", title="Life Expectancy (years)", markers=True)
     life_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
     life_fig.update_layout(**layout_settings)
+    life_fig.update_layout(title=None, showlegend=False)
 
     gdp_fig = px.line(country_df, x="year", y="gdpPercap", title="GDP per Capita ($)", markers=True)
     gdp_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
     gdp_fig.update_layout(**layout_settings)
+    gdp_fig.update_layout(title=None, showlegend=False)
 
     pop_fig = px.area(country_df, x="year", y="pop", title="Population")
     pop_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
     pop_fig.update_layout(**layout_settings)
+    pop_fig.update_layout(title=None, showlegend=False)
 
     return html.Div(
         [
@@ -771,24 +1034,53 @@ def country_layout(theme: str = "light"):
             html.Div(
                 [
                     html.Div(
-                        [dcc.Graph(figure=life_fig, style={"height": "280px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                        [
+                            dcc.Graph(
+                                figure=life_fig,
+                                style={"height": "100%", "width": "100%"},
+                                config={"displayModeBar": False},
+                            )
+                        ],
+                        style={"flex": "1", "minHeight": "0"},
                     ),
                     html.Div(
-                        [dcc.Graph(figure=gdp_fig, style={"height": "280px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                        [
+                            dcc.Graph(
+                                figure=gdp_fig,
+                                style={"height": "100%", "width": "100%"},
+                                config={"displayModeBar": False},
+                            )
+                        ],
+                        style={"flex": "1", "minHeight": "0"},
                     ),
                 ],
-                style={"display": "flex", "gap": "16px", "padding": "16px"},
+                style={
+                    "display": "flex",
+                    "gap": "16px",
+                    "padding": "16px",
+                    "flex": "1",
+                    "minHeight": "0",
+                },
             ),
             html.Div(
                 [
-                    dcc.Graph(figure=pop_fig, style={"height": "220px"}, config={"displayModeBar": False}),
+                    dcc.Graph(
+                        figure=pop_fig,
+                        style={"height": "100%", "width": "100%"},
+                        config={"displayModeBar": False},
+                    ),
                 ],
-                style={"padding": "0 16px 16px 16px"},
+                style={"padding": "0 16px 16px 16px", "flex": "1", "minHeight": "0"},
             ),
         ],
-        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "color": colors["text"],
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
     )
 
 
@@ -816,6 +1108,7 @@ def continent_layout(theme: str = "light"):
     """
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
     df = px.data.gapminder()
     latest_year = df["year"].max()
     latest_df = df[df["year"] == latest_year]
@@ -836,16 +1129,18 @@ def continent_layout(theme: str = "light"):
         hover_name="country",
         log_x=True,
         size_max=50,
-        title=f"GDP vs Life Expectancy ({latest_year})",
     )
     bubble_fig.update_layout(**layout_settings)
+    bubble_fig.update_layout(title=None)
 
     agg = filtered_df.groupby(["continent", "year"]).agg({"lifeExp": "mean", "gdpPercap": "mean"}).reset_index()
-    line_fig = px.line(agg, x="year", y="lifeExp", color="continent", title="Life Expectancy Trend", markers=True)
+    line_fig = px.line(agg, x="year", y="lifeExp", color="continent", markers=True)
     line_fig.update_layout(**layout_settings)
+    line_fig.update_layout(title=None)
 
-    gdp_fig = px.line(agg, x="year", y="gdpPercap", color="continent", title="GDP per Capita Trend", markers=True)
+    gdp_fig = px.line(agg, x="year", y="gdpPercap", color="continent", markers=True)
     gdp_fig.update_layout(**layout_settings)
+    gdp_fig.update_layout(title=None)
 
     return html.Div(
         [
@@ -880,25 +1175,54 @@ def continent_layout(theme: str = "light"):
             ),
             html.Div(
                 [
-                    dcc.Graph(figure=bubble_fig, style={"height": "350px"}, config={"displayModeBar": False}),
+                    dcc.Graph(
+                        figure=bubble_fig,
+                        style={"height": "100%", "width": "100%"},
+                        config={"displayModeBar": False},
+                    ),
                 ],
-                style={"padding": "16px"},
+                style={"padding": "16px", "flex": "1", "minHeight": "0"},
             ),
             html.Div(
                 [
                     html.Div(
-                        [dcc.Graph(figure=line_fig, style={"height": "280px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                        [
+                            dcc.Graph(
+                                figure=line_fig,
+                                style={"height": "100%", "width": "100%"},
+                                config={"displayModeBar": False},
+                            )
+                        ],
+                        style={"flex": "1", "minHeight": "0"},
                     ),
                     html.Div(
-                        [dcc.Graph(figure=gdp_fig, style={"height": "280px"}, config={"displayModeBar": False})],
-                        style={"flex": "1"},
+                        [
+                            dcc.Graph(
+                                figure=gdp_fig,
+                                style={"height": "100%", "width": "100%"},
+                                config={"displayModeBar": False},
+                            )
+                        ],
+                        style={"flex": "1", "minHeight": "0"},
                     ),
                 ],
-                style={"display": "flex", "gap": "16px", "padding": "0 16px 16px 16px"},
+                style={
+                    "display": "flex",
+                    "gap": "16px",
+                    "padding": "0 16px 16px 16px",
+                    "flex": "1",
+                    "minHeight": "0",
+                },
             ),
         ],
-        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "color": colors["text"],
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
     )
 
 
@@ -943,7 +1267,6 @@ def world_layout(theme: str = "light"):
         color=metric,
         hover_name="country",
         color_continuous_scale="Viridis" if theme == "light" else "Plasma",
-        title=f"{metric_labels[metric]} ({latest_year})",
     )
 
     fig.update_layout(
@@ -958,25 +1281,34 @@ def world_layout(theme: str = "light"):
             countrycolor=colors["border"],
         ),
         font={"family": 'Monaco, "Courier New", monospace', "color": colors["text"]},
-        margin={"t": 50, "r": 10, "b": 10, "l": 10},
+        margin={"t": 24, "r": 10, "b": 10, "l": 10},
         coloraxis_colorbar=dict(
             title=metric_labels[metric],
             tickfont=dict(size=10),
         ),
+        title=None,
     )
 
     return html.Div(
         [
-            dcc.Graph(
-                figure=fig,
-                config={"displayModeBar": False},
-                style={"height": "100%"},
-            ),
+            html.Div(
+                [
+                    dcc.Graph(
+                        figure=fig,
+                        config={"displayModeBar": False},
+                        style={"height": "100%", "width": "100%"},
+                    ),
+                ],
+                style={"flex": "1", "minHeight": "0"},
+            )
         ],
-        style={
-            "height": "100%",
-            "backgroundColor": colors["bg"],
-        },
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
     )
 
 
@@ -1037,6 +1369,7 @@ def market_layout(theme: str = "light"):
     """
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
 
     # Generate random ticker and data
     ticker = _generate_asset_name()
@@ -1060,26 +1393,34 @@ def market_layout(theme: str = "light"):
 
     fig.update_layout(**layout_settings)
     fig.update_layout(
-        title={"text": f"{ticker} | OHLC", "font": {"size": 14}},
         xaxis_title="Date",
         yaxis_title="Price ($)",
         xaxis_rangeslider_visible=False,
         showlegend=False,
+        title=None,
     )
 
     return html.Div(
         [
-            dcc.Graph(
-                figure=fig,
-                config={"displayModeBar": False},
-                style={"height": "100%"},
-            ),
+            html.Div(
+                [
+                    dcc.Graph(
+                        figure=fig,
+                        config={"displayModeBar": False},
+                        style={"height": "100%", "width": "100%"},
+                    ),
+                ],
+                style={"flex": "1", "minHeight": "0"},
+            )
         ],
-        style={
-            "height": "100%",
-            "backgroundColor": colors["bg"],
-            "padding": "8px",
-        },
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "padding": "8px",
+                "display": "flex",
+                "flexDirection": "column",
+            }
+        ),
     )
 
 
@@ -1162,7 +1503,15 @@ def delayed_layout(delay: str = "3"):
                 style={"maxWidth": "500px", "margin": "0 auto", "padding": "20px"},
             ),
         ],
-        style={"backgroundColor": colors["bg"], "minHeight": "100%", "color": colors["text"]},
+        style=full_panel_style(
+            {
+                "backgroundColor": colors["bg"],
+                "color": colors["text"],
+                "display": "flex",
+                "flexDirection": "column",
+                "justifyContent": "center",
+            }
+        ),
     )
 
 
@@ -1273,9 +1622,10 @@ def update_chat(n_clicks, n_intervals, message_text, username):
     Input({'type': 'asset-interval', 'index': MATCH}, 'n_intervals'),
     State({'type': 'asset-data', 'index': MATCH}, 'data'),
     State({'type': 'asset-model', 'index': MATCH}, 'data'),
+    State({'type': 'asset-theme', 'index': MATCH}, 'data'),
     prevent_initial_call=True,
 )
-def update_asset_price(n, data, model_type):
+def update_asset_price(n, data, model_type, theme):
     """Update asset price using GBM or RM model."""
     if n is None or not data:
         raise PreventUpdate
@@ -1315,37 +1665,32 @@ def update_asset_price(n, data, model_type):
         timestamps = timestamps[-200:]
         prices = prices[-200:]
 
-    # Create figure
+    theme = theme or 'light'
+    colors = get_theme_colors(theme)
+    layout_settings = get_plotly_layout(theme)
+    layout_settings['margin'] = {'t': 24, 'r': 20, 'b': 40, 'l': 50}
+    layout_settings['showlegend'] = False
+
+    # Create figure (line only)
     fig = {
         'data': [{
             'x': timestamps,
             'y': prices,
             'type': 'scatter',
             'mode': 'lines',
-            'line': {'color': '#18bc9c', 'width': 2},
-            'fill': 'tozeroy',
-            'fillcolor': 'rgba(24, 188, 156, 0.1)',
+            'line': {'color': colors['accent'], 'width': 2},
         }],
         'layout': {
-            'title': {
-                'text': f'Price: ${new_price:.2f}',
-                'font': {'family': 'Monaco, "Courier New", monospace', 'size': 16},
-            },
+            **layout_settings,
             'xaxis': {
+                **layout_settings.get('xaxis', {}),
                 'title': 'Time',
-                'showgrid': True,
-                'gridcolor': 'rgba(128, 128, 128, 0.2)',
             },
             'yaxis': {
+                **layout_settings.get('yaxis', {}),
                 'title': 'Price (USD)',
-                'showgrid': True,
-                'gridcolor': 'rgba(128, 128, 128, 0.2)',
             },
-            'plot_bgcolor': '#ffffff',
-            'paper_bgcolor': '#ffffff',
-            'font': {'family': 'Monaco, "Courier New", monospace'},
-            'margin': {'t': 60, 'r': 20, 'b': 60, 'l': 60},
-        }
+        },
     }
 
     return {
@@ -1406,5 +1751,5 @@ dash_prism.init('prism', app)
 if __name__ == '__main__':
     print("Dash Prism Demo")
     print("Open http://127.0.0.1:5005 in your browser")
-    app.run(debug=True, port=5005, dev_tools_ui=True, dev_tools_props_check=True, dev_tools_serve_dev_bundles=True)
+    app.run(debug=False, port=5005, dev_tools_ui=False, dev_tools_props_check=False, dev_tools_serve_dev_bundles=False)
 

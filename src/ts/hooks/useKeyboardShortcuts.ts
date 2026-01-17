@@ -172,6 +172,20 @@ export function useKeyboardShortcuts() {
         target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if (isEditable) return;
 
+      const isCtrlSpace =
+        e.ctrlKey && (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar');
+      if (isCtrlSpace) {
+        e.preventDefault();
+        if (!state.searchBarsHidden) {
+          window.dispatchEvent(
+            new CustomEvent('prism:focus-searchbar', {
+              detail: { panelId: state.activePanelId },
+            })
+          );
+        }
+        return;
+      }
+
       const isMod = e.metaKey || e.ctrlKey;
       if (!isMod) return;
 
