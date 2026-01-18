@@ -15,7 +15,7 @@ Dash Prism provides a unified workspace where multiple Dash layouts coexist as
 tabs within resizable, splittable panels. Users arrange their workspace via
 drag-and-drop while developers focus on building content.
 
-![Demo](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-demo.gif)
+![Demo](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-demo-0.gif)
 
 ## The Problem
 
