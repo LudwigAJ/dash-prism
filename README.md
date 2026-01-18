@@ -15,7 +15,7 @@ Dash Prism provides a unified workspace where multiple Dash layouts coexist as
 tabs within resizable, splittable panels. Users arrange their workspace via
 drag-and-drop while developers focus on building content.
 
-![Demo](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-demo.gif)
+![Demo](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-demo-0.gif)
 
 ## The Problem
 
@@ -71,6 +71,7 @@ Dash Prism addresses these issues by providing:
 Dash Prism supports both light and dark themes, so the workspace adapts to your style.
 
 ![Dash Prism light mode](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-light-mode-demo-0.png)
+
 ![Dash Prism dark mode](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-dark-mode-demo-0.png)
 
 ## Installation
