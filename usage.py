@@ -1525,7 +1525,7 @@ app.layout = html.Div([
     dash_prism.Prism(
         id='prism',
         style={'height': '100vh', 'width': '100%'},
-        theme='dark',
+        theme='light',
         size='md',
         actions=[
             dash_prism.Action(id='save', label='Save', icon='Save', tooltip='Save workspace'),
