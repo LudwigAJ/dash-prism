@@ -33,12 +33,16 @@ class Prism(PrismComponent):
     :param id: Unique identifier for this component in Dash callbacks.
         Use this ID to read workspace state or update component properties.
     :type id: str or None
+    :param serverSessionId: Server session identifier used to invalidate
+        stale persisted workspaces after server restarts. Automatically set
+        by :func:`dash_prism.init` unless explicitly provided.
+    :type serverSessionId: str or None
     :param theme: Visual theme for the workspace. Controls colors, backgrounds,
         and overall appearance. Defaults to ``'light'``.
     :type theme: str
     :param size: Size variant affecting spacing, typography, and UI element sizing.
-        Options: ``'xs'`` (extra small), ``'sm'`` (small), ``'md'`` (medium, default),
-        ``'lg'`` (large), ``'xl'`` (extra large). Defaults to ``'md'``.
+        Options: ``'sm'`` (small), ``'md'`` (medium, default), ``'lg'`` (large).
+        Defaults to ``'md'``.
     :type size: str
     :param maxTabs: Maximum number of tabs allowed in the workspace. Prevents users
         from creating too many tabs which could impact performance. Values less than

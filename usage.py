@@ -133,6 +133,15 @@ def full_panel_style(extra: dict[str, Any] | None = None) -> dict[str, Any]:
 # SETTINGS LAYOUT
 # =============================================================================
 
+DEFAULT_THEME = "dark"
+DEFAULT_SIZE = "md"
+
+SETTINGS_SCOPE = "settings"
+SETTINGS_THEME_ID = {"type": "settings-theme", "index": SETTINGS_SCOPE}
+SETTINGS_SIZE_ID = {"type": "settings-size", "index": SETTINGS_SCOPE}
+SETTINGS_APPLY_ID = {"type": "settings-apply-btn", "index": SETTINGS_SCOPE}
+SETTINGS_STATUS_ID = {"type": "settings-status", "index": SETTINGS_SCOPE}
+
 
 @dash_prism.register_layout(
     id="settings",
@@ -143,8 +152,6 @@ def full_panel_style(extra: dict[str, Any] | None = None) -> dict[str, Any]:
 )
 def settings_layout():
     """Settings page to configure theme and size."""
-    colors = get_theme_colors("light")
-
     return html.Div(
         [
             html.Div(
@@ -152,10 +159,10 @@ def settings_layout():
                     html.H1("[SETTINGS]", style={"margin": "0", "fontFamily": 'Monaco, "Courier New", monospace'}),
                     html.P(
                         "Configure your workspace",
-                        style={"color": colors["text_secondary"], "margin": "5px 0 0 0"},
+                        style={"color": "var(--muted-foreground)", "margin": "5px 0 0 0"},
                     ),
                 ],
-                style={"padding": "20px", "borderBottom": f'1px solid {colors["border"]}'},
+                style={"padding": "20px", "borderBottom": "1px solid var(--border)"},
             ),
             html.Div(
                 [
@@ -172,12 +179,12 @@ def settings_layout():
                                 },
                             ),
                             dcc.Dropdown(
-                                id="settings-theme",
+                                id=SETTINGS_THEME_ID,
                                 options=[
                                     {"label": "Light", "value": "light"},
                                     {"label": "Dark", "value": "dark"},
                                 ],
-                                value="light",
+                                value=DEFAULT_THEME,
                                 clearable=False,
                                 style={"width": "200px"},
                             ),
@@ -197,13 +204,13 @@ def settings_layout():
                                 },
                             ),
                             dcc.Dropdown(
-                                id="settings-size",
+                                id=SETTINGS_SIZE_ID,
                                 options=[
                                     {"label": "Small", "value": "sm"},
                                     {"label": "Medium", "value": "md"},
                                     {"label": "Large", "value": "lg"},
                                 ],
-                                value="md",
+                                value=DEFAULT_SIZE,
                                 clearable=False,
                                 style={"width": "200px"},
                             ),
@@ -213,12 +220,12 @@ def settings_layout():
                     # Apply button
                     html.Button(
                         "Apply Settings",
-                        id="settings-apply-btn",
+                        id=SETTINGS_APPLY_ID,
                         n_clicks=0,
                         style={
                             "padding": "12px 24px",
-                            "backgroundColor": colors["accent"],
-                            "color": "white",
+                            "backgroundColor": "var(--primary)",
+                            "color": "var(--primary-foreground)",
                             "border": "none",
                             "borderRadius": "4px",
                             "cursor": "pointer",
@@ -227,8 +234,8 @@ def settings_layout():
                         },
                     ),
                     html.Span(
-                        id="settings-status",
-                        style={"marginLeft": "15px", "color": colors["success"]},
+                        id=SETTINGS_STATUS_ID,
+                        style={"marginLeft": "15px", "color": "var(--green)"},
                     ),
                 ],
                 style={"padding": "20px", "maxWidth": "400px"},
@@ -236,8 +243,8 @@ def settings_layout():
         ],
         style=full_panel_style(
             {
-                "backgroundColor": colors["bg"],
-                "color": colors["text"],
+                "backgroundColor": "var(--background)",
+                "color": "var(--foreground)",
                 "display": "flex",
                 "flexDirection": "column",
                 "overflow": "auto",
@@ -1525,8 +1532,8 @@ app.layout = html.Div([
     dash_prism.Prism(
         id='prism',
         style={'height': '100vh', 'width': '100%'},
-        theme='light',
-        size='md',
+        theme=DEFAULT_THEME,
+        size=DEFAULT_SIZE,
         actions=[
             dash_prism.Action(id='save', label='Save', icon='Save', tooltip='Save workspace'),
             dash_prism.Action(id='load', label='Load', icon='FolderOpen', tooltip='Load workspace'),
@@ -1549,10 +1556,10 @@ app.layout = html.Div([
 @callback(
     Output('prism', 'theme'),
     Output('prism', 'size'),
-    Output('settings-status', 'children'),
-    Input('settings-apply-btn', 'n_clicks'),
-    State('settings-theme', 'value'),
-    State('settings-size', 'value'),
+    Output(SETTINGS_STATUS_ID, 'children'),
+    Input(SETTINGS_APPLY_ID, 'n_clicks'),
+    State(SETTINGS_THEME_ID, 'value'),
+    State(SETTINGS_SIZE_ID, 'value'),
     prevent_initial_call=True,
 )
 def apply_settings(n_clicks, theme, size):

@@ -158,6 +158,11 @@ Keyword arguments:
 - searchBarPlaceholder (string; default 'Search layouts...'):
     Placeholder text shown in the search bar.
 
+- serverSessionId (string; optional):
+    Server session identifier used to invalidate stale persisted
+    workspaces. Automatically injected by dash_prism.init() unless
+    overridden.
+
 - size (a value equal to: 'sm', 'md', 'lg'; default 'md'):
     Size variant affecting spacing and typography.
 
@@ -356,6 +361,7 @@ Keyword arguments:
         self,
         children: typing.Optional[ComponentType] = None,
         id: typing.Optional[typing.Union[str, dict]] = None,
+        serverSessionId: typing.Optional[str] = None,
         registeredLayouts: typing.Optional[typing.Dict[typing.Union[str, float, int], "RegisteredLayouts"]] = None,
         theme: typing.Optional[Literal["light", "dark"]] = None,
         size: typing.Optional[Literal["sm", "md", "lg"]] = None,
@@ -372,9 +378,9 @@ Keyword arguments:
         style: typing.Optional[typing.Any] = None,
         **kwargs
     ):
-        self._prop_names = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
+        self._prop_names = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'serverSessionId', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
         self._valid_wildcard_attributes =            []
-        self.available_properties = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
+        self.available_properties = ['children', 'id', 'actions', 'initialLayout', 'layoutTimeout', 'maxTabs', 'persistence', 'persistence_type', 'readWorkspace', 'registeredLayouts', 'searchBarPlaceholder', 'serverSessionId', 'size', 'statusBarPosition', 'style', 'theme', 'updateWorkspace']
         self.available_wildcard_properties =            []
         _explicit_args = kwargs.pop('_explicit_args')
         _locals = locals()

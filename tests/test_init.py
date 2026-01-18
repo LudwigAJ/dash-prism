@@ -248,11 +248,10 @@ def test_init_with_callback_with_multiple_params(prism_app: Dash) -> None:
 
 def test_init_with_async_app() -> None:
     """Test initialization with async Dash app."""
-    # Skip if Dash doesn't support use_async (old versions)
     try:
         app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
-    except Exception:
-        pytest.skip("Dash version doesn't support use_async")
+    except Exception as exc:
+        pytest.fail(f"Dash app does not support use_async: {exc}")
 
     app.layout = html.Div([dash_prism.Prism(id="async-prism", style={})])
 
@@ -344,7 +343,7 @@ def test_init_with_mixed_content(dash_app: Dash) -> None:
             123,  # Number
             None,  # None
             html.Div("Div"),
-            [html.Span("Nested list")],  # Nested list
+            html.Div([html.Span("Nested list")]),  # Nested content
             dash_prism.Prism(id="mixed-prism", style={}),
         ]
     )

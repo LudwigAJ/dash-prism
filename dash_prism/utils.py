@@ -58,11 +58,14 @@ def _get_leaf_panel_ids(panel: Dict[str, Any], leaves: Optional[List[str]] = Non
     if leaves is None:
         leaves = []
 
+    if not isinstance(panel, dict):
+        return leaves
+
     children = panel.get("children", [])
     if not children:
         # This is a leaf panel
         panel_id = panel.get("id")
-        if panel_id:
+        if isinstance(panel_id, str) and panel_id:
             leaves.append(panel_id)
     else:
         # Recurse into children
@@ -95,8 +98,8 @@ def _validate_panel_structure(
         return
 
     panel_id = panel.get("id")
-    if not panel_id:
-        errors.append(f"{path}: missing required 'id' field")
+    if not isinstance(panel_id, str) or not panel_id:
+        errors.append(f"{path}: missing or invalid 'id' field")
 
     children = panel.get("children", [])
 
@@ -149,6 +152,16 @@ def validate_workspace(
     """
     validation_errors: List[str] = []
 
+    if not isinstance(workspace, dict):
+        validation_errors.append(
+            f"Workspace must be a dict, got {type(workspace).__name__}"
+        )
+        if errors == "raise":
+            raise InvalidWorkspace(validation_errors)
+        for err in validation_errors:
+            logger.error(f"[Prism] Workspace validation: {err}")
+        return workspace
+
     # -------------------------------------------------------------------------
     # 1. Check required top-level keys exist
     # -------------------------------------------------------------------------
@@ -171,6 +184,33 @@ def validate_workspace(
     active_tab_ids = workspace["activeTabIds"]
     active_panel_id = workspace["activePanelId"]
 
+    type_errors = False
+    if not isinstance(tabs, list):
+        validation_errors.append(f"tabs: expected list, got {type(tabs).__name__}")
+        type_errors = True
+    if not isinstance(panel, dict):
+        validation_errors.append(f"panel: expected dict, got {type(panel).__name__}")
+        type_errors = True
+    if not isinstance(panel_tabs, dict):
+        validation_errors.append(
+            f"panelTabs: expected dict, got {type(panel_tabs).__name__}"
+        )
+        type_errors = True
+    if not isinstance(active_tab_ids, dict):
+        validation_errors.append(
+            f"activeTabIds: expected dict, got {type(active_tab_ids).__name__}"
+        )
+        type_errors = True
+    if not isinstance(active_panel_id, str) or not active_panel_id:
+        validation_errors.append("activePanelId: expected non-empty string")
+
+    if type_errors:
+        if errors == "raise":
+            raise InvalidWorkspace(validation_errors)
+        for err in validation_errors:
+            logger.error(f"[Prism] Workspace validation: {err}")
+        return workspace
+
     # -------------------------------------------------------------------------
     # 2. Validate panel tree structure
     # -------------------------------------------------------------------------
@@ -180,17 +220,31 @@ def validate_workspace(
     # 3. Collect leaf panel IDs and tab IDs
     # -------------------------------------------------------------------------
     leaf_panel_ids = set(_get_leaf_panel_ids(panel))
-    tab_ids_in_tabs = {tab.get("id") for tab in tabs if isinstance(tab, dict)}
+    tab_ids_in_tabs = {
+        tab_id
+        for tab in tabs
+        if isinstance(tab, dict)
+        and isinstance((tab_id := tab.get("id")), str)
+        and tab_id
+    }
 
     # Build mapping of tab_id -> list of panels it appears in (for duplicate check)
     tab_to_panels: Dict[str, List[str]] = {}
     for panel_id, tab_list in panel_tabs.items():
+        if not isinstance(panel_id, str) or not panel_id:
+            validation_errors.append("panelTabs: panel IDs must be non-empty strings")
+            continue
         if not isinstance(tab_list, list):
             validation_errors.append(
                 f"panelTabs['{panel_id}']: expected list, got {type(tab_list).__name__}"
             )
             continue
         for tab_id in tab_list:
+            if not isinstance(tab_id, str) or not tab_id:
+                validation_errors.append(
+                    f"panelTabs['{panel_id}']: tab IDs must be non-empty strings"
+                )
+                continue
             if tab_id not in tab_to_panels:
                 tab_to_panels[tab_id] = []
             tab_to_panels[tab_id].append(panel_id)
@@ -203,8 +257,8 @@ def validate_workspace(
             validation_errors.append(f"tabs: expected dict items, got {type(tab).__name__}")
             continue
         tab_id = tab.get("id")
-        if not tab_id:
-            validation_errors.append("tabs: found tab without 'id' field")
+        if not isinstance(tab_id, str) or not tab_id:
+            validation_errors.append("tabs: found tab without valid 'id' field")
             continue
 
         panels_containing_tab = tab_to_panels.get(tab_id, [])
@@ -219,9 +273,13 @@ def validate_workspace(
     # 5. Every tab in panelTabs exists in tabs
     # -------------------------------------------------------------------------
     for panel_id, tab_list in panel_tabs.items():
+        if not isinstance(panel_id, str) or not panel_id:
+            continue
         if not isinstance(tab_list, list):
             continue  # Already reported above
         for tab_id in tab_list:
+            if not isinstance(tab_id, str) or not tab_id:
+                continue
             if tab_id not in tab_ids_in_tabs:
                 validation_errors.append(
                     f"Tab '{tab_id}' in panelTabs['{panel_id}'] not found in tabs"
@@ -231,6 +289,8 @@ def validate_workspace(
     # 6. Every panelTabs key is a leaf panel in panel tree
     # -------------------------------------------------------------------------
     for panel_id in panel_tabs.keys():
+        if not isinstance(panel_id, str) or not panel_id:
+            continue
         if panel_id not in leaf_panel_ids:
             validation_errors.append(
                 f"panelTabs key '{panel_id}' is not a leaf panel in the panel tree"
@@ -246,16 +306,30 @@ def validate_workspace(
     # -------------------------------------------------------------------------
     # 8. activePanelId is a valid leaf panel
     # -------------------------------------------------------------------------
-    if active_panel_id not in leaf_panel_ids:
-        validation_errors.append(f"activePanelId '{active_panel_id}' is not a valid leaf panel")
+    if isinstance(active_panel_id, str) and active_panel_id:
+        if active_panel_id not in leaf_panel_ids:
+            validation_errors.append(
+                f"activePanelId '{active_panel_id}' is not a valid leaf panel"
+            )
 
     # -------------------------------------------------------------------------
     # 9. Each activeTabIds entry references valid panel and tab
     # -------------------------------------------------------------------------
     for panel_id, tab_id in active_tab_ids.items():
+        if not isinstance(panel_id, str) or not panel_id:
+            validation_errors.append("activeTabIds: panel IDs must be non-empty strings")
+            continue
         if panel_id not in panel_tabs:
             validation_errors.append(f"activeTabIds references unknown panel '{panel_id}'")
-        elif tab_id and tab_id not in (panel_tabs.get(panel_id) or []):
+            continue
+        if tab_id is None:
+            continue
+        if not isinstance(tab_id, str) or not tab_id:
+            validation_errors.append(
+                f"activeTabIds['{panel_id}'] must be a non-empty string"
+            )
+            continue
+        if tab_id not in (panel_tabs.get(panel_id) or []):
             validation_errors.append(
                 f"activeTabIds['{panel_id}'] = '{tab_id}' but tab not in panelTabs['{panel_id}']"
             )

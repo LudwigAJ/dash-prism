@@ -13,6 +13,7 @@ pk.PrismActionComponent.propTypes = {label:pt.string,
  id:pt.string,
  setProps:pt.any};
 pk.PrismComponent.propTypes = {id:pt.string,
+ serverSessionId:pt.string,
  children:pt.node,
  registeredLayouts:pt.objectOf(pt.shape({name:pt.string,description:pt.string,keywords:pt.arrayOf(pt.string),allowMultiple:pt.bool,params:pt.arrayOf(pt.shape({name:pt.string,hasDefault:pt.bool,default:pt.string})),paramOptions:pt.shape({})})),
  theme:pt.oneOf(["'light'", "'dark'"]),

@@ -48,6 +48,7 @@ internal_docs*
 .github/copilot-instructions.md
 .claude*
 CLAUDE*
+.github/agents*
 
 # CMake
 cmake-build-*/

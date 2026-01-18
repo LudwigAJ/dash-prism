@@ -2,6 +2,7 @@ import { produce, Draft } from 'immer';
 import type { Tab, Panel, Workspace, PanelDirection, PanelId, TabId, LayoutId } from '@types';
 import { generateShortId } from '@utils/uuid';
 import { findTabIndex, findTabById } from '@utils/tabs';
+import { validateWorkspace } from '@utils/workspaceValidation';
 import {
   getLeafPanelIds,
   findPanelById,
@@ -23,6 +24,46 @@ export type PrismState = {
 } & Workspace;
 
 type DraftState = Draft<PrismState>;
+
+type WorkspaceSource = Pick<
+  PrismState,
+  | 'tabs'
+  | 'panel'
+  | 'panelTabs'
+  | 'activeTabIds'
+  | 'activePanelId'
+  | 'favoriteLayouts'
+  | 'theme'
+  | 'searchBarsHidden'
+>;
+
+function buildWorkspaceSnapshot(source: WorkspaceSource): Workspace {
+  return {
+    tabs: source.tabs,
+    panel: source.panel,
+    panelTabs: source.panelTabs,
+    activeTabIds: source.activeTabIds,
+    activePanelId: source.activePanelId,
+    favoriteLayouts: source.favoriteLayouts,
+    theme: source.theme,
+    searchBarsHidden: source.searchBarsHidden,
+  };
+}
+
+function mergeWorkspaceUpdate(state: WorkspaceSource, update: Partial<Workspace>): Workspace {
+  const base = buildWorkspaceSnapshot(state);
+  return {
+    ...base,
+    tabs: update.tabs ?? base.tabs,
+    panel: update.panel ?? base.panel,
+    panelTabs: update.panelTabs ?? base.panelTabs,
+    activeTabIds: update.activeTabIds ?? base.activeTabIds,
+    activePanelId: update.activePanelId ?? base.activePanelId,
+    favoriteLayouts: update.favoriteLayouts ?? base.favoriteLayouts,
+    theme: update.theme ?? base.theme,
+    searchBarsHidden: update.searchBarsHidden ?? base.searchBarsHidden,
+  };
+}
 
 // =============================================================================
 // Helper Functions (operate on draft state)
@@ -206,86 +247,60 @@ function isPanelExists(draft: DraftState, panelId: PanelId): boolean {
 // Initial State
 // =============================================================================
 
-const INITIAL_PANEL_ID: PanelId = generateShortId();
-const INITIAL_TAB_ID: TabId = generateShortId();
+export function createInitialState(): PrismState {
+  const initialPanelId: PanelId = generateShortId();
+  const initialTabId: TabId = generateShortId();
 
-export const initialState: PrismState = {
-  // PERSISTED STATE
-  tabs: [
-    {
-      id: INITIAL_TAB_ID,
-      name: 'New Tab',
-      panelId: INITIAL_PANEL_ID,
-      layoutId: undefined,
-      createdAt: Date.now(),
+  return {
+    // PERSISTED STATE
+    tabs: [
+      {
+        id: initialTabId,
+        name: 'New Tab',
+        panelId: initialPanelId,
+        layoutId: undefined,
+        createdAt: Date.now(),
+      },
+    ],
+    panel: {
+      id: initialPanelId,
+      order: 0,
+      direction: 'horizontal',
+      children: [],
+      size: '100%',
     },
-  ],
-  panel: {
-    id: INITIAL_PANEL_ID,
-    order: 0,
-    direction: 'horizontal',
-    children: [],
-    size: '100%',
-  },
-  panelTabs: { [INITIAL_PANEL_ID]: [INITIAL_TAB_ID] },
-  activeTabIds: { [INITIAL_PANEL_ID]: INITIAL_TAB_ID },
-  activePanelId: INITIAL_PANEL_ID,
-  favoriteLayouts: [],
-  searchBarsHidden: false,
-  // NOT PERSISTED
-  theme: 'light',
-  // size: 'md',
-  undoStack: [],
-  searchBarModes: {},
-  renamingTabId: null,
-};
+    panelTabs: { [initialPanelId]: [initialTabId] },
+    activeTabIds: { [initialPanelId]: initialTabId },
+    activePanelId: initialPanelId,
+    favoriteLayouts: [],
+    searchBarsHidden: false,
+    // NOT PERSISTED
+    theme: 'light',
+    // size: 'md',
+    undoStack: [],
+    searchBarModes: {},
+    renamingTabId: null,
+  };
+}
+
+export const initialState: PrismState = createInitialState();
 
 // =============================================================================
 // State Validation (Development Only)
 // =============================================================================
 
 /**
- * Validate state invariants in development mode.
+ * Validate state invariants in development mode only.
  * Logs errors to console if any invariants are violated.
  */
 function validateState(draft: DraftState): void {
-  if (process.env.NODE_ENV !== 'development') return;
+  if (process.env.NODE_ENV === 'production') return;
 
-  const errors: string[] = [];
-  const leafPanels = getLeafPanelIds(draft.panel);
+  const validation = validateWorkspace(buildWorkspaceSnapshot(draft as WorkspaceSource));
+  if (validation.ok) return;
 
-  // Invariant 1: All leaf panels have panelTabs entries
-  for (const panelId of leafPanels) {
-    if (!draft.panelTabs[panelId]) {
-      errors.push(`Panel ${panelId} missing from panelTabs`);
-    }
-  }
-
-  // Invariant 2: activePanelId is a valid leaf
-  if (!leafPanels.includes(draft.activePanelId)) {
-    errors.push(`activePanelId ${draft.activePanelId} is not a leaf panel`);
-  }
-
-  // Invariant 3: All tabs in panelTabs exist in tabs[]
-  for (const panelId in draft.panelTabs) {
-    for (const tabId of draft.panelTabs[panelId]) {
-      if (!findTabById(draft.tabs, tabId)) {
-        errors.push(`Tab ${tabId} in panelTabs[${panelId}] not found in tabs[]`);
-      }
-    }
-  }
-
-  // Invariant 4: All activeTabIds point to tabs in their panel
-  for (const panelId in draft.activeTabIds) {
-    const activeTabId = draft.activeTabIds[panelId];
-    if (activeTabId && !draft.panelTabs[panelId]?.includes(activeTabId)) {
-      errors.push(`activeTabId ${activeTabId} not in panel ${panelId}`);
-    }
-  }
-
-  if (errors.length > 0) {
-    console.error('❌ State invariant violations:', errors);
-  }
+  const { errors } = validation as { ok: false; errors: string[] };
+  console.error('❌ State invariant violations:', errors);
 }
 
 // =============================================================================
@@ -393,31 +408,28 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         // Workspace Sync (Dash → Prism)
         // -----------------------------------------------------------------------
         case 'SYNC_WORKSPACE': {
-          const {
-            tabs,
-            panel,
-            activeTabIds,
-            activePanelId,
-            panelTabs,
-            favoriteLayouts,
-            searchBarsHidden,
-            theme,
-          } = action.payload;
-          // Use explicit undefined checks (not truthiness) to allow syncing empty arrays/strings
-          if (tabs !== undefined) {
-            // Hydrate mountKey for tabs that don't have one (e.g., from external updateWorkspace)
-            draft.tabs = tabs.map((tab) => ({
-              ...tab,
-              mountKey: tab.mountKey ?? generateShortId(),
-            }));
+          const mergedWorkspace = mergeWorkspaceUpdate(state, action.payload);
+          const validation = validateWorkspace(mergedWorkspace);
+
+          if (!validation.ok) {
+            const { errors } = validation as { ok: false; errors: string[] };
+            console.warn('SYNC_WORKSPACE rejected due to validation errors:', errors);
+            break;
           }
-          if (panel !== undefined) draft.panel = panel;
-          if (panelTabs !== undefined) draft.panelTabs = panelTabs;
-          if (activeTabIds !== undefined) draft.activeTabIds = activeTabIds;
-          if (activePanelId !== undefined) draft.activePanelId = activePanelId;
-          if (favoriteLayouts !== undefined) draft.favoriteLayouts = favoriteLayouts;
-          if (searchBarsHidden !== undefined) draft.searchBarsHidden = searchBarsHidden;
-          if (theme !== undefined) draft.theme = theme;
+
+          const normalized = validation.workspace;
+
+          draft.tabs = normalized.tabs.map((tab) => ({
+            ...tab,
+            mountKey: tab.mountKey ?? generateShortId(),
+          }));
+          draft.panel = normalized.panel;
+          draft.panelTabs = normalized.panelTabs;
+          draft.activeTabIds = normalized.activeTabIds;
+          draft.activePanelId = normalized.activePanelId;
+          draft.favoriteLayouts = normalized.favoriteLayouts ?? draft.favoriteLayouts;
+          draft.searchBarsHidden = normalized.searchBarsHidden ?? draft.searchBarsHidden;
+          draft.theme = normalized.theme ?? draft.theme;
           break;
         }
 
@@ -853,14 +865,15 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
         case 'RESET_WORKSPACE': {
           // Reset to initial state - used when clearing persisted storage
-          draft.tabs = initialState.tabs;
-          draft.panel = initialState.panel;
-          draft.panelTabs = initialState.panelTabs;
-          draft.activeTabIds = initialState.activeTabIds;
-          draft.activePanelId = initialState.activePanelId;
-          draft.favoriteLayouts = initialState.favoriteLayouts;
-          draft.theme = initialState.theme;
-          draft.searchBarsHidden = initialState.searchBarsHidden;
+          const resetState = createInitialState();
+          draft.tabs = resetState.tabs;
+          draft.panel = resetState.panel;
+          draft.panelTabs = resetState.panelTabs;
+          draft.activeTabIds = resetState.activeTabIds;
+          draft.activePanelId = resetState.activePanelId;
+          draft.favoriteLayouts = resetState.favoriteLayouts;
+          draft.theme = resetState.theme;
+          draft.searchBarsHidden = resetState.searchBarsHidden;
           draft.undoStack = [];
           draft.searchBarModes = {};
           draft.renamingTabId = null;

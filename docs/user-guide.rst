@@ -53,6 +53,12 @@ For pre-defined parameter options, use ``param_options``:
    def chart_layout(chart_type: str = 'bar'):
        return dcc.Graph(...)
 
+.. note::
+
+   Parameters passed from the Prism UI are serialized as strings. If your
+   layout expects richer types (e.g., numbers or booleans), convert them
+   inside the layout callback.
+
 Async Layouts
 ^^^^^^^^^^^^^
 
@@ -365,7 +371,7 @@ Configuration
    dash_prism.Prism(
        id='workspace',
        theme='light',           # or 'dark'
-       size='md',               # 'xs', 'sm', 'md', 'lg', 'xl'
+    size='md',               # 'sm', 'md', 'lg'
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
        statusBarPosition='bottom',  # or 'top'

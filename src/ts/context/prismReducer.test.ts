@@ -10,13 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  prismReducer,
-  createPrismReducer,
-  initialState,
-  type PrismState,
-  type Action,
-} from './prismReducer';
+import { prismReducer, createPrismReducer, type PrismState, type Action } from './prismReducer';
 import type { Tab, Panel, PanelId, TabId } from '@types';
 
 // =============================================================================

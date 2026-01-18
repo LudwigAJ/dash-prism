@@ -8,6 +8,8 @@ import type { RegisteredLayouts, Theme, Size, StatusBarPosition, PersistenceType
 type ConfigContextValue = {
   /** Component ID for namespacing persistence storage */
   componentId?: string;
+  /** Server session fingerprint to invalidate stale persistence */
+  serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   /** Tab content specs from Dash callback - keyed by tab ID */
   theme: Theme;
@@ -30,6 +32,7 @@ const ConfigContext = createContext<ConfigContextValue | null>(null);
 type ConfigProviderProps = {
   children: React.ReactNode;
   componentId?: string;
+  serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   theme?: Theme;
   size?: Size;
@@ -44,6 +47,7 @@ type ConfigProviderProps = {
 export function ConfigProvider({
   children,
   componentId,
+  serverSessionId,
   registeredLayouts,
   theme = 'light',
   size = 'md',
@@ -57,6 +61,7 @@ export function ConfigProvider({
   const value = useMemo(
     () => ({
       componentId,
+      serverSessionId,
       registeredLayouts,
       theme,
       size,
@@ -69,6 +74,7 @@ export function ConfigProvider({
     }),
     [
       componentId,
+      serverSessionId,
       registeredLayouts,
       persistence,
       persistenceType,

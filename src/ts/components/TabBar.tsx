@@ -42,6 +42,7 @@ type TabItemProps = {
   tab: Tab;
   theme: Theme;
   isPinned: boolean;
+  isMaxTabsReached: boolean;
   editingTabId: string | null;
   editingName: string;
   inputRef: React.RefObject<HTMLInputElement>;
@@ -71,6 +72,7 @@ const TabItem = memo(function TabItem({
   tab,
   theme,
   isPinned,
+  isMaxTabsReached,
   editingTabId,
   editingName,
   inputRef,
@@ -258,7 +260,7 @@ const TabItem = memo(function TabItem({
 
         <ContextMenuItem
           data-testid="prism-context-menu-duplicate"
-          disabled={isPinned}
+          disabled={isPinned || isMaxTabsReached}
           onSelect={() => onDuplicateTab(tab)}
         >
           Duplicate
@@ -390,6 +392,8 @@ export const TabBar = memo(function TabBar({
   const { state, openInfoModal, openSetIconModal, dispatch } = usePrism();
   const { maxTabs, theme } = useConfig();
   const { shareTab } = useShareLinks();
+  const totalTabCount = state.tabs.length;
+  const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   // ================================================================================
   // DND DROP ZONE
@@ -458,9 +462,9 @@ export const TabBar = memo(function TabBar({
   }, [dispatch]);
 
   const addTab = useCallback(() => {
-    if (maxTabs > 0 && tabs.length >= maxTabs) return;
+    if (isMaxTabsReached) return;
     dispatch({ type: 'ADD_TAB', payload: { panelId } });
-  }, [tabs.length, maxTabs, panelId, dispatch]);
+  }, [isMaxTabsReached, panelId, dispatch]);
 
   // Listen for keyboard-triggered rename via state.renamingTabId
   useEffect(() => {
@@ -478,9 +482,10 @@ export const TabBar = memo(function TabBar({
 
   const duplicateTab = useCallback(
     (tab: Tab) => {
+      if (isMaxTabsReached) return;
       dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
     },
-    [dispatch]
+    [dispatch, isMaxTabsReached]
   );
 
   const setTabIcon = useCallback(
@@ -539,6 +544,7 @@ export const TabBar = memo(function TabBar({
                 tab={tab}
                 theme={theme}
                 isPinned={isPinned}
+                isMaxTabsReached={isMaxTabsReached}
                 editingTabId={editingTabId}
                 editingName={editingName}
                 inputRef={inputRef}
@@ -568,14 +574,12 @@ export const TabBar = memo(function TabBar({
                 data-testid="prism-tabbar-add-button"
                 className="prism-tabbar-add hover:bg-muted flex h-full shrink-0 items-center justify-center transition-colors"
                 onClick={addTab}
-                disabled={maxTabs > 0 && tabs.length >= maxTabs}
+                disabled={isMaxTabsReached}
               >
                 <Plus className="h-4 w-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              {maxTabs > 0 && tabs.length >= maxTabs ? 'Max tabs reached' : 'New tab'}
-            </TooltipContent>
+            <TooltipContent>{isMaxTabsReached ? 'Max tabs reached' : 'New tab'}</TooltipContent>
           </Tooltip>
         )}
         {!isPinned && (

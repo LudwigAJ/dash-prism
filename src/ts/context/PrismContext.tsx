@@ -10,12 +10,13 @@ import React, {
 import { createHtmlPortalNode, HtmlPortalNode } from 'react-reverse-portal';
 import {
   createPrismReducer,
-  initialState,
+  createInitialState as createBaseState,
   type PrismState,
   type Action,
 } from '@context/prismReducer';
 import { useConfig } from '@context/ConfigContext';
 import { generateShortId } from '@utils/uuid';
+import { validateWorkspace } from '@utils/workspaceValidation';
 import type {
   Workspace,
   PersistenceType,
@@ -28,6 +29,73 @@ import type {
 // ========== Persistence Helpers ==========
 
 const STORAGE_KEY_PREFIX = 'prism-workspace';
+const STORAGE_VERSION = 1;
+
+type WorkspaceStorageMeta = {
+  serverSessionId?: string;
+  version: number;
+  timestamp: number;
+};
+
+type StoredWorkspace = {
+  meta: WorkspaceStorageMeta;
+  workspace: Partial<Workspace>;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+function parseStorageMeta(value: unknown): WorkspaceStorageMeta | null {
+  if (!isRecord(value)) return null;
+
+  const version = value.version;
+  const timestamp = value.timestamp;
+  const serverSessionId = value.serverSessionId;
+
+  if (!isFiniteNumber(version) || !isFiniteNumber(timestamp)) return null;
+  if (
+    serverSessionId !== undefined &&
+    serverSessionId !== null &&
+    typeof serverSessionId !== 'string'
+  ) {
+    return null;
+  }
+
+  const normalizedServerSessionId =
+    typeof serverSessionId === 'string' ? serverSessionId : undefined;
+
+  return {
+    version,
+    timestamp,
+    serverSessionId: normalizedServerSessionId,
+  };
+}
+
+function unwrapStoredWorkspace(
+  value: unknown
+): { workspace: unknown; meta?: WorkspaceStorageMeta } | null {
+  if (!isRecord(value)) return null;
+
+  if ('workspace' in value) {
+    const meta = parseStorageMeta(value.meta);
+    if (!meta) return null;
+    return { workspace: value.workspace, meta };
+  }
+
+  return { workspace: value };
+}
+
+function logStorageWarning(message: string, details?: unknown): void {
+  if (process.env.NODE_ENV === 'production') return;
+  if (details) {
+    console.warn(`[Prism] ${message}`, details);
+    return;
+  }
+  console.warn(`[Prism] ${message}`);
+}
 
 /** Get namespaced storage key for component */
 function getStorageKey(componentId?: string): string {
@@ -40,14 +108,62 @@ function getStorage(type: PersistenceType): Storage | null {
   return null; // memory = no storage
 }
 
-function getWorkspace(type: PersistenceType, componentId?: string): Partial<Workspace> | null {
+function getWorkspace(
+  type: PersistenceType,
+  componentId?: string,
+  serverSessionId?: string
+): Partial<Workspace> | null {
   const storage = getStorage(type);
   if (!storage) return null;
 
   try {
     const stored = storage.getItem(getStorageKey(componentId));
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as unknown;
+    const unwrapped = unwrapStoredWorkspace(parsed);
+    if (!unwrapped) {
+      logStorageWarning('Stored workspace has invalid structure. Clearing storage.');
+      clearWorkspace(type, componentId);
+      return null;
+    }
+
+    if (unwrapped.meta) {
+      if (unwrapped.meta.version !== STORAGE_VERSION) {
+        logStorageWarning('Stored workspace version mismatch. Clearing storage.', {
+          expected: STORAGE_VERSION,
+          found: unwrapped.meta.version,
+        });
+        clearWorkspace(type, componentId);
+        return null;
+      }
+
+      if (
+        serverSessionId &&
+        unwrapped.meta.serverSessionId &&
+        unwrapped.meta.serverSessionId !== serverSessionId
+      ) {
+        logStorageWarning('Stored workspace server session mismatch. Clearing storage.', {
+          expected: serverSessionId,
+          found: unwrapped.meta.serverSessionId,
+        });
+        clearWorkspace(type, componentId);
+        return null;
+      }
+    }
+
+    const validation = validateWorkspace(unwrapped.workspace);
+    if (!validation.ok) {
+      const { errors } = validation as { ok: false; errors: string[] };
+      logStorageWarning('Stored workspace failed validation. Clearing storage.', errors);
+      clearWorkspace(type, componentId);
+      return null;
+    }
+
+    return validation.workspace;
   } catch {
+    logStorageWarning('Failed to parse stored workspace JSON. Clearing storage.');
+    clearWorkspace(type, componentId);
     return null;
   }
 }
@@ -55,13 +171,22 @@ function getWorkspace(type: PersistenceType, componentId?: string): Partial<Work
 function setWorkspace(
   type: PersistenceType,
   workspace: Partial<Workspace>,
-  componentId?: string
+  componentId?: string,
+  serverSessionId?: string
 ): void {
   const storage = getStorage(type);
   if (!storage) return;
 
   try {
-    storage.setItem(getStorageKey(componentId), JSON.stringify(workspace));
+    const payload: StoredWorkspace = {
+      meta: {
+        version: STORAGE_VERSION,
+        timestamp: Date.now(),
+        serverSessionId,
+      },
+      workspace,
+    };
+    storage.setItem(getStorageKey(componentId), JSON.stringify(payload));
   } catch {
     // Storage full or unavailable
   }
@@ -80,27 +205,33 @@ function clearWorkspace(type: PersistenceType, componentId?: string): void {
 
 // ========== Helpers ==========
 
-function createInitialState(
+function buildInitialState(
   storedWorkspace?: Partial<Workspace>,
   initialLayout?: string,
   registeredLayouts?: RegisteredLayouts
 ): PrismState {
+  const baseState = createBaseState();
   // Persisted state takes precedence over initialLayout
   if (storedWorkspace?.tabs?.length) {
     // Hydrate tabs with mountKey if missing (for tabs restored from storage)
     const hydratedTabs = storedWorkspace.tabs.map((tab) => ({
       ...tab,
+      layoutId: tab.layoutId ?? undefined,
+      layoutOption: tab.layoutOption ?? undefined,
+      layoutParams: tab.layoutParams ?? undefined,
+      icon: tab.icon ?? undefined,
+      style: tab.style ?? undefined,
       mountKey: tab.mountKey ?? generateShortId(),
     }));
     return {
       tabs: hydratedTabs,
-      panel: storedWorkspace.panel ?? initialState.panel,
-      panelTabs: storedWorkspace.panelTabs ?? initialState.panelTabs,
-      activeTabIds: storedWorkspace.activeTabIds ?? initialState.activeTabIds,
-      activePanelId: storedWorkspace.activePanelId ?? initialState.activePanelId,
-      favoriteLayouts: storedWorkspace.favoriteLayouts ?? initialState.favoriteLayouts,
-      theme: storedWorkspace.theme ?? initialState.theme,
-      searchBarsHidden: storedWorkspace.searchBarsHidden ?? initialState.searchBarsHidden,
+      panel: storedWorkspace.panel ?? baseState.panel,
+      panelTabs: storedWorkspace.panelTabs ?? baseState.panelTabs,
+      activeTabIds: storedWorkspace.activeTabIds ?? baseState.activeTabIds,
+      activePanelId: storedWorkspace.activePanelId ?? baseState.activePanelId,
+      favoriteLayouts: storedWorkspace.favoriteLayouts ?? baseState.favoriteLayouts,
+      theme: storedWorkspace.theme ?? baseState.theme,
+      searchBarsHidden: storedWorkspace.searchBarsHidden ?? baseState.searchBarsHidden,
       undoStack: [], // Never restore undo stack from storage
       searchBarModes: {}, // Ephemeral UI state, never persist
       renamingTabId: null, // Ephemeral UI state
@@ -110,7 +241,6 @@ function createInitialState(
   // Fresh state - apply initialLayout if provided and valid
   if (initialLayout && registeredLayouts?.[initialLayout]) {
     const layoutInfo = registeredLayouts[initialLayout];
-    const baseState = { ...initialState };
     // Update the first tab with the initial layout
     if (baseState.tabs.length > 0) {
       baseState.tabs = [
@@ -124,9 +254,9 @@ function createInitialState(
     return baseState;
   }
 
-  // Default: return initialState which already has one tab
+  // Default: return baseState which already has one tab
   // This guarantees there's always at least one tab on initial load
-  return initialState;
+  return baseState;
 }
 
 // ========== Context ==========
@@ -165,19 +295,35 @@ type PrismProviderProps = {
 
 export function PrismProvider({ children, updateWorkspace, setProps }: PrismProviderProps) {
   // Initialize from storage on mount
-  const { persistence, persistenceType, componentId, initialLayout, registeredLayouts, maxTabs } =
-    useConfig();
+  const {
+    persistence,
+    persistenceType,
+    componentId,
+    serverSessionId,
+    initialLayout,
+    registeredLayouts,
+    maxTabs,
+  } = useConfig();
 
   // Create reducer with maxTabs config for global tab limit enforcement
   const reducer = useMemo(() => createPrismReducer({ maxTabs }), [maxTabs]);
 
   const [state, dispatch] = useReducer(
     reducer,
-    { persistence, persistenceType, componentId, initialLayout, registeredLayouts },
+    {
+      persistence,
+      persistenceType,
+      componentId,
+      serverSessionId,
+      initialLayout,
+      registeredLayouts,
+    },
     (deps) => {
       // Only load from storage if persistence is enabled
-      const stored = deps.persistence ? getWorkspace(deps.persistenceType, deps.componentId) : null;
-      return createInitialState(stored ?? undefined, deps.initialLayout, deps.registeredLayouts);
+      const stored = deps.persistence
+        ? getWorkspace(deps.persistenceType, deps.componentId, deps.serverSessionId)
+        : null;
+      return buildInitialState(stored ?? undefined, deps.initialLayout, deps.registeredLayouts);
     }
   );
 
@@ -230,10 +376,22 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     const currentIds = new Set(state.tabs.map((t) => t.id));
     for (const id of portalNodesRef.current.keys()) {
       if (!currentIds.has(id)) {
+        const node = portalNodesRef.current.get(id);
+        node?.unmount();
         portalNodesRef.current.delete(id);
       }
     }
   }, [state.tabs]);
+
+  // Cleanup all portal nodes on unmount
+  useEffect(() => {
+    return () => {
+      for (const node of portalNodesRef.current.values()) {
+        node.unmount();
+      }
+      portalNodesRef.current.clear();
+    };
+  }, []);
 
   // ================================================================================
   // EFFECTS FOR SYNCING WITH DASH PROPS
@@ -247,8 +405,8 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     }
   }, [updateWorkspace]);
 
-  // Note: "Ensure at least one tab" logic is handled by createInitialState.
-  // The initialState always has one tab, and we only restore from storage
+  // Note: "Ensure at least one tab" logic is handled by buildInitialState.
+  // The base state always has one tab, and we only restore from storage
   // if storedWorkspace.tabs has items. This eliminates the need for a
   // useEffect that dispatches ADD_TAB with setTimeout.
 
@@ -271,7 +429,7 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
       searchBarsHidden: state.searchBarsHidden,
     };
 
-    setWorkspace(persistenceType, workspace, componentId);
+    setWorkspace(persistenceType, workspace, componentId, serverSessionId);
   }, [
     state.tabs,
     state.panel,
@@ -283,6 +441,7 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     persistence,
     persistenceType,
     componentId,
+    serverSessionId,
   ]);
 
   const value = useMemo(
