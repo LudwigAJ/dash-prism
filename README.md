@@ -15,6 +15,8 @@ Dash Prism provides a unified workspace where multiple Dash layouts coexist as
 tabs within resizable, splittable panels. Users arrange their workspace via
 drag-and-drop while developers focus on building content.
 
+![Dash Prism demo](assets/prism-demo-0.gif)
+
 ## The Problem
 
 Building dashboards with Plotly Dash typically means:
@@ -63,6 +65,13 @@ Dash Prism addresses these issues by providing:
   undo close, switch tabs, and more.
 - **Error Resilience** - Errors are captured at the tab level, guarding against
   crashes that would otherwise take down the workspace.
+
+## Light and Dark Mode
+
+Dash Prism supports both light and dark themes, so the workspace adapts to your style.
+
+![Dash Prism light mode](assets/prism-light-mode-demo-0.png.png)
+![Dash Prism dark mode](assets/prism-dark-mode-demo-0.png)
 
 ## Installation
 
