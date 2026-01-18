@@ -71,6 +71,7 @@ Dash Prism addresses these issues by providing:
 Dash Prism supports both light and dark themes, so the workspace adapts to your style.
 
 ![Dash Prism light mode](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-light-mode-demo-0.png)
+
 ![Dash Prism dark mode](https://raw.githubusercontent.com/LudwigAJ/dash-prism/main/assets/prism-dark-mode-demo-0.png)
 
 ## Installation
