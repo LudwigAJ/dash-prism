@@ -33,6 +33,10 @@ class Prism(PrismComponent):
     :param id: Unique identifier for this component in Dash callbacks.
         Use this ID to read workspace state or update component properties.
     :type id: str or None
+    :param serverSessionId: Server session identifier used to invalidate
+        stale persisted workspaces after server restarts. Automatically set
+        by :func:`dash_prism.init` unless explicitly provided.
+    :type serverSessionId: str or None
     :param theme: Visual theme for the workspace. Controls colors, backgrounds,
         and overall appearance. Defaults to ``'light'``.
     :type theme: str

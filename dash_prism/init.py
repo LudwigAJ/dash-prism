@@ -80,6 +80,30 @@ def _find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
     return None
 
 
+def _get_layout_root(app: "Dash") -> Optional[Any]:
+    """Resolve the app layout root, calling a layout function if needed.
+
+    :param app: The Dash application instance.
+    :type app: Dash
+    :returns: The resolved layout root, or ``None`` if unavailable.
+    :rtype: Any | None
+    """
+    layout = getattr(app, "layout", None)
+    if callable(layout):
+        try:
+            return layout()
+        except Exception as exc:  # pragma: no cover - depends on app layout
+            warnings.warn(
+                "Failed to call app.layout() while searching for the Prism component. "
+                "Ensure your layout function can be called without arguments.",
+                UserWarning,
+                stacklevel=3,
+            )
+            logger.exception("Failed to call app.layout() while searching for Prism", exc_info=exc)
+            return None
+    return layout
+
+
 def _is_app_async(app: "Dash") -> bool:
     """Check if the Dash app is configured for async callbacks.
 
@@ -182,7 +206,15 @@ def _resolve_layout_params(
     :rtype: dict[str, Any]
     :raises ValueError: If the layout option is invalid or unsupported.
     """
-    resolved_params = layout_params or {}
+    if layout_params is None:
+        resolved_params: Dict[str, Any] = {}
+    elif not isinstance(layout_params, dict):
+        raise ValueError(
+            f"layoutParams must be an object/dict for layout '{layout_id}', "
+            f"got {type(layout_params).__name__}"
+        )
+    else:
+        resolved_params = layout_params
 
     if registration.param_options:
         if layout_option is None:
@@ -388,7 +420,8 @@ def _validate_prism_component(app: "Dash", prism_id: str) -> Optional[Any]:
     :returns: The Prism component, or ``None`` with warnings if not found.
     :rtype: Any | None
     """
-    prism_component = _find_component_by_id(app.layout, prism_id)
+    layout_root = _get_layout_root(app)
+    prism_component = _find_component_by_id(layout_root, prism_id)
 
     if prism_component is None:
         warnings.warn(
@@ -504,6 +537,10 @@ def init(prism_id: str, app: "Dash") -> None:
     # Inject registered layouts metadata
     if prism_component is not None:
         prism_component.registeredLayouts = get_registered_layouts_metadata()
+        from . import SERVER_SESSION_ID
+
+        if getattr(prism_component, "serverSessionId", None) is None:
+            prism_component.serverSessionId = SERVER_SESSION_ID
 
     # Determine callback mode
     use_async = _is_app_async(app)
@@ -532,14 +569,13 @@ def init(prism_id: str, app: "Dash") -> None:
             """Async callback to render a tab's content."""
             logger.info("render_prism_content_async %s, %s", content_id, data)
 
-            if not content_id or not data:
+            if not isinstance(content_id, dict) or not isinstance(data, dict):
                 raise PreventUpdate
 
             tab_id = content_id.get("index")
 
             layout_id = data.get("layoutId")
-            # Use `or {}` to handle both missing keys AND explicit null from JSON
-            layout_params = data.get("layoutParams") or {}
+            layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
 
             if not layout_id:
@@ -567,13 +603,12 @@ def init(prism_id: str, app: "Dash") -> None:
         def render_prism_content(content_id, data):
             """Sync callback to render a tab's content."""
             logger.info("render_prism_content %s, %s", content_id, data)
-            if not content_id or not data:
+            if not isinstance(content_id, dict) or not isinstance(data, dict):
                 raise PreventUpdate
 
             tab_id = content_id.get("index")
             layout_id = data.get("layoutId")
-            # Use `or {}` to handle both missing keys AND explicit null from JSON
-            layout_params = data.get("layoutParams") or {}
+            layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
 
             if not layout_id:

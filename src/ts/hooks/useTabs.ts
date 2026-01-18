@@ -32,11 +32,13 @@ export function useTabs(panelId: string) {
   const { maxTabs } = useConfig();
 
   const panelTabs = getTabsByPanelId(state.tabs, panelId);
+  const totalTabCount = state.tabs.length;
+  const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   const createTab = useCallback(
     (name = 'New Tab', layoutId?: string) => {
       // maxTabs < 1 means unlimited; reducer also enforces this
-      if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
+      if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
         console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
         return;
@@ -45,7 +47,7 @@ export function useTabs(panelId: string) {
       // Dispatch intent - reducer handles ID generation
       dispatch({ type: 'ADD_TAB', payload: { panelId, name, layoutId } });
     },
-    [panelTabs.length, maxTabs, panelId, dispatch]
+    [isMaxTabsReached, maxTabs, panelId, dispatch]
   );
 
   const closeTab = useCallback(
@@ -59,7 +61,7 @@ export function useTabs(panelId: string) {
   const duplicateTab = useCallback(
     (tabId: string) => {
       // maxTabs < 1 means unlimited; reducer also enforces this
-      if (maxTabs >= 1 && panelTabs.length >= maxTabs) {
+      if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
         console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
         return;
@@ -67,7 +69,7 @@ export function useTabs(panelId: string) {
       // Dispatch intent - reducer handles ID generation and copying
       dispatch({ type: 'DUPLICATE_TAB', payload: { tabId } });
     },
-    [panelTabs.length, maxTabs, panelId, dispatch]
+    [isMaxTabsReached, maxTabs, dispatch]
   );
 
   const moveTab = useCallback(
@@ -112,7 +114,7 @@ export function useTabs(panelId: string) {
 
   return {
     panelTabs,
-    canAddTab: panelTabs.length < maxTabs,
+    canAddTab: maxTabs < 1 || totalTabCount < maxTabs,
     createTab,
     closeTab,
     duplicateTab,

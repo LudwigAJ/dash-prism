@@ -53,6 +53,12 @@ For pre-defined parameter options, use ``param_options``:
    def chart_layout(chart_type: str = 'bar'):
        return dcc.Graph(...)
 
+.. note::
+
+   Parameters passed from the Prism UI are serialized as strings. If your
+   layout expects richer types (e.g., numbers or booleans), convert them
+   inside the layout callback.
+
 Async Layouts
 ^^^^^^^^^^^^^
 

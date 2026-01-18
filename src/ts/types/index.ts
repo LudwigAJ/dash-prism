@@ -177,7 +177,9 @@ export function isDashComponent(value: unknown): value is DashComponent {
     'props' in value &&
     typeof (value as DashComponent).type === 'string' &&
     typeof (value as DashComponent).namespace === 'string' &&
-    typeof (value as DashComponent).props === 'object'
+    typeof (value as DashComponent).props === 'object' &&
+    (value as DashComponent).props !== null &&
+    !Array.isArray((value as DashComponent).props)
   );
 }
 

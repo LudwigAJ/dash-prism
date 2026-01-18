@@ -23,6 +23,8 @@ import type { PanelId, TabId } from '@types';
 export function useKeyboardShortcuts() {
   const { state, dispatch } = usePrism();
   const { maxTabs } = useConfig();
+  const totalTabCount = state.tabs.length;
+  const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   // Track rename mode - when true, we prompt user for new name
   const renameInputRef = useRef<HTMLInputElement | null>(null);
@@ -43,9 +45,8 @@ export function useKeyboardShortcuts() {
   // ========== Action: Create new tab ==========
   const createTab = useCallback(
     (panelId: PanelId) => {
-      const panelTabIds = state.panelTabs[panelId] ?? [];
       // maxTabs < 1 means unlimited; reducer also enforces this
-      if (maxTabs >= 1 && panelTabIds.length >= maxTabs) {
+      if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
         console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
         return;
@@ -53,7 +54,7 @@ export function useKeyboardShortcuts() {
 
       dispatch({ type: 'ADD_TAB', payload: { panelId } });
     },
-    [state.panelTabs, maxTabs, dispatch]
+    [isMaxTabsReached, maxTabs, dispatch]
   );
 
   // ========== Action: Close active tab ==========
@@ -141,16 +142,15 @@ export function useKeyboardShortcuts() {
     const tab = getActiveTab();
     if (!tab) return;
 
-    const panelTabIds = state.panelTabs[state.activePanelId] ?? [];
     // maxTabs < 1 means unlimited; reducer also enforces this
-    if (maxTabs >= 1 && panelTabIds.length >= maxTabs) {
+    if (isMaxTabsReached) {
       // TODO: Replace with toast.warning when Sonner is integrated
       console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
       return;
     }
 
     dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
-  }, [getActiveTab, state.panelTabs, state.activePanelId, maxTabs, dispatch]);
+  }, [getActiveTab, isMaxTabsReached, maxTabs, dispatch]);
 
   // ========== Action: Refresh tab (force refetch layout) ==========
   const refreshActiveTab = useCallback(() => {

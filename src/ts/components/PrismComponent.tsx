@@ -44,6 +44,12 @@ export type PrismProps = {
    */
   id?: string;
 
+  /**
+   * Server session identifier used to invalidate stale persisted workspaces.
+   * Automatically injected by dash_prism.init() unless overridden.
+   */
+  serverSessionId?: string;
+
   // persisted props
   // tabs: Record<PanelId, Tab[]>;
   // panels: Panel;
@@ -143,6 +149,7 @@ export type PrismProps = {
  */
 export function Prism({
   id,
+  serverSessionId,
   setProps,
   registeredLayouts = {},
   theme = 'light',
@@ -191,6 +198,7 @@ export function Prism({
       >
         <ConfigProvider
           componentId={id}
+          serverSessionId={serverSessionId}
           registeredLayouts={registeredLayouts}
           theme={theme}
           size={size}

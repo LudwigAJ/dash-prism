@@ -89,18 +89,12 @@ def test_prism_size_variant_dimensions(prism_app_factory, size: str) -> None:
     expected = SIZE_EXPECTATIONS[size]
 
     tolerance = 0.75
-    assert metrics["tabs_list_height"] == pytest.approx(
-        expected["tabs_list_height"], abs=tolerance
-    )
+    assert metrics["tabs_list_height"] == pytest.approx(expected["tabs_list_height"], abs=tolerance)
     assert metrics["tab_trigger_font_size"] == pytest.approx(
         expected["tab_trigger_font_size"], abs=tolerance
     )
-    assert metrics["searchbar_height"] == pytest.approx(
-        expected["searchbar_height"], abs=tolerance
-    )
-    assert metrics["statusbar_height"] == pytest.approx(
-        expected["statusbar_height"], abs=tolerance
-    )
+    assert metrics["searchbar_height"] == pytest.approx(expected["searchbar_height"], abs=tolerance)
+    assert metrics["statusbar_height"] == pytest.approx(expected["statusbar_height"], abs=tolerance)
     assert metrics["newlayout_card_title_font_size"] == pytest.approx(
         expected["newlayout_card_title_font_size"], abs=tolerance
     )
