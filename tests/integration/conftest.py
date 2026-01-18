@@ -119,15 +119,16 @@ def clear_registry_integration():
     dash_prism.clear_registry()
 
 
-@pytest.fixture
-def prism_app_with_layouts(dash_duo):
+def _start_prism_app(dash_duo, *, size: str = "md"):
     """
-    Create a Dash app with Prism component and registered test layouts.
+    Start a Dash app with Prism component and registered test layouts.
 
     Parameters
     ----------
     dash_duo : DashComposite
         The dash[testing] fixture combining Dash server + browser.
+    size : str
+        Prism size variant ('sm', 'md', or 'lg').
 
     Returns
     -------
@@ -169,7 +170,7 @@ def prism_app_with_layouts(dash_duo):
             dash_prism.Prism(
                 id="prism",
                 theme="light",
-                size="md",
+                size=size,
                 maxTabs=10,
                 persistence=False,
                 persistence_type="memory",
@@ -259,26 +260,35 @@ def prism_app_with_layouts(dash_duo):
     # Force a resize event after mount to trigger any pending observers
     dash_duo.driver.execute_script("window.dispatchEvent(new Event('resize'));")
 
-    # Log container dimensions for debugging
-    dash_duo.driver.execute_script(
-        """
-        console.log('[Test] Initial container dimensions:', 
-            document.querySelector('.prism-container')?.getBoundingClientRect() || 'not found');
-    """
-    )
-
-    # Clear any stored workspace data from previous test runs
-    dash_duo.driver.execute_script(
-        """
-        localStorage.removeItem('prism-workspace');
-        sessionStorage.removeItem('prism-workspace');
-    """
-    )
-
-    # Wait for Prism to fully load (explicit wait)
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-
     return dash_duo
+
+
+@pytest.fixture
+def prism_app_with_layouts(dash_duo):
+    """
+    Create a Dash app with Prism component and registered test layouts.
+
+    Parameters
+    ----------
+    dash_duo : DashComposite
+        The dash[testing] fixture combining Dash server + browser.
+
+    Returns
+    -------
+    DashComposite
+        The dash_duo instance with app already started and loaded.
+    """
+    return _start_prism_app(dash_duo, size="md")
+
+
+@pytest.fixture
+def prism_app_factory(dash_duo):
+    """Factory fixture to start Prism apps with different size variants."""
+
+    def _factory(size: str = "md"):
+        return _start_prism_app(dash_duo, size=size)
+
+    return _factory
 
 
 @pytest.fixture

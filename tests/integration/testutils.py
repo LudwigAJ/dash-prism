@@ -600,6 +600,10 @@ def drag_tab_to_position(
     bool
         True if operation completed.
     """
+    # Wait for layout to stabilize before attempting drag
+    wait_for_panel_layout_stable(dash_duo, timeout=5.0)
+    dash_duo.wait_for_element(PANEL_SELECTOR, timeout=5)
+
     panels = get_panels(dash_duo)
     if panel_index >= len(panels):
         return False
@@ -618,30 +622,11 @@ def drag_tab_to_position(
     dash_duo.driver.execute_script(
         "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", source_tab
     )
-
-    # Calculate offset direction based on position (drop to left or right of target)
-    # Moving forward: drop on right side of target
-    # Moving backward: drop on left side of target
-    if source_tab_index < target_tab_index:
-        # Moving forward - offset to right side of target
-        offset_x = 10
-    else:
-        # Moving backward - offset to left side of target
-        offset_x = -10
-
-    # Use JavaScript to get accurate element centers for reliable drag
-    source_rect = dash_duo.driver.execute_script(
-        "var r = arguments[0].getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2};",
-        source_tab,
-    )
-    target_rect = dash_duo.driver.execute_script(
-        "var r = arguments[0].getBoundingClientRect(); return {x: r.x + r.width/2 + arguments[1], y: r.y + r.height/2};",
-        target_tab,
-        offset_x,
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", target_tab
     )
 
-    # Use ActionChains with move_by_offset for more reliable headless Chrome behavior
-    # All movements relative, no element-based positioning
+    # Use ActionChains with a stable sequence to avoid headless Chrome crashes
     actions = ActionChains(dash_duo.driver)
     actions.move_to_element(source_tab).pause(0.1)
     actions.click_and_hold().pause(0.2)
@@ -651,14 +636,8 @@ def drag_tab_to_position(
     actions.move_by_offset(5, 0).pause(0.1)
     actions.move_by_offset(5, 0).pause(0.1)
 
-    # Calculate relative offset from current position to target
-    # Current position after wiggle: source center + 15px
-    current_x = source_rect["x"] + 15
-    current_y = source_rect["y"]
-    delta_x = int(target_rect["x"] - current_x)
-    delta_y = int(target_rect["y"] - current_y)
-
-    actions.move_by_offset(delta_x, delta_y).pause(0.3)
+    # Move to target tab center and release
+    actions.move_to_element(target_tab).pause(0.2)
     actions.release().perform()
 
     return True

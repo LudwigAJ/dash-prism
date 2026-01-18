@@ -37,8 +37,8 @@ class Prism(PrismComponent):
         and overall appearance. Defaults to ``'light'``.
     :type theme: str
     :param size: Size variant affecting spacing, typography, and UI element sizing.
-        Options: ``'xs'`` (extra small), ``'sm'`` (small), ``'md'`` (medium, default),
-        ``'lg'`` (large), ``'xl'`` (extra large). Defaults to ``'md'``.
+        Options: ``'sm'`` (small), ``'md'`` (medium, default), ``'lg'`` (large).
+        Defaults to ``'md'``.
     :type size: str
     :param maxTabs: Maximum number of tabs allowed in the workspace. Prevents users
         from creating too many tabs which could impact performance. Values less than

@@ -511,7 +511,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
     const showDefaultHint = hasDefault && currentValue === '';
 
     return (
-      <div className={cn('prism-searchbar pl-3')}>
+      <div className={cn('prism-searchbar prism-searchbar-params pl-3')}>
         {/* Counter - muted to match surrounding text */}
         <span className="text-muted-foreground text-sm whitespace-nowrap">
           ({currentParamIndex + 1}/{allParams.length})
