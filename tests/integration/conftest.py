@@ -192,8 +192,7 @@ def _start_prism_app(dash_duo, *, size: str = "md"):
     # creates its observers during initial mount and never picks up the post-hoc patch.
     dash_duo.driver.execute_cdp_cmd(
         "Page.addScriptToEvaluateOnNewDocument",
-        {
-            "source": """
+        {"source": """
             (function() {
                 const OriginalResizeObserver = window.ResizeObserver;
                 if (!OriginalResizeObserver) return;
@@ -247,8 +246,7 @@ def _start_prism_app(dash_duo, *, size: str = "md"):
 
                 console.log('[Test] ResizeObserver patched via CDP before app mount');
             })();
-            """
-        },
+            """},
     )
 
     # Explicitly set window size BEFORE server start (critical for headless mode!)

@@ -17,7 +17,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 
-
 # =============================================================================
 # CSS Selectors - use data-testid for stability across React re-renders
 # =============================================================================
