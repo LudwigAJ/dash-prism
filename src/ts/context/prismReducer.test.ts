@@ -883,7 +883,11 @@ describe('prismReducer', () => {
 
       const result = prismReducer(state, action);
 
-      expect(result.tabs).toEqual(state.tabs);
+      expect(result.tabs).toHaveLength(state.tabs.length);
+      result.tabs.forEach((tab, index) => {
+        expect(tab).toMatchObject(state.tabs[index]);
+        expect(tab.mountKey).toEqual(expect.any(String));
+      });
       expect(result.panel).toEqual(state.panel);
     });
   });
