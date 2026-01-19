@@ -6,7 +6,7 @@ This example demonstrates the full Prism API with polished demo layouts.
 All layouts and callbacks are defined in this single file.
 
 Run with: python usage.py
-Dependencies: pip install -r requirements-test.txt
+Dependencies: pip install -r requirements-dev.txt
 """
 
 from __future__ import annotations
