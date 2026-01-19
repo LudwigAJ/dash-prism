@@ -153,9 +153,7 @@ def validate_workspace(
     validation_errors: List[str] = []
 
     if not isinstance(workspace, dict):
-        validation_errors.append(
-            f"Workspace must be a dict, got {type(workspace).__name__}"
-        )
+        validation_errors.append(f"Workspace must be a dict, got {type(workspace).__name__}")
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
@@ -192,9 +190,7 @@ def validate_workspace(
         validation_errors.append(f"panel: expected dict, got {type(panel).__name__}")
         type_errors = True
     if not isinstance(panel_tabs, dict):
-        validation_errors.append(
-            f"panelTabs: expected dict, got {type(panel_tabs).__name__}"
-        )
+        validation_errors.append(f"panelTabs: expected dict, got {type(panel_tabs).__name__}")
         type_errors = True
     if not isinstance(active_tab_ids, dict):
         validation_errors.append(
@@ -223,9 +219,7 @@ def validate_workspace(
     tab_ids_in_tabs = {
         tab_id
         for tab in tabs
-        if isinstance(tab, dict)
-        and isinstance((tab_id := tab.get("id")), str)
-        and tab_id
+        if isinstance(tab, dict) and isinstance((tab_id := tab.get("id")), str) and tab_id
     }
 
     # Build mapping of tab_id -> list of panels it appears in (for duplicate check)
@@ -308,9 +302,7 @@ def validate_workspace(
     # -------------------------------------------------------------------------
     if isinstance(active_panel_id, str) and active_panel_id:
         if active_panel_id not in leaf_panel_ids:
-            validation_errors.append(
-                f"activePanelId '{active_panel_id}' is not a valid leaf panel"
-            )
+            validation_errors.append(f"activePanelId '{active_panel_id}' is not a valid leaf panel")
 
     # -------------------------------------------------------------------------
     # 9. Each activeTabIds entry references valid panel and tab
@@ -325,9 +317,7 @@ def validate_workspace(
         if tab_id is None:
             continue
         if not isinstance(tab_id, str) or not tab_id:
-            validation_errors.append(
-                f"activeTabIds['{panel_id}'] must be a non-empty string"
-            )
+            validation_errors.append(f"activeTabIds['{panel_id}'] must be a non-empty string")
             continue
         if tab_id not in (panel_tabs.get(panel_id) or []):
             validation_errors.append(

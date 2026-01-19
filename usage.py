@@ -156,7 +156,10 @@ def settings_layout():
         [
             html.Div(
                 [
-                    html.H1("[SETTINGS]", style={"margin": "0", "fontFamily": 'Monaco, "Courier New", monospace'}),
+                    html.H1(
+                        "[SETTINGS]",
+                        style={"margin": "0", "fontFamily": 'Monaco, "Courier New", monospace'},
+                    ),
                     html.P(
                         "Configure your workspace",
                         style={"color": "var(--muted-foreground)", "margin": "5px 0 0 0"},
@@ -259,7 +262,11 @@ def settings_layout():
 
 # Simple in-memory chat store
 _chat_messages: list[dict[str, str]] = [
-    {"username": "System", "text": "Welcome to the terminal chat.", "timestamp": datetime.now().isoformat()},
+    {
+        "username": "System",
+        "text": "Welcome to the terminal chat.",
+        "timestamp": datetime.now().isoformat(),
+    },
 ]
 
 
@@ -610,7 +617,11 @@ def iris_layout(theme: str = "light"):
                     html.P(
                         "150 samples across three species. Use these panels to compare relationships and"
                         " distributions between measurements.",
-                        style={"margin": "0", "color": colors["text_secondary"], "fontSize": "12px"},
+                        style={
+                            "margin": "0",
+                            "color": colors["text_secondary"],
+                            "fontSize": "12px",
+                        },
                     ),
                 ],
                 style=section_style,
@@ -992,7 +1003,9 @@ def country_layout(theme: str = "light"):
     # Find country data
     country_df = df[df["country"] == country]
 
-    life_fig = px.line(country_df, x="year", y="lifeExp", title="Life Expectancy (years)", markers=True)
+    life_fig = px.line(
+        country_df, x="year", y="lifeExp", title="Life Expectancy (years)", markers=True
+    )
     life_fig.add_vline(x=year, line_dash="dash", line_color=colors["accent"], line_width=1)
     life_fig.update_layout(**layout_settings)
     life_fig.update_layout(title=None, showlegend=False)
@@ -1140,7 +1153,11 @@ def continent_layout(theme: str = "light"):
     bubble_fig.update_layout(**layout_settings)
     bubble_fig.update_layout(title=None)
 
-    agg = filtered_df.groupby(["continent", "year"]).agg({"lifeExp": "mean", "gdpPercap": "mean"}).reset_index()
+    agg = (
+        filtered_df.groupby(["continent", "year"])
+        .agg({"lifeExp": "mean", "gdpPercap": "mean"})
+        .reset_index()
+    )
     line_fig = px.line(agg, x="year", y="lifeExp", color="continent", markers=True)
     line_fig.update_layout(**layout_settings)
     line_fig.update_layout(title=None)
@@ -1496,7 +1513,10 @@ def delayed_layout(delay: str = "3"):
                             ),
                             html.P(
                                 "The layout has finished loading after the specified delay.",
-                                style={"fontFamily": 'Monaco, "Courier New", monospace', "fontSize": "12px"},
+                                style={
+                                    "fontFamily": 'Monaco, "Courier New", monospace',
+                                    "fontSize": "12px",
+                                },
                             ),
                         ],
                         style={
@@ -1528,58 +1548,66 @@ def delayed_layout(delay: str = "3"):
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
-app.layout = html.Div([
-    dash_prism.Prism(
-        id='prism',
-        style={'height': '100vh', 'width': '100%'},
-        theme=DEFAULT_THEME,
-        size=DEFAULT_SIZE,
-        actions=[
-            dash_prism.Action(id='save', label='Save', icon='Save', tooltip='Save workspace'),
-            dash_prism.Action(id='load', label='Load', icon='FolderOpen', tooltip='Load workspace'),
-            dash_prism.Action(id='clear', label='Clear', icon='Trash2', tooltip='Clear all tabs'),
-        ],
-        searchBarPlaceholder='Search layouts...',
-        statusBarPosition='bottom',
-        persistence=True,
-        persistence_type='memory',
-        maxTabs=8,
-    ),
-    dcc.Store(id='saved-workspace', storage_type='memory'),
-])
+app.layout = html.Div(
+    [
+        dash_prism.Prism(
+            id="prism",
+            style={"height": "100vh", "width": "100%"},
+            theme=DEFAULT_THEME,
+            size=DEFAULT_SIZE,
+            actions=[
+                dash_prism.Action(id="save", label="Save", icon="Save", tooltip="Save workspace"),
+                dash_prism.Action(
+                    id="load", label="Load", icon="FolderOpen", tooltip="Load workspace"
+                ),
+                dash_prism.Action(
+                    id="clear", label="Clear", icon="Trash2", tooltip="Clear all tabs"
+                ),
+            ],
+            searchBarPlaceholder="Search layouts...",
+            statusBarPosition="bottom",
+            persistence=True,
+            persistence_type="memory",
+            maxTabs=8,
+        ),
+        dcc.Store(id="saved-workspace", storage_type="memory"),
+    ]
+)
 
 
 # =============================================================================
 # CALLBACKS - Settings
 # =============================================================================
 
+
 @callback(
-    Output('prism', 'theme'),
-    Output('prism', 'size'),
-    Output(SETTINGS_STATUS_ID, 'children'),
-    Input(SETTINGS_APPLY_ID, 'n_clicks'),
-    State(SETTINGS_THEME_ID, 'value'),
-    State(SETTINGS_SIZE_ID, 'value'),
+    Output("prism", "theme"),
+    Output("prism", "size"),
+    Output(SETTINGS_STATUS_ID, "children"),
+    Input(SETTINGS_APPLY_ID, "n_clicks"),
+    State(SETTINGS_THEME_ID, "value"),
+    State(SETTINGS_SIZE_ID, "value"),
     prevent_initial_call=True,
 )
 def apply_settings(n_clicks, theme, size):
     """Apply theme and size settings."""
     if not n_clicks:
         raise PreventUpdate
-    return theme, size, '✓ Applied!'
+    return theme, size, "✓ Applied!"
 
 
 # =============================================================================
 # CALLBACKS - Chat
 # =============================================================================
 
+
 @callback(
-    Output({'type': 'chat-messages', 'index': MATCH}, 'children'),
-    Output({'type': 'chat-input', 'index': MATCH}, 'value'),
-    Input({'type': 'chat-send-btn', 'index': MATCH}, 'n_clicks'),
-    Input({'type': 'chat-interval', 'index': MATCH}, 'n_intervals'),
-    State({'type': 'chat-input', 'index': MATCH}, 'value'),
-    State({'type': 'chat-username', 'index': MATCH}, 'data'),
+    Output({"type": "chat-messages", "index": MATCH}, "children"),
+    Output({"type": "chat-input", "index": MATCH}, "value"),
+    Input({"type": "chat-send-btn", "index": MATCH}, "n_clicks"),
+    Input({"type": "chat-interval", "index": MATCH}, "n_intervals"),
+    State({"type": "chat-input", "index": MATCH}, "value"),
+    State({"type": "chat-username", "index": MATCH}, "data"),
     prevent_initial_call=True,
 )
 def update_chat(n_clicks, n_intervals, message_text, username):
@@ -1587,35 +1615,47 @@ def update_chat(n_clicks, n_intervals, message_text, username):
     global _chat_messages
     triggered_id = ctx.triggered_id
 
-    if triggered_id and isinstance(triggered_id, dict) and triggered_id.get('type') == 'chat-send-btn':
+    if (
+        triggered_id
+        and isinstance(triggered_id, dict)
+        and triggered_id.get("type") == "chat-send-btn"
+    ):
         if message_text and message_text.strip():
-            _chat_messages.append({
-                'username': username,
-                'text': message_text.strip(),
-                'timestamp': datetime.now().isoformat(),
-            })
+            _chat_messages.append(
+                {
+                    "username": username,
+                    "text": message_text.strip(),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             # Keep last 100 messages
             if len(_chat_messages) > 100:
                 _chat_messages = _chat_messages[-100:]
 
     # Format messages
     if not _chat_messages:
-        formatted = '*** No messages yet. Start chatting! ***\n'
+        formatted = "*** No messages yet. Start chatting! ***\n"
     else:
         lines = []
         for msg in _chat_messages:
-            ts = msg['timestamp'][:19].replace('T', ' ')
-            user = msg['username']
-            text = msg['text']
-            if user.lower() == 'system':
-                lines.append(f'*** {text} ***\n')
+            ts = msg["timestamp"][:19].replace("T", " ")
+            user = msg["username"]
+            text = msg["text"]
+            if user.lower() == "system":
+                lines.append(f"*** {text} ***\n")
             elif user.lower() == username.lower():
-                lines.append(f'[{ts}] {user} (you): {text}\n')
+                lines.append(f"[{ts}] {user} (you): {text}\n")
             else:
-                lines.append(f'[{ts}] <{user}> {text}\n')
-        formatted = ''.join(lines)
+                lines.append(f"[{ts}] <{user}> {text}\n")
+        formatted = "".join(lines)
 
-    clear_input = '' if triggered_id and isinstance(triggered_id, dict) and triggered_id.get('type') == 'chat-send-btn' else (message_text or '')
+    clear_input = (
+        ""
+        if triggered_id
+        and isinstance(triggered_id, dict)
+        and triggered_id.get("type") == "chat-send-btn"
+        else (message_text or "")
+    )
     return formatted, clear_input
 
 
@@ -1623,13 +1663,14 @@ def update_chat(n_clicks, n_intervals, message_text, username):
 # CALLBACKS - Asset
 # =============================================================================
 
+
 @callback(
-    Output({'type': 'asset-data', 'index': MATCH}, 'data'),
-    Output({'type': 'asset-chart', 'index': MATCH}, 'figure'),
-    Input({'type': 'asset-interval', 'index': MATCH}, 'n_intervals'),
-    State({'type': 'asset-data', 'index': MATCH}, 'data'),
-    State({'type': 'asset-model', 'index': MATCH}, 'data'),
-    State({'type': 'asset-theme', 'index': MATCH}, 'data'),
+    Output({"type": "asset-data", "index": MATCH}, "data"),
+    Output({"type": "asset-chart", "index": MATCH}, "figure"),
+    Input({"type": "asset-interval", "index": MATCH}, "n_intervals"),
+    State({"type": "asset-data", "index": MATCH}, "data"),
+    State({"type": "asset-model", "index": MATCH}, "data"),
+    State({"type": "asset-theme", "index": MATCH}, "data"),
     prevent_initial_call=True,
 )
 def update_asset_price(n, data, model_type, theme):
@@ -1641,15 +1682,15 @@ def update_asset_price(n, data, model_type, theme):
     from datetime import datetime
 
     # Extract data
-    timestamps = data.get('timestamps', [])
-    prices = data.get('prices', [])
-    current_price = data.get('current_price', data['base_price'])
-    base_price = data['base_price']
-    volatility = data['volatility']
+    timestamps = data.get("timestamps", [])
+    prices = data.get("prices", [])
+    current_price = data.get("current_price", data["base_price"])
+    base_price = data["base_price"]
+    volatility = data["volatility"]
 
     # Generate new price based on model
-    dt = 1/252  # Daily time step
-    if model_type == 'GBM':
+    dt = 1 / 252  # Daily time step
+    if model_type == "GBM":
         # Geometric Brownian Motion: dS = mu*S*dt + sigma*S*sqrt(dt)*Z
         mu = 0.0  # Drift
         Z = np.random.normal(0, 1)
@@ -1658,13 +1699,17 @@ def update_asset_price(n, data, model_type, theme):
         # Mean reversion: dS = theta*(mean - S)*dt + sigma*S*sqrt(dt)*Z
         theta = 0.1  # Speed of reversion
         Z = np.random.normal(0, 1)
-        new_price = current_price + theta * (base_price - current_price) * dt + volatility * current_price * np.sqrt(dt) * Z
+        new_price = (
+            current_price
+            + theta * (base_price - current_price) * dt
+            + volatility * current_price * np.sqrt(dt) * Z
+        )
 
     # Ensure price doesn't go negative or too low
     new_price = max(new_price, base_price * 0.3)
 
     # Update data
-    timestamps.append(datetime.now().strftime('%H:%M:%S'))
+    timestamps.append(datetime.now().strftime("%H:%M:%S"))
     prices.append(new_price)
 
     # Keep last 200 points
@@ -1672,40 +1717,42 @@ def update_asset_price(n, data, model_type, theme):
         timestamps = timestamps[-200:]
         prices = prices[-200:]
 
-    theme = theme or 'light'
+    theme = theme or "light"
     colors = get_theme_colors(theme)
     layout_settings = get_plotly_layout(theme)
-    layout_settings['margin'] = {'t': 24, 'r': 20, 'b': 40, 'l': 50}
-    layout_settings['showlegend'] = False
+    layout_settings["margin"] = {"t": 24, "r": 20, "b": 40, "l": 50}
+    layout_settings["showlegend"] = False
 
     # Create figure (line only)
     fig = {
-        'data': [{
-            'x': timestamps,
-            'y': prices,
-            'type': 'scatter',
-            'mode': 'lines',
-            'line': {'color': colors['accent'], 'width': 2},
-        }],
-        'layout': {
+        "data": [
+            {
+                "x": timestamps,
+                "y": prices,
+                "type": "scatter",
+                "mode": "lines",
+                "line": {"color": colors["accent"], "width": 2},
+            }
+        ],
+        "layout": {
             **layout_settings,
-            'xaxis': {
-                **layout_settings.get('xaxis', {}),
-                'title': 'Time',
+            "xaxis": {
+                **layout_settings.get("xaxis", {}),
+                "title": "Time",
             },
-            'yaxis': {
-                **layout_settings.get('yaxis', {}),
-                'title': 'Price (USD)',
+            "yaxis": {
+                **layout_settings.get("yaxis", {}),
+                "title": "Price (USD)",
             },
         },
     }
 
     return {
-        'timestamps': timestamps,
-        'prices': prices,
-        'base_price': base_price,
-        'volatility': volatility,
-        'current_price': new_price,
+        "timestamps": timestamps,
+        "prices": prices,
+        "base_price": base_price,
+        "volatility": volatility,
+        "current_price": new_price,
     }, fig
 
 
@@ -1713,9 +1760,10 @@ def update_asset_price(n, data, model_type, theme):
 # CALLBACKS - Workspace Actions
 # =============================================================================
 
+
 @callback(
-    Output('prism-action-save', 'n_clicks'),
-    Input('prism-action-save', 'n_clicks'),
+    Output("prism-action-save", "n_clicks"),
+    Input("prism-action-save", "n_clicks"),
     prevent_initial_call=True,
 )
 def handle_save(n_clicks: int) -> int:
@@ -1724,9 +1772,10 @@ def handle_save(n_clicks: int) -> int:
         print("Workspace saved.")
     return n_clicks
 
+
 @callback(
-    Output('prism-action-load', 'n_clicks'),
-    Input('prism-action-load', 'n_clicks'),
+    Output("prism-action-load", "n_clicks"),
+    Input("prism-action-load", "n_clicks"),
     prevent_initial_call=True,
 )
 def handle_load(n_clicks: int) -> int:
@@ -1737,8 +1786,8 @@ def handle_load(n_clicks: int) -> int:
 
 
 @callback(
-    Output('prism-action-clear', 'n_clicks'),
-    Input('prism-action-clear', 'n_clicks'),
+    Output("prism-action-clear", "n_clicks"),
+    Input("prism-action-clear", "n_clicks"),
     prevent_initial_call=True,
 )
 def handle_clear(n_clicks: int) -> int:
@@ -1752,11 +1801,16 @@ def handle_clear(n_clicks: int) -> int:
 # INITIALIZE
 # =============================================================================
 
-dash_prism.init('prism', app)
+dash_prism.init("prism", app)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Dash Prism Demo")
     print("Open http://127.0.0.1:5005 in your browser")
-    app.run(debug=False, port=5005, dev_tools_ui=False, dev_tools_props_check=False, dev_tools_serve_dev_bundles=False)
-
+    app.run(
+        debug=False,
+        port=5005,
+        dev_tools_ui=False,
+        dev_tools_props_check=False,
+        dev_tools_serve_dev_bundles=False,
+    )
