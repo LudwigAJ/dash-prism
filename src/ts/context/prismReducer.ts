@@ -11,6 +11,25 @@ import {
 } from '@utils/panels';
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+/** Maximum length for tab names (enforced during rename) */
+export const MAX_TAB_NAME_LENGTH = 24;
+
+/** Maximum number of leaf panels allowed in the workspace */
+export const MAX_LEAF_PANELS = 20;
+
+// =============================================================================
+// Logging Utilities
+// =============================================================================
+
+/** Log warning with [Prism] prefix for consistency */
+const logPrismWarning = (message: string): void => {
+  console.warn(`[Prism] ${message}`);
+};
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -217,6 +236,7 @@ function handleSpawnEmptyTab(draft: DraftState, panelId: PanelId): void {
     panelId,
     layoutId: undefined,
     createdAt: Date.now(),
+    mountKey: generateShortId(),
   };
   draft.tabs.push(newTab);
   handleAddTabToPanelTracking(draft, newTab.id, panelId);
@@ -260,6 +280,7 @@ export function createInitialState(): PrismState {
         panelId: initialPanelId,
         layoutId: undefined,
         createdAt: Date.now(),
+        mountKey: generateShortId(),
       },
     ],
     panel: {
@@ -440,7 +461,7 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         case 'ADD_TAB': {
           // Enforce maxTabs limit (< 1 means unlimited)
           if (isMaxTabsExceeded(draft, maxTabs)) {
-            console.warn(`ADD_TAB blocked: workspace at maxTabs limit (${maxTabs})`);
+            logPrismWarning(`Cannot add tab: maximum of ${maxTabs} tabs reached.`);
             break;
           }
 
@@ -519,7 +540,17 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         case 'RENAME_TAB': {
           const { tabId, name } = action.payload;
           const tab = findTabById(draft.tabs, tabId);
-          if (tab) tab.name = name;
+          if (tab) {
+            if (name.length > MAX_TAB_NAME_LENGTH) {
+              logPrismWarning(
+                `Tab name exceeds maximum length (${MAX_TAB_NAME_LENGTH} chars). ` +
+                  `Truncating from "${name}" to "${name.slice(0, MAX_TAB_NAME_LENGTH)}".`
+              );
+              tab.name = name.slice(0, MAX_TAB_NAME_LENGTH);
+            } else {
+              tab.name = name;
+            }
+          }
           // Clear rename mode after committing
           draft.renamingTabId = null;
           break;
@@ -622,6 +653,15 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
         case 'SPLIT_PANEL': {
           const { panelId, direction, tabId, position = 'after' } = action.payload;
+
+          // Check if we've reached the maximum number of leaf panels
+          const currentLeafCount = getLeafPanelIds(draft.panel).length;
+          if (currentLeafCount >= MAX_LEAF_PANELS) {
+            logPrismWarning(
+              `Cannot split panel: maximum of ${MAX_LEAF_PANELS} panels reached (current: ${currentLeafCount}).`
+            );
+            break;
+          }
 
           const panelToSplit = findPanelById(draft.panel, panelId);
           if (!panelToSplit) break;
@@ -830,8 +870,12 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           // Check if panel still exists, otherwise use active panel
           const targetPanelId = isPanelExists(draft, panelId) ? panelId : draft.activePanelId;
 
-          // Re-add the tab with correct panelId
-          const restoredTab: Tab = { ...tab, panelId: targetPanelId };
+          // Re-add the tab with correct panelId and ensure mountKey exists
+          const restoredTab: Tab = {
+            ...tab,
+            panelId: targetPanelId,
+            mountKey: tab.mountKey ?? generateShortId(),
+          };
           draft.tabs.push(restoredTab);
 
           // Add to panelTabs at original position (or end if position invalid)

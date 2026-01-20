@@ -90,11 +90,7 @@ function unwrapStoredWorkspace(
 
 function logStorageWarning(message: string, details?: unknown): void {
   if (process.env.NODE_ENV === 'production') return;
-  if (details) {
-    console.warn(`[Prism] ${message}`, details);
-    return;
-  }
-  console.warn(`[Prism] ${message}`);
+  console.warn(`[Prism] ${message}`, ...(details !== undefined ? [details] : []));
 }
 
 /** Get namespaced storage key for component */
@@ -371,27 +367,37 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     [state.tabs]
   );
 
+  // Safe unmount wrapper to prevent race conditions
+  const safeUnmountPortal = useCallback((node: HtmlPortalNode | undefined) => {
+    if (!node) return;
+    try {
+      node.unmount();
+    } catch {
+      // Portal already unmounted - safe to ignore during cleanup race conditions
+    }
+  }, []);
+
   // Cleanup stale portal nodes when tabs are removed
   useEffect(() => {
     const currentIds = new Set(state.tabs.map((t) => t.id));
     for (const id of portalNodesRef.current.keys()) {
       if (!currentIds.has(id)) {
         const node = portalNodesRef.current.get(id);
-        node?.unmount();
+        safeUnmountPortal(node);
         portalNodesRef.current.delete(id);
       }
     }
-  }, [state.tabs]);
+  }, [state.tabs, safeUnmountPortal]);
 
   // Cleanup all portal nodes on unmount
   useEffect(() => {
     return () => {
       for (const node of portalNodesRef.current.values()) {
-        node.unmount();
+        safeUnmountPortal(node);
       }
       portalNodesRef.current.clear();
     };
-  }, []);
+  }, [safeUnmountPortal]);
 
   // ================================================================================
   // EFFECTS FOR SYNCING WITH DASH PROPS

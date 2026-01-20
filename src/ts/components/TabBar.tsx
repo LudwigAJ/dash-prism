@@ -30,6 +30,7 @@ import { TAB_STYLE_VARIANTS, getTabStyleClasses } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
 import type { Tab, Theme } from '@types';
 import type { Action } from '@context/prismReducer';
+import { MAX_TAB_NAME_LENGTH } from '@context/prismReducer';
 import { cn } from '@utils/cn';
 import { findTabById } from '@utils/tabs';
 import { makeComponentPath } from './Panel';
@@ -167,7 +168,9 @@ const TabItem = memo(function TabItem({
               )}
             >
               {TabIcon ? <TabIcon className="h-2.5 w-2.5 shrink-0" /> : null}
-              {tab.name.length > 24 ? `${tab.name.slice(0, 24)}…` : tab.name}
+              {tab.name.length > MAX_TAB_NAME_LENGTH
+                ? `${tab.name.slice(0, MAX_TAB_NAME_LENGTH)}…`
+                : tab.name}
             </span>
 
             {/* Rename input overlay */}
@@ -206,6 +209,7 @@ const TabItem = memo(function TabItem({
                   <span
                     role="button"
                     tabIndex={0}
+                    aria-label={`Close ${tab.name} tab`}
                     data-testid={`prism-tab-close-${tab.id}`}
                     className={cn(
                       'group/close text-muted-foreground flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
