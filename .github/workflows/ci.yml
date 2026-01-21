@@ -50,7 +50,7 @@ jobs:
         uses: browser-actions/setup-chrome@v2   # ← change this from @v1
         with:
           chrome-version: stable
-          install-chromedriver: true
+          install-chromedriver: false
 
       - name: Verify Chrome version
         run: google-chrome --version || /usr/bin/google-chrome --version || echo "Chrome not found"
