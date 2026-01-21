@@ -8,6 +8,7 @@ import {
   findPanelById,
   updatePanelInTree,
   removePanelFromTree,
+  isLeafPanel,
 } from '@utils/panels';
 
 // =============================================================================
@@ -620,8 +621,28 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         case 'MOVE_TAB': {
           const { tabId, targetPanelId, targetIndex } = action.payload;
 
+          const tab = findTabById(draft.tabs, tabId);
+          if (!tab) {
+            logPrismWarning(`Cannot move tab '${tabId}': tab not found`);
+            break;
+          }
+
+          // Verify target panel exists and is a leaf
+          const targetPanel = findPanelById(draft.panel, targetPanelId);
+          if (!targetPanel) {
+            logPrismWarning(`Cannot move tab: target panel '${targetPanelId}' not found`);
+            break;
+          }
+
+          if (!isLeafPanel(targetPanel)) {
+            logPrismWarning(
+              `Cannot move tab: target panel '${targetPanelId}' is not a leaf panel`
+            );
+            break;
+          }
+
           const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId, targetIndex);
-          if (!sourcePanelId) break; // No-op or tab not found
+          if (!sourcePanelId) break; // No-op (same panel)
 
           // Update active tabs
           draft.activeTabIds[targetPanelId] = tabId;
@@ -664,7 +685,19 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           }
 
           const panelToSplit = findPanelById(draft.panel, panelId);
-          if (!panelToSplit) break;
+          if (!panelToSplit) {
+            logPrismWarning(`Cannot split panel '${panelId}': panel not found`);
+            break;
+          }
+
+          // Verify it's a leaf panel - only leaf panels can be split
+          if (!isLeafPanel(panelToSplit)) {
+            logPrismWarning(
+              `Cannot split panel '${panelId}': only leaf panels can be split ` +
+                `(panel has ${panelToSplit.children.length} children)`
+            );
+            break;
+          }
 
           const tabToMove = findTabById(draft.tabs, tabId);
           if (!tabToMove) break;
@@ -774,7 +807,17 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           const { panelId } = action.payload;
 
           const leafPanels = getLeafPanelIds(draft.panel).filter((id) => id !== panelId);
-          if (leafPanels.length === 0) break; // Can't collapse last panel
+          if (leafPanels.length === 0) {
+            logPrismWarning('Cannot collapse last panel');
+            break;
+          }
+
+          // Verify panel exists before attempting collapse
+          const panelExists = getLeafPanelIds(draft.panel).includes(panelId);
+          if (!panelExists) {
+            logPrismWarning(`Cannot collapse panel '${panelId}': panel not found`);
+            break;
+          }
 
           const targetPanelId = leafPanels[0];
 
@@ -784,12 +827,21 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
             handleMoveTabToPanel(draft, tid, targetPanelId);
           }
 
-          // Remove panel from tree
-          removePanelFromTree(draft.panel, panelId);
+          // Attempt to remove panel from tree
+          const removed = removePanelFromTree(draft.panel, panelId);
+          if (!removed) {
+            // Rollback: move tabs back to original panel
+            logPrismWarning(`Failed to remove panel '${panelId}'. Rolling back.`);
+            for (const tid of tabsToMove) {
+              handleMoveTabToPanel(draft, tid, panelId);
+            }
+            break;
+          }
 
-          // Clean up
+          // Clean up only if removal succeeded
           delete draft.activeTabIds[panelId];
           delete draft.panelTabs[panelId];
+          delete draft.searchBarModes[panelId];
 
           // Update active states
           if (tabsToMove.length > 0) {

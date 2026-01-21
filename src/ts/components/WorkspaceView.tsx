@@ -20,7 +20,8 @@ function makeSpec(
   id: string,
   layoutId: string | undefined,
   layoutParams: Record<string, string> | undefined,
-  layoutOption: string | undefined
+  layoutOption: string | undefined,
+  timeout: number
 ): DashComponent {
   return {
     namespace: 'dash_prism',
@@ -34,6 +35,7 @@ function makeSpec(
         // Use null instead of {} for stable references
         layoutParams: layoutParams ?? null,
         layoutOption: layoutOption ?? null,
+        timeout,
       },
     },
   };
@@ -47,14 +49,14 @@ function makeSpec(
 const DashContentRenderer = memo(
   ({ tab }: { tab: Tab }) => {
     const api: DashComponentApi | undefined = window.dash_component_api;
-    const { componentId = 'prism' } = useConfig();
+    const { componentId = 'prism', layoutTimeout } = useConfig();
 
     // Destructure only layout-affecting properties for stable memoization
     const { id, layoutId, layoutParams, layoutOption } = tab;
 
     const spec = useMemo<DashComponent>(
-      () => makeSpec(id, layoutId, layoutParams, layoutOption),
-      [id, layoutId, layoutParams, layoutOption]
+      () => makeSpec(id, layoutId, layoutParams, layoutOption, layoutTimeout),
+      [id, layoutId, layoutParams, layoutOption, layoutTimeout]
     );
 
     const componentPath = useMemo(() => makeComponentPath(componentId, id), [componentId, id]);
