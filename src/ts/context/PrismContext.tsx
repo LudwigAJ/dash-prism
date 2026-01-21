@@ -16,7 +16,8 @@ import {
 } from '@context/prismReducer';
 import { useConfig } from '@context/ConfigContext';
 import { generateShortId } from '@utils/uuid';
-import { validateWorkspace } from '@utils/workspaceValidation';
+import { validateWorkspace } from '@utils/workspace';
+import { logger } from '@utils/logger';
 import type {
   Workspace,
   PersistenceType,
@@ -89,8 +90,11 @@ function unwrapStoredWorkspace(
 }
 
 function logStorageWarning(message: string, details?: unknown): void {
-  if (process.env.NODE_ENV === 'production') return;
-  console.warn(`[Prism] ${message}`, ...(details !== undefined ? [details] : []));
+  if (details !== undefined) {
+    logger.warn(message, details);
+  } else {
+    logger.warn(message);
+  }
 }
 
 /** Get namespaced storage key for component */
@@ -210,15 +214,29 @@ function buildInitialState(
   // Persisted state takes precedence over initialLayout
   if (storedWorkspace?.tabs?.length) {
     // Hydrate tabs with mountKey if missing (for tabs restored from storage)
-    const hydratedTabs = storedWorkspace.tabs.map((tab) => ({
-      ...tab,
-      layoutId: tab.layoutId ?? undefined,
-      layoutOption: tab.layoutOption ?? undefined,
-      layoutParams: tab.layoutParams ?? undefined,
-      icon: tab.icon ?? undefined,
-      style: tab.style ?? undefined,
-      mountKey: tab.mountKey ?? generateShortId(),
-    }));
+    // Validate layoutIds against registeredLayouts to handle removed layouts
+    const hydratedTabs = storedWorkspace.tabs.map((tab) => {
+      const layoutId = tab.layoutId ?? undefined;
+      const isLayoutValid = layoutId && registeredLayouts && layoutId in registeredLayouts;
+
+      // Warn if tab references a layout that no longer exists
+      if (layoutId && !isLayoutValid) {
+        logger.warn(
+          `Tab "${tab.name}" references unregistered layout "${layoutId}". Layout will be cleared.`
+        );
+      }
+
+      return {
+        ...tab,
+        // Clear layoutId and related fields if layout no longer exists
+        layoutId: isLayoutValid ? layoutId : undefined,
+        layoutOption: isLayoutValid ? (tab.layoutOption ?? undefined) : undefined,
+        layoutParams: isLayoutValid ? (tab.layoutParams ?? undefined) : undefined,
+        icon: tab.icon ?? undefined,
+        style: tab.style ?? undefined,
+        mountKey: tab.mountKey ?? generateShortId(),
+      };
+    });
     return {
       tabs: hydratedTabs,
       panel: storedWorkspace.panel ?? baseState.panel,

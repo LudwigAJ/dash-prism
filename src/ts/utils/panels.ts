@@ -1,5 +1,6 @@
 import { Draft } from 'immer';
 import type { Panel, PanelId, PanelDirection } from '@types';
+import { generateShortId } from '@utils/uuid';
 
 // =============================================================================
 // Query Functions (Read-only)
@@ -97,13 +98,6 @@ export function findAllLeaves(root: Panel | Draft<Panel>): Panel | Draft<Panel>[
 
 /**
  * Check if a panel is the last (only) leaf panel in the tree
- *
- * TODO: Utility function for future use - checks if panel is the last remaining
- * Currently unused but may be needed for collapse validation
- *
- * @param root - The root panel tree
- * @param panelId - The panel ID to check
- * @returns true if this is the only leaf panel remaining
  */
 export function isLastPanel(root: Panel | Draft<Panel>, panelId: PanelId): boolean {
   const leafPanels = getLeafPanelIds(root);
@@ -167,37 +161,153 @@ export function removePanelFromTree(root: Panel | Draft<Panel>, panelId: PanelId
   return true;
 }
 
+// =============================================================================
+// Complex Panel Operations (Panel Tree Transformations)
+// =============================================================================
+
 /**
- * Normalize a panel tree by flattening single-child containers (in-place)
- *
- * TODO: Utility function for future use - flattens single-child containers
- * Currently unused but may be needed for panel tree optimization
+ * Result of a panel split operation
  */
-export function normalizePanel(root: Panel | Draft<Panel>): void {
-  for (const child of root.children) {
-    normalizePanel(child);
+export type SplitPanelResult = {
+  success: boolean;
+  newPanelId?: PanelId;
+  containerId?: PanelId;
+  error?: string;
+};
+
+/**
+ * Split a leaf panel into a container with two children.
+ *
+ * This transforms a leaf panel at the given location into a container panel
+ * with two children: the original panel (keeping its ID) and a new sibling panel.
+ * The original panel ID is preserved to avoid triggering React re-renders of tabs.
+ *
+ * @param rootPanel - The root panel of the tree (Immer draft or plain)
+ * @param options - Split configuration
+ * @returns Result indicating success/failure and new panel IDs
+ */
+export function splitPanel(
+  rootPanel: Panel | Draft<Panel>,
+  options: {
+    panelId: PanelId;
+    direction: PanelDirection;
+    position: 'before' | 'after';
+  }
+): SplitPanelResult {
+  const { panelId, direction, position } = options;
+
+  // Find the panel to split
+  const panelToSplit = findPanelById(rootPanel, panelId);
+  if (!panelToSplit) {
+    return {
+      success: false,
+      error: `Panel '${panelId}' not found`,
+    };
   }
 
-  if (root.children.length === 1) {
-    const onlyChild = root.children[0];
-    root.id = onlyChild.id;
-    root.order = onlyChild.order;
-    root.direction = onlyChild.direction;
-    root.size = onlyChild.size;
-    root.children = onlyChild.children;
+  // Verify it's a leaf panel
+  if (!isLeafPanel(panelToSplit)) {
+    return {
+      success: false,
+      error: `Panel '${panelId}' is not a leaf panel (has ${panelToSplit.children.length} children)`,
+    };
   }
+
+  // Generate new IDs
+  const newPanelId = generateShortId();
+  const containerId = generateShortId();
+
+  // Determine ordering based on position
+  const newPanelOrder = position === 'before' ? 0 : 1;
+  const originalPanelOrder = position === 'before' ? 1 : 0;
+
+  // Create the original panel as a child (keeps same ID!)
+  const originalPanelAsChild: Panel = {
+    id: panelId,
+    order: originalPanelOrder,
+    direction: null,
+    children: [],
+    size: '50%',
+  };
+
+  // Create new sibling panel
+  const newSiblingPanel: Panel = {
+    id: newPanelId,
+    order: newPanelOrder,
+    direction: null,
+    children: [],
+    size: '50%',
+  };
+
+  // Build children array sorted by order
+  const children =
+    position === 'before'
+      ? [newSiblingPanel, originalPanelAsChild]
+      : [originalPanelAsChild, newSiblingPanel];
+
+  // Transform the panel at this location into a container
+  // The original panel becomes a child, container takes its place
+  panelToSplit.id = containerId;
+  panelToSplit.direction = direction;
+  panelToSplit.children = children as any; // Type assertion for Immer Draft compatibility
+
+  // Clean up size for nested containers (root keeps size)
+  if (panelToSplit !== rootPanel && panelToSplit.size) {
+    delete panelToSplit.size;
+  }
+
+  return {
+    success: true,
+    newPanelId,
+    containerId,
+  };
 }
 
 /**
- * Sort panels by their order property (in-place)
- *
- * TODO: Utility function for future use - sorts panels by order property
- * Currently unused but may be needed for panel ordering features
+ * Result of a panel collapse operation
  */
-export function sortPanelByOrder(root: Panel | Draft<Panel>): void {
-  if (root.children.length < 2) return;
-  root.children.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  for (const child of root.children) {
-    sortPanelByOrder(child);
+export type CollapsePanelResult = {
+  success: boolean;
+  removedPanelId?: PanelId;
+  error?: string;
+};
+
+/**
+ * Collapse a panel by removing it from the tree.
+ *
+ * This function only handles the tree manipulation. The caller is responsible for:
+ * - Moving tabs from the collapsed panel to another panel
+ * - Updating activeTabIds and panelTabs state
+ * - Ensuring at least one panel remains
+ *
+ * @param rootPanel - The root panel of the tree
+ * @param panelId - ID of panel to collapse
+ * @returns Result indicating success/failure
+ */
+export function collapsePanel(
+  rootPanel: Panel | Draft<Panel>,
+  panelId: PanelId
+): CollapsePanelResult {
+  // Verify panel exists
+  const panelExists = getLeafPanelIds(rootPanel).includes(panelId);
+  if (!panelExists) {
+    return {
+      success: false,
+      error: `Panel '${panelId}' not found in tree`,
+    };
   }
+
+  // Attempt to remove from tree
+  const removed = removePanelFromTree(rootPanel, panelId);
+  if (!removed) {
+    return {
+      success: false,
+      error: `Failed to remove panel '${panelId}' from tree`,
+    };
+  }
+
+  return {
+    success: true,
+    removedPanelId: panelId,
+  };
 }

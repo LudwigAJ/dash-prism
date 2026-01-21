@@ -3,6 +3,7 @@ import { ChevronRight, ArrowLeft, X, Star, List } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { cn } from '@utils/cn';
+import { logger } from '@utils/logger';
 
 import {
   Command,
@@ -169,7 +170,7 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
         const existingTab = state.tabs?.find((t) => t.layoutId === layoutId);
         if (existingTab) {
           // TODO: Replace with toast.info when Sonner is integrated
-          console.log(`[Prism] Layout "${layout.name}" already open. Switching to existing tab.`);
+          logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
           dispatch({
             type: 'SELECT_TAB',
             payload: { tabId: existingTab.id, panelId: existingTab.panelId },

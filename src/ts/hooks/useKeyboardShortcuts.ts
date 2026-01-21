@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { usePrism } from './usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
+import { logger } from '@utils/logger';
 import type { PanelId, TabId } from '@types';
 
 /**
@@ -48,7 +49,7 @@ export function useKeyboardShortcuts() {
       // maxTabs < 1 means unlimited; reducer also enforces this
       if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
-        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
+        logger.error(`Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
         return;
       }
 
@@ -145,7 +146,7 @@ export function useKeyboardShortcuts() {
     // maxTabs < 1 means unlimited; reducer also enforces this
     if (isMaxTabsReached) {
       // TODO: Replace with toast.warning when Sonner is integrated
-      console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
+      logger.error(`Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
       return;
     }
 

@@ -86,7 +86,7 @@ test-py:
 
 # Run integration tests (requires chromedriver) - uses 4 parallel workers
 test-integration:
-    source .venv/bin/activate && pip install -e . -q && pytest tests/integration/ -v -n 4 --dist loadfile
+    source .venv/bin/activate && pip install -e . -q && pytest tests/integration/ -v -n auto --dist loadfile --reruns 2 --reruns-delay 1
 
 # Run integration tests sequentially (for debugging)
 test-integration-seq:
@@ -96,7 +96,7 @@ test-integration-seq:
 test:
     npm run test:ts
     source .venv/bin/activate && pip install -e . -q && pytest tests/ -v --ignore=tests/integration/
-    source .venv/bin/activate && pytest tests/integration/ -v -n 4 --dist loadfile
+    source .venv/bin/activate && pytest tests/integration/ -v -n auto --dist loadfile --reruns 2 --reruns-delay 1
 
 # Run tests with coverage report
 coverage:

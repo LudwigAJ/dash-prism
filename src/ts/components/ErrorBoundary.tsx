@@ -1,6 +1,7 @@
 import React, { Component, type ReactNode } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@components/ui';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@utils/logger';
 
 /**
  * Error boundary level determines the recovery options shown.
@@ -54,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    logger.error('ErrorBoundary caught:', error, errorInfo);
     this.props.onError?.(error, errorInfo);
   }
 

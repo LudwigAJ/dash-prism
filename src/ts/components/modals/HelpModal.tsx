@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,20 @@ export type HelpModalProps = {
  * NOT in Redux (see Reversibility Philosophy section).
  */
 export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalProps) {
+  // Platform detection for keyboard shortcuts
+  const isMac = useMemo(
+    () => typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform),
+    []
+  );
+
+  const modKeys = useMemo(
+    () => ({
+      ctrl: isMac ? '⌃' : 'Ctrl',
+      shift: isMac ? '⇧' : 'Shift',
+    }),
+    [isMac]
+  );
+
   const kbdClass = cn(
     'inline-flex items-center justify-center',
     'px-2 py-1 min-w-[1.5rem] h-6',
@@ -69,71 +83,71 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>New tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>N</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Close tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>D</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Duplicate tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>B</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Undo close</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>U</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Lock / unlock tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>O</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Rename tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>R</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Refresh tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
-                <kbd className={kbdClass}>⇧</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                <kbd className={kbdClass}>{modKeys.shift}</kbd>
                 <kbd className={kbdClass}>R</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Pin / unpin panel</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>I</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Toggle search bars</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>Y</kbd>
               </div>
             </div>
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Previous / next tab</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>J</kbd>
                 <span className="text-muted-foreground text-xs">/</span>
                 <kbd className={kbdClass}>K</kbd>
@@ -142,7 +156,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
             <div className={shortcutRowClass}>
               <span className={shortcutLabelClass}>Focus search</span>
               <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>⌃</kbd>
+                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>Space</kbd>
               </div>
             </div>
