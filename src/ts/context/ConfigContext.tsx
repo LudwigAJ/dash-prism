@@ -21,6 +21,8 @@ type ConfigContextValue = {
   statusBarPosition?: StatusBarPosition;
   /** Layout ID to load in the first tab on initial load */
   initialLayout?: string;
+  /** Timeout in seconds for layout loading (default: 30) */
+  layoutTimeout: number;
 };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -42,6 +44,7 @@ type ConfigProviderProps = {
   searchBarPlaceholder?: string;
   statusBarPosition?: StatusBarPosition;
   initialLayout?: string;
+  layoutTimeout?: number;
 };
 
 export function ConfigProvider({
@@ -57,6 +60,7 @@ export function ConfigProvider({
   persistence = false,
   persistenceType = 'memory',
   initialLayout,
+  layoutTimeout = 30,
 }: ConfigProviderProps) {
   const value = useMemo(
     () => ({
@@ -71,6 +75,7 @@ export function ConfigProvider({
       persistence,
       persistenceType,
       initialLayout,
+      layoutTimeout,
     }),
     [
       componentId,
@@ -84,6 +89,7 @@ export function ConfigProvider({
       searchBarPlaceholder,
       statusBarPosition,
       initialLayout,
+      layoutTimeout,
     ]
   );
 

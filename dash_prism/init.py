@@ -119,6 +119,7 @@ def _run_callback(
     callback: Callable[..., Any],
     is_async: bool,
     params: Dict[str, Any],
+    timeout: int = 30,
 ) -> Any:
     """Execute a layout callback in a SYNC context.
 
@@ -128,14 +129,28 @@ def _run_callback(
     :type is_async: bool
     :param params: Parameters to pass to the callback.
     :type params: dict[str, Any]
+    :param timeout: Maximum time in seconds for async callbacks.
+    :type timeout: int
     :returns: The rendered layout component.
     :rtype: Any
+    :raises TimeoutError: If async callback exceeds timeout duration.
 
-    .. note:: Sync callbacks are called directly. Async callbacks are
-        run via ``asyncio.run()``.
+    .. note:: Sync callbacks are called directly (timeout not enforced).
+        Async callbacks are run via ``asyncio.run()`` with timeout.
     """
     if is_async:
-        return asyncio.run(callback(**params))
+        # Async callback - run with timeout via asyncio.run
+        async def _run_with_timeout():
+            try:
+                return await asyncio.wait_for(callback(**params), timeout=timeout)
+            except asyncio.TimeoutError:
+                raise TimeoutError(
+                    f"Async layout callback timed out after {timeout}s. "
+                    "Consider optimizing the callback or increasing layoutTimeout."
+                )
+
+        return asyncio.run(_run_with_timeout())
+    # Sync callback - no timeout enforcement (would require threading)
     return callback(**params)
 
 
@@ -143,8 +158,9 @@ async def _run_callback_async(
     callback: Callable[..., Any],
     is_async: bool,
     params: Dict[str, Any],
+    timeout: int = 30,
 ) -> Any:
-    """Execute a layout callback in an ASYNC context.
+    """Execute a layout callback in an ASYNC context with timeout.
 
     :param callback: The layout callback function.
     :type callback: Callable[..., Any]
@@ -152,16 +168,37 @@ async def _run_callback_async(
     :type is_async: bool
     :param params: Parameters to pass to the callback.
     :type params: dict[str, Any]
+    :param timeout: Maximum time in seconds before raising TimeoutError.
+    :type timeout: int
     :returns: The rendered layout component.
     :rtype: Any
+    :raises TimeoutError: If callback exceeds timeout duration.
 
     .. note:: Async callbacks are awaited directly. Sync callbacks are
-        run in an executor to avoid blocking.
+        run in an executor to avoid blocking. Both are subject to timeout.
     """
     if is_async:
-        return await callback(**params)
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: callback(**params))
+        # Async callback - await directly with timeout
+        try:
+            return await asyncio.wait_for(callback(**params), timeout=timeout)
+        except asyncio.TimeoutError:
+            raise TimeoutError(
+                f"Async layout callback timed out after {timeout}s. "
+                "Consider optimizing the callback or increasing layoutTimeout."
+            )
+    else:
+        # Sync callback - run in executor with timeout
+        loop = asyncio.get_running_loop()
+        try:
+            return await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: callback(**params)),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError(
+                f"Layout callback timed out after {timeout}s. "
+                "Consider optimizing the callback or increasing layoutTimeout."
+            )
 
 
 def _create_error_component(message: str) -> Any:
@@ -260,11 +297,89 @@ def _resolve_layout_params(
     return resolved_params
 
 
+def _render_tab_layout_impl(
+    tab_id: str,
+    layout_id: str,
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str],
+    timeout: int,
+    callback_runner: Callable,
+    is_async: bool = False,
+) -> Any:
+    """Shared implementation for both sync and async layout rendering.
+
+    :param tab_id: The unique tab identifier.
+    :type tab_id: str
+    :param layout_id: The registered layout ID.
+    :type layout_id: str
+    :param layout_params: Parameters to pass to layout callback.
+    :type layout_params: dict[str, Any] | None
+    :param layout_option: Selected option key from ``param_options``.
+    :type layout_option: str | None
+    :param timeout: Maximum time in seconds for callback execution.
+    :type timeout: int
+    :param callback_runner: Either _run_callback or _run_callback_async.
+    :type callback_runner: Callable
+    :param is_async: If True, callback_runner returns awaitable.
+    :type is_async: bool
+    :returns: The rendered Dash component tree.
+    :rtype: Any
+    """
+    from .registry import get_layout
+    from .utils import inject_tab_id
+
+    if not layout_id:
+        return None
+
+    registration = get_layout(layout_id)
+    if not registration:
+        return _create_error_component(f"Layout '{layout_id}' not found")
+
+    try:
+        resolved_params = _resolve_layout_params(
+            registration,
+            layout_id,
+            layout_params,
+            layout_option,
+        )
+
+        if registration.is_callable and registration.callback is not None:
+            result = callback_runner(
+                registration.callback,
+                registration.is_async,
+                resolved_params,
+                timeout,
+            )
+            # If async, result is awaitable
+            layout = result if is_async else result
+        else:
+            layout = copy.deepcopy(registration.layout)
+
+        return inject_tab_id(layout, tab_id)
+
+    except TimeoutError as e:
+        return _create_error_component(
+            f"Layout '{layout_id}' timed out after {timeout}s.\n"
+            "The callback took too long to respond. Try refreshing the tab."
+        )
+    except TypeError as e:
+        return _create_error_component(
+            f"Error rendering layout '{layout_id}': {e}\n"
+            "Check that all required parameters are provided."
+        )
+    except ValueError as e:
+        return _create_error_component(str(e))
+    except Exception as e:
+        logger.exception(f"Unexpected error rendering layout '{layout_id}'", exc_info=e)
+        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
+
+
 def _render_tab_layout(
     tab_id: str,
     layout_id: str,
     layout_params: Optional[Dict[str, Any]],
     layout_option: Optional[str] = None,
+    timeout: int = 30,
 ) -> Any:
     """Render a tab's layout (SYNC version).
 
@@ -276,47 +391,20 @@ def _render_tab_layout(
     :type layout_params: dict[str, Any]
     :param layout_option: Selected option key from ``param_options``.
     :type layout_option: str | None
+    :param timeout: Maximum time in seconds for async callback execution.
+    :type timeout: int
     :returns: The rendered Dash component tree.
     :rtype: Any
     """
-    from .registry import get_layout
-    from .utils import inject_tab_id
-
-    if not layout_id:
-        return None
-
-    registration = get_layout(layout_id)
-    if not registration:
-        return _create_error_component(f"Layout '{layout_id}' not found")
-
-    try:
-        resolved_params = _resolve_layout_params(
-            registration,
-            layout_id,
-            layout_params,
-            layout_option,
-        )
-
-        if registration.is_callable and registration.callback is not None:
-            layout = _run_callback(
-                registration.callback,
-                registration.is_async,
-                resolved_params,
-            )
-        else:
-            layout = copy.deepcopy(registration.layout)
-
-        return inject_tab_id(layout, tab_id)
-
-    except TypeError as e:
-        return _create_error_component(
-            f"Error rendering layout '{layout_id}': {e}\n"
-            "Check that all required parameters are provided."
-        )
-    except ValueError as e:
-        return _create_error_component(str(e))
-    except Exception as e:
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
+    return _render_tab_layout_impl(
+        tab_id,
+        layout_id,
+        layout_params,
+        layout_option,
+        timeout,
+        callback_runner=_run_callback,
+        is_async=False,
+    )
 
 
 async def _render_tab_layout_async(
@@ -324,6 +412,7 @@ async def _render_tab_layout_async(
     layout_id: str,
     layout_params: Optional[Dict[str, Any]],
     layout_option: Optional[str] = None,
+    timeout: int = 30,
 ) -> Any:
     """Render a tab's layout (ASYNC version).
 
@@ -335,47 +424,20 @@ async def _render_tab_layout_async(
     :type layout_params: dict[str, Any]
     :param layout_option: Selected option key from ``param_options``.
     :type layout_option: str | None
+    :param timeout: Maximum time in seconds for callback execution.
+    :type timeout: int
     :returns: The rendered Dash component tree.
     :rtype: Any
     """
-    from .registry import get_layout
-    from .utils import inject_tab_id
-
-    if not layout_id:
-        return None
-
-    registration = get_layout(layout_id)
-    if not registration:
-        return _create_error_component(f"Layout '{layout_id}' not found")
-
-    try:
-        resolved_params = _resolve_layout_params(
-            registration,
-            layout_id,
-            layout_params,
-            layout_option,
-        )
-
-        if registration.is_callable and registration.callback is not None:
-            layout = await _run_callback_async(
-                registration.callback,
-                registration.is_async,
-                resolved_params,
-            )
-        else:
-            layout = copy.deepcopy(registration.layout)
-
-        return inject_tab_id(layout, tab_id)
-
-    except TypeError as e:
-        return _create_error_component(
-            f"Error rendering layout '{layout_id}': {e}\n"
-            "Check that all required parameters are provided."
-        )
-    except ValueError as e:
-        return _create_error_component(str(e))
-    except Exception as e:
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
+    return await _render_tab_layout_impl(
+        tab_id,
+        layout_id,
+        layout_params,
+        layout_option,
+        timeout,
+        callback_runner=_run_callback_async,
+        is_async=True,
+    )
 
 
 # =============================================================================
@@ -577,6 +639,7 @@ def init(prism_id: str, app: "Dash") -> None:
             layout_id = data.get("layoutId")
             layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
+            timeout = data.get("timeout", 30)  # Default to 30s if not provided
 
             if not layout_id:
                 raise PreventUpdate
@@ -586,6 +649,7 @@ def init(prism_id: str, app: "Dash") -> None:
                 layout_id,
                 layout_params,
                 layout_option,
+                timeout,
             )
             if result is None:
                 raise PreventUpdate

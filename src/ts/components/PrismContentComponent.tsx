@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logger } from '@utils/logger';
 import type { TabId, LayoutId } from '@types';
 import { DashComponentProps } from 'props';
 
@@ -59,7 +60,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
     // 3. We're in loading state (callback is processing)
     if (hasLayout && !children && loadingState) {
       timeoutRef.current = setTimeout(() => {
-        console.error(
+        logger.error(
           `[Prism] Layout loading timed out after ${layoutTimeout}s for layout: ${data?.layoutId}`
         );
         setTimedOut(true);

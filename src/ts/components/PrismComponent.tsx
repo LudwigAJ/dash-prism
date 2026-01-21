@@ -208,6 +208,7 @@ export function Prism({
           searchBarPlaceholder={searchBarPlaceholder}
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}
+          layoutTimeout={layoutTimeout}
         >
           <PrismProvider updateWorkspace={updateWorkspace} setProps={setProps}>
             <DndProvider>

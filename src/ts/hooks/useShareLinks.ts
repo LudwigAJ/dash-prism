@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
+import { logger } from '@utils/logger';
 import type { Tab, ShareData } from '@types';
 
 /**
@@ -18,7 +19,7 @@ function encodeShareData(data: string): string | null {
   try {
     const bytes = new TextEncoder().encode(data);
     if (bytes.length > MAX_SHARE_DATA_BYTES) {
-      console.warn(`Share data exceeds ${MAX_SHARE_DATA_BYTES} bytes (${bytes.length})`);
+      logger.warn(`Share data exceeds ${MAX_SHARE_DATA_BYTES} bytes (${bytes.length})`);
       return null;
     }
     // Convert Uint8Array to base64
@@ -116,7 +117,7 @@ export function useShareLinks() {
     const jsonStr = JSON.stringify(shareData);
     const encoded = encodeShareData(jsonStr);
     if (!encoded) {
-      console.warn('Share data too large or encoding failed');
+      logger.warn('Share data too large or encoding failed');
       return null;
     }
     const currentUrl = window.location.href.split('#')[0];

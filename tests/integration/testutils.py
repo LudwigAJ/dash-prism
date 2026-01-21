@@ -693,50 +693,30 @@ def drag_tab_to_panel_edge(
 
     source_tab = tabs[tab_index]
 
-    # Get source position for offset calculation
-    source_rect = source_tab.rect
-    source_x = source_rect["x"] + source_rect["width"] / 2
-    source_y = source_rect["y"] + source_rect["height"] / 2
-
     # Phase 1: Start drag to make drop zones appear
     # Use longer pauses for stability under parallel execution
     actions = ActionChains(dash_duo.driver)
     actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(1.0).perform()
 
     # Wait for drop zones to appear (they only exist during active drag)
-    drop_zone_selector = f"[data-testid^='prism-drop-zone-{edge}']"
+    target_panel_id = get_panel_id(dash_duo, target_panel_index)
+    drop_zone_selector = (
+        f"[data-testid='prism-drop-zone-{edge}-{target_panel_id}']"
+        if target_panel_id
+        else f"[data-testid^='prism-drop-zone-{edge}']"
+    )
     try:
-        WebDriverWait(dash_duo.driver, 5.0).until(
+        dz = WebDriverWait(dash_duo.driver, 5.0).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, drop_zone_selector))
         )
     except Exception:
         ActionChains(dash_duo.driver).release().perform()
         return False
 
-    drop_zones = dash_duo.driver.find_elements(By.CSS_SELECTOR, drop_zone_selector)
-
-    if not drop_zones:
-        ActionChains(dash_duo.driver).release().perform()
-        return False
-
-    dz = drop_zones[0]
-    dz_rect = dz.rect
-
     # Phase 2: Move to drop zone center and release
-    dz_center_x = dz_rect["x"] + dz_rect["width"] / 2
-    dz_center_y = dz_rect["y"] + dz_rect["height"] / 2
-
-    # Current position after phase 1: source_x + 15, source_y + 15
-    current_x = source_x + 15
-    current_y = source_y + 15
-
-    # Calculate delta to drop zone center
-    delta_x = int(dz_center_x - current_x)
-    delta_y = int(dz_center_y - current_y)
-
-    # Move to drop zone and release with longer pause
+    # Use move_to_element to avoid negative offset issues in headless Chrome
     actions2 = ActionChains(dash_duo.driver)
-    actions2.move_by_offset(delta_x, delta_y).pause(1.0).release().pause(1.0).perform()
+    actions2.move_to_element(dz).pause(1.0).release().pause(1.0).perform()
 
     # Wait for React to process the drop action and re-render
     # This explicit wait is critical for parallel test execution

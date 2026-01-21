@@ -3,6 +3,7 @@ import { useDndContext } from '@dnd-kit/core';
 import { usePrism } from './usePrism';
 import { useConfig } from '../context/ConfigContext';
 import { findTabById, getTabsByPanelId } from '@utils/tabs';
+import { logger } from '@utils/logger';
 
 /**
  * Hook for managing tabs within a specific panel.
@@ -40,7 +41,7 @@ export function useTabs(panelId: string) {
       // maxTabs < 1 means unlimited; reducer also enforces this
       if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
-        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
+        logger.error(`Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
         return;
       }
 
@@ -63,7 +64,7 @@ export function useTabs(panelId: string) {
       // maxTabs < 1 means unlimited; reducer also enforces this
       if (isMaxTabsReached) {
         // TODO: Replace with toast.warning when Sonner is integrated
-        console.error(`[Prism] Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
+        logger.error(`Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
         return;
       }
       // Dispatch intent - reducer handles ID generation and copying
