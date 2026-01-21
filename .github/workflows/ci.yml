@@ -46,18 +46,11 @@ jobs:
       - name: Run TypeScript unit tests
         run: npm run test:ts
 
-      - name: Set up Chrome (browser only)
-        uses: browser-actions/setup-chrome@v1
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v2   # ← change this from @v1
         with:
           chrome-version: stable
           install-chromedriver: false
-
-      - name: Remove any pre-installed chromedriver to avoid conflicts
-        run: |
-          which chromedriver && rm -f $(which chromedriver) || true
-          # Optional: also remove from common cache paths if needed
-          rm -f /usr/local/bin/chromedriver || true
-          rm -f ~/.cache/selenium/chromedriver* || true  # Selenium Manager cache
 
       - name: Verify Chrome version
         run: google-chrome --version || /usr/bin/google-chrome --version || echo "Chrome not found"
