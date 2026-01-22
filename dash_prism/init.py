@@ -26,11 +26,15 @@ import copy
 import warnings
 import logging
 from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
+from weakref import WeakSet
 
 if TYPE_CHECKING:
     from dash import Dash
 
 logger = logging.getLogger("dash_prism")
+
+# Track which layout functions we've already wrapped to prevent infinite wrapping
+_wrapped_layouts: WeakSet[Callable] = WeakSet()
 
 
 # =============================================================================
@@ -638,7 +642,7 @@ def init(prism_id: str, app: "Dash") -> None:
 
     if callable(original_layout):
         # Skip wrapping if already wrapped (prevents infinite wrapping on multiple init() calls)
-        if getattr(original_layout, "__prism_wrapped__", False):
+        if original_layout in _wrapped_layouts:
             logger.info("Layout already wrapped, skipping re-wrap")
         else:
             # Wrap the layout function to inject metadata on every render
@@ -666,9 +670,7 @@ def init(prism_id: str, app: "Dash") -> None:
                         layout_tree, prism_id, layouts_metadata, session_id
                     )
 
-                wrapped_async_layout.__prism_wrapped__ = (
-                    True  # pyright: ignore[reportAttributeAccessIssue]
-                )
+                _wrapped_layouts.add(wrapped_async_layout)
                 app.layout = wrapped_async_layout
                 logger.info("Wrapped async callable layout for Prism metadata injection")
             else:
@@ -692,9 +694,7 @@ def init(prism_id: str, app: "Dash") -> None:
                         layout_tree, prism_id, layouts_metadata, session_id
                     )
 
-                wrapped_sync_layout.__prism_wrapped__ = (
-                    True  # pyright: ignore[reportAttributeAccessIssue]
-                )
+                _wrapped_layouts.add(wrapped_sync_layout)
                 app.layout = wrapped_sync_layout
                 logger.info("Wrapped sync callable layout for Prism metadata injection")
     else:
