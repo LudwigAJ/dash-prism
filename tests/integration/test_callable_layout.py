@@ -138,9 +138,7 @@ def test_callable_layout_integration(dash_duo):
 
     # Verify the layout function was wrapped
     assert callable(app.layout), "app.layout should still be callable after init"
-    assert hasattr(
-        app.layout, "__prism_wrapped__"
-    ), "app.layout should be marked as wrapped by Prism"
+    assert hasattr(app.layout, "__wrapped__"), "app.layout should be marked as wrapped"
 
     # Start the app
     port = get_free_port()
