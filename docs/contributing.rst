@@ -48,7 +48,7 @@ Toaster Notifications
 (Maximum Tabs reached, spawning additional non-``allow_multple=True`` layouts, etc...)
 this is currently only shown in the console.
 
-**Solution:** Use `components/ui/toaser.tsx` and implement so we show toasts instead:
+**Solution:** Use `components/ui/toaster.tsx` and implement so we show toasts as well:
 
 .. code-block:: tsx
 
