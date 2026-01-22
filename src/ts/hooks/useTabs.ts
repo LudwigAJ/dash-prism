@@ -3,7 +3,6 @@ import { useDndContext } from '@dnd-kit/core';
 import { usePrism } from './usePrism';
 import { useConfig } from '../context/ConfigContext';
 import { findTabById, getTabsByPanelId } from '@utils/tabs';
-import { logger } from '@utils/logger';
 
 /**
  * Hook for managing tabs within a specific panel.
@@ -34,21 +33,13 @@ export function useTabs(panelId: string) {
 
   const panelTabs = getTabsByPanelId(state.tabs, panelId);
   const totalTabCount = state.tabs.length;
-  const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   const createTab = useCallback(
     (name = 'New Tab', layoutId?: string) => {
-      // maxTabs < 1 means unlimited; reducer also enforces this
-      if (isMaxTabsReached) {
-        // TODO: Replace with toast.warning when Sonner is integrated
-        logger.error(`Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
-        return;
-      }
-
-      // Dispatch intent - reducer handles ID generation
+      // Dispatch intent - reducer handles validation, ID generation, and toast feedback
       dispatch({ type: 'ADD_TAB', payload: { panelId, name, layoutId } });
     },
-    [isMaxTabsReached, maxTabs, panelId, dispatch]
+    [panelId, dispatch]
   );
 
   const closeTab = useCallback(
@@ -61,16 +52,10 @@ export function useTabs(panelId: string) {
 
   const duplicateTab = useCallback(
     (tabId: string) => {
-      // maxTabs < 1 means unlimited; reducer also enforces this
-      if (isMaxTabsReached) {
-        // TODO: Replace with toast.warning when Sonner is integrated
-        logger.error(`Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
-        return;
-      }
-      // Dispatch intent - reducer handles ID generation and copying
+      // Dispatch intent - reducer handles validation, ID generation, copying, and toast feedback
       dispatch({ type: 'DUPLICATE_TAB', payload: { tabId } });
     },
-    [isMaxTabsReached, maxTabs, dispatch]
+    [dispatch]
   );
 
   const moveTab = useCallback(

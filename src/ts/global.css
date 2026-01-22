@@ -576,30 +576,6 @@
 }
 
 /* =============================================================================
-   NOTIFICATIONS (Sonner Toasts)
-   ============================================================================= */
-
-[data-sonner-toaster] {
-  font-family: inherit;
-}
-
-[data-sonner-toast] {
-  background: var(--popover);
-  border: 1px solid var(--border);
-  color: var(--popover-foreground);
-}
-
-[data-sonner-toast][data-type='success'] {
-  background: var(--card);
-  border-color: var(--green);
-}
-
-[data-sonner-toast][data-type='error'] {
-  background: var(--card);
-  border-color: var(--red);
-}
-
-/* =============================================================================
    NEW LAYOUT COMPONENT
    ============================================================================= */
 

@@ -2,7 +2,6 @@ import { useEffect, useCallback, useRef } from 'react';
 import { usePrism } from './usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
-import { logger } from '@utils/logger';
 import type { PanelId, TabId } from '@types';
 
 /**
@@ -23,9 +22,6 @@ import type { PanelId, TabId } from '@types';
  */
 export function useKeyboardShortcuts() {
   const { state, dispatch } = usePrism();
-  const { maxTabs } = useConfig();
-  const totalTabCount = state.tabs.length;
-  const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   // Track rename mode - when true, we prompt user for new name
   const renameInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,16 +42,10 @@ export function useKeyboardShortcuts() {
   // ========== Action: Create new tab ==========
   const createTab = useCallback(
     (panelId: PanelId) => {
-      // maxTabs < 1 means unlimited; reducer also enforces this
-      if (isMaxTabsReached) {
-        // TODO: Replace with toast.warning when Sonner is integrated
-        logger.error(`Max tabs limit reached (${maxTabs}). Cannot create new tab.`);
-        return;
-      }
-
+      // Dispatch intent - reducer handles validation and toast feedback
       dispatch({ type: 'ADD_TAB', payload: { panelId } });
     },
-    [isMaxTabsReached, maxTabs, dispatch]
+    [dispatch]
   );
 
   // ========== Action: Close active tab ==========
@@ -143,15 +133,9 @@ export function useKeyboardShortcuts() {
     const tab = getActiveTab();
     if (!tab) return;
 
-    // maxTabs < 1 means unlimited; reducer also enforces this
-    if (isMaxTabsReached) {
-      // TODO: Replace with toast.warning when Sonner is integrated
-      logger.error(`Max tabs limit reached (${maxTabs}). Cannot duplicate tab.`);
-      return;
-    }
-
+    // Dispatch intent - reducer handles validation and toast feedback
     dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
-  }, [getActiveTab, isMaxTabsReached, maxTabs, dispatch]);
+  }, [getActiveTab, dispatch]);
 
   // ========== Action: Refresh tab (force refetch layout) ==========
   const refreshActiveTab = useCallback(() => {
