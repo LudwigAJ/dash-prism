@@ -80,28 +80,66 @@ def _find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
     return None
 
 
+def _inject_metadata_into_layout(
+    layout_tree: Any,
+    prism_id: str,
+    layouts_metadata: Dict[str, Any],
+    session_id: str,
+) -> Any:
+    """Find Prism component in layout tree and inject metadata.
+
+    :param layout_tree: The layout component tree to search.
+    :type layout_tree: Any
+    :param prism_id: The ID of the Prism component to inject into.
+    :type prism_id: str
+    :param layouts_metadata: The registered layouts metadata to inject.
+    :type layouts_metadata: dict[str, Any]
+    :param session_id: The server session ID to inject.
+    :type session_id: str
+    :returns: The layout tree (modified in-place).
+    :rtype: Any
+    """
+    prism = _find_component_by_id(layout_tree, prism_id)
+    if prism is not None:
+        prism.registeredLayouts = layouts_metadata
+        if getattr(prism, "serverSessionId", None) is None:
+            prism.serverSessionId = session_id
+    return layout_tree
+
+
 def _get_layout_root(app: "Dash") -> Optional[Any]:
     """Resolve the app layout root, calling a layout function if needed.
 
     :param app: The Dash application instance.
     :type app: Dash
-    :returns: The resolved layout root, or ``None`` if unavailable.
+    :returns: The resolved layout root, or ``None`` if unavailable or async.
     :rtype: Any | None
     """
     layout = getattr(app, "layout", None)
-    if callable(layout):
-        try:
-            return layout()
-        except Exception as exc:  # pragma: no cover - depends on app layout
-            warnings.warn(
-                "Failed to call app.layout() while searching for the Prism component. "
-                "Ensure your layout function can be called without arguments.",
-                UserWarning,
-                stacklevel=3,
-            )
-            logger.exception("Failed to call app.layout() while searching for Prism", exc_info=exc)
-            return None
-    return layout
+
+    if not callable(layout):
+        return layout
+
+    # Skip validation for async layouts (can't call them synchronously)
+    if asyncio.iscoroutinefunction(layout):
+        logger.info(
+            "Skipping Prism component validation for async callable layout. "
+            "Validation will occur at runtime when layout is first rendered."
+        )
+        return None
+
+    # Attempt to call sync layout function
+    try:
+        return layout()
+    except Exception as exc:  # pragma: no cover - depends on app layout
+        warnings.warn(
+            "Failed to call app.layout() while searching for the Prism component. "
+            "Ensure your layout function can be called without arguments.",
+            UserWarning,
+            stacklevel=3,
+        )
+        logger.exception("Failed to call app.layout() while searching for Prism", exc_info=exc)
+        return None
 
 
 def _is_app_async(app: "Dash") -> bool:
@@ -304,7 +342,6 @@ def _render_tab_layout_impl(
     layout_option: Optional[str],
     timeout: int,
     callback_runner: Callable,
-    is_async: bool = False,
 ) -> Any:
     """Shared implementation for both sync and async layout rendering.
 
@@ -320,9 +357,7 @@ def _render_tab_layout_impl(
     :type timeout: int
     :param callback_runner: Either _run_callback or _run_callback_async.
     :type callback_runner: Callable
-    :param is_async: If True, callback_runner returns awaitable.
-    :type is_async: bool
-    :returns: The rendered Dash component tree.
+    :returns: The rendered Dash component tree (or awaitable if using async runner).
     :rtype: Any
     """
     from .registry import get_layout
@@ -344,14 +379,12 @@ def _render_tab_layout_impl(
         )
 
         if registration.is_callable and registration.callback is not None:
-            result = callback_runner(
+            layout = callback_runner(
                 registration.callback,
                 registration.is_async,
                 resolved_params,
                 timeout,
             )
-            # If async, result is awaitable
-            layout = result if is_async else result
         else:
             layout = copy.deepcopy(registration.layout)
 
@@ -403,7 +436,6 @@ def _render_tab_layout(
         layout_option,
         timeout,
         callback_runner=_run_callback,
-        is_async=False,
     )
 
 
@@ -436,7 +468,6 @@ async def _render_tab_layout_async(
         layout_option,
         timeout,
         callback_runner=_run_callback_async,
-        is_async=True,
     )
 
 
@@ -596,13 +627,83 @@ def init(prism_id: str, app: "Dash") -> None:
                 )
             logger.info(f"Initial layout '{initial_layout}' validated successfully")
 
-    # Inject registered layouts metadata
-    if prism_component is not None:
-        prism_component.registeredLayouts = get_registered_layouts_metadata()
-        from . import SERVER_SESSION_ID
+    # Capture metadata at init time (registry is frozen after this)
+    from . import SERVER_SESSION_ID
 
-        if getattr(prism_component, "serverSessionId", None) is None:
-            prism_component.serverSessionId = SERVER_SESSION_ID
+    layouts_metadata = get_registered_layouts_metadata()
+    session_id = SERVER_SESSION_ID
+
+    # Handle callable vs static layouts
+    original_layout = app.layout
+
+    if callable(original_layout):
+        # Skip wrapping if already wrapped (prevents infinite wrapping on multiple init() calls)
+        if getattr(original_layout, "__prism_wrapped__", False):
+            logger.info("Layout already wrapped, skipping re-wrap")
+        else:
+            # Wrap the layout function to inject metadata on every render
+            # This creates a closure in the wrapper, avoiding registry lookups on every render
+            from functools import wraps
+
+            if asyncio.iscoroutinefunction(original_layout):
+                # Async layout function
+                @wraps(original_layout)
+                async def wrapped_async_layout(*args, **kwargs):
+                    try:
+                        layout_tree = await original_layout(*args, **kwargs)
+                    except Exception as e:
+                        logger.exception("Error in async layout function", exc_info=e)
+                        raise  # Re-raise with original traceback
+
+                    if layout_tree is None:
+                        logger.warning(
+                            f"Async layout function returned None. "
+                            f"Prism component '{prism_id}' may not be available."
+                        )
+                        return None
+
+                    return _inject_metadata_into_layout(
+                        layout_tree, prism_id, layouts_metadata, session_id
+                    )
+
+                wrapped_async_layout.__prism_wrapped__ = (
+                    True  # pyright: ignore[reportAttributeAccessIssue]
+                )
+                app.layout = wrapped_async_layout
+                logger.info("Wrapped async callable layout for Prism metadata injection")
+            else:
+                # Sync layout function
+                @wraps(original_layout)
+                def wrapped_sync_layout(*args, **kwargs):
+                    try:
+                        layout_tree = original_layout(*args, **kwargs)
+                    except Exception as e:
+                        logger.exception("Error in sync layout function", exc_info=e)
+                        raise  # Re-raise with original traceback
+
+                    if layout_tree is None:
+                        logger.warning(
+                            f"Layout function returned None. "
+                            f"Prism component '{prism_id}' may not be available."
+                        )
+                        return None
+
+                    return _inject_metadata_into_layout(
+                        layout_tree, prism_id, layouts_metadata, session_id
+                    )
+
+                wrapped_sync_layout.__prism_wrapped__ = (
+                    True  # pyright: ignore[reportAttributeAccessIssue]
+                )
+                app.layout = wrapped_sync_layout
+                logger.info("Wrapped sync callable layout for Prism metadata injection")
+    else:
+        # Static layout - inject once (existing behavior)
+        if prism_component is not None:
+            prism_component.registeredLayouts = layouts_metadata
+            if getattr(prism_component, "serverSessionId", None) is None:
+                prism_component.serverSessionId = session_id
+            logger.info("Injected metadata into static layout")
 
     # Determine callback mode
     use_async = _is_app_async(app)

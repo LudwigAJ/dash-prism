@@ -396,7 +396,7 @@ ID Transformation (allow_multiple only)
 When a layout is registered with ``allow_multiple=True``, Prism transforms
 string component IDs into pattern-matching dicts to isolate each tab instance:
 
-- ``'my-button'`` → ``{'type': 'my-button', 'index': 'tab-xyz'}``
+- ``'my-button'`` -> ``{'type': 'my-button', 'index': 'tab-xyz'}``
 
 This transformation happens automatically via ``inject_tab_id()`` and only
 applies to layouts that allow multiple instances. Components that already
@@ -444,3 +444,68 @@ Layouts must be registered **before** calling ``init()``:
 
    # 3. Finally init
    dash_prism.init('workspace', app)
+
+Initialization (``dash_prism.init``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``init()`` function connects Prism to your Dash application and is **required** for Prism to function. It performs three critical tasks:
+
+1. **Injects layout metadata** into the Prism component so the UI knows which layouts are available
+2. **Injects server session ID** to invalidate stale persisted workspaces after server restarts
+3. **Creates callbacks** to render tab contents dynamically
+
+.. code-block:: python
+
+   dash_prism.init('workspace', app)
+
+Static vs Callable Layouts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Prism supports both **static** and **callable** ``app.layout`` configurations:
+
+**Static Layout (Recommended)**
+
+.. code-block:: python
+
+   # Define layout as a static component tree
+   app.layout = html.Div([
+       dash_prism.Prism(id='workspace')
+   ])
+
+   dash_prism.init('workspace', app)
+
+This is the **recommended approach** because:
+
+- Better performance (no function call overhead on every page load)
+- Simpler to reason about
+- Metadata is injected once during initialization
+
+**Callable Layout (Supported)**
+
+.. code-block:: python
+
+   # Define layout as a function that returns a component tree
+   def layout():
+       return html.Div([
+           dash_prism.Prism(id='workspace')
+       ])
+
+   app.layout = layout
+   dash_prism.init('workspace', app)
+
+Callable layouts are useful for:
+
+- User-specific layouts (reading request context)
+- Conditional layout generation
+- Compatibility with existing Dash apps
+
+.. note::
+
+   When using callable layouts, ``init()`` automatically wraps your layout function
+   to inject Prism metadata on every render. This adds minimal overhead (~1ms) but
+   ensures metadata stays synchronized even when the layout is regenerated.
+
+.. warning::
+
+   **Async callable layouts** are supported but require ``app = Dash(__name__, use_async=True)``.
+   The wrapping behavior is the same, but the wrapper preserves the async nature of your function.

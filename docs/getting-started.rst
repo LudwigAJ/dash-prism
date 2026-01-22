@@ -39,7 +39,7 @@ Minimal Example
    if __name__ == '__main__':
        app.run(debug=True)
 
-The order matters: register layouts → define app.layout → call init().
+The order matters: register layouts -> define app.layout -> call init().
 
 Development Installation
 ------------------------

@@ -119,15 +119,16 @@ export type PrismProps = {
   actions?: JSX.Element[];
 
   /**
-   * If to persist workspace state
+   * If to persist workspace state. Defaults to false.
    */
-  persistence: boolean;
+  persistence?: boolean;
 
   /**
    * Where to persist workspace state: 'local' for localStorage,
    * 'session' for sessionStorage, or 'memory' for no persistence.
+   * Defaults to 'memory'.
    */
-  persistence_type: PersistenceType;
+  persistence_type?: PersistenceType;
 
   /**
    * Layout ID to automatically load in the first tab on initial load.
@@ -139,7 +140,7 @@ export type PrismProps = {
   /**
    * Styling props from Dash
    */
-  style: Record<string, string>;
+  style?: Record<string, string>;
 } & DashComponentProps;
 
 /**
