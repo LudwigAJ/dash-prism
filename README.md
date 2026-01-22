@@ -4,7 +4,7 @@
 [![Docs](https://github.com/LudwigAJ/dash-prism/actions/workflows/docs-build.yml/badge.svg)](https://ludwigaj.github.io/dash-prism/)
 [![PyPI](https://img.shields.io/pypi/v/dash-prism)](https://pypi.org/project/dash-prism/)
 [![Python](https://img.shields.io/pypi/pyversions/dash-prism)](https://pypi.org/project/dash-prism/)
-![License](https://img.shields.io/github/license/LudwigAJ/dash-prism.svg?style=flat-square)
+![License](https://img.shields.io/github/license/LudwigAJ/dash-prism.svg?style=flat)
 
 A multi-panel workspace manager for Plotly Dash applications.
 
