@@ -51,11 +51,12 @@ Keyword arguments:
     Maximum number of tabs allowed per panel.
 
 - persistence (boolean; default False):
-    If to persist workspace state.
+    If to persist workspace state. Defaults to False.
 
 - persistence_type (a value equal to: 'memory', 'session', 'local'; default 'memory'):
     Where to persist workspace state: 'local' for localStorage,
     'session' for sessionStorage, or 'memory' for no persistence.
+    Defaults to 'memory'.
 
 - readWorkspace (dict; optional):
     Read-only workspace state from Dash. Updates trigger re-hydration
@@ -386,11 +387,6 @@ Keyword arguments:
         _locals = locals()
         _locals.update(kwargs)  # For wildcard attrs and excess named props
         args = {k: _locals[k] for k in _explicit_args if k != 'children'}
-
-        for k in ['style']:
-            if k not in args:
-                raise TypeError(
-                    'Required argument `' + k + '` was not specified.')
 
         super(PrismComponent, self).__init__(children=children, **args)
 

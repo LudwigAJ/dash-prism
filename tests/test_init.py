@@ -422,3 +422,252 @@ def test_layout_with_actual_params(prism_app: Dash) -> None:
     assert result is not None
     assert received_params["user_id"] == "abc123"
     assert received_params["count"] == "5"
+
+
+# =============================================================================
+# Callable Layout Support Tests (Solution 1)
+# =============================================================================
+
+
+def test_callable_layout_sync(dash_app: Dash) -> None:
+    """Test sync callable app.layout with metadata injection."""
+
+    @dash_prism.register_layout(id="test-layout", name="Test Layout")
+    def test_layout():
+        return html.Div("Test content")
+
+    # Set app.layout as a callable function
+    def layout():
+        return html.Div([dash_prism.Prism(id="prism-callable", style={})])
+
+    dash_app.layout = layout
+    dash_prism.init("prism-callable", dash_app)
+
+    # Call layout function and verify metadata is injected
+    layout_result = dash_app.layout()
+    assert layout_result is not None
+
+    # Find the Prism component in the result
+    from dash_prism.init import _find_component_by_id
+
+    prism = _find_component_by_id(layout_result, "prism-callable")
+    assert prism is not None
+
+    # Verify metadata was injected
+    assert hasattr(prism, "registeredLayouts")
+    assert prism.registeredLayouts is not None
+    assert isinstance(prism.registeredLayouts, dict)
+    assert "test-layout" in prism.registeredLayouts
+    assert prism.registeredLayouts["test-layout"]["name"] == "Test Layout"
+
+    # Verify serverSessionId was injected
+    assert hasattr(prism, "serverSessionId")
+    assert prism.serverSessionId is not None
+
+
+def test_callable_layout_async(dash_app: Dash) -> None:
+    """Test async callable app.layout with metadata injection."""
+    import asyncio
+
+    @dash_prism.register_layout(id="async-test-layout", name="Async Test Layout")
+    async def async_test_layout():
+        return html.Div("Async test content")
+
+    # Set app.layout as an async callable function
+    async def async_layout():
+        return html.Div([dash_prism.Prism(id="prism-async-callable", style={})])
+
+    dash_app.layout = async_layout
+    dash_prism.init("prism-async-callable", dash_app)
+
+    # Verify wrapper is async
+    assert asyncio.iscoroutinefunction(dash_app.layout)
+
+    # Call layout function and verify metadata is injected
+    layout_result = asyncio.run(dash_app.layout())
+    assert layout_result is not None
+
+    # Find the Prism component in the result
+    from dash_prism.init import _find_component_by_id
+
+    prism = _find_component_by_id(layout_result, "prism-async-callable")
+    assert prism is not None
+
+    # Verify metadata was injected
+    assert hasattr(prism, "registeredLayouts")
+    assert prism.registeredLayouts is not None
+    assert isinstance(prism.registeredLayouts, dict)
+    assert "async-test-layout" in prism.registeredLayouts
+
+    # Verify serverSessionId was injected
+    assert hasattr(prism, "serverSessionId")
+    assert prism.serverSessionId is not None
+
+
+def test_callable_layout_with_params(dash_app: Dash) -> None:
+    """Test callable layout with parameters (Dash 2.0+ request context)."""
+
+    @dash_prism.register_layout(id="param-test", name="Param Test")
+    def param_test():
+        return html.Div("Param test")
+
+    # Set app.layout as a callable that accepts parameters
+    def layout(request=None):
+        # In real Dash apps, request would contain query params, etc.
+        return html.Div([dash_prism.Prism(id="prism-with-params", style={})])
+
+    dash_app.layout = layout
+    dash_prism.init("prism-with-params", dash_app)
+
+    # Verify parameters are forwarded
+    from unittest.mock import MagicMock
+
+    mock_request = MagicMock()
+    layout_result = dash_app.layout(request=mock_request)
+    assert layout_result is not None
+
+    # Find the Prism component
+    from dash_prism.init import _find_component_by_id
+
+    prism = _find_component_by_id(layout_result, "prism-with-params")
+    assert prism is not None
+    assert hasattr(prism, "registeredLayouts")
+
+
+def test_callable_layout_multiple_calls(dash_app: Dash) -> None:
+    """Test that callable layout injection works on every call."""
+
+    @dash_prism.register_layout(id="multi-call", name="Multi Call")
+    def multi_call():
+        return html.Div("Multi call")
+
+    call_count = [0]
+
+    def layout():
+        call_count[0] += 1
+        return html.Div(
+            [
+                html.Div(f"Call {call_count[0]}"),
+                dash_prism.Prism(id="prism-multi-call", style={}),
+            ]
+        )
+
+    dash_app.layout = layout
+
+    # Layout is called once during validation, before wrapping
+    initial_count = call_count[0]
+
+    dash_prism.init("prism-multi-call", dash_app)
+
+    # After init, layout has been called once during validation
+    validation_count = call_count[0]
+    assert validation_count == initial_count + 1
+
+    # Call layout multiple times
+    from dash_prism.init import _find_component_by_id
+
+    for i in range(3):
+        layout_result = dash_app.layout()
+        prism = _find_component_by_id(layout_result, "prism-multi-call")
+        assert prism is not None
+        assert hasattr(prism, "registeredLayouts")
+        assert "multi-call" in prism.registeredLayouts
+
+    # Verify it was called 3 more times after validation
+    assert call_count[0] == validation_count + 3
+
+
+def test_callable_layout_preserves_function_metadata(dash_app: Dash) -> None:
+    """Test that functools.wraps preserves function metadata."""
+
+    def layout():
+        """This is my layout function."""
+        return html.Div([dash_prism.Prism(id="prism-metadata", style={})])
+
+    dash_app.layout = layout
+    dash_prism.init("prism-metadata", dash_app)
+
+    # Verify function metadata is preserved
+    assert dash_app.layout.__name__ == "layout"
+    assert dash_app.layout.__doc__ == "This is my layout function."
+
+
+def test_static_layout_unchanged(dash_app: Dash) -> None:
+    """Test that static layouts still work as before (no regression)."""
+
+    @dash_prism.register_layout(id="static-test", name="Static Test")
+    def static_test():
+        return html.Div("Static test")
+
+    # Set app.layout as static (non-callable)
+    dash_app.layout = html.Div([dash_prism.Prism(id="prism-static", style={})])
+
+    # Get the Prism component before init
+    from dash_prism.init import _find_component_by_id
+
+    prism_before = _find_component_by_id(dash_app.layout, "prism-static")
+
+    dash_prism.init("prism-static", dash_app)
+
+    # Verify metadata was injected into the static component
+    assert prism_before.registeredLayouts is not None
+    assert "static-test" in prism_before.registeredLayouts
+
+    # Verify app.layout is still not callable
+    assert not callable(dash_app.layout)
+
+
+def test_callable_layout_multiple_init_no_infinite_wrapping(dash_app: Dash) -> None:
+    """Test that calling init() multiple times doesn't create infinite wrapping."""
+
+    @dash_prism.register_layout(id="init-test", name="Init Test")
+    def init_test():
+        return html.Div("Init test")
+
+    def layout():
+        return html.Div([dash_prism.Prism(id="prism-multi-init", style={})])
+
+    dash_app.layout = layout
+
+    # Call init multiple times
+    dash_prism.init("prism-multi-init", dash_app)
+    first_wrapper = dash_app.layout
+
+    dash_prism.init("prism-multi-init", dash_app)
+    second_wrapper = dash_app.layout
+
+    dash_prism.init("prism-multi-init", dash_app)
+    third_wrapper = dash_app.layout
+
+    # Verify it's the same wrapper (not re-wrapped)
+    assert first_wrapper is second_wrapper
+    assert second_wrapper is third_wrapper
+
+    # Verify the wrapper still works correctly
+    layout_result = dash_app.layout()
+    from dash_prism.init import _find_component_by_id
+
+    prism = _find_component_by_id(layout_result, "prism-multi-init")
+    assert prism is not None
+    assert hasattr(prism, "registeredLayouts")
+
+
+def test_callable_layout_exception_handling(dash_app: Dash) -> None:
+    """Test that exceptions in callable layout are propagated correctly."""
+
+    def failing_layout():
+        raise ValueError("Layout generation failed")
+
+    dash_app.layout = failing_layout
+
+    # Init should succeed (wrapping doesn't call the layout)
+    # But we need to suppress the warning about not finding Prism
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        dash_prism.init("prism-test", dash_app)
+
+    # Calling the layout should raise the original exception
+    with pytest.raises(ValueError, match="Layout generation failed"):
+        dash_app.layout()
