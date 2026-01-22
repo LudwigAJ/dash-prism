@@ -41,30 +41,38 @@ Building Docs
 Future Improvements
 -------------------
 
-Tab Reparenting Without Remount
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Toaster Notifications
+^^^^^^^^^^^^^^^^^^^^^
 
-**Problem:** When a tab is dragged between panels, React unmounts and remounts
-the content, causing Dash to refetch the layout from the server.
+**Problem:** When the user either has an action blocked due to limits 
+(Maximum Tabs reached, spawning additional non-``allow_multple=True`` layouts, etc...)
+this is currently only shown in the console.
 
-**Why:** React reconciles children per-parent. Moving a component to a different
-parent always triggers unmount/remount—``memo`` and ``useMemo`` cannot prevent this.
-
-**Solution:** Use `react-reverse-portal <https://www.npmjs.com/package/react-reverse-portal>`_:
+**Solution:** Use `components/ui/toaser.tsx` and implement so we show toasts instead:
 
 .. code-block:: tsx
 
-   import { createHtmlPortalNode, InPortal, OutPortal } from 'react-reverse-portal';
+   import { Toaster as Sonner } from 'sonner';
 
-   // Content lives in InPortal at WorkspaceView level - never unmounts
-   <InPortal node={portalNode}>
-     <DashContentRenderer tab={tab} />
-   </InPortal>
+   type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-   // OutPortal in each Panel - can move without unmounting content
-   <TabsContent>
-     <OutPortal node={portalNode} />
-   </TabsContent>
+   const Toaster = ({ ...props }: ToasterProps) => {
+   const { theme } = useConfig();
 
-Store portal nodes keyed by ``tabId`` in context. When tabs move between panels,
-only the ``OutPortal`` moves—the content stays mounted and Dash callbacks keep working.
+   return (
+      <Sonner
+         theme={theme as ToasterProps['theme']}
+         className="toaster group bg-background text-foreground"
+         toastOptions={{
+         classNames: {
+            toast:
+               'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
+            description: 'group-[.toast]:text-muted-foreground',
+            actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+            cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
+         },
+         }}
+         {...props}
+      />
+   );
+   };
