@@ -9,8 +9,9 @@
  * - maxTabs enforcement: ADD_TAB, DUPLICATE_TAB blocked at limit
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prismReducer, createPrismReducer, type PrismState, type Action } from './prismReducer';
+import { toastEmitter } from '@utils/toastEmitter';
 import type { Tab, Panel, PanelId, TabId } from '@types';
 
 // =============================================================================
@@ -944,6 +945,39 @@ describe('prismReducer', () => {
         expect(result.tabs).toHaveLength(3);
       });
 
+      it('emits warning toast when ADD_TAB blocked at maxTabs limit', () => {
+        const emitSpy = vi.spyOn(toastEmitter, 'emit');
+        const reducer = createPrismReducer({ maxTabs: 3 });
+        const state = createStateWithTabs(3);
+
+        reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        expect(emitSpy).toHaveBeenCalledWith({
+          type: 'warning',
+          message: 'Maximum tabs limit reached (3)',
+        });
+
+        emitSpy.mockRestore();
+      });
+
+      it('does not emit toast when ADD_TAB succeeds', () => {
+        const emitSpy = vi.spyOn(toastEmitter, 'emit');
+        const reducer = createPrismReducer({ maxTabs: 5 });
+        const state = createStateWithTabs(3);
+
+        reducer(state, {
+          type: 'ADD_TAB',
+          payload: { panelId: 'test-panel' as PanelId, name: 'New Tab' },
+        });
+
+        expect(emitSpy).not.toHaveBeenCalled();
+
+        emitSpy.mockRestore();
+      });
+
       it('allows ADD_TAB when below maxTabs limit', () => {
         const reducer = createPrismReducer({ maxTabs: 5 });
         const state = createStateWithTabs(3);
@@ -992,6 +1026,39 @@ describe('prismReducer', () => {
         });
 
         expect(result.tabs).toHaveLength(3);
+      });
+
+      it('emits warning toast when DUPLICATE_TAB blocked at maxTabs limit', () => {
+        const emitSpy = vi.spyOn(toastEmitter, 'emit');
+        const reducer = createPrismReducer({ maxTabs: 3 });
+        const state = createStateWithTabs(3);
+
+        reducer(state, {
+          type: 'DUPLICATE_TAB',
+          payload: { tabId: 'tab-0' as TabId },
+        });
+
+        expect(emitSpy).toHaveBeenCalledWith({
+          type: 'warning',
+          message: 'Cannot duplicate: maximum tabs limit reached (3)',
+        });
+
+        emitSpy.mockRestore();
+      });
+
+      it('does not emit toast when DUPLICATE_TAB succeeds', () => {
+        const emitSpy = vi.spyOn(toastEmitter, 'emit');
+        const reducer = createPrismReducer({ maxTabs: 5 });
+        const state = createStateWithTabs(3);
+
+        reducer(state, {
+          type: 'DUPLICATE_TAB',
+          payload: { tabId: 'tab-0' as TabId },
+        });
+
+        expect(emitSpy).not.toHaveBeenCalled();
+
+        emitSpy.mockRestore();
       });
 
       it('allows DUPLICATE_TAB when below maxTabs limit', () => {

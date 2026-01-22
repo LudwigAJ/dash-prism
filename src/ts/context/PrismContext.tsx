@@ -18,6 +18,9 @@ import { useConfig } from '@context/ConfigContext';
 import { generateShortId } from '@utils/uuid';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
+import { toastEmitter } from '@utils/toastEmitter';
+import { toast } from 'sonner';
+import { Toaster } from '@components/ui/toaster';
 import type {
   Workspace,
   PersistenceType,
@@ -418,6 +421,24 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
   }, [safeUnmountPortal]);
 
   // ================================================================================
+  // TOAST EVENT SUBSCRIPTION
+  // ================================================================================
+
+  // Subscribe to toast events emitted from reducer
+  useEffect(() => {
+    const unsubscribe = toastEmitter.subscribe(({ type, message, description }) => {
+      toast[type](message, {
+        description,
+        cancel: {
+          label: 'Dismiss',
+          onClick: () => {},
+        },
+      });
+    });
+    return unsubscribe;
+  }, []);
+
+  // ================================================================================
   // EFFECTS FOR SYNCING WITH DASH PROPS
   // ================================================================================
 
@@ -506,5 +527,10 @@ export function PrismProvider({ children, updateWorkspace, setProps }: PrismProv
     ]
   );
 
-  return <PrismContext.Provider value={value}>{children}</PrismContext.Provider>;
+  return (
+    <PrismContext.Provider value={value}>
+      <Toaster />
+      {children}
+    </PrismContext.Provider>
+  );
 }

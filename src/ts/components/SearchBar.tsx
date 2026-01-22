@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { ChevronRight, ArrowLeft, X, Star, List } from 'lucide-react';
+import { toast } from 'sonner';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { cn } from '@utils/cn';
@@ -169,8 +170,13 @@ export const SearchBar = memo(function SearchBar({ panelId, isPinned = false }: 
       if (!layout.allowMultiple) {
         const existingTab = state.tabs?.find((t) => t.layoutId === layoutId);
         if (existingTab) {
-          // TODO: Replace with toast.info when Sonner is integrated
           logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
+          toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
+            cancel: {
+              label: 'Dismiss',
+              onClick: () => {},
+            },
+          });
           dispatch({
             type: 'SELECT_TAB',
             payload: { tabId: existingTab.id, panelId: existingTab.panelId },

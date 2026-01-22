@@ -132,7 +132,9 @@ export function useShareLinks() {
       if (!tab) return;
 
       if (!tab.layoutId) {
-        toast.error('Cannot share a tab without a layout');
+        toast.error('Cannot share a tab without a layout', {
+          cancel: { label: 'Dismiss', onClick: () => {} },
+        });
         return;
       }
 
@@ -140,8 +142,16 @@ export function useShareLinks() {
       if (shareLink) {
         navigator.clipboard
           .writeText(shareLink)
-          .then(() => toast.success('Link copied to clipboard'))
-          .catch(() => toast.error('Failed to copy link'));
+          .then(() =>
+            toast.success('Link copied to clipboard', {
+              cancel: { label: 'Dismiss', onClick: () => {} },
+            })
+          )
+          .catch(() =>
+            toast.error('Failed to copy link', {
+              cancel: { label: 'Dismiss', onClick: () => {} },
+            })
+          );
       }
     },
     [generateShareLink]
@@ -156,7 +166,9 @@ export function useShareLinks() {
 
       // Validate layout exists
       if (!registeredLayouts?.[layoutId]) {
-        toast.error(`Layout "${layoutId}" not found`);
+        toast.error(`Layout "${layoutId}" not found`, {
+          cancel: { label: 'Dismiss', onClick: () => {} },
+        });
         return false;
       }
 
@@ -166,7 +178,9 @@ export function useShareLinks() {
       if (!layoutInfo.allowMultiple) {
         const existing = state.tabs?.find((t) => t.layoutId === layoutId);
         if (existing) {
-          toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`);
+          toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`, {
+            cancel: { label: 'Dismiss', onClick: () => {} },
+          });
           dispatch({
             type: 'SELECT_TAB',
             payload: { tabId: existing.id, panelId: existing.panelId },
@@ -177,7 +191,9 @@ export function useShareLinks() {
 
       // Check maxTabs limit
       if (maxTabs && maxTabs > 0 && (state.tabs?.length ?? 0) >= maxTabs) {
-        toast.error(`Max tabs (${maxTabs}) reached`);
+        toast.error(`Max tabs (${maxTabs}) reached`, {
+          cancel: { label: 'Dismiss', onClick: () => {} },
+        });
         return false;
       }
 
@@ -194,7 +210,9 @@ export function useShareLinks() {
         },
       });
 
-      toast.success(`Opened shared tab: ${name || layoutInfo.name}`);
+      toast.success(`Opened shared tab: ${name || layoutInfo.name}`, {
+        cancel: { label: 'Dismiss', onClick: () => {} },
+      });
       return true;
     },
     [registeredLayouts, state.tabs, state.activePanelId, maxTabs, dispatch]
@@ -212,7 +230,9 @@ export function useShareLinks() {
     // Validate and decode
     const decoded = decodeShareData(encoded);
     if (!decoded) {
-      toast.error('Invalid share link: decoding failed');
+      toast.error('Invalid share link: decoding failed', {
+        cancel: { label: 'Dismiss', onClick: () => {} },
+      });
       return;
     }
 
@@ -220,13 +240,17 @@ export function useShareLinks() {
     try {
       shareData = JSON.parse(decoded);
     } catch {
-      toast.error('Invalid share link: malformed data');
+      toast.error('Invalid share link: malformed data', {
+        cancel: { label: 'Dismiss', onClick: () => {} },
+      });
       return;
     }
 
     // Type-safe validation
     if (!isValidShareData(shareData)) {
-      toast.error('Invalid share link: missing or invalid fields');
+      toast.error('Invalid share link: missing or invalid fields', {
+        cancel: { label: 'Dismiss', onClick: () => {} },
+      });
       return;
     }
 
