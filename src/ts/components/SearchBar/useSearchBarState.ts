@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import type { RefObject } from 'react';
 import { toast } from 'sonner';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
@@ -10,6 +11,15 @@ type Mode = 'display' | 'search' | 'options' | 'params' | 'hidden';
 const DEFAULT_DROPDOWN_HEIGHT = 300;
 const MIN_DROPDOWN_HEIGHT = 120;
 const MAX_DROPDOWN_HEIGHT = 600;
+
+/**
+ * Focus an element after the next render cycle.
+ * Uses double requestAnimationFrame to ensure focus happens after React has
+ * finished updating the DOM.
+ */
+function focusAfterRender(ref: RefObject<HTMLElement>): void {
+  requestAnimationFrame(() => requestAnimationFrame(() => ref.current?.focus()));
+}
 
 export function useSearchBarState(panelId: string) {
   const { state, dispatch } = usePrism();
@@ -80,10 +90,6 @@ export function useSearchBarState(panelId: string) {
     setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
   }, []);
 
-  const focusAfterRender = useCallback(() => {
-    requestAnimationFrame(() => requestAnimationFrame(() => inputRef.current?.focus()));
-  }, []);
-
   const applyLayout = useCallback(
     (layoutId: string, name: string, params?: Record<string, string>, option?: string) => {
       if (activeTabId) {
@@ -141,7 +147,7 @@ export function useSearchBarState(panelId: string) {
         setCurrentParamIndex(0);
         setSearchQuery('');
         setShowDropdown(false);
-        focusAfterRender();
+        focusAfterRender(inputRef);
         return;
       }
 
@@ -150,11 +156,11 @@ export function useSearchBarState(panelId: string) {
         setMode('options');
         setSearchQuery('');
         setShowDropdown(true);
-        focusAfterRender();
+        focusAfterRender(inputRef);
         return;
       }
     },
-    [registeredLayouts, state.tabs, dispatch, resetState, applyLayout, focusAfterRender]
+    [registeredLayouts, state.tabs, dispatch, resetState, applyLayout]
   );
 
   const handleOptionSelect = useCallback(
@@ -174,8 +180,8 @@ export function useSearchBarState(panelId: string) {
     setCurrentParamIndex(0);
     setShowDropdown(true);
     setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
-    focusAfterRender();
-  }, [focusAfterRender]);
+    focusAfterRender(inputRef);
+  }, []);
 
   const handleParamSubmit = useCallback(() => {
     if (!currentParam || !selectedLayoutId) return;
@@ -213,26 +219,23 @@ export function useSearchBarState(panelId: string) {
     setParamValues({});
     setCurrentParamIndex(0);
     setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
-    focusAfterRender();
-  }, [focusAfterRender]);
+    focusAfterRender(inputRef);
+  }, []);
 
-  const handleDisplayKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        manualSearchRef.current = true;
-        setMode('search');
-        setSearchQuery(e.key);
-        setShowDropdown(true);
-        setSelectedLayoutId(null);
-        setParamValues({});
-        setCurrentParamIndex(0);
-        setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
-        focusAfterRender();
-        e.preventDefault();
-      }
-    },
-    [focusAfterRender]
-  );
+  const handleDisplayKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      manualSearchRef.current = true;
+      setMode('search');
+      setSearchQuery(e.key);
+      setShowDropdown(true);
+      setSelectedLayoutId(null);
+      setParamValues({});
+      setCurrentParamIndex(0);
+      setDropdownHeight(DEFAULT_DROPDOWN_HEIGHT);
+      focusAfterRender(inputRef);
+      e.preventDefault();
+    }
+  }, []);
 
   const handleFocus = useCallback(() => {
     if (mode !== 'display') {
@@ -360,11 +363,11 @@ export function useSearchBarState(panelId: string) {
       pendingLayoutRef.current = null;
       suppressAutoOpenRef.current = true;
       handleLayoutSelect(pendingLayoutId);
-      focusAfterRender();
+      focusAfterRender(inputRef);
       return;
     }
     suppressAutoOpenRef.current = true;
-  }, [state.searchBarsHidden, handleLayoutSelect, focusAfterRender]);
+  }, [state.searchBarsHidden, handleLayoutSelect]);
 
   // Handle active tab layout changes
   useEffect(() => {
@@ -409,13 +412,13 @@ export function useSearchBarState(panelId: string) {
       setParamValues({});
       setCurrentParamIndex(0);
       manualSearchRef.current = true;
-      focusAfterRender();
+      focusAfterRender(inputRef);
     };
 
     window.addEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
     return () =>
       window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
-  }, [panelId, state.searchBarsHidden, focusAfterRender]);
+  }, [panelId, state.searchBarsHidden]);
 
   // Click outside handler
   useEffect(() => {

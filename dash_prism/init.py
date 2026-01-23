@@ -37,6 +37,86 @@ logger = logging.getLogger("dash_prism")
 _wrapped_layouts: WeakSet[Callable] = WeakSet()
 
 
+def _execute_and_inject_metadata(
+    layout_tree: Any,
+    prism_id: str,
+    layouts_metadata: Dict[str, Any],
+    session_id: str,
+) -> Any:
+    """Execute common validation and metadata injection logic.
+
+    :param layout_tree: The layout tree returned from original layout function.
+    :type layout_tree: Any
+    :param prism_id: The Prism component ID.
+    :type prism_id: str
+    :param layouts_metadata: Registered layouts metadata.
+    :type layouts_metadata: dict[str, Any]
+    :param session_id: Server session ID.
+    :type session_id: str
+    :returns: Layout tree with metadata injected, or None if layout_tree was None.
+    :rtype: Any | None
+    """
+    if layout_tree is None:
+        logger.warning(
+            f"Layout function returned None. Prism component '{prism_id}' may not be available."
+        )
+        return None
+
+    return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
+
+
+def _create_layout_wrapper(
+    original_layout: Callable,
+    prism_id: str,
+    layouts_metadata: Dict[str, Any],
+    session_id: str,
+    is_async: bool,
+) -> Callable:
+    """Factory for creating layout wrappers with metadata injection.
+
+    :param original_layout: The original layout function to wrap.
+    :type original_layout: Callable
+    :param prism_id: The Prism component ID.
+    :type prism_id: str
+    :param layouts_metadata: Registered layouts metadata.
+    :type layouts_metadata: dict[str, Any]
+    :param session_id: Server session ID.
+    :type session_id: str
+    :param is_async: Whether the original layout is async.
+    :type is_async: bool
+    :returns: Wrapped layout function (sync or async).
+    :rtype: Callable
+    """
+    from functools import wraps
+
+    if is_async:
+
+        @wraps(original_layout)
+        async def async_wrapper(*args, **kwargs):
+            try:
+                layout_tree = await original_layout(*args, **kwargs)
+            except Exception as e:
+                logger.exception("Error in async layout function", exc_info=e)
+                raise  # Re-raise with original traceback
+
+            return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
+
+        return async_wrapper
+    else:
+
+        @wraps(original_layout)
+        def sync_wrapper(*args, **kwargs):
+            try:
+                layout_tree = original_layout(*args, **kwargs)
+            except Exception as e:
+                logger.exception("Error in sync layout function", exc_info=e)
+                raise  # Re-raise with original traceback
+
+            return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
+
+        return sync_wrapper
+
+
 # =============================================================================
 # EXCEPTIONS
 # =============================================================================
@@ -53,35 +133,8 @@ class InitializationError(Exception):
 # =============================================================================
 
 
-def _find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
-    """Recursively search for a component by ID in the layout tree.
-
-    :param layout: The root component to search.
-    :type layout: Any
-    :param component_id: The ID to find.
-    :type component_id: str
-    :returns: The component with matching ID, or ``None`` if not found.
-    :rtype: Any | None
-    """
-    if layout is None:
-        return None
-
-    if hasattr(layout, "id") and layout.id == component_id:
-        return layout
-
-    if hasattr(layout, "children"):
-        children = layout.children
-        if children is None:
-            return None
-        if isinstance(children, (list, tuple)):
-            for child in children:
-                result = _find_component_by_id(child, component_id)
-                if result is not None:
-                    return result
-        else:
-            return _find_component_by_id(children, component_id)
-
-    return None
+# Import the more robust implementation from utils
+from .utils import find_component_by_id as _find_component_by_id
 
 
 def _inject_metadata_into_layout(
@@ -570,56 +623,16 @@ def init(prism_id: str, app: "Dash") -> None:
         else:
             # Wrap the layout function to inject metadata on every render
             # This creates a closure in the wrapper, avoiding registry lookups on every render
-            from functools import wraps
+            is_async = asyncio.iscoroutinefunction(original_layout)
+            wrapped_layout = _create_layout_wrapper(
+                original_layout, prism_id, layouts_metadata, session_id, is_async
+            )
 
-            if asyncio.iscoroutinefunction(original_layout):
-                # Async layout function
-                @wraps(original_layout)
-                async def wrapped_async_layout(*args, **kwargs):
-                    try:
-                        layout_tree = await original_layout(*args, **kwargs)
-                    except Exception as e:
-                        logger.exception("Error in async layout function", exc_info=e)
-                        raise  # Re-raise with original traceback
+            _wrapped_layouts.add(wrapped_layout)
+            app.layout = wrapped_layout
 
-                    if layout_tree is None:
-                        logger.warning(
-                            f"Async layout function returned None. "
-                            f"Prism component '{prism_id}' may not be available."
-                        )
-                        return None
-
-                    return _inject_metadata_into_layout(
-                        layout_tree, prism_id, layouts_metadata, session_id
-                    )
-
-                _wrapped_layouts.add(wrapped_async_layout)
-                app.layout = wrapped_async_layout
-                logger.info("Wrapped async callable layout for Prism metadata injection")
-            else:
-                # Sync layout function
-                @wraps(original_layout)
-                def wrapped_sync_layout(*args, **kwargs):
-                    try:
-                        layout_tree = original_layout(*args, **kwargs)
-                    except Exception as e:
-                        logger.exception("Error in sync layout function", exc_info=e)
-                        raise  # Re-raise with original traceback
-
-                    if layout_tree is None:
-                        logger.warning(
-                            f"Layout function returned None. "
-                            f"Prism component '{prism_id}' may not be available."
-                        )
-                        return None
-
-                    return _inject_metadata_into_layout(
-                        layout_tree, prism_id, layouts_metadata, session_id
-                    )
-
-                _wrapped_layouts.add(wrapped_sync_layout)
-                app.layout = wrapped_sync_layout
-                logger.info("Wrapped sync callable layout for Prism metadata injection")
+            mode = "async" if is_async else "sync"
+            logger.info(f"Wrapped {mode} callable layout for Prism metadata injection")
     else:
         # Static layout - inject once (existing behavior)
         if prism_component is not None:
