@@ -262,83 +262,6 @@ def _create_error_component(message: str) -> Any:
     )
 
 
-def _resolve_layout_params(
-    registration: Any,
-    layout_id: str,
-    layout_params: Optional[Dict[str, Any]],
-    layout_option: Optional[str],
-) -> Dict[str, Any]:
-    """Resolve effective layout parameters.
-
-    If ``layout_option`` is provided, it will be mapped to parameters via
-    ``registration.param_options`` on the Python side.
-
-    :param registration: Layout registration metadata.
-    :type registration: Any
-    :param layout_id: The registered layout ID.
-    :type layout_id: str
-    :param layout_params: Parameters supplied from the client.
-    :type layout_params: dict[str, Any]
-    :param layout_option: Selected option key from ``param_options``.
-    :type layout_option: str | None
-    :returns: Resolved parameters to pass to the layout callback.
-    :rtype: dict[str, Any]
-    :raises ValueError: If the layout option is invalid or unsupported.
-    """
-    if layout_params is None:
-        resolved_params: Dict[str, Any] = {}
-    elif not isinstance(layout_params, dict):
-        raise ValueError(
-            f"layoutParams must be an object/dict for layout '{layout_id}', "
-            f"got {type(layout_params).__name__}"
-        )
-    else:
-        resolved_params = layout_params
-
-    if registration.param_options:
-        if layout_option is None:
-            raise ValueError(
-                f"Layout '{layout_id}' requires layoutOption when param_options is defined."
-            )
-
-        if resolved_params:
-            raise ValueError(
-                f"Layout '{layout_id}' only accepts parameters via param_options; "
-                "layoutParams are not supported."
-            )
-
-        if not isinstance(layout_option, str):
-            raise ValueError(
-                f"layoutOption must be a string for layout '{layout_id}', "
-                f"got {type(layout_option).__name__}"
-            )
-
-        if not registration.is_callable or registration.callback is None:
-            raise ValueError(
-                f"Layout options are only supported for callback layouts. "
-                f"Layout '{layout_id}' is static."
-            )
-
-        option_entry = registration.param_options.get(layout_option)
-        if not option_entry:
-            raise ValueError(f"Layout option '{layout_option}' not found for layout '{layout_id}'.")
-
-        _, option_params = option_entry
-        if not isinstance(option_params, dict):
-            raise ValueError(
-                f"param_options for layout '{layout_id}' must map to a dict of params."
-            )
-
-        return dict(option_params)
-
-    if layout_option is not None:
-        raise ValueError(
-            f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
-        )
-
-    return resolved_params
-
-
 def _render_tab_layout_impl(
     tab_id: str,
     layout_id: str,
@@ -364,7 +287,7 @@ def _render_tab_layout_impl(
     :returns: The rendered Dash component tree (or awaitable if using async runner).
     :rtype: Any
     """
-    from .registry import get_layout
+    from .registry import get_layout, resolve_layout_params
     from .utils import inject_tab_id
 
     if not layout_id:
@@ -375,7 +298,7 @@ def _render_tab_layout_impl(
         return _create_error_component(f"Layout '{layout_id}' not found")
 
     try:
-        resolved_params = _resolve_layout_params(
+        resolved_params = resolve_layout_params(
             registration,
             layout_id,
             layout_params,

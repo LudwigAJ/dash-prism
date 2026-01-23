@@ -478,7 +478,7 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     """
     from dash import html
 
-    from .registry import get_layout
+    from .registry import get_layout, resolve_layout_params
 
     tab_id = data.get("tabId")
     layout_id = data.get("layoutId")
@@ -500,42 +500,12 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
         )
 
     try:
-        resolved_params = layout_params or {}
-        if registration.param_options:
-            if layout_option is None:
-                raise ValueError(
-                    f"Layout '{layout_id}' requires layoutOption when param_options is defined."
-                )
-            if resolved_params:
-                raise ValueError(
-                    f"Layout '{layout_id}' only accepts parameters via param_options; "
-                    "layoutParams are not supported."
-                )
-            if not isinstance(layout_option, str):
-                raise ValueError(
-                    f"layoutOption must be a string for layout '{layout_id}', "
-                    f"got {type(layout_option).__name__}"
-                )
-            if not registration.is_callable or registration.callback is None:
-                raise ValueError(
-                    f"Layout options are only supported for callback layouts. "
-                    f"Layout '{layout_id}' is static."
-                )
-            option_entry = registration.param_options.get(layout_option)
-            if not option_entry:
-                raise ValueError(
-                    f"Layout option '{layout_option}' not found for layout '{layout_id}'."
-                )
-            _, option_params = option_entry
-            if not isinstance(option_params, dict):
-                raise ValueError(
-                    f"param_options for layout '{layout_id}' must map to a dict of params."
-                )
-            resolved_params = dict(option_params)
-        elif layout_option is not None:
-            raise ValueError(
-                f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
-            )
+        resolved_params = resolve_layout_params(
+            registration,
+            layout_id,
+            layout_params,
+            layout_option,
+        )
 
         if registration.is_callable and registration.callback is not None:
             layout = registration.callback(**resolved_params)
