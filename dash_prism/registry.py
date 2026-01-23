@@ -597,6 +597,89 @@ def get_registered_layouts_metadata() -> Dict[str, Dict[str, Any]]:
     return registry.get_metadata()
 
 
+def resolve_layout_params(
+    registration: LayoutRegistration,
+    layout_id: str,
+    layout_params: Optional[Dict[str, Any]],
+    layout_option: Optional[str],
+) -> Dict[str, Any]:
+    """Resolve effective layout parameters.
+
+    Single source of truth for parameter resolution across the codebase.
+    Validates param_options and layout_option, returns resolved parameters.
+
+    If ``layout_option`` is provided, it will be mapped to parameters via
+    ``registration.param_options``.
+
+    :param registration: Layout registration metadata.
+    :type registration: LayoutRegistration
+    :param layout_id: The registered layout ID.
+    :type layout_id: str
+    :param layout_params: Parameters supplied from the client.
+    :type layout_params: dict[str, Any] | None
+    :param layout_option: Selected option key from ``param_options``.
+    :type layout_option: str | None
+    :returns: Resolved parameters to pass to the layout callback.
+    :rtype: dict[str, Any]
+    :raises ValueError: If the layout option is invalid or unsupported.
+    """
+    # Validate layout_params input
+    if layout_params is None:
+        resolved_params: Dict[str, Any] = {}
+    elif not isinstance(layout_params, dict):
+        raise ValueError(
+            f"layoutParams must be an object/dict for layout '{layout_id}', "
+            f"got {type(layout_params).__name__}"
+        )
+    else:
+        resolved_params = layout_params
+
+    # Handle param_options (mutually exclusive with layout_params)
+    if registration.param_options:
+        if layout_option is None:
+            raise ValueError(
+                f"Layout '{layout_id}' requires layoutOption when param_options is defined."
+            )
+
+        if resolved_params:
+            raise ValueError(
+                f"Layout '{layout_id}' only accepts parameters via param_options; "
+                "layoutParams are not supported."
+            )
+
+        if not isinstance(layout_option, str):
+            raise ValueError(
+                f"layoutOption must be a string for layout '{layout_id}', "
+                f"got {type(layout_option).__name__}"
+            )
+
+        if not registration.is_callable or registration.callback is None:
+            raise ValueError(
+                f"Layout options are only supported for callback layouts. "
+                f"Layout '{layout_id}' is static."
+            )
+
+        option_entry = registration.param_options.get(layout_option)
+        if not option_entry:
+            raise ValueError(f"Layout option '{layout_option}' not found for layout '{layout_id}'.")
+
+        _, option_params = option_entry
+        if not isinstance(option_params, dict):
+            raise ValueError(
+                f"param_options for layout '{layout_id}' must map to a dict of params."
+            )
+
+        return dict(option_params)
+
+    # If layout_option provided but no param_options defined, that's an error
+    if layout_option is not None:
+        raise ValueError(
+            f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
+        )
+
+    return resolved_params
+
+
 def clear_registry() -> None:
     """Clear all registered layouts.
 

@@ -5,6 +5,7 @@ import { findTabIndex, findTabById } from '@utils/tabs';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
 import { toastEmitter } from '@utils/toastEmitter';
+import { notifyUser } from '@utils/notifications';
 import {
   getLeafPanelIds,
   findPanelById,
@@ -161,6 +162,23 @@ function handleMoveTabToPanel(
 }
 
 /**
+ * Move all tabs from one panel to another.
+ * Returns the list of tab IDs that were moved.
+ *
+ * @param draft - Draft state
+ * @param fromPanelId - Source panel ID
+ * @param toPanelId - Target panel ID
+ * @returns Array of moved tab IDs
+ */
+function handleMoveAllTabs(draft: DraftState, fromPanelId: PanelId, toPanelId: PanelId): TabId[] {
+  const tabsToMove = [...(draft.panelTabs[fromPanelId] ?? [])];
+  for (const tid of tabsToMove) {
+    handleMoveTabToPanel(draft, tid, toPanelId);
+  }
+  return tabsToMove;
+}
+
+/**
  * Remove a tab from its panel's tracking (panelTabs only, not tabs array).
  */
 function handleRemoveTabFromPanelTracking(draft: DraftState, tabId: TabId, panelId: PanelId): void {
@@ -257,6 +275,36 @@ function handleEnsurePanelHasTab(draft: DraftState, panelId: PanelId): void {
  */
 function isPanelExists(draft: DraftState, panelId: PanelId): boolean {
   return getLeafPanelIds(draft.panel).includes(panelId);
+}
+
+/**
+ * Validate that a target panel exists and is a leaf panel.
+ * Emits error notifications if validation fails.
+ *
+ * @param draft - Draft state
+ * @param panelId - Panel ID to validate
+ * @param action - Action description for error messages (e.g., "move tab", "split panel")
+ * @returns The validated panel, or null if validation failed
+ */
+function validateTargetPanel(draft: DraftState, panelId: PanelId, action: string): Panel | null {
+  const panel = findPanelById(draft.panel, panelId);
+  if (!panel) {
+    notifyUser(
+      'error',
+      `Cannot ${action}: target panel not found`,
+      `Target panel '${panelId}' not found`
+    );
+    return null;
+  }
+  if (!isLeafPanel(panel)) {
+    notifyUser(
+      'error',
+      `Cannot ${action}: target is not a leaf panel`,
+      `Target panel '${panelId}' is not a leaf panel`
+    );
+    return null;
+  }
+  return panel;
 }
 
 // =============================================================================
@@ -430,11 +478,11 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
           if (!validation.ok) {
             const { errors } = validation as { ok: false; errors: string[] };
-            logger.warn('SYNC_WORKSPACE rejected due to validation errors:', errors);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Workspace sync failed: invalid data. Workspace was not updated.',
-            });
+            notifyUser(
+              'error',
+              'Workspace sync failed: invalid data. Workspace was not updated.',
+              `SYNC_WORKSPACE rejected due to validation errors: ${errors.join(', ')}`
+            );
             break;
           }
 
@@ -461,11 +509,11 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         case 'ADD_TAB': {
           // Enforce maxTabs limit (< 1 means unlimited)
           if (isMaxTabsExceeded(draft, maxTabs)) {
-            logger.warn(`Cannot add tab: maximum of ${maxTabs} tabs reached.`);
-            toastEmitter.emit({
-              type: 'warning',
-              message: `Maximum tabs limit reached (${maxTabs})`,
-            });
+            notifyUser(
+              'warning',
+              `Maximum tabs limit reached (${maxTabs})`,
+              `Cannot add tab: maximum of ${maxTabs} tabs reached.`
+            );
             break;
           }
 
@@ -584,11 +632,11 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
         case 'DUPLICATE_TAB': {
           // Enforce maxTabs limit (< 1 means unlimited)
           if (isMaxTabsExceeded(draft, maxTabs)) {
-            logger.warn(`DUPLICATE_TAB blocked: workspace at maxTabs limit (${maxTabs})`);
-            toastEmitter.emit({
-              type: 'warning',
-              message: `Cannot duplicate: maximum tabs limit reached (${maxTabs})`,
-            });
+            notifyUser(
+              'warning',
+              `Cannot duplicate: maximum tabs limit reached (${maxTabs})`,
+              `DUPLICATE_TAB blocked: workspace at maxTabs limit (${maxTabs})`
+            );
             break;
           }
 
@@ -630,33 +678,17 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
           const tab = findTabById(draft.tabs, tabId);
           if (!tab) {
-            logger.warn(`Cannot move tab '${tabId}': tab not found`);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot move tab: tab not found',
-            });
+            notifyUser(
+              'error',
+              'Cannot move tab: tab not found',
+              `Cannot move tab '${tabId}': tab not found`
+            );
             break;
           }
 
           // Verify target panel exists and is a leaf
-          const targetPanel = findPanelById(draft.panel, targetPanelId);
-          if (!targetPanel) {
-            logger.warn(`Cannot move tab: target panel '${targetPanelId}' not found`);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot move tab: target panel not found',
-            });
-            break;
-          }
-
-          if (!isLeafPanel(targetPanel)) {
-            logger.warn(`Cannot move tab: target panel '${targetPanelId}' is not a leaf panel`);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot move tab: target is not a leaf panel',
-            });
-            break;
-          }
+          const targetPanel = validateTargetPanel(draft, targetPanelId, 'move tab');
+          if (!targetPanel) break;
 
           const sourcePanelId = handleMoveTabToPanel(draft, tabId, targetPanelId, targetIndex);
           if (!sourcePanelId) break; // No-op (same panel)
@@ -695,36 +727,32 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           // Check if we've reached the maximum number of leaf panels
           const currentLeafCount = getLeafPanelIds(draft.panel).length;
           if (currentLeafCount >= MAX_LEAF_PANELS) {
-            logger.warn(
+            notifyUser(
+              'warning',
+              `Cannot split: maximum of ${MAX_LEAF_PANELS} panels reached`,
               `Cannot split panel: maximum of ${MAX_LEAF_PANELS} panels reached (current: ${currentLeafCount}).`
             );
-            toastEmitter.emit({
-              type: 'warning',
-              message: `Cannot split: maximum of ${MAX_LEAF_PANELS} panels reached`,
-            });
             break;
           }
 
           const panelToSplit = findPanelById(draft.panel, panelId);
           if (!panelToSplit) {
-            logger.warn(`Cannot split panel '${panelId}': panel not found`);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot split: panel not found',
-            });
+            notifyUser(
+              'error',
+              'Cannot split: panel not found',
+              `Cannot split panel '${panelId}': panel not found`
+            );
             break;
           }
 
           // Verify it's a leaf panel - only leaf panels can be split
           if (!isLeafPanel(panelToSplit)) {
-            logger.warn(
+            notifyUser(
+              'error',
+              'Cannot split a non-leaf panel. Split one of its children instead.',
               `Cannot split panel '${panelId}': only leaf panels can be split ` +
                 `(panel has ${panelToSplit.children.length} children)`
             );
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot split a non-leaf panel. Split one of its children instead.',
-            });
             break;
           }
 
@@ -743,21 +771,17 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           // Perform the split operation on the panel tree
           const splitResult = splitPanel(draft.panel, { panelId, direction, position });
           if (!splitResult.success) {
-            logger.warn(`Cannot split: ${splitResult.error}`);
-            toastEmitter.emit({
-              type: 'error',
-              message: `Cannot split: ${splitResult.error}`,
-            });
+            notifyUser('error', `Cannot split: ${splitResult.error}`);
             break;
           }
 
           const { newPanelId, containerId } = splitResult;
           if (!newPanelId || !containerId) {
-            logger.warn('Split succeeded but missing panel IDs');
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Split operation failed unexpectedly',
-            });
+            notifyUser(
+              'error',
+              'Split operation failed unexpectedly',
+              'Split succeeded but missing panel IDs'
+            );
             break;
           }
 
@@ -775,25 +799,11 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
           // Update active tab in original panel if needed
           // (in case we moved the currently active tab)
-          if (draft.activeTabIds[panelId] === tabId) {
-            const remainingTabs = draft.panelTabs[panelId] ?? [];
-            const lastTabId = remainingTabs[remainingTabs.length - 1];
-            if (lastTabId) {
-              draft.activeTabIds[panelId] = lastTabId;
-            } else {
-              delete draft.activeTabIds[panelId];
-            }
-          }
+          handleUpdateActiveTabAfterRemoval(draft, panelId, tabId);
 
           // For cross-panel splits, update active tab in SOURCE panel if we moved its active tab
-          if (!isSamePanelSplit && draft.activeTabIds[sourcePanelId] === tabId) {
-            const remainingSourceTabs = draft.panelTabs[sourcePanelId] ?? [];
-            const lastSourceTabId = remainingSourceTabs[remainingSourceTabs.length - 1];
-            if (lastSourceTabId) {
-              draft.activeTabIds[sourcePanelId] = lastSourceTabId;
-            } else {
-              delete draft.activeTabIds[sourcePanelId];
-            }
+          if (!isSamePanelSplit) {
+            handleUpdateActiveTabAfterRemoval(draft, sourcePanelId, tabId);
           }
 
           // For cross-panel splits, collapse the source panel if it's now empty
@@ -812,42 +822,35 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
 
           const leafPanels = getLeafPanelIds(draft.panel).filter((id) => id !== panelId);
           if (leafPanels.length === 0) {
-            logger.warn('Cannot collapse last panel');
-            toastEmitter.emit({
-              type: 'warning',
-              message: 'Cannot close the last panel',
-            });
+            notifyUser('warning', 'Cannot close the last panel', 'Cannot collapse last panel');
             break;
           }
 
           // Verify panel exists before attempting collapse
           const panelExists = getLeafPanelIds(draft.panel).includes(panelId);
           if (!panelExists) {
-            logger.warn(`Cannot collapse panel '${panelId}': panel not found`);
-            toastEmitter.emit({
-              type: 'error',
-              message: 'Cannot close panel: panel not found',
-            });
+            notifyUser(
+              'error',
+              'Cannot close panel: panel not found',
+              `Cannot collapse panel '${panelId}': panel not found`
+            );
             break;
           }
 
           const targetPanelId = leafPanels[0];
 
           // Move all tabs from collapsing panel to target
-          const tabsToMove = [...(draft.panelTabs[panelId] ?? [])];
-          for (const tid of tabsToMove) {
-            handleMoveTabToPanel(draft, tid, targetPanelId);
-          }
+          const tabsToMove = handleMoveAllTabs(draft, panelId, targetPanelId);
 
           // Attempt to collapse panel
           const collapseResult = collapsePanel(draft.panel, panelId);
           if (!collapseResult.success) {
             // Rollback: move tabs back to original panel
-            logger.warn(`Collapse failed: ${collapseResult.error}. Rolling back.`);
-            toastEmitter.emit({
-              type: 'error',
-              message: `Failed to close panel: ${collapseResult.error}`,
-            });
+            notifyUser(
+              'error',
+              `Failed to close panel: ${collapseResult.error}`,
+              `Collapse failed: ${collapseResult.error}. Rolling back.`
+            );
             for (const tid of tabsToMove) {
               handleMoveTabToPanel(draft, tid, panelId);
             }
