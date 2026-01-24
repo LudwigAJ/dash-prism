@@ -600,7 +600,7 @@
 .prism-newlayout-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
 
 .prism-newlayout-card-title {
@@ -631,7 +631,7 @@
 
 .prism-size-sm .prism-newlayout-grid {
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 }
 
 .prism-size-sm .prism-newlayout-card-title {
@@ -662,7 +662,7 @@
 
 .prism-size-lg .prism-newlayout-grid {
   gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(279px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
 .prism-size-lg .prism-newlayout-card-title {

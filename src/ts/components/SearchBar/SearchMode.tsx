@@ -63,7 +63,7 @@ export const SearchMode = ({
 
         {showDropdown && (
           <CommandList
-            className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border shadow-lg"
+            className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border"
             style={{ maxHeight: dropdownHeight }}
           >
             {filteredLayouts.length === 0 ? (
