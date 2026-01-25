@@ -17,6 +17,7 @@ import {
 import { useConfig } from '@context/ConfigContext';
 import { generateShortId } from '@utils/uuid';
 import { validateWorkspace } from '@utils/workspace';
+import { migrateTabStyle } from '@constants/tab-styles';
 import { logger } from '@utils/logger';
 import { toastEmitter } from '@utils/toastEmitter';
 import { toast } from 'sonner';
@@ -236,7 +237,8 @@ function buildInitialState(
         layoutOption: isLayoutValid ? (tab.layoutOption ?? undefined) : undefined,
         layoutParams: isLayoutValid ? (tab.layoutParams ?? undefined) : undefined,
         icon: tab.icon ?? undefined,
-        style: tab.style ?? undefined,
+        // Migrate old Catppuccin color names to new semantic colors
+        style: migrateTabStyle(tab.style),
         mountKey: tab.mountKey ?? generateShortId(),
       };
     });

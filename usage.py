@@ -132,7 +132,7 @@ def full_panel_style(extra: dict[str, Any] | None = None) -> dict[str, Any]:
 # SETTINGS LAYOUT
 # =============================================================================
 
-DEFAULT_THEME = "dark"
+DEFAULT_THEME = "light"
 DEFAULT_SIZE = "md"
 
 SETTINGS_SCOPE = "settings"
