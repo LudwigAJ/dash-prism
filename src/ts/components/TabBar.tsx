@@ -245,7 +245,7 @@ const TabItem = memo(function TabItem({
                 <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
               </Tooltip>
             ) : isLoading ? (
-              <LoaderCircle className="text-mauve h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
             ) : null}
           </TabsTrigger>
         </div>
