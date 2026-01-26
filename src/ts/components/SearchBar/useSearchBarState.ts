@@ -102,7 +102,7 @@ export function useSearchBarState(panelId: string) {
       setMode('display');
       resetState();
     },
-    [activeTabId, dispatch, resetState]
+    [activeTabId, activeTab?.layoutId, dispatch, resetState]
   );
 
   const handleLayoutSelect = useCallback(
@@ -374,7 +374,7 @@ export function useSearchBarState(panelId: string) {
     if (state.searchBarsHidden) return;
 
     if (activeTab?.layoutId && currentLayout) {
-      if (!(manualSearchRef.current && mode === 'search')) {
+      if (!(manualSearchRef.current && (mode === 'search' || mode === 'options' || mode === 'params'))) {
         manualSearchRef.current = false;
         setMode('display');
         resetState();
@@ -391,7 +391,7 @@ export function useSearchBarState(panelId: string) {
         setShowDropdown(true);
       }
     }
-  }, [activeTab?.layoutId, currentLayout, mode, resetState, state.searchBarsHidden]);
+  }, [activeTab?.layoutId, currentLayout, resetState, state.searchBarsHidden]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {
