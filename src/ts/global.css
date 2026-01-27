@@ -57,13 +57,13 @@
   --prism-zone-searchbar: var(--background);
 
   /* Tab colors (light mode - saturated for visibility) */
-  --tab-red: oklch(0.60 0.22 25);
-  --tab-orange: oklch(0.70 0.20 55);
-  --tab-yellow: oklch(0.80 0.18 90);
+  --tab-red: oklch(0.6 0.22 25);
+  --tab-orange: oklch(0.7 0.2 55);
+  --tab-yellow: oklch(0.8 0.18 90);
   --tab-green: oklch(0.65 0.18 145);
   --tab-blue: oklch(0.55 0.22 250);
-  --tab-purple: oklch(0.55 0.20 290);
-  --tab-pink: oklch(0.70 0.18 350);
+  --tab-purple: oklch(0.55 0.2 290);
+  --tab-pink: oklch(0.7 0.18 350);
 }
 
 /* =============================================================================
@@ -113,9 +113,9 @@
 
   /* Tab colors (dark mode - softer for dark backgrounds) */
   --tab-red: oklch(0.75 0.16 20);
-  --tab-orange: oklch(0.80 0.14 50);
+  --tab-orange: oklch(0.8 0.14 50);
   --tab-yellow: oklch(0.88 0.12 85);
-  --tab-green: oklch(0.80 0.12 140);
+  --tab-green: oklch(0.8 0.12 140);
   --tab-blue: oklch(0.75 0.12 240);
   --tab-purple: oklch(0.78 0.12 285);
   --tab-pink: oklch(0.82 0.12 345);

@@ -665,10 +665,19 @@ export function createPrismReducer(config: Partial<ReducerConfig> = {}) {
           const { tabId, layoutId, name, params, option } = action.payload;
           const tab = findTabById(draft.tabs, tabId);
           if (tab) {
+            // Check if layout is actually changing (switching from one layout to another)
+            const layoutChanging = tab.layoutId !== undefined && tab.layoutId !== layoutId;
+
             tab.layoutId = layoutId;
             tab.name = name;
             tab.layoutParams = params ?? undefined;
             tab.layoutOption = option ?? undefined;
+
+            // Regenerate mountKey when switching layouts to force fresh component mount
+            // This ensures the Dash callback fires with the new layout data
+            if (layoutChanging) {
+              tab.mountKey = generateShortId();
+            }
           }
           break;
         }
