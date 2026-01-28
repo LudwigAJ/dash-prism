@@ -245,21 +245,14 @@ export function useSearchBarState(panelId: string) {
 
   const handleBlur = useCallback(
     (e: React.FocusEvent) => {
-      console.log('[SearchBar] Blur fired');
-      console.log('  relatedTarget:', e.relatedTarget);
-      console.log('  commandRef.current:', commandRef.current);
-      console.log('  contains relatedTarget:', commandRef.current?.contains(e.relatedTarget as Node));
-
       const relatedTarget = e.relatedTarget as HTMLElement;
       if (!commandRef.current?.contains(relatedTarget)) {
-        console.log('  -> Closing dropdown via blur handler');
         dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
         if (mode === 'params' || mode === 'options') {
           dispatch({ type: 'CLEAR_SELECTION' });
         }
+        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
         dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
-      } else {
-        console.log('  -> Not closing (target inside commandRef)');
       }
     },
     [currentLayout, mode]
@@ -278,6 +271,7 @@ export function useSearchBarState(panelId: string) {
         handleBackToLayouts();
       } else if (e.key === 'Escape') {
         dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
+        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
         dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
       }
     },
@@ -377,19 +371,14 @@ export function useSearchBarState(panelId: string) {
     if (globalState.searchBarsHidden) return;
 
     if (activeTab?.layoutId && currentLayout) {
-      // Tab now has a layout. If not actively searching/collecting params, return to idle.
-      if (mode !== 'search' && mode !== 'options' && mode !== 'params') {
-        dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
-      }
+      // Tab now has a layout.
+      dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
     } else if (!activeTab?.layoutId) {
-      // Tab has no layout. Mode will be derived as 'search'.
-      if (mode === 'params' || mode === 'options') {
-        // Preserve param collection state in case user is mid-flow
-        return;
-      }
+      // Tab has no layout. Allow auto-opening dropdown since layout was removed.
+      dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: false });
       dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: false });
     }
-  }, [activeTab?.layoutId, currentLayout, mode, globalState.searchBarsHidden]);
+  }, [activeTab?.layoutId, currentLayout, globalState.searchBarsHidden]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {
@@ -418,28 +407,18 @@ export function useSearchBarState(panelId: string) {
     if (!state.showDropdown) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      console.log('[SearchBar] Click outside fired');
-      console.log('  e.target:', e.target);
-      console.log('  commandRef.current:', commandRef.current);
-      console.log('  contains target:', commandRef.current?.contains(e.target as Node));
-
       if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
-        console.log('  -> Closing dropdown via click-outside handler');
         dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
         if (mode === 'params' || mode === 'options') {
           dispatch({ type: 'CLEAR_SELECTION' });
         }
+        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
         dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
-      } else {
-        console.log('  -> Not closing (target inside commandRef or ref is null)');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      console.log('[SearchBar] Click outside effect cleanup');
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [state.showDropdown, currentLayout, mode]);
 
   // ===== PUBLIC API =====
