@@ -10,6 +10,7 @@ import {
   type ModeContext,
 } from './searchBarReducer';
 import { filterLayouts } from './searchBarUtils';
+import { useDropdownResize } from './useDropdownResize';
 
 /**
  * SearchBar state management hook.
@@ -39,12 +40,12 @@ export function useSearchBarState(panelId: string) {
     createInitialState
   );
 
-  // ===== REFS (only for DOM and resize) =====
+  // ===== REFS (only for DOM) =====
   const inputRef = useRef<HTMLInputElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
-  const isResizingRef = useRef(false);
-  const startYRef = useRef(0);
-  const startHeightRef = useRef(300);
+
+  // ===== RESIZE LOGIC =====
+  const { height: dropdownHeight, handleResizeStart } = useDropdownResize();
 
   // ===== DERIVED MODE =====
   const selectedLayout = state.selectedLayoutId ? registeredLayouts[state.selectedLayoutId] : null;
@@ -97,7 +98,7 @@ export function useSearchBarState(panelId: string) {
         logger.error('Cannot apply layout: layout no longer exists', { panelId, layoutId });
         toast.error('Layout is no longer available');
         dispatch({ type: 'RESET' });
-        dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
+        dispatch({ type: 'RETURN_TO_IDLE', showDropdown: currentLayout === null });
         return;
       }
 
@@ -107,7 +108,7 @@ export function useSearchBarState(panelId: string) {
       });
 
       dispatch({ type: 'RESET' });
-      dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
+      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
     },
     [globalState.activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
   );
@@ -130,7 +131,7 @@ export function useSearchBarState(panelId: string) {
             payload: { tabId: existingTab.id, panelId: existingTab.panelId },
           });
           dispatch({ type: 'RESET' });
-          dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
+          dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
           return;
         }
       }
@@ -172,7 +173,7 @@ export function useSearchBarState(panelId: string) {
   );
 
   const handleBackToLayouts = useCallback(() => {
-    dispatch({ type: 'BACK_TO_SEARCH' });
+    dispatch({ type: 'ENTER_SEARCH_MODE' });
     focusInput();
   }, [focusInput]);
 
@@ -204,14 +205,14 @@ export function useSearchBarState(panelId: string) {
   ]);
 
   const handleDisplayClick = useCallback(() => {
-    dispatch({ type: 'START_MANUAL_SEARCH' });
+    dispatch({ type: 'ENTER_SEARCH_MODE' });
     focusInput();
   }, [focusInput]);
 
   const handleDisplayKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        dispatch({ type: 'START_MANUAL_SEARCH', initialQuery: e.key });
+        dispatch({ type: 'ENTER_SEARCH_MODE', initialQuery: e.key });
         focusInput();
         e.preventDefault();
       }
@@ -231,13 +232,9 @@ export function useSearchBarState(panelId: string) {
    * Consolidates the repeated dismiss logic used across blur, escape, etc.
    */
   const handleDismiss = useCallback(() => {
-    dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
-    if (mode === 'params' || mode === 'options') {
-      dispatch({ type: 'CLEAR_SELECTION' });
-    }
-    dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
-    dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
-  }, [mode, currentLayout]);
+    const clearSelection = mode === 'params' || mode === 'options';
+    dispatch({ type: 'DISMISS', clearSelection });
+  }, [mode]);
 
   const handleBlur = useCallback(
     (e: React.FocusEvent) => {
@@ -267,49 +264,7 @@ export function useSearchBarState(panelId: string) {
     [mode, handleParamSubmit, handleBackToLayouts, handleDismiss]
   );
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      isResizingRef.current = true;
-      startYRef.current = e.clientY;
-      startHeightRef.current = state.dropdownHeight;
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
-    },
-    [state.dropdownHeight]
-  );
-
   // ===== EFFECTS =====
-
-  // Resize drag handling (FIXED: cleanup always resets body styles)
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizingRef.current) return;
-      const deltaY = e.clientY - startYRef.current;
-      const newHeight = startHeightRef.current + deltaY;
-      dispatch({ type: 'SET_DROPDOWN_HEIGHT', height: newHeight });
-    };
-
-    const handleMouseUp = () => {
-      if (isResizingRef.current) {
-        isResizingRef.current = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      }
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      // CRITICAL: Always cleanup body styles on unmount
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, []);
 
   // Layout selection from external events
   const handleLayoutSelection = useCallback(
@@ -359,13 +314,9 @@ export function useSearchBarState(panelId: string) {
     if (state.isPendingLayout) {
       const pendingLayoutId = state.isPendingLayout;
       dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: null });
-      dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
       handleLayoutSelect(pendingLayoutId);
       focusInput();
-      return;
     }
-
-    dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
   }, [globalState.searchBarsHidden, state.isPendingLayout, handleLayoutSelect, focusInput]);
 
   // Handle active tab layout changes
@@ -374,11 +325,10 @@ export function useSearchBarState(panelId: string) {
 
     if (activeTab?.layoutId && currentLayout) {
       // Tab now has a layout.
-      dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
+      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
     } else if (!activeTab?.layoutId) {
-      // Tab has no layout. Allow auto-opening dropdown since layout was removed.
-      dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: false });
-      dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: false });
+      // Tab has no layout. Auto-open dropdown since layout was removed.
+      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
     }
   }, [activeTab?.layoutId, currentLayout, globalState.searchBarsHidden]);
 
@@ -394,7 +344,7 @@ export function useSearchBarState(panelId: string) {
       if (customEvent.detail?.panelId !== panelId) return;
       if (globalState.searchBarsHidden) return;
 
-      dispatch({ type: 'START_MANUAL_SEARCH' });
+      dispatch({ type: 'ENTER_SEARCH_MODE' });
       focusInput();
     },
     [panelId, globalState.searchBarsHidden, focusInput]
@@ -437,7 +387,7 @@ export function useSearchBarState(panelId: string) {
     // Local state
     searchQuery: state.searchQuery,
     showDropdown: state.showDropdown,
-    dropdownHeight: state.dropdownHeight,
+    dropdownHeight,
     paramValues: state.paramValues,
     currentParamIndex: state.currentParamIndex,
     selectedLayoutId: state.selectedLayoutId,
