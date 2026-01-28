@@ -225,7 +225,7 @@ export function splitPanel(
   const originalPanelAsChild: Panel = {
     id: panelId,
     order: originalPanelOrder,
-    direction: null,
+    direction: panelToSplit.direction,
     children: [],
     size: '50%',
   };
@@ -234,7 +234,7 @@ export function splitPanel(
   const newSiblingPanel: Panel = {
     id: newPanelId,
     order: newPanelOrder,
-    direction: null,
+    direction,
     children: [],
     size: '50%',
   };
