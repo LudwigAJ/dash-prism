@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dash_prism"
-version = "0.6.3"
+version = "0.7.0"
 description = "Prism: Powerful multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -13,7 +13,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Framework :: Dash",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
@@ -91,7 +91,7 @@ markers = [
 
 [tool.black]
 line-length = 100
-target-version = ["py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312", "py313", "py314"]
 include = '\.pyi?$'
 extend-exclude = '''
 (

@@ -2,7 +2,7 @@
 # Install with: pip install -r requirements-dev.txt
 
 # Core development tools
-dash[dev,async]>=3.1.1
+dash[dev,async,testing]>=3.1.1
 wheel
 build
 pyyaml>=6.0.0
@@ -12,6 +12,10 @@ pytest>=9.0.2
 pytest-cov>=7.0.0
 pytest-xdist>=3.8.0
 pytest-rerunfailures>=16.1
+
+# Browser testing (for integration tests)
+selenium>=4.0.0
+webdriver-manager>=4.0.0
 
 # Linting and type checking
 black==26.1.0
