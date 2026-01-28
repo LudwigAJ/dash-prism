@@ -408,7 +408,6 @@ export function useSearchBarState(panelId: string) {
 
   // Click outside handler
   useEffect(() => {
-    console.log('[SearchBar] Click outside effect running, showDropdown:', state.showDropdown);
     if (!state.showDropdown) return;
 
     const handleClickOutside = (e: MouseEvent) => {
