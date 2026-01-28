@@ -222,6 +222,7 @@ export function useSearchBarState(panelId: string) {
   const handleFocus = useCallback(() => {
     if (mode !== 'display') {
       dispatch({ type: 'SET_SHOW_DROPDOWN', show: true });
+      focusInput();
     }
   }, [mode]);
 
@@ -404,6 +405,22 @@ export function useSearchBarState(panelId: string) {
     return () =>
       window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
   }, [handleFocusSearchbar]);
+
+
+  // Click outside handler
+  useEffect(() => {
+    console.log('[SearchBar] Click outside effect running, showDropdown:', state.showDropdown);
+    if (!state.showDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
+        handleDismiss();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [handleDismiss]);
 
   // ===== PUBLIC API =====
   return {

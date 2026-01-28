@@ -58,7 +58,7 @@ export const SearchMode = ({
           onBlur={onBlur}
           onKeyDown={onKeyDown}
           placeholder={searchBarPlaceholder}
-          autoFocus={false}
+          autoFocus={true}
         />
 
         {showDropdown && (
