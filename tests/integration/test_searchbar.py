@@ -355,7 +355,7 @@ def test_searchbar_survives_page_resize(prism_app_with_layouts):
     duo.driver.implicitly_wait(0.5)
 
     # Resize back
-    duo.driver.set_window_size(initial_size['width'], initial_size['height'])
+    duo.driver.set_window_size(initial_size["width"], initial_size["height"])
     duo.driver.implicitly_wait(0.5)
 
     # SearchBar should still be present and functional

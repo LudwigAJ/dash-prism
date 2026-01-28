@@ -29,6 +29,7 @@ export type SearchBarAction =
   | { type: 'CLEAR_SELECTION' }
   | { type: 'BACK_TO_SEARCH' }
   | { type: 'SET_PARAM_VALUE'; paramName: string; value: string }
+  | { type: 'SET_PARAM_VALUES'; values: Record<string, string> }
   | { type: 'ADVANCE_PARAM' }
   | { type: 'RESET_PARAMS' }
   | { type: 'SET_PENDING_LAYOUT'; layoutId: string | null }
@@ -54,7 +55,11 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
   if (state.selectedLayoutId && context.selectedLayout?.hasParams && state.currentParamIndex >= 0) {
     return 'params';
   }
-  if (state.selectedLayoutId && context.selectedLayout?.hasOptions && !context.selectedLayout.hasParams) {
+  if (
+    state.selectedLayoutId &&
+    context.selectedLayout?.hasOptions &&
+    !context.selectedLayout.hasParams
+  ) {
     return 'options';
   }
   if (state.isUserSearching) return 'search';
@@ -106,7 +111,10 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.showDropdown = action.show;
       break;
     case 'SET_DROPDOWN_HEIGHT':
-      draft.dropdownHeight = Math.min(MAX_DROPDOWN_HEIGHT, Math.max(MIN_DROPDOWN_HEIGHT, action.height));
+      draft.dropdownHeight = Math.min(
+        MAX_DROPDOWN_HEIGHT,
+        Math.max(MIN_DROPDOWN_HEIGHT, action.height)
+      );
       break;
     case 'START_MANUAL_SEARCH':
       draft.isUserSearching = true;
@@ -131,6 +139,9 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       break;
     case 'SET_PARAM_VALUE':
       draft.paramValues[action.paramName] = action.value;
+      break;
+    case 'SET_PARAM_VALUES':
+      draft.paramValues = { ...draft.paramValues, ...action.values };
       break;
     case 'ADVANCE_PARAM':
       draft.currentParamIndex += 1;

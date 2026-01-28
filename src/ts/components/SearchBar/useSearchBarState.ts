@@ -9,6 +9,7 @@ import {
   deriveMode,
   type ModeContext,
 } from './searchBarReducer';
+import { filterLayouts } from './searchBarUtils';
 
 /**
  * SearchBar state management hook.
@@ -55,8 +56,7 @@ export function useSearchBarState(panelId: string) {
       ? {
           hasParams: (selectedLayout.params?.length ?? 0) > 0,
           hasOptions:
-            (selectedLayout.paramOptions &&
-              Object.keys(selectedLayout.paramOptions).length > 0) ??
+            (selectedLayout.paramOptions && Object.keys(selectedLayout.paramOptions).length > 0) ??
             false,
         }
       : null,
@@ -67,18 +67,10 @@ export function useSearchBarState(panelId: string) {
   // ===== DERIVED DATA =====
   const layoutEntries = useMemo(() => Object.entries(registeredLayouts), [registeredLayouts]);
 
-  const filteredLayouts = useMemo(() => {
-    if (!state.searchQuery.trim()) return layoutEntries;
-    const query = state.searchQuery.toLowerCase();
-    return layoutEntries.filter(([id, meta]) => {
-      return (
-        id.toLowerCase().includes(query) ||
-        meta.name.toLowerCase().includes(query) ||
-        meta.description?.toLowerCase().includes(query) ||
-        meta.keywords?.some((k) => k.toLowerCase().includes(query))
-      );
-    });
-  }, [state.searchQuery, layoutEntries]);
+  const filteredLayouts = useMemo(
+    () => filterLayouts(layoutEntries, state.searchQuery),
+    [layoutEntries, state.searchQuery]
+  );
 
   const paramOptions = selectedLayout?.paramOptions;
   const allParams = selectedLayout?.params ?? [];
@@ -86,14 +78,15 @@ export function useSearchBarState(panelId: string) {
 
   // ===== FOCUS HELPER =====
   const focusInput = useCallback(() => {
-    // Use single rAF instead of double-rAF
-    requestAnimationFrame(() => inputRef.current?.focus());
+    inputRef.current?.focus();
   }, []);
 
   // ===== HANDLERS =====
   const applyLayout = useCallback(
     (layoutId: string, name: string, params?: Record<string, string>, option?: string) => {
-      if (!activeTabId) {
+      // Read fresh activeTabId to avoid stale closure
+      const currentActiveTabId = globalState.activeTabIds[panelId];
+      if (!currentActiveTabId) {
         logger.error('Cannot apply layout: no active tab in panel', { panelId, layoutId });
         toast.error('Unable to apply layout: no active tab');
         return;
@@ -110,13 +103,13 @@ export function useSearchBarState(panelId: string) {
 
       globalDispatch({
         type: 'UPDATE_TAB_LAYOUT',
-        payload: { tabId: activeTabId, layoutId, name, params, option },
+        payload: { tabId: currentActiveTabId, layoutId, name, params, option },
       });
 
       dispatch({ type: 'RESET' });
       dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: true });
     },
-    [activeTabId, panelId, globalDispatch, registeredLayouts, currentLayout]
+    [globalState.activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
   );
 
   const handleLayoutSelect = useCallback(
@@ -161,14 +154,7 @@ export function useSearchBarState(panelId: string) {
         focusInput();
       }
     },
-    [
-      registeredLayouts,
-      globalState.tabs,
-      activeTabId,
-      globalDispatch,
-      applyLayout,
-      focusInput,
-    ]
+    [registeredLayouts, globalState.tabs, globalDispatch, applyLayout, focusInput]
   );
 
   const handleOptionSelect = useCallback(
@@ -205,11 +191,7 @@ export function useSearchBarState(panelId: string) {
       dispatch({ type: 'ADVANCE_PARAM' });
     } else {
       const layout = registeredLayouts[state.selectedLayoutId];
-      applyLayout(
-        state.selectedLayoutId,
-        layout?.name ?? state.selectedLayoutId,
-        newParamValues
-      );
+      applyLayout(state.selectedLayoutId, layout?.name ?? state.selectedLayoutId, newParamValues);
     }
   }, [
     currentParam,
@@ -243,19 +225,27 @@ export function useSearchBarState(panelId: string) {
     }
   }, [mode]);
 
+  /**
+   * Helper to dismiss the searchbar dropdown and return to idle state.
+   * Consolidates the repeated dismiss logic used across blur, escape, etc.
+   */
+  const handleDismiss = useCallback(() => {
+    dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
+    if (mode === 'params' || mode === 'options') {
+      dispatch({ type: 'CLEAR_SELECTION' });
+    }
+    dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
+    dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
+  }, [mode, currentLayout]);
+
   const handleBlur = useCallback(
     (e: React.FocusEvent) => {
       const relatedTarget = e.relatedTarget as HTMLElement;
       if (!commandRef.current?.contains(relatedTarget)) {
-        dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
-        if (mode === 'params' || mode === 'options') {
-          dispatch({ type: 'CLEAR_SELECTION' });
-        }
-        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
-        dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
+        handleDismiss();
       }
     },
-    [currentLayout, mode]
+    [handleDismiss]
   );
 
   const handleKeyDown = useCallback(
@@ -270,12 +260,10 @@ export function useSearchBarState(panelId: string) {
       } else if (mode === 'options' && e.key === 'Escape') {
         handleBackToLayouts();
       } else if (e.key === 'Escape') {
-        dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
-        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
-        dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
+        handleDismiss();
       }
     },
-    [mode, handleParamSubmit, handleBackToLayouts, currentLayout]
+    [mode, handleParamSubmit, handleBackToLayouts, handleDismiss]
   );
 
   const handleResizeStart = useCallback(
@@ -323,9 +311,11 @@ export function useSearchBarState(panelId: string) {
   }, []);
 
   // Layout selection from external events
-  useEffect(() => {
-    const handleLayoutSelection = (e: CustomEvent) => {
-      if (e.detail.tabId !== activeTabId) return;
+  const handleLayoutSelection = useCallback(
+    (e: CustomEvent) => {
+      // Read fresh activeTabId to avoid stale closure
+      const currentActiveTabId = globalState.activeTabIds[panelId];
+      if (e.detail.tabId !== currentActiveTabId) return;
 
       const layout = registeredLayouts[e.detail.layoutId];
       if (!layout) return;
@@ -340,11 +330,22 @@ export function useSearchBarState(panelId: string) {
       }
 
       handleLayoutSelect(e.detail.layoutId);
-    };
+    },
+    [
+      globalState.activeTabIds,
+      panelId,
+      handleLayoutSelect,
+      registeredLayouts,
+      globalState.searchBarsHidden,
+      globalDispatch,
+    ]
+  );
+
+  useEffect(() => {
     window.addEventListener('prism:select-layout', handleLayoutSelection as EventListener);
     return () =>
       window.removeEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-  }, [activeTabId, handleLayoutSelect, registeredLayouts, globalState.searchBarsHidden, globalDispatch]);
+  }, [handleLayoutSelection]);
 
   // Handle searchBarsHidden state changes
   useEffect(() => {
@@ -386,40 +387,23 @@ export function useSearchBarState(panelId: string) {
   }, [mode, panelId, globalDispatch]);
 
   // Focus request from global shortcut
-  useEffect(() => {
-    const handleFocusSearchbar = (event: Event) => {
+  const handleFocusSearchbar = useCallback(
+    (event: Event) => {
       const customEvent = event as CustomEvent<{ panelId?: string }>;
       if (customEvent.detail?.panelId !== panelId) return;
       if (globalState.searchBarsHidden) return;
 
       dispatch({ type: 'START_MANUAL_SEARCH' });
       focusInput();
-    };
+    },
+    [panelId, globalState.searchBarsHidden, focusInput]
+  );
 
+  useEffect(() => {
     window.addEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
     return () =>
       window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
-  }, [panelId, globalState.searchBarsHidden, focusInput]);
-
-  // Click outside handler
-  useEffect(() => {
-    console.log('[SearchBar] Click outside effect running, showDropdown:', state.showDropdown);
-    if (!state.showDropdown) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
-        dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
-        if (mode === 'params' || mode === 'options') {
-          dispatch({ type: 'CLEAR_SELECTION' });
-        }
-        dispatch({ type: 'SUPPRESS_AUTO_OPEN', suppress: true });
-        dispatch({ type: 'RETURN_TO_IDLE', hasCurrentLayout: currentLayout !== null });
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [state.showDropdown, currentLayout, mode]);
+  }, [handleFocusSearchbar]);
 
   // ===== PUBLIC API =====
   return {
@@ -450,18 +434,8 @@ export function useSearchBarState(panelId: string) {
     // Handlers
     setSearchQuery: (query: string) => dispatch({ type: 'SET_SEARCH_QUERY', query }),
     setParamValues: (setter: (prev: Record<string, string>) => Record<string, string>) => {
-      try {
-        const newValues = setter(state.paramValues);
-        if (!newValues || typeof newValues !== 'object') {
-          logger.error('setParamValues: invalid return value from setter');
-          return;
-        }
-        Object.entries(newValues).forEach(([name, value]) => {
-          dispatch({ type: 'SET_PARAM_VALUE', paramName: name, value });
-        });
-      } catch (error) {
-        logger.error('setParamValues: setter threw error', { error });
-      }
+      const newValues = setter(state.paramValues);
+      dispatch({ type: 'SET_PARAM_VALUES', values: newValues });
     },
     handleLayoutSelect,
     handleOptionSelect,

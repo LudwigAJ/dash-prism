@@ -6,7 +6,7 @@ import {
   deriveMode,
   type SearchBarAction,
   type SearchBarState,
-  type ModeContext
+  type ModeContext,
 } from './searchBarReducer';
 
 describe('deriveMode', () => {
@@ -66,7 +66,7 @@ describe('deriveMode', () => {
     const context = {
       searchBarsHidden: true,
       hasCurrentLayout: true,
-      selectedLayout: { hasParams: true, hasOptions: false }
+      selectedLayout: { hasParams: true, hasOptions: false },
     };
     expect(deriveMode(state, context)).toBe('hidden');
   });
@@ -75,7 +75,7 @@ describe('deriveMode', () => {
     const state = { ...baseState, selectedLayoutId: 'chart', currentParamIndex: 0 };
     const context = {
       ...baseContext,
-      selectedLayout: { hasParams: true, hasOptions: true }
+      selectedLayout: { hasParams: true, hasOptions: true },
     };
     expect(deriveMode(state, context)).toBe('params');
   });
