@@ -406,7 +406,6 @@ export function useSearchBarState(panelId: string) {
       window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
   }, [handleFocusSearchbar]);
 
-
   // Click outside handler
   useEffect(() => {
     console.log('[SearchBar] Click outside effect running, showDropdown:', state.showDropdown);
