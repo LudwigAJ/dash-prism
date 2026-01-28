@@ -13,28 +13,24 @@ export type SearchBarState = {
   selectedLayoutId: string | null;
   paramValues: Record<string, string>;
   currentParamIndex: number;
-  dropdownHeight: number;
   isUserSearching: boolean;
   isPendingLayout: string | null;
-  suppressAutoOpen: boolean;
 };
 
 export type SearchBarAction =
   | { type: 'RESET' }
   | { type: 'SET_SEARCH_QUERY'; query: string }
   | { type: 'SET_SHOW_DROPDOWN'; show: boolean }
-  | { type: 'SET_DROPDOWN_HEIGHT'; height: number }
-  | { type: 'START_MANUAL_SEARCH'; initialQuery?: string }
+  | { type: 'ENTER_SEARCH_MODE'; initialQuery?: string }
   | { type: 'SELECT_LAYOUT'; layoutId: string }
   | { type: 'CLEAR_SELECTION' }
-  | { type: 'BACK_TO_SEARCH' }
   | { type: 'SET_PARAM_VALUE'; paramName: string; value: string }
   | { type: 'SET_PARAM_VALUES'; values: Record<string, string> }
   | { type: 'ADVANCE_PARAM' }
   | { type: 'RESET_PARAMS' }
   | { type: 'SET_PENDING_LAYOUT'; layoutId: string | null }
-  | { type: 'SUPPRESS_AUTO_OPEN'; suppress: boolean }
-  | { type: 'RETURN_TO_IDLE'; hasCurrentLayout: boolean };
+  | { type: 'RETURN_TO_IDLE'; showDropdown: boolean }
+  | { type: 'DISMISS'; clearSelection: boolean };
 
 export type ModeContext = {
   searchBarsHidden: boolean;
@@ -71,10 +67,6 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
 // Reducer
 // =============================================================================
 
-const DEFAULT_DROPDOWN_HEIGHT = 300;
-const MIN_DROPDOWN_HEIGHT = 120;
-const MAX_DROPDOWN_HEIGHT = 600;
-
 export function createInitialState(hasCurrentLayout: boolean): SearchBarState {
   return {
     searchQuery: '',
@@ -82,10 +74,8 @@ export function createInitialState(hasCurrentLayout: boolean): SearchBarState {
     selectedLayoutId: null,
     paramValues: {},
     currentParamIndex: 0,
-    dropdownHeight: DEFAULT_DROPDOWN_HEIGHT,
     isUserSearching: false,
     isPendingLayout: null,
-    suppressAutoOpen: false,
   };
 }
 
@@ -110,17 +100,10 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
     case 'SET_SHOW_DROPDOWN':
       draft.showDropdown = action.show;
       break;
-    case 'SET_DROPDOWN_HEIGHT':
-      draft.dropdownHeight = Math.min(
-        MAX_DROPDOWN_HEIGHT,
-        Math.max(MIN_DROPDOWN_HEIGHT, action.height)
-      );
-      break;
-    case 'START_MANUAL_SEARCH':
+    case 'ENTER_SEARCH_MODE':
       draft.isUserSearching = true;
       draft.showDropdown = true;
       draft.searchQuery = action.initialQuery ?? '';
-      draft.dropdownHeight = DEFAULT_DROPDOWN_HEIGHT;
       clearSelection(draft);
       break;
     case 'SELECT_LAYOUT':
@@ -129,12 +112,6 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.showDropdown = true;
       break;
     case 'CLEAR_SELECTION':
-      clearSelection(draft);
-      break;
-    case 'BACK_TO_SEARCH':
-      draft.isUserSearching = true;
-      draft.showDropdown = true;
-      draft.dropdownHeight = DEFAULT_DROPDOWN_HEIGHT;
       clearSelection(draft);
       break;
     case 'SET_PARAM_VALUE':
@@ -153,14 +130,18 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
     case 'SET_PENDING_LAYOUT':
       draft.isPendingLayout = action.layoutId;
       break;
-    case 'SUPPRESS_AUTO_OPEN':
-      draft.suppressAutoOpen = action.suppress;
-      break;
     case 'RETURN_TO_IDLE':
       draft.isUserSearching = false;
-      draft.showDropdown = action.hasCurrentLayout ? false : !draft.suppressAutoOpen;
-      draft.suppressAutoOpen = false;
+      draft.showDropdown = action.showDropdown;
       draft.isPendingLayout = null;
+      break;
+    case 'DISMISS':
+      draft.showDropdown = false;
+      draft.isUserSearching = false;
+      draft.isPendingLayout = null;
+      if (action.clearSelection) {
+        clearSelection(draft);
+      }
       break;
   }
 });
