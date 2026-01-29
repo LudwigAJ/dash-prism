@@ -47,25 +47,25 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10"
+python = ">=3.10,<4.0"  # Add explicit upper bound (recommended; nothing supports 4.x yet)
 dash = ">=3.1.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "==26.1.0"
 mypy = "==1.19.1"
 pyyaml = ">=6.0.0"
-# dash extras for development/async support
-dash = {version = ">=3.1.1", extras = ["dev", "async"]}
+# Restrict dash dev extras to Python <4.0
+dash = {version = ">=3.1.1", extras = ["dev", "async"], markers = "python_version < '4.0'"}
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=9.0.2"
 pytest-cov = ">=7.0.0"
 pytest-xdist = ">=3.8.0"
 pytest-rerunfailures = ">=16.1"
-selenium = ">=4.0.0"
+# Restrict selenium and dash[testing] to Python <4.0
+selenium = {version = ">=4.0.0", markers = "python_version < '4.0'"}
 webdriver-manager = ">=4.0.0"
-# dash testing extra (e.g., for component testing with Playwright)
-dash = {version = ">=3.1.1", extras = ["testing"]}
+dash = {version = ">=3.1.1", extras = ["testing"], markers = "python_version < '4.0'"}
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "==8.1.3"
