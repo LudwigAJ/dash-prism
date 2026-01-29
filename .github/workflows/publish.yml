@@ -32,8 +32,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"  # Optional: speeds up repeated runs
+          node-version: "24"
+          cache: "npm"
 
       - name: Install Node dependencies
         run: npm ci
