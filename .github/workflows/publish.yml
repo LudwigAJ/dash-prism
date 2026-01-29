@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Distribution
+  build-and-publish:
+    name: Build and Publish to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/dash-prism
+    permissions:
+      id-token: write  # Required for trusted publishing
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,15 +24,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      - name: Install build dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          cache: "npm"  # Optional: speeds up repeated runs
 
       - name: Install Node dependencies
         run: npm ci
@@ -36,51 +42,7 @@ jobs:
         run: npm run build
 
       - name: Build package
-        run: python -m build
-
-      - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-  publish-pypi:
-    name: Publish to PyPI
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/dash-prism
-    permissions:
-      id-token: write  # Required for trusted publishing
-    steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
+        run: poetry build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  # Optional: Publish to TestPyPI first (uncomment if needed)
-  # publish-testpypi:
-  #   name: Publish to TestPyPI
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: testpypi
-  #     url: https://test.pypi.org/p/dash-prism
-  #   permissions:
-  #     id-token: write
-  #   steps:
-  #     - name: Download distribution artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: python-package-distributions
-  #         path: dist/
-  #
-  #     - name: Publish to TestPyPI
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         repository-url: https://test.pypi.org/legacy/

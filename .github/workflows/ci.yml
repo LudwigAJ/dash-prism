@@ -23,13 +23,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
 
-      - name: Install Python dependencies
+      - name: Install Poetry
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-          pip install -e .[test]
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies (dev + test groups)
+        run: poetry install --with dev,test --no-interaction
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -47,7 +48,7 @@ jobs:
         run: npm run test:ts
 
       - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v2   # ← change this from @v1
+        uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: stable
           install-chromedriver: false
@@ -57,7 +58,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
+          poetry run pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -72,7 +73,7 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          python -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+          poetry run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
   lint:
     name: Lint and Type Check
@@ -85,18 +86,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install Poetry
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies (dev group)
+        run: poetry install --with dev --no-interaction
 
       - name: Check formatting with black
-        run: black --check dash_prism tests
+        run: poetry run black --check dash_prism tests
 
       - name: Type check with mypy
-        run: mypy
+        run: poetry run mypy
 
   build:
     name: Build Distribution
@@ -111,11 +114,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build tools
+      - name: Install Poetry
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-          pip install twine
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -130,10 +132,12 @@ jobs:
         run: npm run build
 
       - name: Build package
-        run: python -m build
+        run: poetry build
 
-      - name: Check package with twine
-        run: twine check dist/*
+      - name: Check package with twine (optional but kept for extra validation)
+        run: |
+          python -m pip install twine
+          poetry run twine check dist/*
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
