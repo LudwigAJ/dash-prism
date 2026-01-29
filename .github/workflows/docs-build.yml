@@ -21,8 +21,8 @@ jobs:
           node-version: "20"
 
       - run: npm ci
-      - run: npm run build:backends
       - run: pip install -r requirements-dev.txt
+      - run: npm run build:backends
 
       - name: Build docs
         run: cd docs && make html
