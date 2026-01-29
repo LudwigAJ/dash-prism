@@ -119,6 +119,9 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Install dependencies (dev group)
+        run: poetry install --with dev --no-interaction
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
