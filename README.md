@@ -112,6 +112,8 @@ if __name__ == '__main__':
 
 ## Development
 
+This project uses [Poetry](https://python-poetry.org/) for dependency management and packaging.
+
 ### Setup
 
 ```bash
@@ -124,7 +126,7 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+poetry install --with dev,test,docs,demo
 npm install
 
 # Build

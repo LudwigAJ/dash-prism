@@ -10,9 +10,9 @@ Setup
    cd dash_prism
    python -m venv .venv
    source .venv/bin/activate
+   poetry install --with dev,test,docs,demo
    npm install
    npm run build
-   pip install -e ".[dev,test]"
 
 Tests
 -----
@@ -33,6 +33,6 @@ Building Docs
 
 .. code-block:: bash
 
-   pip install sphinx sphinx-rtd-theme
+   poetry install --with docs
    cd docs
    make html
