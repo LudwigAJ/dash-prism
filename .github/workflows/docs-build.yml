@@ -21,8 +21,8 @@ jobs:
           node-version: "20"
 
       - run: npm ci
-      - run: pip install -e . sphinx sphinx-rtd-theme
-      - run: npm run build:js
+      - run: pip install -r requirements-dev.txt
+      - run: npm run build:backends
 
       - name: Build docs
         run: cd docs && make html
