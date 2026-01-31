@@ -97,7 +97,7 @@ export const SearchMode = ({
                         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
                         <Star
-                          className={cn('h-4 w-4 text-current', isFavorite && 'fill-current')}
+                          className={cn('size-[1em] text-current', isFavorite && 'fill-current')}
                         />
                       </button>
                       <div className="flex flex-1 items-center gap-3 overflow-hidden">
@@ -114,7 +114,7 @@ export const SearchMode = ({
                         </span>
                       ) : hasOptions ? (
                         <List
-                          className="text-muted-foreground ml-auto h-3.5 w-3.5"
+                          className="text-muted-foreground ml-auto size-[1em]"
                           aria-hidden="true"
                         />
                       ) : null}

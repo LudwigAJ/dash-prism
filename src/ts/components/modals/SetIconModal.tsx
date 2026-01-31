@@ -70,7 +70,7 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
                     isSelected && 'bg-primary/20 ring-primary ring-2'
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="size-[1.25em]" />
                 </button>
               );
             })}
