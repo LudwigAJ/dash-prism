@@ -18,7 +18,7 @@ import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { getLeafPanelIds } from '@utils/panels';
 import { getTabIcon } from '@constants/tab-icons';
-import { TAB_STYLE_VARIANTS } from '@constants/tab-styles';
+import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
 import type { Tab } from '../types';
 
@@ -225,12 +225,8 @@ export function DndProvider({ children }: DndProviderProps) {
 function DraggedTabPreview({ tab }: { tab: Tab }) {
   const { theme } = useConfig();
   const IconComponent = tab.icon ? getTabIcon(tab.icon) : null;
-  // Safely check if style exists in TAB_STYLE_VARIANTS before accessing
-  const styleVariant =
-    tab.style && tab.style in TAB_STYLE_VARIANTS
-      ? TAB_STYLE_VARIANTS[tab.style as keyof typeof TAB_STYLE_VARIANTS]
-      : null;
-  const styleClasses = styleVariant ? styleVariant[theme === 'dark' ? 'dark' : 'light'] : '';
+  const styleColor = migrateTabStyle(tab.style);
+  const styleClasses = tabStyleVariants({ color: styleColor, theme });
 
   return (
     <div

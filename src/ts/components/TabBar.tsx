@@ -26,7 +26,7 @@ import {
   TooltipTrigger,
   Spinner,
 } from '@components/ui';
-import { TAB_STYLE_VARIANTS, getTabStyleClasses } from '@constants/tab-styles';
+import { TAB_STYLE_LABELS, tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
 import type { Tab, Theme } from '@types';
 import type { Action } from '@context/prismReducer';
@@ -102,9 +102,9 @@ const TabItem = memo(function TabItem({
   const isLoading = ctx?.useLoading({ rawPath: componentPath }) ?? false;
 
   const TabIcon = tab.icon ? getTabIcon(tab.icon) : null;
-  const styleClasses = getTabStyleClasses(tab.style, theme);
-  const styleValue = tab.style && tab.style in TAB_STYLE_VARIANTS ? tab.style : 'default';
-  const isDefaultStyle = styleValue === 'default';
+  const styleColor = migrateTabStyle(tab.style);
+  const styleClasses = tabStyleVariants({ color: styleColor, theme });
+  const isDefaultStyle = styleColor === 'default';
   const isLocked = tab.locked ?? false;
   const isEditing = editingTabId === tab.id;
 
@@ -158,7 +158,7 @@ const TabItem = memo(function TabItem({
               isDefaultStyle && 'prism-tab-default'
             )}
             data-default-style={isDefaultStyle || undefined}
-            data-tab-style={styleValue}
+            data-tab-style={styleColor}
           >
             {/* Tab name (hidden when editing) */}
             <span
@@ -167,7 +167,7 @@ const TabItem = memo(function TabItem({
                 isEditing && 'invisible'
               )}
             >
-              {TabIcon ? <TabIcon className="h-2.5 w-2.5 shrink-0" /> : null}
+              {TabIcon ? <TabIcon className="size-[0.85em] shrink-0" /> : null}
               {tab.name.length > MAX_TAB_NAME_LENGTH
                 ? `${tab.name.slice(0, MAX_TAB_NAME_LENGTH)}…`
                 : tab.name}
@@ -198,7 +198,7 @@ const TabItem = memo(function TabItem({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-muted-foreground flex items-center">
-                    <Lock className="h-2.5 w-2.5" />
+                    <Lock className="size-[0.85em]" />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>Tab is locked</TooltipContent>
@@ -233,19 +233,19 @@ const TabItem = memo(function TabItem({
                       <>
                         <Spinner
                           size="sm"
-                          className="h-3.5 w-3.5 shrink-0 group-hover/close:hidden"
+                          className="shrink-0 group-hover/close:hidden"
                         />
-                        <X className="hidden h-3.5 w-3.5 group-hover/close:block" />
+                        <X className="hidden size-[1em] group-hover/close:block" />
                       </>
                     ) : (
-                      <X className="h-3.5 w-3.5" />
+                      <X className="size-[1em]" />
                     )}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
               </Tooltip>
             ) : isLoading ? (
-              <LoaderCircle className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="text-muted-foreground size-[1em] animate-spin" />
             ) : null}
           </TabsTrigger>
         </div>
@@ -307,15 +307,15 @@ const TabItem = memo(function TabItem({
         <ContextMenuSub>
           <ContextMenuSubTrigger>Style</ContextMenuSubTrigger>
           <ContextMenuSubContent theme={theme}>
-            <ContextMenuRadioGroup value={styleValue}>
-              {Object.entries(TAB_STYLE_VARIANTS).map(([styleKey, variant]) => (
+            <ContextMenuRadioGroup value={styleColor}>
+              {Object.entries(TAB_STYLE_LABELS).map(([styleKey, label]) => (
                 <ContextMenuRadioItem
                   key={styleKey}
                   value={styleKey}
                   data-testid={`prism-context-menu-style-${styleKey}`}
                   onSelect={() => onSetTabStyle(tab, styleKey)}
                 >
-                  {variant.label}
+                  {label}
                 </ContextMenuRadioItem>
               ))}
             </ContextMenuRadioGroup>
@@ -580,7 +580,7 @@ export const TabBar = memo(function TabBar({
                 onClick={addTab}
                 disabled={isMaxTabsReached}
               >
-                <Plus className="h-4 w-4" />
+                <Plus />
               </button>
             </TooltipTrigger>
             <TooltipContent>{isMaxTabsReached ? 'Max tabs reached' : 'New tab'}</TooltipContent>

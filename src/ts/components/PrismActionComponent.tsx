@@ -119,9 +119,9 @@ export function PrismAction({
           aria-busy={loading}
         >
           {loading ? (
-            <Spinner size="sm" className="h-3 w-3" />
+            <Spinner size="sm" />
           ) : IconComponent ? (
-            <IconComponent className="h-3 w-3" />
+            <IconComponent className="size-[1em]" />
           ) : null}
           <span>{label}</span>
         </button>

@@ -59,7 +59,7 @@ export const OptionsMode = ({
             style={{ maxHeight: dropdownHeight }}
           >
             <CommandItem onSelect={onBackToLayouts}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="mr-2 size-[1em]" />
               <span>Back to layouts</span>
             </CommandItem>
             <CommandSeparator />

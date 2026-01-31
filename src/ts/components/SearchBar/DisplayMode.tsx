@@ -32,14 +32,14 @@ export const DisplayMode = ({
       <span className="prism-searchbar-layout-name">{currentLayoutName}</span>
       {hasOption && (
         <>
-          <ChevronRight className="text-muted-foreground mx-1 h-3.5 w-3.5 flex-shrink-0" />
+          <ChevronRight className="text-muted-foreground mx-1 size-[1em] flex-shrink-0" />
           <span className="text-primary text-sm">{option}</span>
         </>
       )}
       {hasParams &&
         Object.values(params).map((value, i) => (
           <React.Fragment key={i}>
-            <ChevronRight className="text-muted-foreground mx-1 h-3.5 w-3.5 flex-shrink-0" />
+            <ChevronRight className="text-muted-foreground mx-1 size-[1em] flex-shrink-0" />
             <span className="text-primary text-sm">{value}</span>
           </React.Fragment>
         ))}
