@@ -190,6 +190,23 @@
 }
 
 /* =============================================================================
+   PRISM SIZE SYSTEM
+   Base font-size per size variant - child elements use em units to scale
+   ============================================================================= */
+
+.prism-size-sm {
+  font-size: 12px;
+}
+
+.prism-size-md {
+  font-size: 14px;
+}
+
+.prism-size-lg {
+  font-size: 16px;
+}
+
+/* =============================================================================
    PRISM ROOT LAYOUT
    ============================================================================= */
 
@@ -278,25 +295,34 @@
 }
 
 /* =============================================================================
-   TAB BAR SIZING
+   TAB BAR SIZING (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
 .prism-tabbar {
   background: var(--background);
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
+  height: 2.3em;
+  min-height: 2.3em;
+  max-height: 2.3em;
 }
 
 .prism-container [data-slot='tabs-list'] {
-  height: 32px;
-  min-height: 32px;
-  font-size: 12px;
+  height: 2.3em;
+  min-height: 2.3em;
+  font-size: 1em;
 }
 
 .prism-container [data-slot='tabs-trigger'] {
-  font-size: 12px;
-  padding: 4px 12px;
+  font-size: 0.85em;
+  padding: 0.3em 0.85em;
+}
+
+.prism-container [data-slot='tabs-trigger'] svg {
+  width: 1em;
+  height: 1em;
+}
+
+.prism-container [data-slot='tabs-trigger'] button {
+  padding: 0.15em;
 }
 
 .prism-container [data-slot='tabs-trigger'].prism-tab-default {
@@ -307,87 +333,26 @@
   border-color: var(--border);
 }
 
-/* Small tabs */
-.prism-size-sm .prism-tabbar {
-  height: 26px;
-  min-height: 26px;
-  max-height: 26px;
-}
-
-.prism-size-sm [data-slot='tabs-list'] {
-  height: 26px;
-  min-height: 26px;
-}
-
-.prism-size-sm [data-slot='tabs-trigger'] {
-  font-size: 10px;
-  padding: 2px 8px;
-}
-
-.prism-size-sm [data-slot='tabs-trigger'] button {
-  padding: 2px;
-}
-
-.prism-size-sm [data-slot='tabs-trigger'] svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Large tabs */
-.prism-size-lg .prism-tabbar {
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
-}
-
-.prism-size-lg [data-slot='tabs-list'] {
-  height: 40px;
-  min-height: 40px;
-}
-
-.prism-size-lg [data-slot='tabs-trigger'] {
-  font-size: 14px;
-  padding: 8px 16px;
-}
-
-.prism-size-lg [data-slot='tabs-trigger'] svg {
-  width: 18px;
-  height: 18px;
-}
-
 /* =============================================================================
-   STATUS BAR SIZING
+   STATUS BAR SIZING (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
 .prism-status-bar {
-  height: 22px;
-  min-height: 22px;
-  max-height: 22px;
+  height: 1.6em;
+  min-height: 1.6em;
+  max-height: 1.6em;
   flex-shrink: 0;
-}
-
-.prism-size-sm .prism-status-bar {
-  height: 18px;
-  min-height: 18px;
-  max-height: 18px;
-  font-size: 10px;
-}
-
-.prism-size-lg .prism-status-bar {
-  height: 26px;
-  min-height: 26px;
-  max-height: 26px;
-  font-size: 12px;
+  font-size: 0.85em;
 }
 
 /* =============================================================================
-   SEARCH BAR COMPONENT
+   SEARCH BAR COMPONENT (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
 .prism-searchbar {
   @apply border-border flex w-full items-center border-b;
-  height: 36px;
-  min-height: 36px;
+  height: 2.6em;
+  min-height: 2.6em;
   position: relative;
   z-index: 40;
   overflow: visible;
@@ -404,50 +369,16 @@
   min-height: 100%;
 }
 
+.prism-searchbar [data-slot='command-input-wrapper'] svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
 .prism-searchbar [data-slot='command-input'] {
   height: 100%;
-  padding-top: 0.375rem;
-  padding-bottom: 0.375rem;
-}
-
-.prism-size-sm .prism-searchbar {
-  height: 30px;
-  min-height: 30px;
-}
-
-.prism-size-sm .prism-searchbar [data-slot='command-input'] {
-  font-size: 12px;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-}
-
-.prism-size-sm .prism-searchbar [data-slot='command-input-wrapper'] svg {
-  width: 12px;
-  height: 12px;
-}
-
-.prism-size-sm .prism-searchbar-layout-name {
-  font-size: 12px;
-}
-
-.prism-size-lg .prism-searchbar {
-  height: 44px;
-  min-height: 44px;
-}
-
-.prism-size-lg .prism-searchbar [data-slot='command-input'] {
-  font-size: 16px;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.prism-size-lg .prism-searchbar [data-slot='command-input-wrapper'] svg {
-  width: 18px;
-  height: 18px;
-}
-
-.prism-size-lg .prism-searchbar-layout-name {
-  font-size: 16px;
+  font-size: 1em;
+  padding-top: 0.3em;
+  padding-bottom: 0.3em;
 }
 
 .prism-searchbar-display {
@@ -465,13 +396,14 @@
 }
 
 .prism-searchbar-layout-name {
-  @apply truncate text-sm font-medium;
+  @apply truncate font-medium;
+  font-size: 1em;
   color: var(--foreground);
-  margin-left: 6px;
+  margin-left: 0.4em;
 }
 
 .prism-searchbar-resize-handle {
-  height: 6px;
+  height: 0.4em;
   cursor: ns-resize;
   flex-shrink: 0;
   background: transparent;
@@ -497,19 +429,19 @@
 }
 
 /* =============================================================================
-   TAB RENAME INPUT
+   TAB RENAME INPUT (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
 .prism-tab-rename-input {
   position: absolute;
-  left: 12px;
-  right: 28px;
+  left: 0.85em;
+  right: 2em;
   top: 50%;
   transform: translateY(-50%);
   background-color: var(--input);
   border: 1px solid var(--ring);
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: 0.3em;
+  padding: 0.15em 0.6em;
   font-size: inherit;
   font-family: inherit;
   color: var(--foreground);
@@ -523,25 +455,20 @@
 }
 
 /* =============================================================================
-   NEW TAB BUTTON
+   NEW TAB BUTTON (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
 .prism-tabbar-add {
   @apply flex items-center justify-center;
-  min-width: 28px;
+  min-width: 2em;
   min-height: 100%;
   height: 100%;
   color: var(--muted-foreground);
 }
 
-.prism-size-sm .prism-tabbar-add svg {
-  width: 12px;
-  height: 12px;
-}
-
-.prism-size-lg .prism-tabbar-add svg {
-  width: 18px;
-  height: 18px;
+.prism-tabbar-add svg {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .prism-tabbar-add:hover:not(:disabled) {
@@ -552,108 +479,6 @@
 .prism-tabbar-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* =============================================================================
-   NEW LAYOUT COMPONENT
-   ============================================================================= */
-
-.prism-newlayout {
-  padding: 24px;
-  background: var(--background);
-}
-
-.prism-newlayout-section {
-  margin-bottom: 32px;
-}
-
-.prism-newlayout-section:last-child {
-  margin-bottom: 0;
-}
-
-.prism-newlayout-heading {
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-
-.prism-newlayout-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-}
-
-.prism-newlayout-card-title {
-  font-size: 16px;
-}
-
-.prism-newlayout-card-description {
-  font-size: 14px;
-}
-
-.prism-newlayout-card-meta {
-  font-size: 12px;
-}
-
-/* Small size */
-.prism-size-sm .prism-newlayout {
-  padding: 16px;
-}
-
-.prism-size-sm .prism-newlayout-section {
-  margin-bottom: 20px;
-}
-
-.prism-size-sm .prism-newlayout-heading {
-  font-size: 11px;
-  margin-bottom: 12px;
-}
-
-.prism-size-sm .prism-newlayout-grid {
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-}
-
-.prism-size-sm .prism-newlayout-card-title {
-  font-size: 13px;
-}
-
-.prism-size-sm .prism-newlayout-card-description {
-  font-size: 11px;
-}
-
-.prism-size-sm .prism-newlayout-card-meta {
-  font-size: 10px;
-}
-
-/* Large size */
-.prism-size-lg .prism-newlayout {
-  padding: 32px;
-}
-
-.prism-size-lg .prism-newlayout-section {
-  margin-bottom: 40px;
-}
-
-.prism-size-lg .prism-newlayout-heading {
-  font-size: 16px;
-  margin-bottom: 20px;
-}
-
-.prism-size-lg .prism-newlayout-grid {
-  gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-}
-
-.prism-size-lg .prism-newlayout-card-title {
-  font-size: 18px;
-}
-
-.prism-size-lg .prism-newlayout-card-description {
-  font-size: 16px;
-}
-
-.prism-size-lg .prism-newlayout-card-meta {
-  font-size: 13px;
 }
 
 /* =============================================================================

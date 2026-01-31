@@ -1,7 +1,60 @@
 import * as React from 'react';
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../utils/cn';
+
+const contextMenuItemVariants = cva(
+  'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+  {
+    variants: {
+      variant: {
+        default: '[&_svg:not([class*="text-"])]:text-muted-foreground',
+        destructive:
+          'text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 focus:text-destructive *:[svg]:!text-destructive',
+      },
+      inset: {
+        true: 'pl-8',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      inset: false,
+    },
+  }
+);
+
+const contextMenuSubTriggerVariants = cva(
+  'focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground [&_svg:not([class*="text-"])]:text-muted-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+  {
+    variants: {
+      inset: {
+        true: 'pl-8',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      inset: false,
+    },
+  }
+);
+
+const contextMenuCheckboxItemVariants = cva(
+  'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+const contextMenuRadioItemVariants = cva(
+  'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
 
 function ContextMenu({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -31,18 +84,20 @@ function ContextMenuRadioGroup({
   return <ContextMenuPrimitive.RadioGroup data-slot="context-menu-radio-group" {...props} />;
 }
 
+type ContextMenuSubTriggerProps = React.ComponentPropsWithoutRef<
+  typeof ContextMenuPrimitive.SubTrigger
+> &
+  VariantProps<typeof contextMenuSubTriggerVariants>;
+
 const ContextMenuSubTrigger = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.SubTrigger>,
-  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubTrigger> & { inset?: boolean }
+  ContextMenuSubTriggerProps
 >(({ className, inset, children, ...props }, ref) => (
   <ContextMenuPrimitive.SubTrigger
     ref={ref}
     data-slot="context-menu-sub-trigger"
     data-inset={inset}
-    className={cn(
-      'focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground [&_svg:not([class*="text-"])]:text-muted-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
-      className
-    )}
+    className={cn(contextMenuSubTriggerVariants({ inset }), className)}
     {...props}
   >
     {children}
@@ -91,38 +146,37 @@ const ContextMenuContent = React.forwardRef<
 ));
 ContextMenuContent.displayName = 'ContextMenuContent';
 
+type ContextMenuItemProps = React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Item> &
+  VariantProps<typeof contextMenuItemVariants>;
+
 const ContextMenuItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Item> & {
-    inset?: boolean;
-    variant?: 'default' | 'destructive';
-  }
->(({ className, inset, variant = 'default', ...props }, ref) => (
+  ContextMenuItemProps
+>(({ className, inset, variant, ...props }, ref) => (
   <ContextMenuPrimitive.Item
     ref={ref}
     data-slot="context-menu-item"
-    data-inset={inset}
     data-variant={variant}
-    className={cn(
-      'focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*="text-"])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
-      className
-    )}
+    data-inset={inset}
+    className={cn(contextMenuItemVariants({ variant, inset }), className)}
     {...props}
   />
 ));
 ContextMenuItem.displayName = 'ContextMenuItem';
 
+type ContextMenuCheckboxItemProps = React.ComponentPropsWithoutRef<
+  typeof ContextMenuPrimitive.CheckboxItem
+> &
+  VariantProps<typeof contextMenuCheckboxItemVariants>;
+
 const ContextMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.CheckboxItem>,
-  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.CheckboxItem>
+  ContextMenuCheckboxItemProps
 >(({ className, children, checked, ...props }, ref) => (
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     data-slot="context-menu-checkbox-item"
-    className={cn(
-      'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
-      className
-    )}
+    className={cn(contextMenuCheckboxItemVariants({}), className)}
     checked={checked}
     {...props}
   >
@@ -136,17 +190,19 @@ const ContextMenuCheckboxItem = React.forwardRef<
 ));
 ContextMenuCheckboxItem.displayName = 'ContextMenuCheckboxItem';
 
+type ContextMenuRadioItemProps = React.ComponentPropsWithoutRef<
+  typeof ContextMenuPrimitive.RadioItem
+> &
+  VariantProps<typeof contextMenuRadioItemVariants>;
+
 const ContextMenuRadioItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.RadioItem>,
-  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.RadioItem>
+  ContextMenuRadioItemProps
 >(({ className, children, ...props }, ref) => (
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     data-slot="context-menu-radio-item"
-    className={cn(
-      'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
-      className
-    )}
+    className={cn(contextMenuRadioItemVariants({}), className)}
     {...props}
   >
     <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
@@ -199,8 +255,11 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
+  contextMenuItemVariants,
   ContextMenuCheckboxItem,
+  contextMenuCheckboxItemVariants,
   ContextMenuRadioItem,
+  contextMenuRadioItemVariants,
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuShortcut,
@@ -209,5 +268,6 @@ export {
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
+  contextMenuSubTriggerVariants,
   ContextMenuRadioGroup,
 };

@@ -91,7 +91,7 @@ export function StatusBar({
             className="text-muted-foreground hover:text-destructive hover:bg-muted/70 rounded-sm p-1 transition-colors"
             onClick={handleReset}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>Reset workspace (clear saved state)</TooltipContent>
@@ -107,7 +107,7 @@ export function StatusBar({
             className="text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-sm p-1 transition-colors"
             onClick={() => onOpenHelp?.()}
           >
-            <Info className="h-3 w-3" />
+            <Info className="size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>Help</TooltipContent>
@@ -129,7 +129,7 @@ export function StatusBar({
             onClick={handleUndo}
             disabled={!canUndo}
           >
-            <Undo2 className="h-3 w-3" />
+            <Undo2 className="size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>
@@ -167,7 +167,7 @@ export function StatusBar({
         <PopoverTrigger asChild>
           <div className="hover:bg-muted/70 flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
             Tab: <span className="text-foreground">{activeTab?.name || '--'}</span>
-            {activeTab?.locked && <Lock className="text-muted-foreground h-3 w-3" />}
+            {activeTab?.locked && <Lock className="text-muted-foreground size-[1em]" />}
           </div>
         </PopoverTrigger>
         {activeTab && (

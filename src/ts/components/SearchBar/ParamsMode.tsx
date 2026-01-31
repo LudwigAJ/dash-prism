@@ -42,7 +42,7 @@ export const ParamsMode = ({
       <span className="prism-searchbar-layout-name">{selectedLayoutName}</span>
 
       {/* Chevron separator */}
-      <ChevronRight className="text-muted-foreground mx-1 h-3.5 w-3.5 flex-shrink-0" />
+      <ChevronRight className="text-muted-foreground mx-1 size-[1em] flex-shrink-0" />
 
       {/* Param label */}
       <span className="text-muted-foreground text-sm whitespace-nowrap">{currentParam.name}:</span>
@@ -71,7 +71,7 @@ export const ParamsMode = ({
         onClick={onCancel}
         title="Cancel"
       >
-        <X className="h-4 w-4" />
+        <X className="size-[1em]" />
       </button>
     </div>
   );

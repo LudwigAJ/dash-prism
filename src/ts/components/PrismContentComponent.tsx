@@ -80,7 +80,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive h-5 w-5" />
+              <AlertTriangle className="text-destructive size-[1.25em]" />
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
@@ -92,7 +92,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               The server may be overloaded or the layout callback encountered an issue.
             </p>
             <Button variant="default" onClick={() => setTimedOut(false)}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-[1em]" />
               Try Again
             </Button>
           </CardContent>
