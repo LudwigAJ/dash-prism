@@ -44,6 +44,9 @@ export function useSearchBarState(panelId: string) {
   const inputRef = useRef<HTMLInputElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
 
+  // Track which tabs we've seen to distinguish new tabs from existing ones
+  const seenTabsRef = useRef(new Set<string>());
+
   // ===== RESIZE LOGIC =====
   const { height: dropdownHeight, handleResizeStart } = useDropdownResize();
 
@@ -323,14 +326,22 @@ export function useSearchBarState(panelId: string) {
   useEffect(() => {
     if (globalState.searchBarsHidden) return;
 
-    if (activeTab?.layoutId && currentLayout) {
-      // Tab now has a layout.
-      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
-    } else if (!activeTab?.layoutId) {
-      // Tab has no layout. Auto-open dropdown since layout was removed.
-      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
+    const isNewTab = activeTabId && !seenTabsRef.current.has(activeTabId);
+
+    // Track this tab as seen
+    if (activeTabId) {
+      seenTabsRef.current.add(activeTabId);
     }
-  }, [activeTab?.layoutId, currentLayout, globalState.searchBarsHidden]);
+
+    if (activeTab?.layoutId && currentLayout) {
+      // Tab now has a layout. Close dropdown.
+      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
+    } else if (!activeTab?.layoutId && isNewTab) {
+      // Only auto-open dropdown for newly created tabs without layouts
+      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
+      focusInput();
+    }
+  }, [activeTab?.layoutId, currentLayout, globalState.searchBarsHidden, activeTabId]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {

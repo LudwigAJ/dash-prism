@@ -231,21 +231,18 @@ const TabItem = memo(function TabItem({
                     {/* Show spinner when loading, but X on hover to allow cancellation */}
                     {isLoading ? (
                       <>
-                        <Spinner
-                          size="sm"
-                          className="shrink-0 group-hover/close:hidden"
-                        />
-                        <X className="hidden size-[1em] group-hover/close:block" />
+                        <Spinner size="sm" className="shrink-0 group-hover/close:hidden" />
+                        <X className="hidden size-[1.25em] stroke-[2.5] group-hover/close:block" />
                       </>
                     ) : (
-                      <X className="size-[1em]" />
+                      <X className="size-[1.25em] stroke-[2.5]" />
                     )}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
               </Tooltip>
             ) : isLoading ? (
-              <LoaderCircle className="text-muted-foreground size-[1em] animate-spin" />
+              <LoaderCircle className="text-muted-foreground size-[1.25em] animate-spin stroke-[2.5]" />
             ) : null}
           </TabsTrigger>
         </div>

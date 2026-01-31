@@ -93,12 +93,12 @@ export function NewLayout({ tabId }: NewLayoutProps) {
       <CardHeader className="flex-1 pr-10 pb-2">
         <CardTitle className="text-[1.15em]">{meta.name}</CardTitle>
         {meta.description && (
-          <CardDescription className="text-[1em] line-clamp-3">{meta.description}</CardDescription>
+          <CardDescription className="line-clamp-3 text-[1em]">{meta.description}</CardDescription>
         )}
       </CardHeader>
       {meta.params && meta.params.length > 0 && (
         <CardContent className="pt-0">
-          <p className="text-[0.85em] text-muted-foreground">
+          <p className="text-muted-foreground text-[0.85em]">
             {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
@@ -114,7 +114,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
           <h2 className="text-muted-foreground mb-[1.1em] text-[1em] font-medium tracking-wide uppercase">
             Favorites
           </h2>
-          <div className="grid gap-[1.1em] grid-cols-[repeat(auto-fill,minmax(15em,1fr))]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
             {favoriteEntries.map(([id, meta]) => (
               <LayoutCard key={id} id={id} meta={meta} />
             ))}
@@ -128,7 +128,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
           <h2 className="text-muted-foreground mb-[1.1em] text-[1em] font-medium tracking-wide uppercase">
             Layouts
           </h2>
-          <div className="grid gap-[1.1em] grid-cols-[repeat(auto-fill,minmax(15em,1fr))]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
             {otherEntries.map(([id, meta]) => (
               <LayoutCard key={id} id={id} meta={meta} />
             ))}
