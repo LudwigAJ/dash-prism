@@ -4,6 +4,7 @@ import { usePrism } from '@hooks/usePrism';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { useDashSync } from '@hooks/useDashSync';
 import { useConfig } from '@context/ConfigContext';
+import { usePortal } from '@context/PortalContext';
 import { Panel, makeComponentPath } from '@components/Panel';
 import { StatusBar } from '@components/StatusBar';
 import { HelpModal } from '@components/modals/HelpModal';
@@ -11,6 +12,7 @@ import { InfoModal } from '@components/modals/InfoModal';
 import { SetIconModal } from '@components/modals/SetIconModal';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import type { Tab, DashComponent, DashComponentApi } from '@types';
+import { useAppDispatch, useAppSelector, selectTabs, selectPanel, setTabIcon } from '@store';
 
 // =============================================================================
 // DashContentRenderer - Memoized component that renders Dash layout content
@@ -99,14 +101,15 @@ type WorkspaceViewProps = {
 };
 
 export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
-  // Hooks that use Redux and setProps
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
+  const { getPortalNode } = usePortal();
+
+  // Hooks that use Redux
   useKeyboardShortcuts();
   const { lastSyncTime } = useDashSync();
   const {
-    state,
-    dispatch,
-    setProps,
-    getPortalNode,
     infoModalTab,
     helpModalOpen,
     setIconModalTab,
@@ -123,7 +126,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
       {/* PORTAL HOST: Stable mount point for all tab content with layouts.
           Content rendered here stays mounted even when tabs move between panels.
           Uses mountKey in key to force remount when user triggers refresh. */}
-      {state.tabs
+      {tabs
         .filter((tab) => Boolean(tab.layoutId))
         .map((tab) => {
           const node = getPortalNode(tab.id);
@@ -142,7 +145,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
       )}
 
       <div className="prism-view-panels">
-        <Panel panel={state.panel} />
+        <Panel panel={panel} />
       </div>
 
       {statusBarPosition === 'bottom' && (
@@ -156,7 +159,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         tab={setIconModalTab}
         onOpenChange={closeSetIconModal}
         onSelectIcon={(tabId, icon) => {
-          dispatch({ type: 'SET_TAB_ICON', payload: { tabId, icon } });
+          dispatch(setTabIcon({ tabId, icon }));
         }}
       />
 

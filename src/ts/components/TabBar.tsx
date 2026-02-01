@@ -29,11 +29,29 @@ import {
 import { TAB_STYLE_LABELS, tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
 import type { Tab, Theme } from '@types';
-import type { Action } from '@context/prismReducer';
-import { MAX_TAB_NAME_LENGTH } from '@context/prismReducer';
+import type { AppDispatch } from '@store';
+import { MAX_TAB_NAME_LENGTH } from '@store/workspaceSlice';
 import { cn } from '@utils/cn';
 import { findTabById } from '@utils/tabs';
 import { makeComponentPath } from './Panel';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectRenamingTabId,
+  addTab,
+  removeTab,
+  renameTab,
+  duplicateTab,
+  lockTab,
+  unlockTab,
+  pinPanel,
+  unpinPanel,
+  setTabIcon,
+  setTabStyle,
+  refreshTab,
+  clearRenameTab,
+} from '@store';
 
 // =============================================================================
 // TabItem - Isolated component for each tab to minimize re-renders
@@ -59,7 +77,7 @@ type TabItemProps = {
   onUnpinPanel: () => void;
   onOpenInfo?: (tab: Tab) => void;
   onShareTab: (tab: Tab) => void;
-  dispatch: React.Dispatch<Action>;
+  dispatch: AppDispatch;
 };
 
 /**
@@ -283,7 +301,7 @@ const TabItem = memo(function TabItem({
         {tab.layoutId && (
           <ContextMenuItem
             data-testid="prism-context-menu-refresh"
-            onSelect={() => dispatch({ type: 'REFRESH_TAB', payload: { tabId: tab.id } })}
+            onSelect={() => dispatch(refreshTab({ tabId: tab.id }))}
           >
             Refresh
             <ContextMenuShortcut>⌃⇧R</ContextMenuShortcut>
@@ -325,7 +343,7 @@ const TabItem = memo(function TabItem({
         {tab.layoutId && !isLocked && !isPinned && (
           <ContextMenuItem
             data-testid="prism-context-menu-lock"
-            onSelect={() => dispatch({ type: 'LOCK_TAB', payload: { tabId: tab.id } })}
+            onSelect={() => dispatch(lockTab({ tabId: tab.id }))}
           >
             Lock Tab
             <ContextMenuShortcut>⌃O</ContextMenuShortcut>
@@ -334,7 +352,7 @@ const TabItem = memo(function TabItem({
         {isLocked && !isPinned && (
           <ContextMenuItem
             data-testid="prism-context-menu-unlock"
-            onSelect={() => dispatch({ type: 'UNLOCK_TAB', payload: { tabId: tab.id } })}
+            onSelect={() => dispatch(unlockTab({ tabId: tab.id }))}
           >
             Unlock Tab
             <ContextMenuShortcut>⌃O</ContextMenuShortcut>
@@ -390,10 +408,13 @@ export const TabBar = memo(function TabBar({
   isPinned = false,
   onOpenInfo,
 }: TabBarProps) {
-  const { state, openInfoModal, openSetIconModal, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const allTabs = useAppSelector(selectTabs);
+  const renamingTabId = useAppSelector(selectRenamingTabId);
+  const { openInfoModal, openSetIconModal } = usePrism();
   const { maxTabs, theme } = useConfig();
   const { shareTab } = useShareLinks();
-  const totalTabCount = state.tabs.length;
+  const totalTabCount = allTabs.length;
   const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 
   // ================================================================================
@@ -432,7 +453,7 @@ export const TabBar = memo(function TabBar({
       if (isPinned) return;
       const tab = findTabById(tabs, tabId);
       if (tab && !tab.locked) {
-        dispatch({ type: 'REMOVE_TAB', payload: { tabId } });
+        dispatch(removeTab({ tabId }));
       }
     },
     [tabs, dispatch, isPinned]
@@ -450,7 +471,7 @@ export const TabBar = memo(function TabBar({
 
   const commitRename = useCallback(() => {
     if (editingTabId && editingName.trim()) {
-      dispatch({ type: 'RENAME_TAB', payload: { tabId: editingTabId, name: editingName.trim() } });
+      dispatch(renameTab({ tabId: editingTabId, name: editingName.trim() }));
     }
     setEditingTabId(null);
     setEditingName('');
@@ -459,61 +480,60 @@ export const TabBar = memo(function TabBar({
   const cancelRename = useCallback(() => {
     setEditingTabId(null);
     setEditingName('');
-    dispatch({ type: 'CLEAR_RENAME_TAB' });
+    dispatch(clearRenameTab());
   }, [dispatch]);
 
-  const addTab = useCallback(() => {
+  const handleAddTab = useCallback(() => {
     if (isMaxTabsReached) return;
-    dispatch({ type: 'ADD_TAB', payload: { panelId } });
+    dispatch(addTab({ panelId }));
   }, [isMaxTabsReached, panelId, dispatch]);
 
-  // Listen for keyboard-triggered rename via state.renamingTabId
+  // Listen for keyboard-triggered rename via renamingTabId
   useEffect(() => {
-    const targetTabId = state.renamingTabId;
-    if (!targetTabId) return;
+    if (!renamingTabId) return;
 
     // Only handle if the tab belongs to this panel
-    const tab = tabs.find((t) => t.id === targetTabId);
+    const tab = tabs.find((t) => t.id === renamingTabId);
     if (tab && !tab.locked && !isPinned) {
       startRename(tab);
     }
     // Clear the rename trigger after handling
-    dispatch({ type: 'CLEAR_RENAME_TAB' });
-  }, [state.renamingTabId, tabs, isPinned, startRename, dispatch]);
+    dispatch(clearRenameTab());
+  }, [renamingTabId, tabs, isPinned, startRename, dispatch]);
 
-  const duplicateTab = useCallback(
+  const handleDuplicateTab = useCallback(
     (tab: Tab) => {
       if (isMaxTabsReached) return;
-      dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
+      dispatch(duplicateTab({ tabId: tab.id }));
     },
     [dispatch, isMaxTabsReached]
   );
 
-  const setTabIcon = useCallback(
+  const handleSetTabIcon = useCallback(
     (tab: Tab, icon: string | undefined) => {
       // If icon is undefined, open the picker modal; otherwise set directly
       if (icon === undefined) {
         openSetIconModal(tab);
       } else {
-        dispatch({ type: 'SET_TAB_ICON', payload: { tabId: tab.id, icon } });
+        dispatch(setTabIcon({ tabId: tab.id, icon }));
       }
     },
     [dispatch, openSetIconModal]
   );
 
-  const setTabStyle = useCallback(
+  const handleSetTabStyle = useCallback(
     (tab: Tab, style: string) => {
-      dispatch({ type: 'SET_TAB_STYLE', payload: { tabId: tab.id, style } });
+      dispatch(setTabStyle({ tabId: tab.id, style }));
     },
     [dispatch]
   );
 
-  const pinPanel = useCallback(() => {
-    dispatch({ type: 'PIN_PANEL', payload: { panelId } });
+  const handlePinPanel = useCallback(() => {
+    dispatch(pinPanel({ panelId }));
   }, [panelId, dispatch]);
 
-  const unpinPanel = useCallback(() => {
-    dispatch({ type: 'UNPIN_PANEL', payload: { panelId } });
+  const handleUnpinPanel = useCallback(() => {
+    dispatch(unpinPanel({ panelId }));
   }, [panelId, dispatch]);
 
   // ================================================================================
@@ -554,11 +574,11 @@ export const TabBar = memo(function TabBar({
                 onCancelRename={cancelRename}
                 onEditingNameChange={setEditingName}
                 onCloseTab={closeTab}
-                onDuplicateTab={duplicateTab}
-                onSetTabIcon={setTabIcon}
-                onSetTabStyle={setTabStyle}
-                onPinPanel={pinPanel}
-                onUnpinPanel={unpinPanel}
+                onDuplicateTab={handleDuplicateTab}
+                onSetTabIcon={handleSetTabIcon}
+                onSetTabStyle={handleSetTabStyle}
+                onPinPanel={handlePinPanel}
+                onUnpinPanel={handleUnpinPanel}
                 onOpenInfo={openInfoModal}
                 onShareTab={shareTab}
                 dispatch={dispatch}
@@ -574,7 +594,7 @@ export const TabBar = memo(function TabBar({
               <button
                 data-testid="prism-tabbar-add-button"
                 className="prism-tabbar-add hover:bg-muted flex h-full shrink-0 items-center justify-center transition-colors"
-                onClick={addTab}
+                onClick={handleAddTab}
                 disabled={isMaxTabsReached}
               >
                 <Plus />
@@ -586,7 +606,7 @@ export const TabBar = memo(function TabBar({
         {!isPinned && (
           <div
             className="h-full min-w-8 flex-1 cursor-pointer"
-            onDoubleClick={addTab}
+            onDoubleClick={handleAddTab}
             title="Double-click to add new tab"
           />
         )}

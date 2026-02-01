@@ -14,6 +14,18 @@ import { isLeafPanel, getLeafPanelIds } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
 import { NewLayout } from '@components/layouts';
 import { ErrorBoundary } from '@components/ErrorBoundary';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectPanelTabs,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectTab,
+  setActivePanel,
+  resizePanel,
+} from '@store';
+import { usePortal } from '@context/PortalContext';
 
 type PanelProps = {
   panel: PanelType;
@@ -33,30 +45,34 @@ type LeafPanelProps = {
 };
 
 const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
-  const { state, dispatch, getPortalNode } = usePrism();
+  const dispatch = useAppDispatch();
+  const { getPortalNode } = usePortal();
+  const allTabs = useAppSelector(selectTabs);
+  const panelTabsMap = useAppSelector(selectPanelTabs);
+  const activePanelId = useAppSelector(selectActivePanelId);
 
-  const panelTabIds = state.panelTabs[panel.id] || [];
+  const panelTabIds = panelTabsMap[panel.id] || [];
   const tabs = panelTabIds
-    .map((tabId) => findTabById(state.tabs, tabId))
+    .map((tabId) => findTabById(allTabs, tabId))
     .filter((tab): tab is Tab => tab !== undefined);
 
   const activeTab = useActiveTab(panel.id);
-  const isActive = state.activePanelId === panel.id;
+  const isActive = activePanelId === panel.id;
   const activeTabId = activeTab?.id ?? null;
   const isPinned = panel.pinned ?? false;
 
   const handleTabChange = useCallback(
     (tabId: string) => {
-      dispatch({ type: 'SELECT_TAB', payload: { tabId, panelId: panel.id } });
+      dispatch(selectTab({ tabId, panelId: panel.id }));
     },
     [dispatch, panel.id]
   );
 
   const handlePanelClick = useCallback(() => {
-    if (state.activePanelId !== panel.id) {
-      dispatch({ type: 'SET_ACTIVE_PANEL', payload: { panelId: panel.id } });
+    if (activePanelId !== panel.id) {
+      dispatch(setActivePanel({ panelId: panel.id }));
     }
-  }, [dispatch, panel.id, state.activePanelId]);
+  }, [dispatch, panel.id, activePanelId]);
 
   return (
     <div
@@ -117,17 +133,14 @@ LeafPanel.displayName = 'LeafPanel';
 // =============================================================================
 
 export const Panel = memo(function Panel({ panel }: PanelProps) {
-  const { dispatch } = usePrism();
+  const dispatch = useAppDispatch();
   const isLeaf = isLeafPanel(panel);
 
   const handleResizeEnd = useCallback(
     (sizes: (string | number)[]) => {
       panel.children.forEach((child, index) => {
         if (sizes[index] !== undefined) {
-          dispatch({
-            type: 'RESIZE_PANEL',
-            payload: { panelId: child.id, size: sizes[index] },
-          });
+          dispatch(resizePanel({ panelId: child.id, size: sizes[index] }));
         }
       });
     },

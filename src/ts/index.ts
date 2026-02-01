@@ -17,9 +17,94 @@ export { ErrorBoundary, type ErrorBoundaryLevel } from './components/ErrorBounda
 export { ErrorBoundary as ErrorLayout } from './components/ErrorBoundary';
 
 // Context
-export { PrismProvider, PrismContext } from './context/PrismContext';
 export { ConfigProvider, useConfig } from './context/ConfigContext';
-export { prismReducer, type PrismState, type Action } from './context/prismReducer';
+export { PortalProvider, usePortal } from './context/PortalContext';
+
+// Redux Store
+export {
+  // Store factory
+  createPrismStore,
+  // Typed hooks
+  useAppDispatch,
+  useAppSelector,
+  // Undo/redo
+  undo,
+  redo,
+  clearHistory,
+  jump,
+  // Selectors
+  selectTabs,
+  selectPanel,
+  selectPanelTabs,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectFavoriteLayouts,
+  selectSearchBarsHidden,
+  selectCanUndo,
+  selectCanRedo,
+  selectTabCount,
+  selectPanelCount,
+  selectWorkspaceSnapshot,
+  // Factory selectors
+  makeSelectPanelTabs,
+  makeSelectActiveTab,
+  makeSelectSearchBarMode,
+  makeSelectCanCloseTab,
+  // UI selectors
+  selectRenamingTabId,
+  selectInfoModalTabId,
+  selectHelpModalOpen,
+  selectSetIconModalTabId,
+  // Workspace actions
+  addTab,
+  removeTab,
+  selectTab,
+  renameTab,
+  lockTab,
+  unlockTab,
+  toggleTabLock,
+  updateTabLayout,
+  moveTab,
+  reorderTab,
+  duplicateTab,
+  setTabIcon,
+  setTabStyle,
+  refreshTab,
+  setActivePanel,
+  resizePanel,
+  pinPanel,
+  unpinPanel,
+  splitPanelAction,
+  collapsePanelAction,
+  toggleSearchBars,
+  toggleFavoriteLayout,
+  resetWorkspace,
+  syncWorkspace,
+  // UI actions
+  setSearchBarMode,
+  startRenameTab,
+  clearRenameTab,
+  openInfoModal,
+  closeInfoModal,
+  openHelpModal,
+  closeHelpModal,
+  openSetIconModal,
+  closeSetIconModal,
+  // Initial states
+  initialWorkspaceState,
+  initialUiState,
+} from './store';
+
+// Redux store types
+export type {
+  RootState,
+  AppDispatch,
+  WorkspaceState,
+  UiState,
+  SearchBarMode,
+  StoreConfig,
+  ThunkExtra,
+} from './store';
 
 // Hooks
 export { usePrism, useActiveTab, usePanelTabs } from './hooks/usePrism';

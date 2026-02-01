@@ -1,18 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { usePrism } from '@hooks/usePrism';
-import type { Workspace } from '@types';
-
-/** Debounce delay for subsequent syncs (ms) */
-const DEBOUNCE_MS = 500;
+import { useEffect, useRef, useState } from 'react';
+import { useAppSelector, selectWorkspaceSnapshot } from '@store';
 
 /**
- * Syncs Prism state to Dash via the `readWorkspace` prop.
+ * Tracks workspace state changes for StatusBar display.
  *
- * Behavior:
- * - First sync: Immediate (no delay) to ensure initial state is sent
- * - Subsequent syncs: 500ms debounce to prevent rapid updates during user interactions
- * - Deduplication: Only syncs when serialized state actually changes
- * - beforeunload/pagehide: Flushes pending sync to prevent data loss on browser close
+ * Note: Actual sync to Dash is now handled by dashSyncMiddleware.
+ * This hook only tracks lastSyncTime for UI purposes.
  *
  * @returns Object containing `lastSyncTime` timestamp for StatusBar display
  *
@@ -25,89 +18,19 @@ const DEBOUNCE_MS = 500;
  * ```
  */
 export function useDashSync(): { lastSyncTime: number } {
-  const { state, setProps } = usePrism();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const lastSyncRef = useRef('');
-  const isFirstSyncRef = useRef(true);
+  const workspace = useAppSelector(selectWorkspaceSnapshot);
+  const lastSnapshotRef = useRef('');
   const [lastSyncTime, setLastSyncTime] = useState(Date.now);
-  const pendingWorkspaceRef = useRef<Partial<Workspace> | null>(null);
 
-  // Memoized sync function for reuse in effect and beforeunload
-  const doSync = useCallback(
-    (workspace: Partial<Workspace>) => {
-      if (!setProps) return;
-      const serialized = JSON.stringify(workspace);
-      if (serialized === lastSyncRef.current) return;
-      lastSyncRef.current = serialized;
-      setLastSyncTime(Date.now());
-      setProps({ readWorkspace: workspace });
-      pendingWorkspaceRef.current = null;
-    },
-    [setProps]
-  );
-
+  // Update lastSyncTime when workspace changes
+  // The actual sync is handled by dashSyncMiddleware
   useEffect(() => {
-    if (!setProps) return;
-
-    const workspace: Partial<Workspace> = {
-      tabs: state.tabs,
-      panel: state.panel,
-      panelTabs: state.panelTabs,
-      activeTabIds: state.activeTabIds,
-      activePanelId: state.activePanelId,
-      favoriteLayouts: state.favoriteLayouts,
-      searchBarsHidden: state.searchBarsHidden,
-    };
-
     const serialized = JSON.stringify(workspace);
-    if (serialized === lastSyncRef.current) return;
-
-    // Clear any pending debounced sync
-    clearTimeout(timeoutRef.current);
-
-    if (isFirstSyncRef.current) {
-      // First sync is immediate (no delay)
-      isFirstSyncRef.current = false;
-      doSync(workspace);
-    } else {
-      // Store pending workspace for beforeunload flush
-      pendingWorkspaceRef.current = workspace;
-      // Subsequent syncs are debounced
-      timeoutRef.current = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
+    if (serialized !== lastSnapshotRef.current) {
+      lastSnapshotRef.current = serialized;
+      setLastSyncTime(Date.now());
     }
-
-    return () => clearTimeout(timeoutRef.current);
-  }, [
-    state.tabs,
-    state.panel,
-    state.panelTabs,
-    state.activeTabIds,
-    state.activePanelId,
-    state.favoriteLayouts,
-    state.searchBarsHidden,
-    setProps,
-    doSync,
-  ]);
-
-  // Flush pending sync on page unload to prevent data loss
-  useEffect(() => {
-    const flushPendingSync = () => {
-      if (pendingWorkspaceRef.current) {
-        clearTimeout(timeoutRef.current);
-        doSync(pendingWorkspaceRef.current);
-      }
-    };
-
-    // beforeunload for desktop browsers
-    window.addEventListener('beforeunload', flushPendingSync);
-    // pagehide for mobile browsers (more reliable than beforeunload)
-    window.addEventListener('pagehide', flushPendingSync);
-
-    return () => {
-      window.removeEventListener('beforeunload', flushPendingSync);
-      window.removeEventListener('pagehide', flushPendingSync);
-    };
-  }, [doSync]);
+  }, [workspace]);
 
   return { lastSyncTime };
 }

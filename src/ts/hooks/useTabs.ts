@@ -1,8 +1,20 @@
 import { useCallback } from 'react';
 import { useDndContext } from '@dnd-kit/core';
-import { usePrism } from './usePrism';
 import { useConfig } from '../context/ConfigContext';
 import { findTabById, getTabsByPanelId } from '@utils/tabs';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  addTab,
+  removeTab,
+  duplicateTab,
+  moveTab,
+  renameTab,
+  toggleTabLock,
+  setTabIcon,
+  setTabStyle,
+} from '@store';
 
 /**
  * Hook for managing tabs within a specific panel.
@@ -28,50 +40,48 @@ import { findTabById, getTabsByPanelId } from '@utils/tabs';
  * ```
  */
 export function useTabs(panelId: string) {
-  const { state, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
   const { maxTabs } = useConfig();
 
-  const panelTabs = getTabsByPanelId(state.tabs, panelId);
-  const totalTabCount = state.tabs.length;
+  const panelTabs = getTabsByPanelId(tabs, panelId);
+  const totalTabCount = tabs.length;
 
   const createTab = useCallback(
     (name = 'New Tab', layoutId?: string) => {
-      // Dispatch intent - reducer handles validation, ID generation, and toast feedback
-      dispatch({ type: 'ADD_TAB', payload: { panelId, name, layoutId } });
+      dispatch(addTab({ panelId, name, layoutId }));
     },
     [panelId, dispatch]
   );
 
   const closeTab = useCallback(
     (tabId: string) => {
-      // Dispatch REMOVE_TAB - reducer validates (ignores locked tabs) and handles undo stack
-      dispatch({ type: 'REMOVE_TAB', payload: { tabId } });
+      dispatch(removeTab({ tabId }));
     },
     [dispatch]
   );
 
-  const duplicateTab = useCallback(
+  const duplicateTabFn = useCallback(
     (tabId: string) => {
-      // Dispatch intent - reducer handles validation, ID generation, copying, and toast feedback
-      dispatch({ type: 'DUPLICATE_TAB', payload: { tabId } });
+      dispatch(duplicateTab({ tabId }));
     },
     [dispatch]
   );
 
-  const moveTab = useCallback(
+  const moveTabFn = useCallback(
     (tabId: string, targetPanelId: string) => {
       if (targetPanelId === panelId) return false;
-      dispatch({ type: 'MOVE_TAB', payload: { tabId, targetPanelId } });
+      dispatch(moveTab({ tabId, targetPanelId }));
       return true;
     },
     [panelId, dispatch]
   );
 
-  const renameTab = useCallback(
+  const renameTabFn = useCallback(
     (tabId: string, name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return false;
-      dispatch({ type: 'RENAME_TAB', payload: { tabId, name: trimmed } });
+      dispatch(renameTab({ tabId, name: trimmed }));
       return true;
     },
     [dispatch]
@@ -79,21 +89,21 @@ export function useTabs(panelId: string) {
 
   const toggleLock = useCallback(
     (tabId: string) => {
-      dispatch({ type: 'TOGGLE_TAB_LOCK', payload: { tabId } });
+      dispatch(toggleTabLock({ tabId }));
     },
     [dispatch]
   );
 
   const setIcon = useCallback(
     (tabId: string, icon?: string) => {
-      dispatch({ type: 'SET_TAB_ICON', payload: { tabId, icon } });
+      dispatch(setTabIcon({ tabId, icon }));
     },
     [dispatch]
   );
 
   const setStyle = useCallback(
     (tabId: string, style?: string) => {
-      dispatch({ type: 'SET_TAB_STYLE', payload: { tabId, style } });
+      dispatch(setTabStyle({ tabId, style }));
     },
     [dispatch]
   );
@@ -103,9 +113,9 @@ export function useTabs(panelId: string) {
     canAddTab: maxTabs < 1 || totalTabCount < maxTabs,
     createTab,
     closeTab,
-    duplicateTab,
-    moveTab,
-    renameTab,
+    duplicateTab: duplicateTabFn,
+    moveTab: moveTabFn,
+    renameTab: renameTabFn,
     toggleLock,
     setIcon,
     setStyle,
@@ -129,10 +139,10 @@ export function useTabs(panelId: string) {
  */
 export function useTabDrag() {
   const { active, over } = useDndContext();
-  const { state } = usePrism();
+  const tabs = useAppSelector(selectTabs);
 
   const activeTabId = active?.id ? String(active.id) : null;
-  const activeTab = activeTabId ? findTabById(state.tabs, activeTabId) : null;
+  const activeTab = activeTabId ? findTabById(tabs, activeTabId) : null;
 
   const overTabId = over?.id ? String(over.id) : null;
   const isOverPanel = overTabId?.startsWith('panel-drop-') ?? false;
@@ -140,7 +150,7 @@ export function useTabDrag() {
     isOverPanel && overTabId
       ? overTabId.replace('panel-drop-', '')
       : overTabId
-        ? (findTabById(state.tabs, overTabId)?.panelId ?? null)
+        ? (findTabById(tabs, overTabId)?.panelId ?? null)
         : null;
 
   return {
