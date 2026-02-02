@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { ConfigProvider, useConfig } from '@context/ConfigContext';
@@ -160,16 +160,32 @@ function PrismInner({
 }) {
   const config = useConfig();
 
+  // Use a ref for setProps to avoid recreating the store when setProps reference changes.
+  // This is critical: when dashSyncMiddleware calls setProps(), Dash may re-render with
+  // a new setProps reference. Without this ref, the store would be recreated with fresh
+  // initial state, causing tabs to disappear.
+  const setPropsRef = useRef(config.setProps);
+  useEffect(() => {
+    setPropsRef.current = config.setProps;
+  }, [config.setProps]);
+
+  // Stable setProps wrapper that always calls the latest setProps
+  const stableSetProps = useMemo(
+    () => (props: Record<string, unknown>) => setPropsRef.current?.(props),
+    []
+  );
+
   // Create store with config values - memoized to prevent recreation
+  // Note: stableSetProps is stable (empty deps), so it won't cause store recreation
   const { store, persistor } = useMemo(
     () =>
       createPrismStore({
         componentId: config.componentId,
         persistenceType: config.persistenceType,
         maxTabs: config.maxTabs,
-        setProps: config.setProps,
+        setProps: stableSetProps,
       }),
-    [config.componentId, config.persistenceType, config.maxTabs, config.setProps]
+    [config.componentId, config.persistenceType, config.maxTabs, stableSetProps]
   );
 
   // Subscribe to toast events

@@ -153,3 +153,62 @@ def test_tab_selection(prism_app_with_layouts):
     # Verify we still have 2 tabs (no side effects)
     tabs = get_tabs(duo)
     assert len(tabs) == 2, "Should still have 2 tabs after switching"
+
+
+def test_tab_persists_after_creation(prism_app_with_layouts):
+    """
+    Test that a newly created tab persists after Redux sync cycles.
+
+    This is a regression test for an issue where tabs would appear briefly
+    and then disappear due to a race condition in the Redux/Dash sync:
+    1. Tab is created in Redux state
+    2. dashSyncMiddleware syncs state to Dash via setProps
+    3. If setProps caused store recreation, the tab would be lost
+
+    The fix ensures the store is stable and tabs persist.
+    """
+    import time
+
+    duo = prism_app_with_layouts
+
+    # Start with 1 initial tab
+    initial_tabs = get_tabs(duo)
+    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
+
+    # Click the add tab button (single click should work)
+    add_button = duo.find_element(ADD_TAB_BUTTON)
+    add_button.click()
+
+    # Wait for the new tab to appear
+    wait_for_tab_count(duo, 2)
+
+    # Critical: Wait for Redux sync cycle to complete
+    # The dashSyncMiddleware has a 500ms debounce, so we wait longer
+    # to ensure any potential state overwrites would have occurred
+    time.sleep(1.5)
+
+    # Verify the tab is STILL there after the sync cycle
+    tabs_after_sync = get_tabs(duo)
+    assert len(tabs_after_sync) == 2, (
+        f"Tab should persist after Redux sync cycle. "
+        f"Expected 2 tabs, found {len(tabs_after_sync)}. "
+        "This may indicate a state synchronization regression."
+    )
+
+    # Add another tab to verify continued functionality
+    add_button = duo.find_element(ADD_TAB_BUTTON)
+    add_button.click()
+    wait_for_tab_count(duo, 3)
+
+    # Wait again for sync
+    time.sleep(1.5)
+
+    # Verify both new tabs persist
+    final_tabs = get_tabs(duo)
+    assert len(final_tabs) == 3, (
+        f"Both new tabs should persist. Expected 3 tabs, found {len(final_tabs)}."
+    )
+
+    # Verify no browser errors occurred
+    errors = check_browser_errors(duo)
+    assert len(errors) == 0, f"Browser console should have no errors: {errors}"

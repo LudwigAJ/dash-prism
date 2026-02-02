@@ -1025,14 +1025,18 @@ describe('workspaceSlice', () => {
         // Remove panelTabs entry for a secondary panel ID
         const panel2Id = 'panel-2' as PanelId;
         state.panel.children = [
-          { id: 'test-panel-1' as PanelId, order: 0 as const, direction: 'horizontal', children: [], size: '50%' },
+          {
+            id: 'test-panel-1' as PanelId,
+            order: 0 as const,
+            direction: 'horizontal',
+            children: [],
+            size: '50%',
+          },
           { id: panel2Id, order: 1 as const, direction: 'horizontal', children: [], size: '50%' },
         ];
         const store = createTestStore(state);
 
-        store.dispatch(
-          moveTab({ tabId: 'test-tab-1' as TabId, targetPanelId: panel2Id })
-        );
+        store.dispatch(moveTab({ tabId: 'test-tab-1' as TabId, targetPanelId: panel2Id }));
 
         expect(getWorkspace(store).panelTabs[panel2Id]).toContain('test-tab-1');
       });
@@ -1285,9 +1289,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTwoPanelState());
 
       // Move a tab
-      store.dispatch(
-        moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId })
-      );
+      store.dispatch(moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId }));
 
       // Verify each tab's panelId matches its location in panelTabs
       const { tabs, panelTabs } = getWorkspace(store);

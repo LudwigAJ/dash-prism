@@ -47,13 +47,14 @@ export function createDashSyncMiddleware(
   return (store) => (next) => (action: UnknownAction) => {
     const result = next(action);
 
-    // Sync on workspace actions AND undo/redo actions
+    // Sync on workspace actions, undo/redo actions, AND after persistence rehydration
     const isWorkspaceAction =
       typeof action.type === 'string' &&
       (action.type.startsWith('workspace/') ||
         action.type === '@@redux-undo/UNDO' ||
         action.type === '@@redux-undo/REDO' ||
-        action.type === '@@redux-undo/JUMP');
+        action.type === '@@redux-undo/JUMP' ||
+        action.type === 'persist/REHYDRATE');
 
     if (isWorkspaceAction) {
       const state = store.getState();
