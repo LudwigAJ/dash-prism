@@ -10,8 +10,8 @@ import {
   updatePanelInTree,
   removePanelFromTree,
   isLeafPanel,
-  splitPanel,
-  collapsePanel,
+  splitPanel as splitPanelTree,
+  collapsePanel as collapsePanelTree,
 } from '@utils/panels';
 import { notifyUser } from '@utils/notifications';
 
@@ -264,6 +264,17 @@ const workspaceSlice = createSlice({
       tab.panelId = targetPanelId;
       state.activeTabIds[targetPanelId] = tabId;
       state.activePanelId = targetPanelId;
+
+      // Update source panel's active tab if the moved tab was active
+      if (state.activeTabIds[sourcePanelId] === tabId) {
+        const remaining = state.panelTabs[sourcePanelId] ?? [];
+        const lastTab = remaining[remaining.length - 1];
+        if (lastTab) {
+          state.activeTabIds[sourcePanelId] = lastTab;
+        } else {
+          delete state.activeTabIds[sourcePanelId];
+        }
+      }
     },
 
     reorderTab(
@@ -320,7 +331,12 @@ const workspaceSlice = createSlice({
       if (panel) panel.pinned = false;
     },
 
-    splitPanelAction(
+    /**
+     * Split a panel to create a new panel with the specified tab.
+     * Handles both same-panel splits (tab moves to new sibling) and
+     * cross-panel splits (tab from another panel creates new panel here).
+     */
+    splitPanel(
       state,
       action: PayloadAction<{
         panelId: PanelId;
@@ -331,7 +347,7 @@ const workspaceSlice = createSlice({
     ) {
       const { panelId, direction, tabId, position = 'after' } = action.payload;
 
-      // Check if we've reached the maximum number of leaf panels
+      // Step 1: Validate split is allowed
       const currentLeafCount = getLeafPanelIds(state.panel).length;
       if (currentLeafCount >= MAX_LEAF_PANELS) {
         notifyUser(
@@ -348,7 +364,6 @@ const workspaceSlice = createSlice({
         return;
       }
 
-      // Verify it's a leaf panel
       if (!isLeafPanel(panelToSplit)) {
         notifyUser('error', 'Cannot split a non-leaf panel');
         return;
@@ -364,8 +379,8 @@ const workspaceSlice = createSlice({
       // Block same-panel split if panel only has one tab
       if (isSamePanelSplit && sourcePanelTabs.length <= 1) return;
 
-      // Perform the split operation
-      const splitResult = splitPanel(state.panel, { panelId, direction, position });
+      // Step 2: Perform tree split operation
+      const splitResult = splitPanelTree(state.panel, { panelId, direction, position });
       if (!splitResult.success || !splitResult.newPanelId) {
         notifyUser('error', `Cannot split: ${splitResult.error}`);
         return;
@@ -373,25 +388,21 @@ const workspaceSlice = createSlice({
 
       const { newPanelId } = splitResult;
 
-      // Initialize new panel's state
+      // Step 3: Move tab to new panel
       state.panelTabs[newPanelId] = [];
 
-      // Move the tab to the new panel
-      // Remove from source panelTabs
       const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
       if (sourceIdx !== undefined && sourceIdx !== -1) {
         state.panelTabs[sourcePanelId].splice(sourceIdx, 1);
       }
 
-      // Add to new panel
       state.panelTabs[newPanelId].push(tabId);
       tabToMove.panelId = newPanelId;
 
-      // Update active states
+      // Step 4: Update active states
       state.activeTabIds[newPanelId] = tabId;
       state.activePanelId = newPanelId;
 
-      // Update active tab in original/source panel if needed
       if (state.activeTabIds[panelId] === tabId) {
         const remaining = state.panelTabs[panelId] ?? [];
         const lastTab = remaining[remaining.length - 1];
@@ -412,7 +423,7 @@ const workspaceSlice = createSlice({
         }
       }
 
-      // Collapse source panel if empty (for cross-panel splits)
+      // Step 5: Clean up source panel if empty (for cross-panel splits)
       if (!isSamePanelSplit) {
         const sourceEmpty = (state.panelTabs[sourcePanelId]?.length ?? 0) === 0;
         if (sourceEmpty) {
@@ -427,7 +438,7 @@ const workspaceSlice = createSlice({
       }
     },
 
-    collapsePanelAction(state, action: PayloadAction<{ panelId: PanelId }>) {
+    collapsePanel(state, action: PayloadAction<{ panelId: PanelId }>) {
       const { panelId } = action.payload;
 
       const leafPanels = getLeafPanelIds(state.panel).filter((id) => id !== panelId);
@@ -462,7 +473,7 @@ const workspaceSlice = createSlice({
       }
 
       // Collapse the panel in the tree
-      const collapseResult = collapsePanel(state.panel, panelId);
+      const collapseResult = collapsePanelTree(state.panel, panelId);
       if (!collapseResult.success) {
         notifyUser('error', `Failed to close panel: ${collapseResult.error}`);
         // Rollback: move tabs back
@@ -583,8 +594,8 @@ export const {
   resizePanel,
   pinPanel,
   unpinPanel,
-  splitPanelAction,
-  collapsePanelAction,
+  splitPanel,
+  collapsePanel,
   toggleSearchBars,
   toggleFavoriteLayout,
   resetWorkspace,

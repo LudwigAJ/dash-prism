@@ -26,7 +26,7 @@ import {
   selectTabs,
   selectPanel,
   selectPanelTabs,
-  splitPanelAction,
+  splitPanel,
   moveTab,
   reorderTab,
 } from '@store';
@@ -140,7 +140,7 @@ export function DndProvider({ children }: DndProviderProps) {
         const position = edge === 'left' || edge === 'top' ? 'before' : 'after';
 
         dispatch(
-          splitPanelAction({
+          splitPanel({
             panelId: targetPanelId,
             direction,
             tabId: activeId,
