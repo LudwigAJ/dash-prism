@@ -13,7 +13,7 @@ import {
   splitPanel as splitPanelTree,
   collapsePanel as collapsePanelTree,
 } from '@utils/panels';
-import { notifyUser } from '@utils/notifications';
+import { notifyUser } from '@utils/toastEmitter';
 import { canAddTab } from './selectors';
 
 // =============================================================================
@@ -193,6 +193,37 @@ const workspaceSlice = createSlice({
           state.activeTabIds[panelId] = lastTab;
         } else {
           delete state.activeTabIds[panelId];
+        }
+      }
+
+      // Handle empty panel: collapse or spawn new tab
+      const panelTabCount = state.panelTabs[panelId]?.length ?? 0;
+      if (panelTabCount === 0) {
+        const leafPanels = getLeafPanelIds(state.panel);
+        const otherPanels = leafPanels.filter((id) => id !== panelId);
+
+        if (otherPanels.length > 0) {
+          // Collapse the empty panel - there are other panels to use
+          const collapseResult = collapsePanelTree(state.panel, panelId);
+          if (collapseResult.success) {
+            delete state.activeTabIds[panelId];
+            delete state.panelTabs[panelId];
+            // Move focus to another panel
+            state.activePanelId = otherPanels[0];
+          }
+        } else {
+          // This is the last panel - spawn a new empty tab
+          const newTabId: TabId = generateShortId();
+          const newTab: Tab = {
+            id: newTabId,
+            name: 'New Tab',
+            panelId: panelId,
+            createdAt: Date.now(),
+            mountKey: generateShortId(),
+          };
+          state.tabs.push(newTab);
+          state.panelTabs[panelId] = [newTabId];
+          state.activeTabIds[panelId] = newTabId;
         }
       }
     },

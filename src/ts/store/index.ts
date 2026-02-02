@@ -19,8 +19,7 @@ import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'r
 
 import workspaceReducer, { initialWorkspaceState } from './workspaceSlice';
 import uiReducer, { initialUiState } from './uiSlice';
-import { createDashSyncMiddleware } from './middleware/dashSyncMiddleware';
-import { validationMiddleware } from './middleware/validationMiddleware';
+import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
 import { generateShortId } from '@utils/uuid';
 
