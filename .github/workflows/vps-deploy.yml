@@ -1,0 +1,123 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'public/**'
+      - 'caddy/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/vps-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies (dev + docs groups)
+        run: poetry install --with dev,docs --no-interaction
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build JavaScript backends
+        run: npm run build:backends
+
+      - name: Build Sphinx documentation
+        run: |
+          cd docs
+          poetry run make html
+      
+      - name: Validate docker-compose config
+        run: |
+          if [ -f docker-compose.yml ]; then
+            docker compose config -q
+          fi
+      
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+      - name: Add VPS to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Rsync deployment
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.gitignore' \
+            --exclude 'node_modules' \
+            --exclude '.env.local' \
+            --exclude '.DS_Store' \
+            --exclude 'caddy/data' \
+            --exclude 'caddy/config' \
+            --exclude 'docs/Makefile' \
+            --exclude 'docs/make.bat' \
+            --exclude 'docs/*.py' \
+            --exclude 'docs/*.rst' \
+            --exclude 'docs/_templates' \
+            --exclude 'docs/_static' \
+            --exclude 'poetry.lock' \
+            --exclude 'pyproject.toml' \
+            --exclude '*.py' \
+            --exclude '__pycache__' \
+            --exclude '.venv' \
+            --exclude 'package.json' \
+            --exclude 'package-lock.json' \
+            --exclude 'tsconfig.json' \
+            --exclude 'src' \
+            --exclude 'tests' \
+            ./ deploy@${{ secrets.VPS_HOST }}:~/site/
+      
+      - name: Restart Caddy service
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} << 'EOF'
+            cd ~/site
+            docker compose pull caddy
+            docker compose up -d --force-recreate caddy
+            docker compose ps
+          EOF
+      
+      - name: Health check
+        run: |
+          echo "Waiting 5 seconds for Caddy to start..."
+          sleep 5
+          
+          # Check if container is running
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} \
+            'docker compose ps --format json caddy' | grep -q '"State":"running"' && \
+            echo "✓ Caddy container is running" || \
+            (echo "✗ Caddy container failed to start" && exit 1)
+      
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
