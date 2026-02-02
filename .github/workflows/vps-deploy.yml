@@ -96,7 +96,7 @@ jobs:
             --exclude 'tsconfig.json' \
             --exclude 'src' \
             --exclude 'tests' \
-            ./ deploy@${{ secrets.VPS_HOST }}:~/site/
+            ./ deploy@${{ secrets.VPS_HOST }}:./site/
       
       - name: Restart Caddy service
         run: |
