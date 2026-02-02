@@ -153,6 +153,9 @@ export function createPrismStore(config: StoreConfig) {
   // Create thunk extra argument
   const thunkExtra: ThunkExtra = { maxTabs };
 
+  // Create dash sync middleware (returns middleware + cleanup function)
+  const dashSync = createDashSyncMiddleware(setProps);
+
   // Configure store
   const store = configureStore({
     reducer: rootReducer,
@@ -166,7 +169,7 @@ export function createPrismStore(config: StoreConfig) {
           extraArgument: thunkExtra,
         },
       })
-        .concat(createDashSyncMiddleware(setProps))
+        .concat(dashSync.middleware)
         .concat(validationMiddleware),
     devTools: process.env.NODE_ENV !== 'production',
   });
@@ -174,7 +177,15 @@ export function createPrismStore(config: StoreConfig) {
   // Create persistor
   const persistor = persistStore(store);
 
-  return { store, persistor };
+  /**
+   * Cleanup function to dispose of store resources.
+   * Call this when unmounting the Prism component to prevent memory leaks.
+   */
+  const cleanup = () => {
+    dashSync.cleanup();
+  };
+
+  return { store, persistor, cleanup };
 }
 
 // =============================================================================

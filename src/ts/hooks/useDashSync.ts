@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppSelector, selectWorkspaceSnapshot } from '@store';
+import type { Workspace } from '@types';
 
 /**
  * Tracks workspace state changes for StatusBar display.
  *
  * Note: Actual sync to Dash is now handled by dashSyncMiddleware.
  * This hook only tracks lastSyncTime for UI purposes.
+ *
+ * Uses reference equality instead of JSON serialization for change detection,
+ * since Redux returns new references when state changes.
  *
  * @returns Object containing `lastSyncTime` timestamp for StatusBar display
  *
@@ -19,15 +23,14 @@ import { useAppSelector, selectWorkspaceSnapshot } from '@store';
  */
 export function useDashSync(): { lastSyncTime: number } {
   const workspace = useAppSelector(selectWorkspaceSnapshot);
-  const lastSnapshotRef = useRef('');
+  const lastWorkspaceRef = useRef<Partial<Workspace> | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState(Date.now);
 
-  // Update lastSyncTime when workspace changes
+  // Update lastSyncTime when workspace reference changes
   // The actual sync is handled by dashSyncMiddleware
   useEffect(() => {
-    const serialized = JSON.stringify(workspace);
-    if (serialized !== lastSnapshotRef.current) {
-      lastSnapshotRef.current = serialized;
+    if (workspace !== lastWorkspaceRef.current) {
+      lastWorkspaceRef.current = workspace;
       setLastSyncTime(Date.now());
     }
   }, [workspace]);

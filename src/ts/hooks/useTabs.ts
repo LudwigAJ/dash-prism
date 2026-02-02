@@ -14,6 +14,7 @@ import {
   toggleTabLock,
   setTabIcon,
   setTabStyle,
+  canAddTab,
 } from '@store';
 
 /**
@@ -110,7 +111,7 @@ export function useTabs(panelId: string) {
 
   return {
     panelTabs,
-    canAddTab: maxTabs < 1 || totalTabCount < maxTabs,
+    canAddTab: canAddTab(totalTabCount, maxTabs),
     createTab,
     closeTab,
     duplicateTab: duplicateTabFn,

@@ -12,6 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import uiReducer, {
   initialUiState,
   setSearchBarMode,
+  clearSearchBarMode,
   startRenameTab,
   clearRenameTab,
   openInfoModal,
@@ -96,6 +97,42 @@ describe('uiSlice', () => {
         store.dispatch(setSearchBarMode({ panelId: 'panel-1' as PanelId, mode }));
         expect(getUiState(store).searchBarModes['panel-1']).toBe(mode);
       }
+    });
+  });
+
+  describe('clearSearchBarMode', () => {
+    it('removes mode for a panel', () => {
+      const store = createTestStore({
+        searchBarModes: { 'panel-1': 'search' } as Record<PanelId, 'search'>,
+      });
+
+      store.dispatch(clearSearchBarMode({ panelId: 'panel-1' as PanelId }));
+
+      expect(getUiState(store).searchBarModes['panel-1']).toBeUndefined();
+    });
+
+    it('preserves other panels when clearing one', () => {
+      const store = createTestStore({
+        searchBarModes: {
+          'panel-1': 'search',
+          'panel-2': 'display',
+        } as Record<PanelId, 'search' | 'display'>,
+      });
+
+      store.dispatch(clearSearchBarMode({ panelId: 'panel-1' as PanelId }));
+
+      expect(getUiState(store).searchBarModes['panel-1']).toBeUndefined();
+      expect(getUiState(store).searchBarModes['panel-2']).toBe('display');
+    });
+
+    it('is a no-op for non-existent panel', () => {
+      const store = createTestStore({
+        searchBarModes: { 'panel-1': 'search' } as Record<PanelId, 'search'>,
+      });
+
+      store.dispatch(clearSearchBarMode({ panelId: 'panel-nonexistent' as PanelId }));
+
+      expect(getUiState(store).searchBarModes['panel-1']).toBe('search');
     });
   });
 

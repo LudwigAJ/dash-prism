@@ -767,6 +767,95 @@ describe('workspaceSlice', () => {
 
       expect(getWorkspace(store).tabs).toEqual(originalTabs);
     });
+
+    it('removes tabs that reference non-existent panels', () => {
+      const state = createTestState();
+      const store = createTestStore(state);
+      const panelId = state.panel.id;
+
+      // Sync tabs with one referencing a non-existent panel
+      store.dispatch(
+        syncWorkspace({
+          tabs: [
+            { id: 'tab-1' as TabId, name: 'Valid', panelId, createdAt: Date.now(), mountKey: 'm1' },
+            {
+              id: 'tab-2' as TabId,
+              name: 'Orphaned',
+              panelId: 'non-existent-panel' as PanelId,
+              createdAt: Date.now(),
+              mountKey: 'm2',
+            },
+          ],
+        })
+      );
+
+      // Should only have the valid tab
+      expect(getWorkspace(store).tabs.length).toBe(1);
+      expect(getWorkspace(store).tabs[0].id).toBe('tab-1');
+    });
+
+    it('rebuilds panelTabs to match tabs array', () => {
+      const state = createTestState();
+      const store = createTestStore(state);
+      const panelId = state.panel.id;
+
+      // Sync with mismatched panelTabs
+      store.dispatch(
+        syncWorkspace({
+          tabs: [
+            { id: 'new-tab' as TabId, name: 'New', panelId, createdAt: Date.now(), mountKey: 'm1' },
+          ],
+          panelTabs: {
+            [panelId]: ['wrong-tab-id' as TabId], // Doesn't match tabs
+          },
+        })
+      );
+
+      // panelTabs should be rebuilt from tabs
+      expect(getWorkspace(store).panelTabs[panelId]).toEqual(['new-tab']);
+    });
+
+    it('fixes activeTabIds referencing non-existent tabs', () => {
+      const state = createTestState();
+      const store = createTestStore(state);
+      const panelId = state.panel.id;
+
+      // Sync with activeTabId pointing to non-existent tab
+      store.dispatch(
+        syncWorkspace({
+          tabs: [
+            {
+              id: 'real-tab' as TabId,
+              name: 'Real',
+              panelId,
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+          activeTabIds: {
+            [panelId]: 'deleted-tab' as TabId,
+          },
+        })
+      );
+
+      // Should fall back to first tab in panel
+      expect(getWorkspace(store).activeTabIds[panelId]).toBe('real-tab');
+    });
+
+    it('fixes activePanelId referencing non-existent panel', () => {
+      const state = createTestState();
+      const store = createTestStore(state);
+      const panelId = state.panel.id;
+
+      store.dispatch(
+        syncWorkspace({
+          activePanelId: 'non-existent' as PanelId,
+        })
+      );
+
+      // Should fall back to first leaf panel
+      expect(getWorkspace(store).activePanelId).toBe(panelId);
+    });
   });
 
   describe('setActivePanel', () => {
@@ -1062,25 +1151,51 @@ describe('workspaceSlice', () => {
     });
 
     describe('selectTab edge cases', () => {
-      it('sets activeTabId even for nonexistent tab (no validation)', () => {
+      it('is a no-op when tab does not exist', () => {
         const store = createTestStore(createTestState());
+        const originalActiveTabId = getWorkspace(store).activeTabIds['test-panel-1'];
 
         store.dispatch(
           selectTab({ tabId: 'nonexistent' as TabId, panelId: 'test-panel-1' as PanelId })
         );
 
-        // The action sets the value without validating tab existence
-        expect(getWorkspace(store).activeTabIds['test-panel-1']).toBe('nonexistent');
+        // Should not change activeTabId when tab doesn't exist
+        expect(getWorkspace(store).activeTabIds['test-panel-1']).toBe(originalActiveTabId);
+      });
+
+      it('is a no-op when tab belongs to different panel', () => {
+        const state = createTwoPanelState();
+        const store = createTestStore(state);
+
+        // Try to select tab-1 (belongs to panel-1) in panel-2
+        store.dispatch(selectTab({ tabId: 'tab-1' as TabId, panelId: 'panel-2' as PanelId }));
+
+        // Should not change panel-2's activeTabId
+        expect(getWorkspace(store).activeTabIds['panel-2']).toBe('tab-3');
       });
     });
 
     describe('setActivePanel edge cases', () => {
-      it('sets activePanelId even for nonexistent panel (no validation)', () => {
+      it('is a no-op when panel does not exist', () => {
         const store = createTestStore(createTestState());
+        const originalPanelId = getWorkspace(store).activePanelId;
 
         store.dispatch(setActivePanel({ panelId: 'nonexistent' as PanelId }));
 
-        expect(getWorkspace(store).activePanelId).toBe('nonexistent');
+        // Should not change activePanelId when panel doesn't exist
+        expect(getWorkspace(store).activePanelId).toBe(originalPanelId);
+      });
+
+      it('is a no-op for container panels (non-leaf)', () => {
+        const state = createTwoPanelState();
+        const store = createTestStore(state);
+        const originalPanelId = getWorkspace(store).activePanelId;
+
+        // Try to set active panel to the container panel
+        store.dispatch(setActivePanel({ panelId: 'container-1' as PanelId }));
+
+        // Should not change since container-1 is not a leaf
+        expect(getWorkspace(store).activePanelId).toBe(originalPanelId);
       });
     });
 

@@ -1,6 +1,8 @@
 // src/ts/context/PortalContext.tsx
-import React, { createContext, useContext, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useRef, useMemo, useEffect } from 'react';
 import { createHtmlPortalNode, HtmlPortalNode } from 'react-reverse-portal';
+import { useAppSelector } from '@store/hooks';
+import { selectTabs } from '@store/selectors';
 import type { TabId } from '@types';
 
 // =============================================================================
@@ -55,6 +57,7 @@ type PortalProviderProps = {
  */
 export function PortalProvider({ children }: PortalProviderProps) {
   const portalsRef = useRef<PortalMap>(new Map());
+  const tabs = useAppSelector(selectTabs);
 
   const getPortalNode = useCallback((tabId: TabId): HtmlPortalNode => {
     let node = portalsRef.current.get(tabId);
@@ -77,6 +80,25 @@ export function PortalProvider({ children }: PortalProviderProps) {
   const hasPortal = useCallback((tabId: TabId): boolean => {
     return portalsRef.current.has(tabId);
   }, []);
+
+  // Clean up portals for tabs that no longer exist
+  useEffect(() => {
+    const currentTabIds = new Set(tabs.map((t) => t.id));
+    const orphanedPortalIds: TabId[] = [];
+
+    for (const tabId of portalsRef.current.keys()) {
+      if (!currentTabIds.has(tabId)) {
+        orphanedPortalIds.push(tabId);
+      }
+    }
+
+    for (const tabId of orphanedPortalIds) {
+      portalsRef.current.delete(tabId);
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`[PortalProvider] Cleaned up orphaned portal for tab: ${tabId}`);
+      }
+    }
+  }, [tabs]);
 
   const value = useMemo(
     () => ({ getPortalNode, removePortalNode, hasPortal }),

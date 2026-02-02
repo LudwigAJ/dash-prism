@@ -177,7 +177,7 @@ function PrismInner({
 
   // Create store with config values - memoized to prevent recreation
   // Note: stableSetProps is stable (empty deps), so it won't cause store recreation
-  const { store, persistor } = useMemo(
+  const { store, persistor, cleanup } = useMemo(
     () =>
       createPrismStore({
         componentId: config.componentId,
@@ -187,6 +187,13 @@ function PrismInner({
       }),
     [config.componentId, config.persistenceType, config.maxTabs, stableSetProps]
   );
+
+  // Clean up middleware resources on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   // Subscribe to toast events
   useEffect(() => {

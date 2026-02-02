@@ -34,9 +34,9 @@ function makeSpec(
       data: {
         tabId: id,
         layoutId,
-        // Use null instead of {} for stable references
-        layoutParams: layoutParams ?? null,
-        layoutOption: layoutOption ?? null,
+        // Keep undefined for absent values (consistent with Tab type)
+        layoutParams,
+        layoutOption,
         timeout,
       },
     },

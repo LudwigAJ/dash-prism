@@ -19,6 +19,10 @@ const uiSlice = createSlice({
       state.searchBarModes[action.payload.panelId] = action.payload.mode;
     },
 
+    clearSearchBarMode(state, action: PayloadAction<{ panelId: PanelId }>) {
+      delete state.searchBarModes[action.payload.panelId];
+    },
+
     startRenameTab(state, action: PayloadAction<{ tabId: TabId }>) {
       state.renamingTabId = action.payload.tabId;
     },
@@ -55,6 +59,7 @@ const uiSlice = createSlice({
 
 export const {
   setSearchBarMode,
+  clearSearchBarMode,
   startRenameTab,
   clearRenameTab,
   openInfoModal,

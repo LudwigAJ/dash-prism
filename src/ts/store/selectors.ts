@@ -56,6 +56,28 @@ export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconMod
 
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 
+/**
+ * Check if a new tab can be added based on maxTabs limit.
+ * This is a utility function (not a pure selector) because maxTabs comes from config.
+ *
+ * @param tabCount - Current number of tabs
+ * @param maxTabs - Maximum tabs allowed (0 or negative means unlimited)
+ * @returns true if a new tab can be added
+ */
+export function canAddTab(tabCount: number, maxTabs: number): boolean {
+  return maxTabs < 1 || tabCount < maxTabs;
+}
+
+/**
+ * Selector factory for checking if a new tab can be added.
+ * Use this when you have maxTabs available.
+ *
+ * @param maxTabs - Maximum tabs allowed (0 or negative means unlimited)
+ * @returns Selector that returns boolean
+ */
+export const makeSelectCanAddTab = (maxTabs: number) =>
+  createSelector(selectTabCount, (tabCount) => canAddTab(tabCount, maxTabs));
+
 export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(

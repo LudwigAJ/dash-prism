@@ -14,6 +14,7 @@ import {
   collapsePanel as collapsePanelTree,
 } from '@utils/panels';
 import { notifyUser } from '@utils/notifications';
+import { canAddTab } from './selectors';
 
 // =============================================================================
 // Constants
@@ -64,21 +65,29 @@ type AddTabPayload = {
   layoutId?: string;
   params?: Record<string, string>;
   option?: string;
+  /** Internal: maxTabs limit passed through for race condition guard in reducer */
+  maxTabs?: number;
 };
+
+/** Return type for addTab thunk - includes tab and maxTabs for race condition guard */
+type AddTabResult = { tab: Tab; maxTabs: number };
 
 /**
  * Async thunk for adding a tab with maxTabs validation.
  * Uses thunk extra argument to access config.
+ *
+ * Note: The fulfilled reducer includes a secondary maxTabs check to prevent
+ * race conditions when multiple addTab calls are dispatched rapidly.
  */
 export const addTab = createAsyncThunk<
-  Tab, // Return type
+  AddTabResult, // Return type
   AddTabPayload, // Argument type
   { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
 >('workspace/addTab', async (payload, { getState, extra, rejectWithValue }) => {
   const { tabs } = getState().workspace.present;
 
-  // Validate maxTabs limit
-  if (extra.maxTabs > 0 && tabs.length >= extra.maxTabs) {
+  // Validate maxTabs limit using shared canAddTab helper
+  if (!canAddTab(tabs.length, extra.maxTabs)) {
     notifyUser(
       'warning',
       `Maximum tabs limit reached (${extra.maxTabs})`,
@@ -99,17 +108,22 @@ export const addTab = createAsyncThunk<
     mountKey: generateShortId(),
   };
 
-  return newTab;
+  // Pass maxTabs through for race condition guard in reducer
+  return { tab: newTab, maxTabs: extra.maxTabs };
 });
 
+/** Return type for duplicateTab thunk */
+type DuplicateTabResult = { tab: Tab; maxTabs: number };
+
 export const duplicateTab = createAsyncThunk<
-  Tab,
+  DuplicateTabResult,
   { tabId: TabId },
   { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
 >('workspace/duplicateTab', async ({ tabId }, { getState, extra, rejectWithValue }) => {
   const { tabs } = getState().workspace.present;
 
-  if (extra.maxTabs > 0 && tabs.length >= extra.maxTabs) {
+  // Validate maxTabs limit using shared canAddTab helper
+  if (!canAddTab(tabs.length, extra.maxTabs)) {
     notifyUser(
       'warning',
       `Cannot duplicate: maximum tabs limit reached (${extra.maxTabs})`,
@@ -133,7 +147,8 @@ export const duplicateTab = createAsyncThunk<
     mountKey: generateShortId(),
   };
 
-  return newTab;
+  // Pass maxTabs through for race condition guard in reducer
+  return { tab: newTab, maxTabs: extra.maxTabs };
 });
 
 // =============================================================================
@@ -184,6 +199,24 @@ const workspaceSlice = createSlice({
 
     selectTab(state, action: PayloadAction<{ tabId: TabId; panelId: PanelId }>) {
       const { tabId, panelId } = action.payload;
+
+      // Validate: tab must exist
+      const tab = findTabById(state.tabs, tabId);
+      if (!tab) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[selectTab] Tab not found: ${tabId}`);
+        }
+        return;
+      }
+
+      // Validate: tab must belong to the specified panel
+      if (tab.panelId !== panelId) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[selectTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`);
+        }
+        return;
+      }
+
       state.activeTabIds[panelId] = tabId;
       state.activePanelId = panelId;
     },
@@ -223,15 +256,20 @@ const workspaceSlice = createSlice({
     ) {
       const { tabId, layoutId, name, params, option } = action.payload;
       const tab = findTabById(state.tabs, tabId);
-      if (tab) {
-        const layoutChanging = tab.layoutId !== undefined && tab.layoutId !== layoutId;
-        tab.layoutId = layoutId;
-        tab.name = name;
-        tab.layoutParams = params;
-        tab.layoutOption = option;
-        if (layoutChanging) {
-          tab.mountKey = generateShortId();
+      if (!tab) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[updateTabLayout] Tab not found: ${tabId}`);
         }
+        return;
+      }
+
+      const layoutChanging = tab.layoutId !== undefined && tab.layoutId !== layoutId;
+      tab.layoutId = layoutId;
+      tab.name = name;
+      tab.layoutParams = params;
+      tab.layoutOption = option;
+      if (layoutChanging) {
+        tab.mountKey = generateShortId();
       }
     },
 
@@ -312,7 +350,18 @@ const workspaceSlice = createSlice({
     // -------------------------------------------------------------------------
 
     setActivePanel(state, action: PayloadAction<{ panelId: PanelId }>) {
-      state.activePanelId = action.payload.panelId;
+      const { panelId } = action.payload;
+
+      // Validate: panelId must be a leaf panel
+      const leafPanelIds = getLeafPanelIds(state.panel);
+      if (!leafPanelIds.includes(panelId)) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[setActivePanel] Panel is not a leaf panel: ${panelId}`);
+        }
+        return;
+      }
+
+      state.activePanelId = panelId;
     },
 
     resizePanel(state, action: PayloadAction<{ panelId: PanelId; size: string | number }>) {
@@ -535,10 +584,19 @@ const workspaceSlice = createSlice({
     },
 
     /**
-     * Sync workspace from Dash backend (updateWorkspace prop)
+     * Sync workspace from Dash backend (updateWorkspace prop).
+     *
+     * Validates state invariants after applying updates:
+     * - All tabs must reference valid leaf panels
+     * - panelTabs must be consistent with tabs array
+     * - activeTabIds must reference existing tabs in correct panels
+     *
+     * Auto-heals inconsistencies when possible to prevent crashes.
      */
     syncWorkspace(state, action: PayloadAction<Partial<WorkspaceState>>) {
       const update = action.payload;
+
+      // Apply updates
       if (update.tabs) state.tabs = update.tabs;
       if (update.panel) state.panel = update.panel;
       if (update.panelTabs) state.panelTabs = update.panelTabs;
@@ -546,6 +604,63 @@ const workspaceSlice = createSlice({
       if (update.activePanelId) state.activePanelId = update.activePanelId;
       if (update.favoriteLayouts) state.favoriteLayouts = update.favoriteLayouts;
       if (update.searchBarsHidden !== undefined) state.searchBarsHidden = update.searchBarsHidden;
+
+      // Validate and auto-heal state invariants
+      const leafPanelIds = new Set(getLeafPanelIds(state.panel));
+
+      // 1. Remove tabs that reference non-existent panels
+      const validTabs = state.tabs.filter((tab) => leafPanelIds.has(tab.panelId));
+      if (validTabs.length !== state.tabs.length) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
+          );
+        }
+        state.tabs = validTabs;
+      }
+
+      // 2. Rebuild panelTabs from tabs to ensure consistency
+      const rebuiltPanelTabs: Record<PanelId, TabId[]> = {};
+      for (const panelId of leafPanelIds) {
+        rebuiltPanelTabs[panelId] = [];
+      }
+      for (const tab of state.tabs) {
+        if (rebuiltPanelTabs[tab.panelId]) {
+          rebuiltPanelTabs[tab.panelId].push(tab.id);
+        }
+      }
+      state.panelTabs = rebuiltPanelTabs;
+
+      // 3. Validate and fix activeTabIds
+      const tabIdSet = new Set(state.tabs.map((t) => t.id));
+      for (const panelId of leafPanelIds) {
+        const activeTabId = state.activeTabIds[panelId];
+        const panelTabIds = state.panelTabs[panelId] ?? [];
+
+        if (activeTabId && (!tabIdSet.has(activeTabId) || !panelTabIds.includes(activeTabId))) {
+          // Active tab doesn't exist or isn't in this panel - pick first tab or delete
+          if (panelTabIds.length > 0) {
+            state.activeTabIds[panelId] = panelTabIds[0];
+          } else {
+            delete state.activeTabIds[panelId];
+          }
+        }
+      }
+
+      // Clean up activeTabIds for non-existent panels
+      for (const panelId of Object.keys(state.activeTabIds) as PanelId[]) {
+        if (!leafPanelIds.has(panelId)) {
+          delete state.activeTabIds[panelId];
+        }
+      }
+
+      // 4. Validate activePanelId
+      if (!leafPanelIds.has(state.activePanelId)) {
+        const firstLeafPanel = Array.from(leafPanelIds)[0];
+        if (firstLeafPanel) {
+          state.activePanelId = firstLeafPanel;
+        }
+      }
     },
   },
 
@@ -553,7 +668,16 @@ const workspaceSlice = createSlice({
     // Handle async thunk fulfilled cases
     builder
       .addCase(addTab.fulfilled, (state, action) => {
-        const newTab = action.payload;
+        const { tab: newTab, maxTabs } = action.payload;
+
+        // Guard: Re-check maxTabs limit to prevent race condition.
+        // Between thunk validation and this reducer, another addTab could have completed.
+        if (!canAddTab(state.tabs.length, maxTabs)) {
+          // Silently skip - the tab was already created but we can't add it.
+          // This is a rare race condition edge case.
+          return;
+        }
+
         state.tabs.push(newTab);
 
         if (!state.panelTabs[newTab.panelId]) {
@@ -564,7 +688,13 @@ const workspaceSlice = createSlice({
         state.activePanelId = newTab.panelId;
       })
       .addCase(duplicateTab.fulfilled, (state, action) => {
-        const newTab = action.payload;
+        const { tab: newTab, maxTabs } = action.payload;
+
+        // Guard: Re-check maxTabs limit to prevent race condition
+        if (!canAddTab(state.tabs.length, maxTabs)) {
+          return;
+        }
+
         state.tabs.push(newTab);
 
         if (!state.panelTabs[newTab.panelId]) {
