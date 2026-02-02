@@ -1,10 +1,15 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@components/ui/card';
 import { useConfig } from '@context/ConfigContext';
-import { usePrism } from '@hooks/usePrism';
 import { cn } from '@utils/cn';
 import { Star, Layers } from 'lucide-react';
 import type { TabId } from '@types';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectFavoriteLayouts,
+  toggleFavoriteLayout,
+} from '@store';
 
 type NewLayoutProps = {
   tabId: TabId;
@@ -16,8 +21,8 @@ type NewLayoutProps = {
  */
 export function NewLayout({ tabId }: NewLayoutProps) {
   const { registeredLayouts } = useConfig();
-  const { state, dispatch } = usePrism();
-  const favoriteLayouts = state.favoriteLayouts ?? [];
+  const dispatch = useAppDispatch();
+  const favoriteLayouts = useAppSelector(selectFavoriteLayouts) ?? [];
 
   const layoutEntries = Object.entries(registeredLayouts);
 
@@ -29,7 +34,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
 
   const handleToggleFavorite = (e: React.MouseEvent, layoutId: string) => {
     e.stopPropagation();
-    dispatch({ type: 'TOGGLE_FAVORITE_LAYOUT', payload: { layoutId } });
+    dispatch(toggleFavoriteLayout({ layoutId }));
   };
 
   const handleLayoutClick = (layoutId: string) => {

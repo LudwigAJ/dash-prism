@@ -14,6 +14,18 @@ import {
 import { cn } from '@utils/cn';
 import type { DashComponent, DashComponentApi } from '@types';
 import { isDashComponent } from '@types';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectPanel,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectSearchBarModes,
+  selectCanUndo,
+  undo,
+  resetWorkspace,
+} from '@store';
 
 type StatusBarProps = {
   /** Array of PrismAction component specs to render */
@@ -29,22 +41,30 @@ export function StatusBar({
   onOpenHelp,
   onOpenInfo,
 }: StatusBarProps) {
-  const { state, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const { clearPersistedState } = usePrism();
   const { maxTabs, componentId = 'prism' } = useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
+
+  // Select state from Redux
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
+  const activePanelId = useAppSelector(selectActivePanelId);
+  const searchBarModes = useAppSelector(selectSearchBarModes);
+  const canUndo = useAppSelector(selectCanUndo);
 
   // Get Dash API for rendering action components
   const api: DashComponentApi | undefined = window.dash_component_api;
 
   // Get active tab and search bar mode for active panel
-  const activeTabId = state.activeTabIds[state.activePanelId];
-  const activeTab = state.tabs?.find((t) => t.id === activeTabId);
-  const searchBarMode = state.searchBarModes[state.activePanelId] ?? 'display';
+  const activeTabId = activeTabIds[activePanelId];
+  const activeTab = tabs?.find((t) => t.id === activeTabId);
+  const searchBarMode = searchBarModes[activePanelId] ?? 'display';
 
   // Counts
-  const tabCount = state.tabs?.length ?? 0;
-  const panelCount = countLeafPanels(state.panel);
-  const canUndo = state.undoStack.length > 0;
+  const tabCount = tabs?.length ?? 0;
+  const panelCount = countLeafPanels(panel);
 
   // Update sync time display every 5 seconds
   useEffect(() => {
@@ -61,10 +81,8 @@ export function StatusBar({
   }, [lastSyncTime]);
 
   const handleUndo = useCallback(() => {
-    if (canUndo) dispatch({ type: 'POP_UNDO' });
+    if (canUndo) dispatch(undo());
   }, [canUndo, dispatch]);
-
-  const { clearPersistedState } = usePrism();
 
   const handleReset = useCallback(() => {
     const confirmed = window.confirm(
@@ -77,7 +95,7 @@ export function StatusBar({
       // Clear persisted storage (localStorage/sessionStorage)
       clearPersistedState();
       // Reset reducer state to initial
-      dispatch({ type: 'RESET_WORKSPACE' });
+      dispatch(resetWorkspace());
     }
   }, [clearPersistedState, dispatch]);
 
@@ -156,7 +174,7 @@ export function StatusBar({
       <div className="flex items-center gap-1">
         Panels: <span className="text-foreground font-medium">{panelCount}</span>
         {panelCount > 1 && (
-          <span className="text-muted-foreground">({state.activePanelId.slice(0, 8)})</span>
+          <span className="text-muted-foreground">({activePanelId.slice(0, 8)})</span>
         )}
       </div>
 

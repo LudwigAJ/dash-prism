@@ -1,6 +1,5 @@
 import { useReducer, useRef, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import {
@@ -11,20 +10,36 @@ import {
 } from './searchBarReducer';
 import { filterLayouts } from './searchBarUtils';
 import { useDropdownResize } from './useDropdownResize';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectActiveTabIds,
+  selectSearchBarsHidden,
+  selectFavoriteLayouts,
+  updateTabLayout,
+  selectTab,
+  toggleSearchBars,
+  setSearchBarMode,
+} from '@store';
 
 /**
  * SearchBar state management hook.
  * Now uses a local reducer with derived mode instead of scattered useState calls.
  */
 export function useSearchBarState(panelId: string) {
-  const { state: globalState, dispatch: globalDispatch } = usePrism();
+  const globalDispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
+  const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
+  const favoriteLayouts = useAppSelector(selectFavoriteLayouts);
   const { registeredLayouts, searchBarPlaceholder } = useConfig();
 
   // ===== DERIVED GLOBAL STATE =====
-  const activeTabId = globalState.activeTabIds[panelId];
+  const activeTabId = activeTabIds[panelId];
   const activeTab = useMemo(
-    () => globalState.tabs?.find((t) => t.id === activeTabId) ?? null,
-    [globalState.tabs, activeTabId]
+    () => tabs?.find((t) => t.id === activeTabId) ?? null,
+    [tabs, activeTabId]
   );
 
   const currentLayout = useMemo(() => {
@@ -54,7 +69,7 @@ export function useSearchBarState(panelId: string) {
   const selectedLayout = state.selectedLayoutId ? registeredLayouts[state.selectedLayoutId] : null;
 
   const modeContext: ModeContext = {
-    searchBarsHidden: globalState.searchBarsHidden ?? false,
+    searchBarsHidden: searchBarsHidden ?? false,
     hasCurrentLayout: currentLayout !== null,
     selectedLayout: selectedLayout
       ? {
@@ -89,7 +104,7 @@ export function useSearchBarState(panelId: string) {
   const applyLayout = useCallback(
     (layoutId: string, name: string, params?: Record<string, string>, option?: string) => {
       // Read fresh activeTabId to avoid stale closure
-      const currentActiveTabId = globalState.activeTabIds[panelId];
+      const currentActiveTabId = activeTabIds[panelId];
       if (!currentActiveTabId) {
         logger.error('Cannot apply layout: no active tab in panel', { panelId, layoutId });
         toast.error('Unable to apply layout: no active tab');
@@ -105,15 +120,14 @@ export function useSearchBarState(panelId: string) {
         return;
       }
 
-      globalDispatch({
-        type: 'UPDATE_TAB_LAYOUT',
-        payload: { tabId: currentActiveTabId, layoutId, name, params, option },
-      });
+      globalDispatch(
+        updateTabLayout({ tabId: currentActiveTabId, layoutId, name, params, option })
+      );
 
       dispatch({ type: 'RESET' });
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
     },
-    [globalState.activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
+    [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
   );
 
   const handleLayoutSelect = useCallback(
@@ -123,16 +137,13 @@ export function useSearchBarState(panelId: string) {
 
       // Check allowMultiple constraint
       if (!layout.allowMultiple) {
-        const existingTab = globalState.tabs?.find((t) => t.layoutId === layoutId);
+        const existingTab = tabs?.find((t) => t.layoutId === layoutId);
         if (existingTab) {
           logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
           toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
             cancel: { label: 'Dismiss', onClick: () => {} },
           });
-          globalDispatch({
-            type: 'SELECT_TAB',
-            payload: { tabId: existingTab.id, panelId: existingTab.panelId },
-          });
+          globalDispatch(selectTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
           dispatch({ type: 'RESET' });
           dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
           return;
@@ -158,7 +169,7 @@ export function useSearchBarState(panelId: string) {
         focusInput();
       }
     },
-    [registeredLayouts, globalState.tabs, globalDispatch, applyLayout, focusInput]
+    [registeredLayouts, tabs, globalDispatch, applyLayout, focusInput]
   );
 
   const handleOptionSelect = useCallback(
@@ -273,7 +284,7 @@ export function useSearchBarState(panelId: string) {
   const handleLayoutSelection = useCallback(
     (e: CustomEvent) => {
       // Read fresh activeTabId to avoid stale closure
-      const currentActiveTabId = globalState.activeTabIds[panelId];
+      const currentActiveTabId = activeTabIds[panelId];
       if (e.detail.tabId !== currentActiveTabId) return;
 
       const layout = registeredLayouts[e.detail.layoutId];
@@ -282,22 +293,15 @@ export function useSearchBarState(panelId: string) {
       const hasParams = layout.params && layout.params.length > 0;
       const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
 
-      if (globalState.searchBarsHidden && (hasParams || hasOptions)) {
+      if (searchBarsHidden && (hasParams || hasOptions)) {
         dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: e.detail.layoutId });
-        globalDispatch({ type: 'TOGGLE_SEARCH_BARS' });
+        globalDispatch(toggleSearchBars());
         return;
       }
 
       handleLayoutSelect(e.detail.layoutId);
     },
-    [
-      globalState.activeTabIds,
-      panelId,
-      handleLayoutSelect,
-      registeredLayouts,
-      globalState.searchBarsHidden,
-      globalDispatch,
-    ]
+    [activeTabIds, panelId, handleLayoutSelect, registeredLayouts, searchBarsHidden, globalDispatch]
   );
 
   useEffect(() => {
@@ -308,7 +312,7 @@ export function useSearchBarState(panelId: string) {
 
   // Handle searchBarsHidden state changes
   useEffect(() => {
-    if (globalState.searchBarsHidden) {
+    if (searchBarsHidden) {
       // Mode will be derived as 'hidden'
       dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
       return;
@@ -320,11 +324,11 @@ export function useSearchBarState(panelId: string) {
       handleLayoutSelect(pendingLayoutId);
       focusInput();
     }
-  }, [globalState.searchBarsHidden, state.isPendingLayout, handleLayoutSelect, focusInput]);
+  }, [searchBarsHidden, state.isPendingLayout, handleLayoutSelect, focusInput]);
 
   // Handle active tab layout changes
   useEffect(() => {
-    if (globalState.searchBarsHidden) return;
+    if (searchBarsHidden) return;
 
     const isNewTab = activeTabId && !seenTabsRef.current.has(activeTabId);
 
@@ -341,11 +345,11 @@ export function useSearchBarState(panelId: string) {
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
       focusInput();
     }
-  }, [activeTab?.layoutId, currentLayout, globalState.searchBarsHidden, activeTabId]);
+  }, [activeTab?.layoutId, currentLayout, searchBarsHidden, activeTabId]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {
-    globalDispatch({ type: 'SET_SEARCHBAR_MODE', payload: { panelId, mode } });
+    globalDispatch(setSearchBarMode({ panelId, mode }));
   }, [mode, panelId, globalDispatch]);
 
   // Focus request from global shortcut
@@ -353,12 +357,12 @@ export function useSearchBarState(panelId: string) {
     (event: Event) => {
       const customEvent = event as CustomEvent<{ panelId?: string }>;
       if (customEvent.detail?.panelId !== panelId) return;
-      if (globalState.searchBarsHidden) return;
+      if (searchBarsHidden) return;
 
       dispatch({ type: 'ENTER_SEARCH_MODE' });
       focusInput();
     },
-    [panelId, globalState.searchBarsHidden, focusInput]
+    [panelId, searchBarsHidden, focusInput]
   );
 
   useEffect(() => {
@@ -392,7 +396,7 @@ export function useSearchBarState(panelId: string) {
     paramOptions,
     allParams,
     currentParam,
-    favoriteLayouts: globalState.favoriteLayouts ?? [],
+    favoriteLayouts: favoriteLayouts ?? [],
     searchBarPlaceholder,
 
     // Local state

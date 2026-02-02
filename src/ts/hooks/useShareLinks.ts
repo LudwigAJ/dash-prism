@@ -1,9 +1,16 @@
 import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import type { Tab, ShareData } from '@types';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectActivePanelId,
+  addTab,
+  selectTab,
+} from '@store';
 
 /**
  * Maximum size for share link data in bytes (~4KB).
@@ -91,7 +98,9 @@ function isValidShareData(data: unknown): data is ShareData {
  * - processShareHash: Side effect → Redux action
  */
 export function useShareLinks() {
-  const { state, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const activePanelId = useAppSelector(selectActivePanelId);
   const { registeredLayouts, maxTabs } = useConfig();
 
   // =========================================================================
@@ -176,21 +185,18 @@ export function useShareLinks() {
 
       // Check allowMultiple constraint
       if (!layoutInfo.allowMultiple) {
-        const existing = state.tabs?.find((t) => t.layoutId === layoutId);
+        const existing = tabs?.find((t) => t.layoutId === layoutId);
         if (existing) {
           toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`, {
             cancel: { label: 'Dismiss', onClick: () => {} },
           });
-          dispatch({
-            type: 'SELECT_TAB',
-            payload: { tabId: existing.id, panelId: existing.panelId },
-          });
+          dispatch(selectTab({ tabId: existing.id, panelId: existing.panelId }));
           return false;
         }
       }
 
       // Check maxTabs limit
-      if (maxTabs && maxTabs > 0 && (state.tabs?.length ?? 0) >= maxTabs) {
+      if (maxTabs && maxTabs > 0 && (tabs?.length ?? 0) >= maxTabs) {
         toast.error(`Max tabs (${maxTabs}) reached`, {
           cancel: { label: 'Dismiss', onClick: () => {} },
         });
@@ -199,23 +205,22 @@ export function useShareLinks() {
 
       // Dispatch Redux action - THIS IS THE REVERSIBLE PART
       // User can close the tab to "undo" opening the share link
-      dispatch({
-        type: 'ADD_TAB',
-        payload: {
-          panelId: state.activePanelId,
+      dispatch(
+        addTab({
+          panelId: activePanelId,
           name: name || layoutInfo.name || 'Shared Tab',
           layoutId,
           params: layoutParams || undefined,
           option: layoutOption || undefined,
-        },
-      });
+        })
+      );
 
       toast.success(`Opened shared tab: ${name || layoutInfo.name}`, {
         cancel: { label: 'Dismiss', onClick: () => {} },
       });
       return true;
     },
-    [registeredLayouts, state.tabs, state.activePanelId, maxTabs, dispatch]
+    [registeredLayouts, tabs, activePanelId, maxTabs, dispatch]
   );
 
   // =========================================================================

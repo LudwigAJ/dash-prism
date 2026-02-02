@@ -1,33 +1,159 @@
-import { useContext } from 'react';
+import { useCallback, useMemo } from 'react';
 import { getLeafPanelIds, isLastPanel } from '@utils/panels';
-import { PrismContext } from '@context/PrismContext';
-import type { Panel, PanelId, TabId } from '@types';
+import type { PanelId, TabId, Tab } from '@types';
 import { findTabById, getActiveTabForPanel, getTabsByPanelId } from '@utils/tabs';
+import { usePortal } from '@context/PortalContext';
+import {
+  useAppSelector,
+  useAppDispatch,
+  selectTabs,
+  selectPanel,
+  selectPanelTabs,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectFavoriteLayouts,
+  selectSearchBarsHidden,
+  selectRenamingTabId,
+  selectInfoModalTabId,
+  selectHelpModalOpen,
+  selectSetIconModalTabId,
+  selectCanUndo,
+  // UI actions for modals
+  openInfoModal,
+  closeInfoModal,
+  openHelpModal,
+  closeHelpModal,
+  openSetIconModal,
+  closeSetIconModal,
+} from '@store';
 
 // =============================================================================
 // Hooks
 // =============================================================================
 
 /**
- * Primary hook for accessing Prism context.
- * Provides access to state, dispatch, and modal controls.
- *
- * @throws Error if used outside of PrismProvider
+ * Primary hook for accessing Prism state.
+ * Now uses Redux internally. For dispatching actions, use useAppDispatch
+ * and import action creators directly from @store.
  *
  * @example
  * ```tsx
+ * import { usePrism } from '@hooks/usePrism';
+ * import { useAppDispatch, addTab, removeTab } from '@store';
+ *
  * function MyComponent() {
- *   const { state, dispatch } = usePrism();
- *   const handleAddTab = () => dispatch({ type: 'ADD_TAB', payload: { panelId: 'main' } });
+ *   const { state, infoModalTab, openInfoModal } = usePrism();
+ *   const dispatch = useAppDispatch();
+ *
+ *   const handleAddTab = () => dispatch(addTab({ panelId: 'main' }));
+ *   const handleRemoveTab = (tabId: string) => dispatch(removeTab({ tabId }));
  * }
  * ```
  */
 export function usePrism() {
-  const context = useContext(PrismContext);
-  if (!context) {
-    throw new Error('usePrism must be used within PrismProvider');
-  }
-  return context;
+  const dispatch = useAppDispatch();
+  const { getPortalNode } = usePortal();
+
+  // Select all state from Redux
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
+  const panelTabs = useAppSelector(selectPanelTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
+  const activePanelId = useAppSelector(selectActivePanelId);
+  const favoriteLayouts = useAppSelector(selectFavoriteLayouts);
+  const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
+  const renamingTabId = useAppSelector(selectRenamingTabId);
+  const infoModalTabId = useAppSelector(selectInfoModalTabId);
+  const helpModalOpen = useAppSelector(selectHelpModalOpen);
+  const setIconModalTabId = useAppSelector(selectSetIconModalTabId);
+  const canUndo = useAppSelector(selectCanUndo);
+
+  // Derive modal tabs from IDs for backward compatibility
+  const infoModalTab = useMemo(
+    () => (infoModalTabId ? (findTabById(tabs, infoModalTabId) ?? null) : null),
+    [tabs, infoModalTabId]
+  );
+  const setIconModalTab = useMemo(
+    () => (setIconModalTabId ? (findTabById(tabs, setIconModalTabId) ?? null) : null),
+    [tabs, setIconModalTabId]
+  );
+
+  // Construct state object for convenience
+  const state = useMemo(
+    () => ({
+      tabs,
+      panel,
+      panelTabs,
+      activeTabIds,
+      activePanelId,
+      favoriteLayouts,
+      searchBarsHidden,
+      renamingTabId,
+      // Undo availability (redux-undo manages history)
+      undoStack: canUndo ? [{}] : [],
+    }),
+    [
+      tabs,
+      panel,
+      panelTabs,
+      activeTabIds,
+      activePanelId,
+      favoriteLayouts,
+      searchBarsHidden,
+      renamingTabId,
+      canUndo,
+    ]
+  );
+
+  // Clear persisted state helper (redux-persist handles persistence)
+  const clearPersistedState = useCallback(() => {
+    try {
+      localStorage.removeItem('persist:prism-workspace');
+      sessionStorage.removeItem('persist:prism-workspace');
+    } catch {
+      // Storage access may fail in some contexts
+    }
+  }, []);
+
+  // Modal controls - accept Tab or tabId
+  const openInfoModalFn = useCallback(
+    (tabOrId: Tab | string) => {
+      const tabId = typeof tabOrId === 'string' ? tabOrId : tabOrId.id;
+      dispatch(openInfoModal({ tabId }));
+    },
+    [dispatch]
+  );
+  const closeInfoModalFn = useCallback(() => dispatch(closeInfoModal()), [dispatch]);
+  const openHelpModalFn = useCallback(() => dispatch(openHelpModal()), [dispatch]);
+  const closeHelpModalFn = useCallback(() => dispatch(closeHelpModal()), [dispatch]);
+  const openSetIconModalFn = useCallback(
+    (tabOrId: Tab | string) => {
+      const tabId = typeof tabOrId === 'string' ? tabOrId : tabOrId.id;
+      dispatch(openSetIconModal({ tabId }));
+    },
+    [dispatch]
+  );
+  const closeSetIconModalFn = useCallback(() => dispatch(closeSetIconModal()), [dispatch]);
+
+  return {
+    state,
+    clearPersistedState,
+    // Portal management
+    getPortalNode,
+    // Modal state (Tab objects for component compatibility)
+    infoModalTab,
+    infoModalTabId,
+    helpModalOpen,
+    setIconModalTab,
+    setIconModalTabId,
+    // Modal controls
+    openInfoModal: openInfoModalFn,
+    closeInfoModal: closeInfoModalFn,
+    openHelpModal: openHelpModalFn,
+    closeHelpModal: closeHelpModalFn,
+    openSetIconModal: openSetIconModalFn,
+    closeSetIconModal: closeSetIconModalFn,
+  };
 }
 
 /**
@@ -35,8 +161,7 @@ export function usePrism() {
  * Convenience selector for `state.tabs`.
  */
 export function useTabs() {
-  const { state } = usePrism();
-  return state.tabs;
+  return useAppSelector(selectTabs);
 }
 
 /**
@@ -46,8 +171,9 @@ export function useTabs() {
  * @returns The active Tab object, or null if no active tab
  */
 export function useActiveTab(panelId: string) {
-  const { state } = usePrism();
-  return getActiveTabForPanel(state.tabs, state.activeTabIds, panelId) ?? null;
+  const tabs = useAppSelector(selectTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
+  return getActiveTabForPanel(tabs, activeTabIds, panelId) ?? null;
 }
 
 /**
@@ -57,8 +183,8 @@ export function useActiveTab(panelId: string) {
  * @returns Array of Tab objects in the panel
  */
 export function usePanelTabs(panelId: string) {
-  const { state } = usePrism();
-  return getTabsByPanelId(state.tabs, panelId);
+  const tabs = useAppSelector(selectTabs);
+  return getTabsByPanelId(tabs, panelId);
 }
 
 /**
@@ -75,31 +201,32 @@ export function usePanelTabs(panelId: string) {
  * ```
  */
 export function useWorkspace() {
-  const { state } = usePrism();
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
 
-  const leafPanels = getLeafPanelIds(state.panel);
+  const leafPanels = getLeafPanelIds(panel);
   const isOnlyPanel = (panelId: string) => leafPanels.length === 1 && leafPanels[0] === panelId;
 
   // Check if closing a tab would leave the workspace empty
   const canCloseTab = (panelId: PanelId, tabId: TabId) => {
-    const tab = findTabById(state.tabs, tabId);
+    const tab = findTabById(tabs, tabId);
     if (!tab) return false;
     if (tab.locked) return false;
 
     // If this is not the last panel, we can always close
-    if (!isLastPanel(state.panel, tab.panelId)) return true;
+    if (!isLastPanel(panel, tab.panelId)) return true;
 
     // In the last panel, we can close if there's more than 1 tab
-    const panelTabs = getTabsByPanelId(state.tabs, panelId);
-    return panelTabs.length > 1;
+    const panelTabsList = getTabsByPanelId(tabs, panelId);
+    return panelTabsList.length > 1;
   };
 
   return {
-    panel: state.panel,
+    panel,
     leafPanels,
     isOnlyPanel,
     canCloseTab,
-    tabCount: state.tabs?.length ?? 0,
+    tabCount: tabs?.length ?? 0,
     panelCount: leafPanels.length,
   };
 }

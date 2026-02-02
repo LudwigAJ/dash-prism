@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { usePrism } from './usePrism';
+import { useAppDispatch, resizePanel } from '@store';
 
 /**
  * Options for the usePanels hook.
@@ -56,7 +56,7 @@ export function usePanels({
   minSize = 10,
   maxSize = 90,
 }: UsePanelsOptions) {
-  const { dispatch } = usePrism();
+  const dispatch = useAppDispatch();
   const [isResizing, setIsResizing] = useState(false);
   const stateRef = useRef<ResizeState | null>(null);
 
@@ -89,7 +89,7 @@ export function usePanels({
 
       const newSize = Math.min(maxSize, Math.max(minSize, startSize + deltaPercent));
 
-      dispatch({ type: 'RESIZE_PANEL', payload: { panelId, size: newSize } });
+      dispatch(resizePanel({ panelId, size: newSize }));
     };
 
     const handleMouseUp = () => {
@@ -123,7 +123,7 @@ export function usePanels({
       if (newSize !== currentSize) {
         e.preventDefault();
         newSize = Math.min(maxSize, Math.max(minSize, newSize));
-        dispatch({ type: 'RESIZE_PANEL', payload: { panelId, size: newSize } });
+        dispatch(resizePanel({ panelId, size: newSize }));
       }
     },
     [direction, panelId, minSize, maxSize, dispatch]

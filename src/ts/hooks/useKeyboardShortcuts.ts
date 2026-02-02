@@ -3,6 +3,28 @@ import { usePrism } from './usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
 import type { PanelId, TabId } from '@types';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectPanel,
+  selectPanelTabs,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectSearchBarsHidden,
+  selectCanUndo,
+  addTab,
+  removeTab,
+  selectTab,
+  toggleTabLock,
+  pinPanel,
+  unpinPanel,
+  toggleSearchBars,
+  duplicateTab,
+  refreshTab,
+  undo,
+  startRenameTab,
+} from '@store';
 
 /**
  * Global keyboard shortcuts for Prism component.
@@ -21,29 +43,36 @@ import type { PanelId, TabId } from '@types';
  * - U: Undo last closed tab
  */
 export function useKeyboardShortcuts() {
-  const { state, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
+  const panelTabs = useAppSelector(selectPanelTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
+  const activePanelId = useAppSelector(selectActivePanelId);
+  const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
+  const canUndo = useAppSelector(selectCanUndo);
 
   // Track rename mode - when true, we prompt user for new name
   const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   // ========== Helper: Get active tab ==========
   const getActiveTab = useCallback(() => {
-    const activeTabId = state.activeTabIds[state.activePanelId];
+    const activeTabId = activeTabIds[activePanelId];
     if (!activeTabId) return null;
-    return state.tabs?.find((t) => t.id === activeTabId) ?? null;
-  }, [state.activeTabIds, state.activePanelId, state.tabs]);
+    return tabs?.find((t) => t.id === activeTabId) ?? null;
+  }, [activeTabIds, activePanelId, tabs]);
 
   // ========== Helper: Get tabs in active panel ==========
   const getActivePanelTabs = useCallback(() => {
-    const tabIds = state.panelTabs[state.activePanelId] ?? [];
-    return tabIds.map((id) => state.tabs?.find((t) => t.id === id)).filter(Boolean);
-  }, [state.panelTabs, state.activePanelId, state.tabs]);
+    const tabIds = panelTabs[activePanelId] ?? [];
+    return tabIds.map((id) => tabs?.find((t) => t.id === id)).filter(Boolean);
+  }, [panelTabs, activePanelId, tabs]);
 
   // ========== Action: Create new tab ==========
   const createTab = useCallback(
     (panelId: PanelId) => {
       // Dispatch intent - reducer handles validation and toast feedback
-      dispatch({ type: 'ADD_TAB', payload: { panelId } });
+      dispatch(addTab({ panelId }));
     },
     [dispatch]
   );
@@ -51,81 +80,77 @@ export function useKeyboardShortcuts() {
   // ========== Action: Close active tab ==========
   const closeActiveTab = useCallback(() => {
     const tab = getActiveTab();
-    const panel = findPanelById(state.panel, state.activePanelId);
+    const currentPanel = findPanelById(panel, activePanelId);
     // Don't close if tab is locked OR panel is pinned
-    if (tab && !tab.locked && !panel?.pinned) {
-      dispatch({ type: 'REMOVE_TAB', payload: { tabId: tab.id } });
+    if (tab && !tab.locked && !currentPanel?.pinned) {
+      dispatch(removeTab({ tabId: tab.id }));
     }
-  }, [getActiveTab, state.panel, state.activePanelId, dispatch]);
+  }, [getActiveTab, panel, activePanelId, dispatch]);
 
   // ========== Action: Undo close ==========
   const undoCloseTab = useCallback(() => {
-    if (state.undoStack.length > 0) {
-      dispatch({ type: 'POP_UNDO' });
+    if (canUndo) {
+      dispatch(undo());
     }
-  }, [state.undoStack, dispatch]);
+  }, [canUndo, dispatch]);
 
   // ========== Action: Navigate tabs (J = prev, K = next) ==========
   const navigateTab = useCallback(
     (direction: 'prev' | 'next') => {
-      const panelTabs = getActivePanelTabs();
-      if (panelTabs.length === 0) return;
+      const activePanelTabs = getActivePanelTabs();
+      if (activePanelTabs.length === 0) return;
 
-      const activeTabId = state.activeTabIds[state.activePanelId];
-      const currentIndex = panelTabs.findIndex((t) => t?.id === activeTabId);
+      const activeTabId = activeTabIds[activePanelId];
+      const currentIndex = activePanelTabs.findIndex((t) => t?.id === activeTabId);
       if (currentIndex === -1) return;
 
       let newIndex: number;
       if (direction === 'prev') {
-        newIndex = currentIndex > 0 ? currentIndex - 1 : panelTabs.length - 1;
+        newIndex = currentIndex > 0 ? currentIndex - 1 : activePanelTabs.length - 1;
       } else {
-        newIndex = currentIndex < panelTabs.length - 1 ? currentIndex + 1 : 0;
+        newIndex = currentIndex < activePanelTabs.length - 1 ? currentIndex + 1 : 0;
       }
 
-      const newTab = panelTabs[newIndex];
+      const newTab = activePanelTabs[newIndex];
       if (newTab) {
-        dispatch({
-          type: 'SELECT_TAB',
-          payload: { tabId: newTab.id as TabId, panelId: state.activePanelId },
-        });
+        dispatch(selectTab({ tabId: newTab.id as TabId, panelId: activePanelId }));
       }
     },
-    [getActivePanelTabs, state.activeTabIds, state.activePanelId, dispatch]
+    [getActivePanelTabs, activeTabIds, activePanelId, dispatch]
   );
 
   // ========== Action: Toggle tab lock ==========
-  const toggleTabLock = useCallback(() => {
+  const toggleTabLockFn = useCallback(() => {
     const tab = getActiveTab();
     if (tab) {
-      dispatch({ type: 'TOGGLE_TAB_LOCK', payload: { tabId: tab.id } });
+      dispatch(toggleTabLock({ tabId: tab.id }));
     }
   }, [getActiveTab, dispatch]);
 
   // ========== Action: Toggle panel pin ==========
   const togglePanelPin = useCallback(() => {
-    const panelId = state.activePanelId;
-    const panel = findPanelById(state.panel, panelId);
-    if (!panel) return;
+    const currentPanel = findPanelById(panel, activePanelId);
+    if (!currentPanel) return;
 
-    if (panel.pinned) {
-      dispatch({ type: 'UNPIN_PANEL', payload: { panelId } });
+    if (currentPanel.pinned) {
+      dispatch(unpinPanel({ panelId: activePanelId }));
     } else {
-      dispatch({ type: 'PIN_PANEL', payload: { panelId } });
+      dispatch(pinPanel({ panelId: activePanelId }));
     }
-  }, [state.activePanelId, state.panel, dispatch]);
+  }, [activePanelId, panel, dispatch]);
 
   // ========== Action: Rename tab ==========
   const renameActiveTab = useCallback(() => {
     const tab = getActiveTab();
     if (!tab || tab.locked) return;
 
-    // Dispatch to trigger inline rename in TabBar via state.renamingTabId
-    dispatch({ type: 'START_RENAME_TAB', payload: { tabId: tab.id } });
+    // Dispatch to trigger inline rename in TabBar via renamingTabId
+    dispatch(startRenameTab({ tabId: tab.id }));
   }, [getActiveTab, dispatch]);
 
   // ========== Action: Toggle search bars ==========
-  const toggleSearchBars = useCallback(() => {
-    dispatch({ type: 'TOGGLE_SEARCH_BARS' });
+  const toggleSearchBarsFn = useCallback(() => {
+    dispatch(toggleSearchBars());
   }, [dispatch]);
 
   // ========== Action: Duplicate tab ==========
@@ -134,7 +159,7 @@ export function useKeyboardShortcuts() {
     if (!tab) return;
 
     // Dispatch intent - reducer handles validation and toast feedback
-    dispatch({ type: 'DUPLICATE_TAB', payload: { tabId: tab.id } });
+    dispatch(duplicateTab({ tabId: tab.id }));
   }, [getActiveTab, dispatch]);
 
   // ========== Action: Refresh tab (force refetch layout) ==========
@@ -145,7 +170,7 @@ export function useKeyboardShortcuts() {
     if (!tab) return;
     if (!tab.layoutId) return;
 
-    dispatch({ type: 'REFRESH_TAB', payload: { tabId: tab.id } });
+    dispatch(refreshTab({ tabId: tab.id }));
   }, [getActiveTab, dispatch]);
 
   // ========== Keyboard event handler ==========
@@ -161,10 +186,10 @@ export function useKeyboardShortcuts() {
         e.ctrlKey && (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar');
       if (isCtrlSpace) {
         e.preventDefault();
-        if (!state.searchBarsHidden) {
+        if (!searchBarsHidden) {
           window.dispatchEvent(
             new CustomEvent('prism:focus-searchbar', {
-              detail: { panelId: state.activePanelId },
+              detail: { panelId: activePanelId },
             })
           );
         }
@@ -178,7 +203,7 @@ export function useKeyboardShortcuts() {
         case 'n':
           // New tab
           e.preventDefault();
-          createTab(state.activePanelId);
+          createTab(activePanelId);
           break;
 
         case 'd':
@@ -202,7 +227,7 @@ export function useKeyboardShortcuts() {
         case 'o':
           // Toggle lock on active tab
           e.preventDefault();
-          toggleTabLock();
+          toggleTabLockFn();
           break;
 
         case 'i':
@@ -225,7 +250,7 @@ export function useKeyboardShortcuts() {
         case 'y':
           // Toggle search bars
           e.preventDefault();
-          toggleSearchBars();
+          toggleSearchBarsFn();
           break;
 
         case 'b':
@@ -245,15 +270,16 @@ export function useKeyboardShortcuts() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
-    state.activePanelId,
+    activePanelId,
+    searchBarsHidden,
     createTab,
     closeActiveTab,
     navigateTab,
-    toggleTabLock,
+    toggleTabLockFn,
     togglePanelPin,
     renameActiveTab,
     refreshActiveTab,
-    toggleSearchBars,
+    toggleSearchBarsFn,
     duplicateActiveTab,
     undoCloseTab,
   ]);

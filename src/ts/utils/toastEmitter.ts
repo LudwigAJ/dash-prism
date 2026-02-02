@@ -1,5 +1,5 @@
 /**
- * Toast Event Emitter
+ * Toast Event Emitter & User Notifications
  *
  * This utility provides a simple event emitter pattern for toast notifications.
  * The reducer emits toast events when operations fail/succeed, and the PrismContext
@@ -8,6 +8,8 @@
  * This approach maintains single source of truth (reducer) while keeping the reducer
  * testable and avoiding direct coupling to the toast library.
  */
+
+import { logger } from './logger';
 
 export type ToastEvent = {
   type: 'success' | 'warning' | 'error' | 'info';
@@ -36,3 +38,22 @@ export const toastEmitter = {
     return () => listeners.delete(fn);
   },
 };
+
+/**
+ * Notify the user with a toast message and log the details.
+ * Consolidates the common pattern of logging + toast emission.
+ *
+ * @param level - The severity level ('info', 'warning', or 'error')
+ * @param message - User-facing message shown in toast
+ * @param logDetails - Optional detailed message for logging (defaults to message)
+ */
+export function notifyUser(
+  level: 'info' | 'warning' | 'error',
+  message: string,
+  logDetails?: string
+): void {
+  // Map 'warning' to 'warn' for logger (logger uses 'warn', toast uses 'warning')
+  const logLevel = level === 'warning' ? 'warn' : level;
+  logger[logLevel](logDetails ?? message);
+  toastEmitter.emit({ type: level, message });
+}
