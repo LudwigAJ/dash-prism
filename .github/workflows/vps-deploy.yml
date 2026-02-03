@@ -2,7 +2,7 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'dash_prism/**'
@@ -72,7 +72,7 @@ jobs:
       - name: Reload Caddy
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} \
-            'docker exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true'
+            'cd ~/site && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true'
 
       - name: Cleanup SSH key
         if: always()
