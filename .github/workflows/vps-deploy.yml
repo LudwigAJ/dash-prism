@@ -2,11 +2,9 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - 'docs/**'
-      - 'caddy/**'
-      - 'docker-compose.yml'
       - 'dash_prism/**'
       - 'src/**'
       - '.github/workflows/vps-deploy.yml'
@@ -69,40 +67,12 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             docs/_build/html/ \
-            deploy@${{ secrets.VPS_HOST }}:~/site/docs/_build/html/
+            deploy@${{ secrets.VPS_HOST }}:site/docs/
 
-      - name: Deploy Caddy config
+      - name: Reload Caddy
         run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            caddy/Caddyfile \
-            deploy@${{ secrets.VPS_HOST }}:~/site/caddy/
-
-      - name: Deploy docker-compose
-        run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            docker-compose.yml \
-            deploy@${{ secrets.VPS_HOST }}:~/site/
-
-      - name: Restart Caddy service
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} << 'EOF'
-            cd ~/site
-            docker compose pull caddy
-            docker compose up -d --force-recreate caddy
-            docker compose ps
-          EOF
-
-      - name: Health check
-        run: |
-          echo "Waiting 5 seconds for Caddy to start..."
-          sleep 5
-
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} \
-            'docker compose -f ~/site/docker-compose.yml ps --format json caddy' | grep -q '"State":"running"' && \
-            echo "✓ Caddy container is running" || \
-            (echo "✗ Caddy container failed to start" && exit 1)
+            'docker exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true'
 
       - name: Cleanup SSH key
         if: always()
