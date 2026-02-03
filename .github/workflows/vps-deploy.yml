@@ -4,9 +4,11 @@ on:
   push:
     branches: [dev]
     paths:
-      - 'public/**'
+      - 'docs/**'
       - 'caddy/**'
       - 'docker-compose.yml'
+      - 'dash_prism/**'
+      - 'src/**'
       - '.github/workflows/vps-deploy.yml'
   workflow_dispatch:
 
@@ -17,7 +19,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,53 +53,38 @@ jobs:
         run: |
           cd docs
           poetry run make html
-      
-      - name: Validate docker-compose config
-        run: |
-          if [ -f docker-compose.yml ]; then
-            docker compose config -q
-          fi
-      
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          
+
       - name: Add VPS to known hosts
         run: |
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-      
-      - name: Rsync deployment
+
+      - name: Deploy documentation
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '.gitignore' \
-            --exclude 'node_modules' \
-            --exclude '.env.local' \
-            --exclude '.DS_Store' \
-            --exclude 'caddy/data' \
-            --exclude 'caddy/config' \
-            --exclude 'docs/Makefile' \
-            --exclude 'docs/make.bat' \
-            --exclude 'docs/*.py' \
-            --exclude 'docs/*.rst' \
-            --exclude 'docs/_templates' \
-            --exclude 'docs/_static' \
-            --exclude 'poetry.lock' \
-            --exclude 'pyproject.toml' \
-            --exclude '*.py' \
-            --exclude '__pycache__' \
-            --exclude '.venv' \
-            --exclude 'package.json' \
-            --exclude 'package-lock.json' \
-            --exclude 'tsconfig.json' \
-            --exclude 'src' \
-            --exclude 'tests' \
-            ./ deploy@${{ secrets.VPS_HOST }}:./site/
-      
+            docs/_build/html/ \
+            deploy@${{ secrets.VPS_HOST }}:~/site/docs/_build/html/
+
+      - name: Deploy Caddy config
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            caddy/Caddyfile \
+            deploy@${{ secrets.VPS_HOST }}:~/site/caddy/
+
+      - name: Deploy docker-compose
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            docker-compose.yml \
+            deploy@${{ secrets.VPS_HOST }}:~/site/
+
       - name: Restart Caddy service
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} << 'EOF'
@@ -106,18 +93,17 @@ jobs:
             docker compose up -d --force-recreate caddy
             docker compose ps
           EOF
-      
+
       - name: Health check
         run: |
           echo "Waiting 5 seconds for Caddy to start..."
           sleep 5
-          
-          # Check if container is running
+
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} \
-            'docker compose ps --format json caddy' | grep -q '"State":"running"' && \
+            'docker compose -f ~/site/docker-compose.yml ps --format json caddy' | grep -q '"State":"running"' && \
             echo "✓ Caddy container is running" || \
             (echo "✗ Caddy container failed to start" && exit 1)
-      
+
       - name: Cleanup SSH key
         if: always()
         run: rm -f ~/.ssh/deploy_key
