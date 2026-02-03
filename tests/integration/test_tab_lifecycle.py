@@ -205,9 +205,9 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
 
     # Verify both new tabs persist
     final_tabs = get_tabs(duo)
-    assert len(final_tabs) == 3, (
-        f"Both new tabs should persist. Expected 3 tabs, found {len(final_tabs)}."
-    )
+    assert (
+        len(final_tabs) == 3
+    ), f"Both new tabs should persist. Expected 3 tabs, found {len(final_tabs)}."
 
     # Verify no browser errors occurred
     errors = check_browser_errors(duo)
