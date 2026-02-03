@@ -14,29 +14,41 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { getLeafPanelIds } from '@utils/panels';
 import { getTabIcon } from '@constants/tab-icons';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
 import type { Tab } from '../types';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectPanel,
+  selectPanelTabs,
+  splitPanel,
+  moveTab,
+  reorderTab,
+} from '@store';
 
 type DndProviderProps = {
   children: React.ReactNode;
 };
 
 export function DndProvider({ children }: DndProviderProps) {
-  const { state, dispatch } = usePrism();
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const panel = useAppSelector(selectPanel);
+  const panelTabs = useAppSelector(selectPanelTabs);
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [overPanelId, setOverPanelId] = useState<string | null>(null);
 
   // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
   const isSingleTabMode = useMemo(() => {
-    const leafPanelIds = getLeafPanelIds(state.panel);
-    const tabCount = state.tabs?.length ?? 0;
+    const leafPanelIds = getLeafPanelIds(panel);
+    const tabCount = tabs?.length ?? 0;
     return tabCount === 1 && leafPanelIds.length === 1;
-  }, [state.tabs?.length, state.panel]);
+  }, [tabs?.length, panel]);
 
   // Configure sensors (pointer + mouse fallback + keyboard for accessibility)
   // MouseSensor added as fallback for headless Chrome where PointerEvents may not fire reliably
@@ -60,7 +72,7 @@ export function DndProvider({ children }: DndProviderProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const tab = state.tabs?.find((t) => t.id === active.id);
+    const tab = tabs?.find((t) => t.id === active.id);
 
     if (tab?.locked) {
       // Don't allow dragging locked tabs
@@ -91,7 +103,7 @@ export function DndProvider({ children }: DndProviderProps) {
       setOverPanelId(overId.replace('panel-drop-', ''));
     } else {
       // Over a tab - find its panel
-      const overTab = state.tabs?.find((t) => t.id === overId);
+      const overTab = tabs?.find((t) => t.id === overId);
       setOverPanelId(overTab?.panelId ?? null);
     }
   };
@@ -127,15 +139,14 @@ export function DndProvider({ children }: DndProviderProps) {
         // 'before' = left/top (new panel first), 'after' = right/bottom (new panel second)
         const position = edge === 'left' || edge === 'top' ? 'before' : 'after';
 
-        dispatch({
-          type: 'SPLIT_PANEL',
-          payload: {
+        dispatch(
+          splitPanel({
             panelId: targetPanelId,
             direction,
             tabId: activeId,
             position,
-          },
-        });
+          })
+        );
       }
       return;
     }
@@ -145,47 +156,42 @@ export function DndProvider({ children }: DndProviderProps) {
     if (dropData?.type === 'searchbar' && dropData.panelId) {
       const targetPanelId = dropData.panelId;
       if (activeTab.panelId !== targetPanelId) {
-        dispatch({
-          type: 'MOVE_TAB',
-          payload: { tabId: activeId, targetPanelId },
-        });
+        dispatch(moveTab({ tabId: activeId, targetPanelId }));
       }
       return;
     }
 
     // Case 3: Dropped on another tab (reorder within panel or cross-panel)
-    const overTab = state.tabs?.find((t) => t.id === overId);
+    const overTab = tabs?.find((t) => t.id === overId);
     if (!overTab) return;
 
     if (activeTab.panelId === overTab.panelId) {
       // Same panel: reorder
-      const panelTabIds = state.panelTabs[activeTab.panelId] || [];
+      const panelTabIds = panelTabs[activeTab.panelId] || [];
       const oldIndex = panelTabIds.indexOf(activeId);
       const newIndex = panelTabIds.indexOf(overId);
 
       if (oldIndex !== newIndex) {
-        dispatch({
-          type: 'REORDER_TAB',
-          payload: {
+        dispatch(
+          reorderTab({
             panelId: activeTab.panelId,
             fromIndex: oldIndex,
             toIndex: newIndex,
-          },
-        });
+          })
+        );
       }
     } else {
       // Different panel: move to target panel at drop position
-      const targetPanelTabIds = state.panelTabs[overTab.panelId] || [];
+      const targetPanelTabIds = panelTabs[overTab.panelId] || [];
       const targetIndex = targetPanelTabIds.indexOf(overId);
 
-      dispatch({
-        type: 'MOVE_TAB',
-        payload: {
+      dispatch(
+        moveTab({
           tabId: activeId,
           targetPanelId: overTab.panelId,
           targetIndex: targetIndex >= 0 ? targetIndex : undefined,
-        },
-      });
+        })
+      );
     }
   };
 

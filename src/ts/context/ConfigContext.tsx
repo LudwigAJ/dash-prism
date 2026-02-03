@@ -23,6 +23,8 @@ type ConfigContextValue = {
   initialLayout?: string;
   /** Timeout in seconds for layout loading (default: 30) */
   layoutTimeout: number;
+  /** Dash setProps callback for syncing state to Dash */
+  setProps?: (props: Record<string, unknown>) => void;
 };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -45,6 +47,7 @@ type ConfigProviderProps = {
   statusBarPosition?: StatusBarPosition;
   initialLayout?: string;
   layoutTimeout?: number;
+  setProps?: (props: Record<string, unknown>) => void;
 };
 
 export function ConfigProvider({
@@ -61,6 +64,7 @@ export function ConfigProvider({
   persistenceType = 'memory',
   initialLayout,
   layoutTimeout = 30,
+  setProps,
 }: ConfigProviderProps) {
   const value = useMemo(
     () => ({
@@ -76,6 +80,7 @@ export function ConfigProvider({
       persistenceType,
       initialLayout,
       layoutTimeout,
+      setProps,
     }),
     [
       componentId,
@@ -90,6 +95,7 @@ export function ConfigProvider({
       statusBarPosition,
       initialLayout,
       layoutTimeout,
+      setProps,
     ]
   );
 

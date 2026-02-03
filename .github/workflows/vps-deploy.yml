@@ -1,0 +1,83 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'docs/**'
+      - 'dash_prism/**'
+      - 'src/**'
+      - '.github/workflows/vps-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: venv-${{ runner.os }}-
+
+      - name: Install Python dependencies
+        run: poetry install --with dev,docs --no-interaction
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build JavaScript backends
+        run: npm run build:backends
+
+      - name: Build Sphinx documentation
+        run: poetry run make -C docs html
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy documentation
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            docs/_build/html/ \
+            deploy@${{ secrets.VPS_HOST }}:site/docs/
+
+      - name: Reload Caddy
+        run: |
+          ssh -i ~/.ssh/deploy_key deploy@${{ secrets.VPS_HOST }} \
+            'cd site && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile' || true
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

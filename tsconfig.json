@@ -19,7 +19,9 @@
       "@types": ["types"],
       "@types/*": ["types/*"],
       "@context/*": ["context/*"],
-      "@constants/*": ["constants/*"]
+      "@constants/*": ["constants/*"],
+      "@store": ["store/index"],
+      "@store/*": ["store/*"]
     }
   },
   "exclude": [

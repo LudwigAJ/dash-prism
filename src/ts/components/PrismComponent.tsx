@@ -1,19 +1,21 @@
-import React, { useCallback, useEffect } from 'react';
-import { ConfigProvider } from '@context/ConfigContext';
-import { PrismProvider } from '@context/PrismContext';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { ConfigProvider, useConfig } from '@context/ConfigContext';
+import { PortalProvider } from '@context/PortalContext';
 import { DndProvider } from '@context/DndProvider';
 import { WorkspaceView } from '@components/WorkspaceView';
 import { ErrorBoundary } from '@components/ErrorBoundary';
+import { Toaster } from '@components/ui/toaster';
+import { createPrismStore, syncWorkspace, useAppDispatch } from '@store';
+import { toastEmitter } from '@utils/toastEmitter';
+import { toast } from 'sonner';
 import type {
   RegisteredLayouts,
   Theme,
   Size,
   Workspace,
   StatusBarPosition,
-  PanelId,
-  Tab,
-  Panel,
-  TabId,
   PersistenceType,
 } from '@types';
 import '../global.css';
@@ -144,6 +146,101 @@ export type PrismProps = {
 } & DashComponentProps;
 
 /**
+ * Inner component that uses ConfigContext to create the Redux store.
+ * Must be inside ConfigProvider to access config values.
+ */
+function PrismInner({
+  actions,
+  children,
+  updateWorkspace,
+}: {
+  actions: JSX.Element[];
+  children?: React.ReactNode;
+  updateWorkspace?: Partial<Workspace>;
+}) {
+  const config = useConfig();
+
+  // Use a ref for setProps to avoid recreating the store when setProps reference changes.
+  // This is critical: when dashSyncMiddleware calls setProps(), Dash may re-render with
+  // a new setProps reference. Without this ref, the store would be recreated with fresh
+  // initial state, causing tabs to disappear.
+  const setPropsRef = useRef(config.setProps);
+  useEffect(() => {
+    setPropsRef.current = config.setProps;
+  }, [config.setProps]);
+
+  // Stable setProps wrapper that always calls the latest setProps
+  const stableSetProps = useMemo(
+    () => (props: Record<string, unknown>) => setPropsRef.current?.(props),
+    []
+  );
+
+  // Create store with config values - memoized to prevent recreation
+  // Note: stableSetProps is stable (empty deps), so it won't cause store recreation
+  const { store, persistor, cleanup } = useMemo(
+    () =>
+      createPrismStore({
+        componentId: config.componentId,
+        persistenceType: config.persistenceType,
+        maxTabs: config.maxTabs,
+        setProps: stableSetProps,
+      }),
+    [config.componentId, config.persistenceType, config.maxTabs, stableSetProps]
+  );
+
+  // Clean up middleware resources on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // Subscribe to toast events
+  useEffect(() => {
+    const unsubscribe = toastEmitter.subscribe(({ type, message, description }) => {
+      toast[type](message, {
+        description,
+        cancel: {
+          label: 'Dismiss',
+          onClick: () => {},
+        },
+      });
+    });
+    return unsubscribe;
+  }, []);
+
+  return (
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <PortalProvider>
+          <UpdateWorkspaceSync updateWorkspace={updateWorkspace} />
+          <DndProvider>
+            <Toaster />
+            <WorkspaceView actions={actions}>{children}</WorkspaceView>
+          </DndProvider>
+        </PortalProvider>
+      </PersistGate>
+    </Provider>
+  );
+}
+
+/**
+ * Component to sync updateWorkspace from Dash props to Redux.
+ * Separated to avoid re-rendering the entire tree on updateWorkspace changes.
+ */
+function UpdateWorkspaceSync({ updateWorkspace }: { updateWorkspace?: Partial<Workspace> }) {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (updateWorkspace) {
+      dispatch(syncWorkspace(updateWorkspace));
+    }
+  }, [updateWorkspace, dispatch]);
+
+  return null;
+}
+
+/**
  * Advanced multi-panel workspace manager for Plotly Dash.
  * Provides dynamic layout management with drag-and-drop tab organization,
  * multi-panel splits, and persistent workspace state across sessions.
@@ -210,12 +307,11 @@ export function Prism({
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}
           layoutTimeout={layoutTimeout}
+          setProps={setProps}
         >
-          <PrismProvider updateWorkspace={updateWorkspace} setProps={setProps}>
-            <DndProvider>
-              <WorkspaceView actions={actions}>{children}</WorkspaceView>
-            </DndProvider>
-          </PrismProvider>
+          <PrismInner actions={actions} updateWorkspace={updateWorkspace}>
+            {children}
+          </PrismInner>
         </ConfigProvider>
       </ErrorBoundary>
     </div>

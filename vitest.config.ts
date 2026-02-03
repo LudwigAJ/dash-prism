@@ -22,6 +22,7 @@ export default defineConfig({
       '@types': path.resolve(__dirname, 'src/ts/types'),
       '@context': path.resolve(__dirname, 'src/ts/context'),
       '@constants': path.resolve(__dirname, 'src/ts/constants'),
+      '@store': path.resolve(__dirname, 'src/ts/store'),
     },
   },
 });
