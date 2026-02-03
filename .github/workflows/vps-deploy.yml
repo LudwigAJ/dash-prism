@@ -28,11 +28,20 @@ jobs:
           python-version: "3.12"
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
-      - name: Install Python dependencies (dev + docs groups)
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: venv-${{ runner.os }}-
+
+      - name: Install Python dependencies
         run: poetry install --with dev,docs --no-interaction
 
       - name: Set up Node.js
@@ -48,31 +57,26 @@ jobs:
         run: npm run build:backends
 
       - name: Build Sphinx documentation
-        run: |
-          cd docs
-          poetry run make html
+        run: poetry run make -C docs html
 
-      - name: Setup SSH key
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-      - name: Add VPS to known hosts
-        run: |
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy documentation
         run: |
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/deploy_key" \
             docs/_build/html/ \
             deploy@${{ secrets.VPS_HOST }}:site/docs/
 
       - name: Reload Caddy
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.VPS_HOST }} \
-            cd site && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
+          ssh -i ~/.ssh/deploy_key deploy@${{ secrets.VPS_HOST }} \
+            'cd site && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile' || true
 
       - name: Cleanup SSH key
         if: always()
