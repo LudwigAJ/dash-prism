@@ -118,6 +118,7 @@ SETTINGS_SIZE_ID = {"type": "settings-size", "index": SETTINGS_SCOPE}
 SETTINGS_APPLY_ID = {"type": "settings-apply-btn", "index": SETTINGS_SCOPE}
 SETTINGS_STATUS_ID = {"type": "settings-status", "index": SETTINGS_SCOPE}
 
+
 @dash_prism.register_layout(
     id="settings",
     name="Settings",
@@ -237,9 +238,11 @@ def settings_layout():
         ),
     )
 
+
 # ================================================================================
 # IRIS DATASET LAYOUT
 # ================================================================================
+
 
 @dash_prism.register_layout(
     id="iris",
@@ -332,9 +335,11 @@ def iris_layout():
         ),
     )
 
+
 # ================================================================================
 # DELAYED LAYOUT
 # ================================================================================
+
 
 @dash_prism.register_layout(
     id="delayed",
@@ -418,6 +423,7 @@ def delayed_layout(delay: str = "3"):
             }
         ),
     )
+
 
 # ================================================================================
 # COUNTRY EXPLORER LAYOUT
@@ -568,9 +574,11 @@ def country_layout(country: str = "United States"):
         ),
     )
 
+
 # ================================================================================
 # CONTINENT COMPARISON LAYOUT
 # ================================================================================
+
 
 @dash_prism.register_layout(
     id="continent",
@@ -669,7 +677,9 @@ def continent_layout(continent: str = "Europe"):
             ),
             html.Div(
                 [
-                    html.Span(f"GDP vs Life Expectancy ({latest_year})", style={"fontSize": "11px"}),
+                    html.Span(
+                        f"GDP vs Life Expectancy ({latest_year})", style={"fontSize": "11px"}
+                    ),
                     dcc.Graph(
                         figure=bubble_fig,
                         style={"height": "100%", "width": "100%"},
@@ -722,9 +732,11 @@ def continent_layout(continent: str = "Europe"):
         ),
     )
 
+
 # ================================================================================
 # EMBED URL LAYOUT
 # ================================================================================
+
 
 @dash_prism.register_layout(
     id="embed",
@@ -768,9 +780,11 @@ def embed_layout(url: str = "https://example.com"):
         style=full_panel_style({"backgroundColor": colors["bg"]}),
     )
 
+
 # ================================================================================
 # LIVE PLOT LAYOUT
 # ================================================================================
+
 
 @dash_prism.register_layout(
     id="live",
@@ -807,6 +821,7 @@ def live_layout(title: str = "Random Walk"):
         ],
         style=full_panel_style({"backgroundColor": colors["bg"]}),
     )
+
 
 # ================================================================================
 # SCATTER PLOT LAYOUT
@@ -912,6 +927,7 @@ def scatter_layout():
             }
         ),
     )
+
 
 # ================================================================================
 # OHLC CHART LAYOUT
@@ -1056,7 +1072,7 @@ app.layout = html.Div(
             persistence=True,
             persistence_type="memory",
             newTabOpensDropdown=False,
-            maxTabs=8,
+            maxTabs=16,
         ),
         dcc.Store(id="saved-workspace", storage_type="memory"),
     ]
@@ -1131,13 +1147,11 @@ def update_live_chart(n, data, title):
                 "type": "scatter",
                 "mode": "lines",
                 "line": {"color": colors["accent"], "width": 2},
-                "fill": "tozeroy",
-                "fillcolor": f"rgba{(*[int(colors['accent'].lstrip('#')[i:i+2], 16) for i in (0, 2, 4)], 0.1)}",
             }
         ],
         "layout": {
             **layout_settings,
-            "title": {"text": title, "font": {"size": 14}, "x": 0, "xanchor": "left"},
+            "title": {"text": title, "font": {"size": 14}},
             "xaxis": {
                 **layout_settings.get("xaxis", {}),
                 "title": "Time",
@@ -1205,7 +1219,7 @@ dash_prism.init("prism", app)
 
 
 if __name__ == "__main__":
-    HOST = '127.0.0.1'
+    HOST = "127.0.0.1"
     PORT = 5050
 
     print("Running Dash Prism `usage.py` Demo")

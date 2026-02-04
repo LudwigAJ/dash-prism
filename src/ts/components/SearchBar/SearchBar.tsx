@@ -39,6 +39,7 @@ export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {
     handleFocus,
     handleBlur,
     handleKeyDown,
+    handleClick,
     handleResizeStart,
     handleToggleFavorite,
   } = useSearchBarState(panelId);
@@ -115,6 +116,7 @@ export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
+      onClick={handleClick}
       onResizeStart={handleResizeStart}
       inputRef={inputRef}
       commandRef={commandRef}

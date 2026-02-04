@@ -20,6 +20,7 @@ import {
   updateTabLayout,
   selectTab,
   toggleSearchBars,
+  toggleFavoriteLayout,
   setSearchBarMode,
 } from '@store';
 
@@ -252,6 +253,13 @@ export function useSearchBarState(panelId: string) {
     }
   }, [mode]);
 
+  const handleClick = useCallback(() => {
+    // User clicked on search bar - always open dropdown (even if already focused)
+    if (mode !== 'display') {
+      dispatch({ type: 'SET_SHOW_DROPDOWN', show: true });
+    }
+  }, [mode]);
+
   /**
    * Helper to dismiss the searchbar dropdown and return to idle state.
    * Consolidates the repeated dismiss logic used across blur, escape, etc.
@@ -284,6 +292,7 @@ export function useSearchBarState(panelId: string) {
         handleBackToLayouts();
       } else if (e.key === 'Escape') {
         handleDismiss();
+        inputRef.current?.blur();
       }
     },
     [mode, handleParamSubmit, handleBackToLayouts, handleDismiss]
@@ -438,8 +447,8 @@ export function useSearchBarState(panelId: string) {
     handleFocus,
     handleBlur,
     handleKeyDown,
+    handleClick,
     handleResizeStart,
-    handleToggleFavorite: (layoutId: string) =>
-      globalDispatch({ type: 'TOGGLE_FAVORITE_LAYOUT', payload: { layoutId } }),
+    handleToggleFavorite: (layoutId: string) => globalDispatch(toggleFavoriteLayout({ layoutId })),
   };
 }

@@ -141,6 +141,7 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.showDropdown = false;
       draft.isUserSearching = false;
       draft.isPendingLayout = null;
+      draft.searchQuery = '';
       if (action.clearSelection) {
         clearSelection(draft);
       }
