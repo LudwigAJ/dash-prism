@@ -1,4 +1,4 @@
-recursive-include dash_prism *.js *.js.map *.json *.css *.html
+recursive-include dash_prism *
 include LICENSE
 include README.md
 prune tests
