@@ -12,15 +12,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,12 +51,18 @@ jobs:
           poetry run make html
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build/html
 
+  deploy:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
-        if: github.event_name == 'push'
         uses: actions/deploy-pages@v4
         id: deployment
