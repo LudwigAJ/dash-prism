@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dash_prism"
-version = "0.8.4"
+version = "0.8.5"
 description = "Prism: Powerful multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = "Apache-2.0"
@@ -38,8 +38,8 @@ homepage = "https://github.com/LudwigAJ/dash-prism"
 repository = "https://github.com/LudwigAJ/dash-prism.git"
 documentation = "https://ludwigaj.github.io/dash-prism"
 
-# Include all files in dash_prism/, even if gitignored (build artifacts)
-include = ["dash_prism/*"]
+# Include all package files
+include = ["dash_prism/*.js", "dash_prism/*.json", "dash_prism/*.py", "dash_prism/*.txt"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
