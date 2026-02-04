@@ -1,14 +1,15 @@
 # Dash Prism
 
 [![CI](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml)
-[![Docs](https://github.com/LudwigAJ/dash-prism/actions/workflows/docs-build.yml/badge.svg)](https://ludwigaj.github.io/dash-prism/)
+[![CodeQL](https://github.com/LudwigAJ/dash-prism/actions/workflows/codeql.yml/badge.svg)](https://github.com/LudwigAJ/dash-prism/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/dash-prism)](https://pypi.org/project/dash-prism/)
 [![Python](https://img.shields.io/pypi/pyversions/dash-prism)](https://pypi.org/project/dash-prism/)
 ![License](https://img.shields.io/github/license/LudwigAJ/dash-prism.svg?style=flat)
 
 A multi-panel workspace manager for Plotly Dash applications.
 
-**Documentation:** https://ludwigaj.com/dash-prism/    
+**Docs (1):** https://ludwigaj.github.io/dash-prism/     
+**Docs (2):** https://ludwigaj.com/dash-prism/    
 **PyPI:** https://pypi.org/project/dash-prism/    
  
 ## What is Dash Prism?

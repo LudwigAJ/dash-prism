@@ -7,8 +7,11 @@ on:
       - 'docs/**'
       - 'dash_prism/**'
       - 'src/**'
-      - '.github/workflows/vps-deploy.yml'
+      - '.github/workflows/docs-deploy-vps.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: vps-deploy
@@ -29,17 +32,6 @@ jobs:
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Cache Python dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
-          restore-keys: venv-${{ runner.os }}-
 
       - name: Install Python dependencies
         run: poetry install --with dev,docs --no-interaction
