@@ -67,10 +67,12 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
 // Reducer
 // =============================================================================
 
-export function createInitialState(hasCurrentLayout: boolean): SearchBarState {
+export function createInitialState(_hasCurrentLayout: boolean): SearchBarState {
+  // Note: showDropdown starts false - the useSearchBarState effect will open it
+  // based on newTabOpensDropdown config when appropriate
   return {
     searchQuery: '',
-    showDropdown: !hasCurrentLayout,
+    showDropdown: false,
     selectedLayoutId: null,
     paramValues: {},
     currentParamIndex: 0,
@@ -139,6 +141,7 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.showDropdown = false;
       draft.isUserSearching = false;
       draft.isPendingLayout = null;
+      draft.searchQuery = '';
       if (action.clearSelection) {
         clearSelection(draft);
       }

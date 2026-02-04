@@ -67,8 +67,8 @@ export function NewLayout({ tabId }: NewLayoutProps) {
     <Card
       key={id}
       className={cn(
-        'hover:border-accent relative cursor-pointer transition-all hover:shadow-md',
-        'focus-within:ring-ring focus-within:ring-2 focus-within:ring-offset-2',
+        'hover:border-accent relative cursor-pointer transition-colors hover:shadow-md',
+        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
         'flex flex-col'
       )}
       onClick={() => handleLayoutClick(id)}

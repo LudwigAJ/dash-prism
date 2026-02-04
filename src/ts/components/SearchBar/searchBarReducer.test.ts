@@ -226,12 +226,14 @@ describe('searchBarReducer', () => {
 });
 
 describe('createInitialState', () => {
-  it('creates initial state with dropdown open when no current layout', () => {
+  it('creates initial state with dropdown closed (effect controls opening)', () => {
+    // showDropdown always starts false - the useSearchBarState effect decides
+    // whether to open it based on newTabOpensDropdown config
     const state = createInitialState(false);
-    expect(state.showDropdown).toBe(true);
+    expect(state.showDropdown).toBe(false);
   });
 
-  it('creates initial state with dropdown closed when has current layout', () => {
+  it('creates initial state with dropdown closed regardless of hasCurrentLayout', () => {
     const state = createInitialState(true);
     expect(state.showDropdown).toBe(false);
   });

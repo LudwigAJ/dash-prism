@@ -24,6 +24,7 @@ export type SearchModeProps = {
   onFocus: () => void;
   onBlur: (e: React.FocusEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
+  onClick: () => void;
   onResizeStart: (e: React.MouseEvent) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   commandRef: React.RefObject<HTMLDivElement>;
@@ -42,12 +43,18 @@ export const SearchMode = ({
   onFocus,
   onBlur,
   onKeyDown,
+  onClick,
   onResizeStart,
   inputRef,
   commandRef,
 }: SearchModeProps) => {
   return (
-    <div className={cn('prism-searchbar')} ref={commandRef} data-testid="prism-searchbar">
+    <div
+      className={cn('prism-searchbar')}
+      ref={commandRef}
+      data-testid="prism-searchbar"
+      onClick={onClick}
+    >
       <Command shouldFilter={false} className="prism-command flex-1 overflow-visible">
         <CommandInput
           ref={inputRef}
@@ -69,7 +76,7 @@ export const SearchMode = ({
             {filteredLayouts.length === 0 ? (
               <CommandEmpty>No layouts found</CommandEmpty>
             ) : (
-              <CommandGroup heading="Available Layouts">
+              <CommandGroup>
                 {filteredLayouts.map(([id, meta]) => {
                   const hasOptions = meta.paramOptions && Object.keys(meta.paramOptions).length > 0;
                   const hasParams = meta.params && meta.params.length > 0;
