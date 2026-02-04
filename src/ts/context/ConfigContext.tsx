@@ -21,6 +21,8 @@ type ConfigContextValue = {
   statusBarPosition?: StatusBarPosition;
   /** Layout ID to load in the first tab on initial load */
   initialLayout?: string;
+  /** Whether new tabs auto-focus SearchBar and open dropdown (default: true) */
+  newTabOpensDropdown: boolean;
   /** Timeout in seconds for layout loading (default: 30) */
   layoutTimeout: number;
   /** Dash setProps callback for syncing state to Dash */
@@ -46,6 +48,7 @@ type ConfigProviderProps = {
   searchBarPlaceholder?: string;
   statusBarPosition?: StatusBarPosition;
   initialLayout?: string;
+  newTabOpensDropdown?: boolean;
   layoutTimeout?: number;
   setProps?: (props: Record<string, unknown>) => void;
 };
@@ -63,6 +66,7 @@ export function ConfigProvider({
   persistence = false,
   persistenceType = 'memory',
   initialLayout,
+  newTabOpensDropdown = true,
   layoutTimeout = 30,
   setProps,
 }: ConfigProviderProps) {
@@ -79,6 +83,7 @@ export function ConfigProvider({
       persistence,
       persistenceType,
       initialLayout,
+      newTabOpensDropdown,
       layoutTimeout,
       setProps,
     }),
@@ -94,6 +99,7 @@ export function ConfigProvider({
       searchBarPlaceholder,
       statusBarPosition,
       initialLayout,
+      newTabOpensDropdown,
       layoutTimeout,
       setProps,
     ]

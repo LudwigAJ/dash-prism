@@ -33,7 +33,7 @@ export function useSearchBarState(panelId: string) {
   const activeTabIds = useAppSelector(selectActiveTabIds);
   const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
   const favoriteLayouts = useAppSelector(selectFavoriteLayouts);
-  const { registeredLayouts, searchBarPlaceholder } = useConfig();
+  const { registeredLayouts, searchBarPlaceholder, newTabOpensDropdown } = useConfig();
 
   // ===== DERIVED GLOBAL STATE =====
   const activeTabId = activeTabIds[panelId];
@@ -61,6 +61,9 @@ export function useSearchBarState(panelId: string) {
 
   // Track which tabs we've seen to distinguish new tabs from existing ones
   const seenTabsRef = useRef(new Set<string>());
+
+  // Track if initial auto-focus has happened (to prevent auto-opening dropdown on mount)
+  const hasReceivedInitialFocusRef = useRef(false);
 
   // ===== RESIZE LOGIC =====
   const { height: dropdownHeight, handleResizeStart } = useDropdownResize();
@@ -235,9 +238,17 @@ export function useSearchBarState(panelId: string) {
   );
 
   const handleFocus = useCallback(() => {
+    // Skip opening dropdown on initial auto-focus from mount
+    // The effect will handle opening dropdown if newTabOpensDropdown is true
+    if (!hasReceivedInitialFocusRef.current) {
+      hasReceivedInitialFocusRef.current = true;
+      // Don't open dropdown on initial auto-focus - let the effect decide
+      return;
+    }
+
+    // User-initiated focus (click, tab navigation) - always open dropdown
     if (mode !== 'display') {
       dispatch({ type: 'SET_SHOW_DROPDOWN', show: true });
-      focusInput();
     }
   }, [mode]);
 
@@ -340,12 +351,13 @@ export function useSearchBarState(panelId: string) {
     if (activeTab?.layoutId && currentLayout) {
       // Tab now has a layout. Close dropdown.
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
-    } else if (!activeTab?.layoutId && isNewTab) {
+    } else if (!activeTab?.layoutId && isNewTab && newTabOpensDropdown) {
       // Only auto-open dropdown for newly created tabs without layouts
+      // when newTabOpensDropdown is enabled
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
       focusInput();
     }
-  }, [activeTab?.layoutId, currentLayout, searchBarsHidden, activeTabId]);
+  }, [activeTab?.layoutId, currentLayout, searchBarsHidden, activeTabId, newTabOpensDropdown]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {

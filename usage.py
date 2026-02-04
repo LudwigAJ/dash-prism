@@ -1055,6 +1055,7 @@ app.layout = html.Div(
             statusBarPosition="bottom",
             persistence=True,
             persistence_type="memory",
+            newTabOpensDropdown=False,
             maxTabs=8,
         ),
         dcc.Store(id="saved-workspace", storage_type="memory"),

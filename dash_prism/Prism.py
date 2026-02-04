@@ -75,6 +75,11 @@ class Prism(PrismComponent):
         Only applies on the very first load; if ``persistence`` is enabled and a
         saved workspace exists, the persisted state takes precedence.
     :type initialLayout: str or None
+    :param newTabOpensDropdown: Whether opening a new tab should automatically
+        focus the SearchBar and open the layout dropdown. If ``True`` (default),
+        new tabs instantly show the layout dropdown for quick selection. If
+        ``False``, users must click the SearchBar to see available layouts.
+    :type newTabOpensDropdown: bool
     :param readWorkspace: **Output property** - Read-only workspace state from Dash.
         Use as an ``Output`` in callbacks to react to workspace changes.
         The workspace dict contains: ``tabs`` (list of dict), ``panel`` (dict),

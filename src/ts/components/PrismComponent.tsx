@@ -140,6 +140,13 @@ export type PrismProps = {
   initialLayout?: string;
 
   /**
+   * Whether opening a new tab should automatically focus the SearchBar and
+   * open the dropdown. If true (default), new tabs instantly show the layout
+   * dropdown. If false, users must click the SearchBar to see the dropdown.
+   */
+  newTabOpensDropdown?: boolean;
+
+  /**
    * Styling props from Dash
    */
   style?: Record<string, string>;
@@ -260,6 +267,7 @@ export function Prism({
   persistence = false,
   persistence_type = 'memory',
   initialLayout,
+  newTabOpensDropdown = true,
   updateWorkspace,
   readWorkspace,
   style,
@@ -306,6 +314,7 @@ export function Prism({
           searchBarPlaceholder={searchBarPlaceholder}
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}
+          newTabOpensDropdown={newTabOpensDropdown}
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >

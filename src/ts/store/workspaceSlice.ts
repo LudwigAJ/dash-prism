@@ -344,6 +344,20 @@ const workspaceSlice = createSlice({
           delete state.activeTabIds[sourcePanelId];
         }
       }
+
+      // Collapse source panel if it's now empty (and not the last panel)
+      const sourceEmpty = (state.panelTabs[sourcePanelId]?.length ?? 0) === 0;
+      if (sourceEmpty) {
+        const leafPanels = getLeafPanelIds(state.panel);
+        const otherPanels = leafPanels.filter((id) => id !== sourcePanelId);
+        if (otherPanels.length > 0) {
+          const collapseResult = collapsePanelTree(state.panel, sourcePanelId);
+          if (collapseResult.success) {
+            delete state.activeTabIds[sourcePanelId];
+            delete state.panelTabs[sourcePanelId];
+          }
+        }
+      }
     },
 
     reorderTab(

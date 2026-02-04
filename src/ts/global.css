@@ -361,7 +361,7 @@
 }
 
 .prism-searchbar-params {
-  background: var(--background);
+  background: var(--popover);
 }
 
 .prism-searchbar [data-slot='command-input-wrapper'] {
