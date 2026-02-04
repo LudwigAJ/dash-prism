@@ -10,6 +10,9 @@ on:
       - '.github/workflows/docs-deploy-vps.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: vps-deploy
   cancel-in-progress: true

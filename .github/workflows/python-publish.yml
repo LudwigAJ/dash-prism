@@ -6,6 +6,10 @@ on:
   # Allow manual trigger for testing
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-and-publish:
     name: Build and Publish to PyPI
@@ -13,8 +17,6 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/dash-prism
-    permissions:
-      id-token: write  # Required for trusted publishing
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
