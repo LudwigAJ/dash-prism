@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy Docs to VPS
 
 on:
   push:
@@ -9,9 +9,6 @@ on:
       - 'src/**'
       - '.github/workflows/docs-deploy-vps.yml'
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 concurrency:
   group: vps-deploy
