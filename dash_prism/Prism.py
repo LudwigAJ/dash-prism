@@ -6,9 +6,14 @@ This file provides a clean Python API that wraps the auto-generated PrismCompone
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal, Sequence
+
+from dash.development.base_component import Component
 
 from .PrismComponent import PrismComponent
+
+# Sentinel to distinguish "not provided" from an explicit None
+_UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
 
 
 class Prism(PrismComponent):
@@ -207,6 +212,40 @@ class Prism(PrismComponent):
     # Override _type to match what init.py expects
     _type = "Prism"
 
-    def __init__(self, **kwargs: Any):
-        """Initialize Prism component"""
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        # Identity
+        id: str | None = _UNSET,
+        style: dict[str, Any] | None = _UNSET,
+        # Appearance
+        theme: Literal["light", "dark"] = _UNSET,
+        size: Literal["sm", "md", "lg"] = _UNSET,
+        actions: Sequence[Component] | None = _UNSET,
+        statusBarPosition: Literal["top", "bottom"] = _UNSET,
+        # Persistence
+        persistence: bool = _UNSET,
+        persistence_type: Literal["memory", "session", "local"] = _UNSET,
+        # Behavior
+        maxTabs: int = _UNSET,
+        initialLayout: str | None = _UNSET,
+        newTabOpensDropdown: bool = _UNSET,
+        searchBarPlaceholder: str = _UNSET,
+        layoutTimeout: int = _UNSET,
+        # Advanced — typically managed by dash_prism.init()
+        children: list[Component] | None = _UNSET,
+        serverSessionId: str | None = _UNSET,
+        registeredLayouts: dict[str, Any] | None = _UNSET,
+        readWorkspace: dict[str, Any] | None = _UNSET,
+        updateWorkspace: dict[str, Any] | None = _UNSET,
+        **kwargs: Any,
+    ):
+        # Only forward args the caller actually provided so that
+        # _explicitize_args on the base class sees the correct set.
+        _locals = locals()
+        explicit = {
+            k: v
+            for k, v in _locals.items()
+            if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
+        }
+        explicit.update(kwargs)
+        super().__init__(**explicit)

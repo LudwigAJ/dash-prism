@@ -6,7 +6,12 @@ This file provides a clean Python API that wraps the auto-generated PrismActionC
 
 from __future__ import annotations
 
+from typing import Any
+
 from .PrismActionComponent import PrismActionComponent
+
+# Sentinel to distinguish "not provided" from an explicit None
+_UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
 
 
 class Action(PrismActionComponent):
@@ -178,14 +183,26 @@ class Action(PrismActionComponent):
     # Override _type to match what init.py expects (internal wire protocol)
     _type = "PrismAction"
 
-    def __init__(self, **kwargs):
-        """Initialize Action component.
-
-        :param kwargs: All parameters accepted by the Action component.
-            See class docstring for full parameter list.
-        :type kwargs: dict
-        """
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        label: str = _UNSET,
+        id: str | None = _UNSET,
+        icon: str | None = _UNSET,
+        tooltip: str | None = _UNSET,
+        style: str | None = _UNSET,
+        disabled: bool = _UNSET,
+        loading: bool = _UNSET,
+        n_clicks: int = _UNSET,
+        **kwargs: Any,
+    ):
+        _locals = locals()
+        explicit = {
+            k: v
+            for k, v in _locals.items()
+            if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
+        }
+        explicit.update(kwargs)
+        super().__init__(**explicit)
 
 
 # Backwards compatibility alias
