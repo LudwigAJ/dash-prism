@@ -23,9 +23,9 @@ gen:
 watch:
     npm run watch
 
-# Install  pip requirements & node modules.
+# Install Poetry dependencies & node modules.
 install:
-    pip install -r requirements.txt
+    poetry install --with dev,test,docs,demo
     npm install
 
 # Package the application for distribution using python wheel.

@@ -371,7 +371,7 @@ Configuration
    dash_prism.Prism(
        id='workspace',
        theme='light',           # or 'dark'
-    size='md',               # 'sm', 'md', 'lg'
+       size='md',               # 'sm', 'md', 'lg'
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
        statusBarPosition='bottom',  # or 'top'

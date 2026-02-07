@@ -114,11 +114,6 @@ Classes
 - :class:`LayoutParameter`: Describes a layout parameter
 - :class:`LayoutRegistry`: Registry for managing layouts
 
-Examples
---------
-
-See the ``examples/`` directory for complete working examples.
-
 Notes
 -----
 
