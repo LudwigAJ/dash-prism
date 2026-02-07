@@ -7,7 +7,15 @@ import { DndProvider } from '@context/DndProvider';
 import { WorkspaceView } from '@components/WorkspaceView';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import { Toaster } from '@components/ui/toaster';
-import { createPrismStore, syncWorkspace, useAppDispatch } from '@store';
+import {
+  createPrismStore,
+  syncWorkspace,
+  updateTabLayout,
+  selectTabs,
+  useAppDispatch,
+  useAppSelector,
+  getWorkspaceStorageKey,
+} from '@store';
 import { toastEmitter } from '@utils/toastEmitter';
 import { toast } from 'sonner';
 import type {
@@ -21,12 +29,9 @@ import type {
 import '../global.css';
 import { DashComponentProps } from 'props';
 
-/** Storage key prefix - must match PrismContext */
-const STORAGE_KEY_PREFIX = 'prism-workspace';
-
 /** Clear workspace from storage (used by workspace-level error boundary) */
 function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: string): void {
-  const key = componentId ? `${STORAGE_KEY_PREFIX}-${componentId}` : STORAGE_KEY_PREFIX;
+  const key = getWorkspaceStorageKey(componentId);
   try {
     if (persistenceType === 'local') localStorage.removeItem(key);
     else if (persistenceType === 'session') sessionStorage.removeItem(key);
@@ -221,6 +226,7 @@ function PrismInner({
       <PersistGate loading={null} persistor={persistor}>
         <PortalProvider>
           <UpdateWorkspaceSync updateWorkspace={updateWorkspace} />
+          <InitialLayoutLoader />
           <DndProvider>
             <Toaster />
             <WorkspaceView actions={actions}>{children}</WorkspaceView>
@@ -243,6 +249,40 @@ function UpdateWorkspaceSync({ updateWorkspace }: { updateWorkspace?: Partial<Wo
       dispatch(syncWorkspace(updateWorkspace));
     }
   }, [updateWorkspace, dispatch]);
+
+  return null;
+}
+
+/**
+ * Applies the initialLayout config to the first tab on fresh workspaces.
+ * Runs once after rehydration. If persistence restored a saved workspace
+ * (tabs already have layouts), this is a no-op.
+ */
+function InitialLayoutLoader() {
+  const dispatch = useAppDispatch();
+  const tabs = useAppSelector(selectTabs);
+  const { initialLayout, registeredLayouts } = useConfig();
+  const appliedRef = useRef(false);
+
+  useEffect(() => {
+    if (appliedRef.current) return;
+    if (!initialLayout) return;
+
+    const layout = registeredLayouts[initialLayout];
+    if (!layout) return;
+
+    // Only apply to a fresh workspace: single tab with no layout
+    if (tabs.length === 1 && !tabs[0].layoutId) {
+      appliedRef.current = true;
+      dispatch(
+        updateTabLayout({
+          tabId: tabs[0].id,
+          layoutId: initialLayout,
+          name: layout.name,
+        })
+      );
+    }
+  }, [tabs, initialLayout, registeredLayouts, dispatch]);
 
   return null;
 }

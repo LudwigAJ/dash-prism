@@ -23,6 +23,7 @@ from selenium.webdriver.common.keys import Keys
 TAB_SELECTOR = "[data-testid^='prism-tab-']:not([data-testid*='close'])"
 PANEL_SELECTOR = "[data-testid^='prism-panel-']"
 ADD_TAB_BUTTON = "[data-testid='prism-tabbar-add-button']"
+SPLIT_PANEL_BUTTON = "[data-testid='prism-tabbar-split-button']"
 SEARCHBAR_INPUT = "[data-testid='prism-searchbar-input']"
 CONTEXT_MENU = "[data-testid='prism-context-menu']"
 PRISM_ROOT = ".prism-root"

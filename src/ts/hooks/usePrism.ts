@@ -3,6 +3,7 @@ import { getLeafPanelIds, isLastPanel } from '@utils/panels';
 import type { PanelId, TabId, Tab } from '@types';
 import { findTabById, getActiveTabForPanel, getTabsByPanelId } from '@utils/tabs';
 import { usePortal } from '@context/PortalContext';
+import { useConfig } from '@context/ConfigContext';
 import {
   useAppSelector,
   useAppDispatch,
@@ -18,6 +19,7 @@ import {
   selectHelpModalOpen,
   selectSetIconModalTabId,
   selectCanUndo,
+  getWorkspaceStorageKey,
   // UI actions for modals
   openInfoModal,
   closeInfoModal,
@@ -53,6 +55,7 @@ import {
 export function usePrism() {
   const dispatch = useAppDispatch();
   const { getPortalNode } = usePortal();
+  const { componentId } = useConfig();
 
   // Select all state from Redux
   const tabs = useAppSelector(selectTabs);
@@ -107,13 +110,14 @@ export function usePrism() {
 
   // Clear persisted state helper (redux-persist handles persistence)
   const clearPersistedState = useCallback(() => {
+    const key = getWorkspaceStorageKey(componentId);
     try {
-      localStorage.removeItem('persist:prism-workspace');
-      sessionStorage.removeItem('persist:prism-workspace');
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
     } catch {
       // Storage access may fail in some contexts
     }
-  }, []);
+  }, [componentId]);
 
   // Modal controls - accept Tab or tabId
   const openInfoModalFn = useCallback(

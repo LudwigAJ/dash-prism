@@ -88,7 +88,13 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
         activationMode="manual"
         className="flex h-full flex-col gap-0 overflow-hidden"
       >
-        <TabBar panelId={panel.id} tabs={tabs} activeTabId={activeTabId} isPinned={isPinned} />
+        <TabBar
+          panelId={panel.id}
+          tabs={tabs}
+          activeTabId={activeTabId}
+          isPinned={isPinned}
+          isActive={isActive}
+        />
 
         <SearchBar panelId={panel.id} isPinned={isPinned} />
 

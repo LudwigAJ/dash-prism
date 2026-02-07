@@ -39,6 +39,7 @@ from testutils import (
     TAB_SELECTOR,
     PANEL_SELECTOR,
     ADD_TAB_BUTTON,
+    SPLIT_PANEL_BUTTON,
     SEARCHBAR_INPUT,
     CONTEXT_MENU,
     PRISM_ROOT,

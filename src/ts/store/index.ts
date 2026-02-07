@@ -24,6 +24,31 @@ import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
 import { generateShortId } from '@utils/uuid';
 
 // =============================================================================
+// Persistence Key Helpers
+// =============================================================================
+
+/** Base prefix for workspace persistence keys (used by redux-persist config). */
+const WORKSPACE_PERSIST_PREFIX = 'prism-workspace';
+
+/**
+ * Build the redux-persist config key for a workspace.
+ * This is the key passed to `persistReducer({ key: ... })`.
+ * redux-persist adds its own `persist:` prefix when writing to storage.
+ */
+export function getWorkspacePersistKey(componentId?: string): string {
+  return componentId ? `${WORKSPACE_PERSIST_PREFIX}-${componentId}` : WORKSPACE_PERSIST_PREFIX;
+}
+
+/**
+ * Build the full storage key as it appears in localStorage / sessionStorage.
+ * redux-persist prefixes config keys with `persist:` by default.
+ * Use this when directly removing persisted data via `storage.removeItem()`.
+ */
+export function getWorkspaceStorageKey(componentId?: string): string {
+  return `persist:${getWorkspacePersistKey(componentId)}`;
+}
+
+// =============================================================================
 // Storage Configuration
 // =============================================================================
 
@@ -124,7 +149,7 @@ export function createPrismStore(config: StoreConfig) {
   // This ensures only the workspace state is persisted, not the undo history.
   // On page reload, undo history starts fresh.
   const workspacePersistConfig = {
-    key: componentId ? `prism-workspace-${componentId}` : 'prism-workspace',
+    key: getWorkspacePersistKey(componentId),
     version: 1, // Increment this when adding new migrations
     storage: getStorage(persistenceType),
     migrate: createMigrate(migrations, { debug: process.env.NODE_ENV !== 'production' }),
