@@ -38,8 +38,13 @@ homepage = "https://github.com/LudwigAJ/dash-prism"
 repository = "https://github.com/LudwigAJ/dash-prism.git"
 documentation = "https://ludwigaj.github.io/dash-prism"
 
-# Include all package files
-include = ["dash_prism/*.js", "dash_prism/*.json", "dash_prism/*.py", "dash_prism/*.txt"]
+# Include build artifacts in both sdist and wheel, even if gitignored
+include = [
+    { path = "dash_prism/*.js", format = ["sdist", "wheel"] },
+    { path = "dash_prism/*.js.LICENSE.txt", format = ["sdist", "wheel"] },
+    { path = "dash_prism/*.json", format = ["sdist", "wheel"] },
+    { path = "dash_prism/*.py", format = ["sdist", "wheel"] },
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
