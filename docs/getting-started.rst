@@ -44,9 +44,20 @@ The order matters: register layouts -> define app.layout -> call init().
 Development Installation
 ------------------------
 
+The project uses `Poetry <https://python-poetry.org/>`_ for dependency
+management:
+
 .. code-block:: bash
 
    git clone https://github.com/LudwigAJ/dash-prism.git
    cd dash-prism
-   npm install && npm run build
-   pip install -e .
+   poetry install --with dev,test,docs,demo
+   npm install
+   npm run build
+
+Or with `just <https://github.com/casey/just>`_:
+
+.. code-block:: bash
+
+   just install
+   just build
