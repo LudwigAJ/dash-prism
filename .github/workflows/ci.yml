@@ -139,6 +139,68 @@ jobs:
           python -m pip install twine
           poetry run twine check dist/*
 
+      - name: Validate wheel contents
+        run: |
+          echo "## Wheel Contents Validation" >> $GITHUB_STEP_SUMMARY
+
+          WHEEL_FILE=$(ls dist/*.whl)
+          echo "Wheel: $WHEEL_FILE" >> $GITHUB_STEP_SUMMARY
+
+          # List wheel contents
+          python -m zipfile -l "$WHEEL_FILE" > /tmp/wheel_contents.txt
+
+          # Check for required files
+          REQUIRED_FILES=(
+            "dash_prism/dash_prism.js"
+            "dash_prism/metadata.json"
+            "dash_prism/package-info.json"
+            "dash_prism/icons.json"
+            "dash_prism/proptypes.js"
+            "dash_prism/__init__.py"
+            "dash_prism/Prism.py"
+            "dash_prism/Action.py"
+            "dash_prism/init.py"
+            "dash_prism/registry.py"
+            "dash_prism/utils.py"
+            "dash_prism/icons.py"
+            "dash_prism/PrismComponent.py"
+            "dash_prism/PrismActionComponent.py"
+            "dash_prism/PrismContentComponent.py"
+            "dash_prism/_imports_.py"
+          )
+
+          MISSING=0
+          for file in "${REQUIRED_FILES[@]}"; do
+            if grep -q "$file" /tmp/wheel_contents.txt; then
+              echo "  [ok] $file" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "  [MISSING] $file" >> $GITHUB_STEP_SUMMARY
+              MISSING=$((MISSING + 1))
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "ERROR: $MISSING required file(s) missing from wheel!" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/wheel_contents.txt >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All required files present in wheel." >> $GITHUB_STEP_SUMMARY
+
+      - name: Smoke test wheel install
+        run: |
+          python -m venv /tmp/test-env
+          /tmp/test-env/bin/pip install dist/*.whl
+          /tmp/test-env/bin/python -c "
+          import dash_prism
+          print(f'Version: {dash_prism.__version__}')
+          assert dash_prism.__version__, 'Version should not be empty'
+          assert len(dash_prism.AVAILABLE_ICONS) > 0, 'Should have icons'
+          print('Smoke test passed!')
+          "
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

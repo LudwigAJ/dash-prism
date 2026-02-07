@@ -6,9 +6,7 @@ This file provides a clean Python API that wraps the auto-generated PrismCompone
 
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict
-
-from narwhals import Unknown
+from typing import Any
 
 from .PrismComponent import PrismComponent
 
