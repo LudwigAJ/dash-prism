@@ -37,6 +37,38 @@ export function makeComponentPath(componentId: string, tabId: string): string[] 
 }
 
 // =============================================================================
+// useNativePanelFocus — Native pointerdown (capture) listener
+// to detect clicks inside Dash layouts, whose separate React
+// root prevents synthetic events from reaching Prism's tree.
+// =============================================================================
+
+function useNativePanelFocus(
+  panelId: string,
+  activePanelId: string,
+  dispatch: ReturnType<typeof useAppDispatch>
+) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const activePanelIdRef = useRef(activePanelId);
+  activePanelIdRef.current = activePanelId;
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+
+    const handler = () => {
+      if (activePanelIdRef.current !== panelId) {
+        dispatch(setActivePanel({ panelId }));
+      }
+    };
+
+    el.addEventListener('pointerdown', handler, true);
+    return () => el.removeEventListener('pointerdown', handler, true);
+  }, [dispatch, panelId]);
+
+  return panelRef;
+}
+
+// =============================================================================
 // LeafPanel - Renders a leaf panel with tabs
 // =============================================================================
 
@@ -68,16 +100,12 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
     [dispatch, panel.id]
   );
 
-  const handlePanelClick = useCallback(() => {
-    if (activePanelId !== panel.id) {
-      dispatch(setActivePanel({ panelId: panel.id }));
-    }
-  }, [dispatch, panel.id, activePanelId]);
+  const panelRef = useNativePanelFocus(panel.id, activePanelId, dispatch);
 
   return (
     <div
+      ref={panelRef}
       className={cn('prism-panel', isActive && 'prism-panel-active')}
-      onClick={handlePanelClick}
       data-testid={`prism-panel-${panel.id}`}
       data-panel-id={panel.id}
       data-active={isActive || undefined}

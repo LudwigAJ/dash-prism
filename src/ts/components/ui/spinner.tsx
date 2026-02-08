@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn';
 const spinnerVariants = cva('animate-spin stroke-[2.5]', {
   variants: {
     size: {
-      sm: 'size-[1.25em]',
+      sm: 'size-[1.2em]',
       md: 'size-[1.5em]',
       lg: 'size-[1.75em]',
     },

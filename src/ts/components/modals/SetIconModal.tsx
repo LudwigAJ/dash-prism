@@ -66,7 +66,7 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
                   title={getIconLabel(iconName)}
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-md transition-colors',
-                    'hover:bg-accent dark:hover:bg-muted focus:ring-ring focus:ring-2 focus:outline-none',
+                    'hover:bg-muted focus:ring-ring focus:ring-2 focus:outline-none',
                     isSelected && 'bg-primary/20 ring-primary ring-2'
                   )}
                 >
