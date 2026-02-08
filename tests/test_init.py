@@ -671,3 +671,101 @@ def test_callable_layout_exception_handling(dash_app: Dash) -> None:
     # Calling the layout should raise the original exception
     with pytest.raises(ValueError, match="Layout generation failed"):
         dash_app.layout()
+
+
+# =============================================================================
+# Async Layout Rendering Regression Tests
+# =============================================================================
+
+
+def test_async_render_tab_layout_returns_component_not_coroutine(prism_app: Dash) -> None:
+    """Regression test: _render_tab_layout_async must await the callback runner.
+
+    Previously, _render_tab_layout_async delegated to the synchronous
+    _render_tab_layout_impl which called _run_callback_async without awaiting
+    the returned coroutine. The result was a coroutine object passed to
+    inject_tab_id instead of a Dash component tree.
+    """
+    import asyncio
+
+    @dash_prism.register_layout(id="async-render-test", name="Async Render Test")
+    async def async_layout():
+        return html.Div("Async rendered content", id="async-rendered")
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout_async
+
+    result = asyncio.run(_render_tab_layout_async("tab-1", "async-render-test", None))
+
+    # The result must be a Dash component, NOT a coroutine
+    assert result is not None
+    assert not asyncio.iscoroutine(result), (
+        "_render_tab_layout_async returned a coroutine instead of a component. "
+        "The callback runner's coroutine was not awaited."
+    )
+    assert hasattr(result, "children"), "Result should be a Dash component with children"
+
+
+def test_async_render_sync_callback_in_async_context(prism_app: Dash) -> None:
+    """Test that sync callbacks work correctly when rendered via async path."""
+    import asyncio
+
+    invoked = []
+
+    @dash_prism.register_layout(id="sync-in-async", name="Sync In Async")
+    def sync_layout():
+        invoked.append(True)
+        return html.Div("Sync content in async context")
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout_async
+
+    result = asyncio.run(_render_tab_layout_async("tab-1", "sync-in-async", None))
+
+    assert result is not None
+    assert len(invoked) == 1, "Sync callback should have been invoked once"
+    assert not asyncio.iscoroutine(result)
+
+
+def test_async_render_with_params(prism_app: Dash) -> None:
+    """Test async layout rendering with parameters."""
+    import asyncio
+
+    received = {}
+
+    @dash_prism.register_layout(id="async-params", name="Async Params")
+    async def async_param_layout(mode: str = "default"):
+        received["mode"] = mode
+        return html.Div(f"Mode: {mode}")
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout_async
+
+    result = asyncio.run(_render_tab_layout_async("tab-1", "async-params", {"mode": "advanced"}))
+
+    assert result is not None
+    assert not asyncio.iscoroutine(result)
+    assert received["mode"] == "advanced"
+
+
+def test_async_render_static_layout(prism_app: Dash) -> None:
+    """Test that static layouts (no callback) work via async path."""
+    import asyncio
+
+    dash_prism.register_layout(
+        id="async-static",
+        name="Async Static",
+        layout=html.Div("Static in async", id="async-static-content"),
+    )
+
+    dash_prism.init("test-prism", prism_app)
+
+    from dash_prism.init import _render_tab_layout_async
+
+    result = asyncio.run(_render_tab_layout_async("tab-1", "async-static", None))
+
+    assert result is not None
+    assert not asyncio.iscoroutine(result)

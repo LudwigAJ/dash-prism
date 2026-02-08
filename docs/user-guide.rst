@@ -155,8 +155,9 @@ Handle clicks with callbacks:
        # Do work...
        return False  # Stop loading spinner
 
-Style options: ``'default'``, ``'primary'``, ``'secondary'``, ``'success'``,
-``'warning'``, ``'danger'``, or a hex color like ``'#FF5500'``.
+Variant options (``variant`` parameter): ``'default'``, ``'primary'``,
+``'secondary'``, ``'success'``, ``'warning'``, ``'danger'``, or a hex color
+like ``'#FF5500'``.
 
 Icons
 -----
@@ -229,8 +230,8 @@ Workspace State
 
 Prism exposes two properties for reading and writing workspace state:
 
-- ``readWorkspace`` — Output property containing the current workspace state
-- ``updateWorkspace`` — Input property for programmatically updating the workspace
+- ``readWorkspace`` — Read-only property containing the current workspace state (use as ``Input`` or ``State`` in callbacks)
+- ``updateWorkspace`` — Write-only property for programmatically updating the workspace (use as ``Output`` in callbacks)
 
 Reading State with Actions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -389,6 +390,46 @@ the entire workspace. This is a **global** limit, not per-panel.
 
 Caveats
 -------
+
+Callback Exceptions
+^^^^^^^^^^^^^^^^^^^
+
+If your layouts contain components with callbacks, you should set
+``suppress_callback_exceptions=True`` on your Dash app:
+
+.. code-block:: python
+
+   app = Dash(__name__, suppress_callback_exceptions=True)
+
+**Why?** Components inside tab layouts don't exist in ``app.layout`` at
+startup — they are created dynamically when a user opens a tab. Dash
+validates callback IDs against the layout at registration time, so callbacks
+referencing those components will raise an exception.
+
+.. code-block:: python
+
+   # This layout has a Dropdown and Graph inside a tab:
+   @dash_prism.register_layout(id='analytics', name='Analytics')
+   def analytics():
+       return html.Div([
+           dcc.Dropdown(id='metric', options=['revenue', 'users']),
+           dcc.Graph(id='chart'),
+       ])
+
+   # This callback will FAIL at startup without suppress_callback_exceptions
+   # because 'metric' and 'chart' don't exist in app.layout yet.
+   @app.callback(Output('chart', 'figure'), Input('metric', 'value'))
+   def update_chart(metric):
+       return px.line(df, y=metric)
+
+**When is it not needed?** If all your layouts are purely static (no
+callbacks targeting components inside tabs), or if you exclusively use
+pattern-matching IDs (dict-style) for those components, you can skip it.
+
+.. note::
+
+   ``init()`` logs a warning if ``suppress_callback_exceptions`` is
+   ``False`` to help catch this early.
 
 ID Transformation (allow_multiple only)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

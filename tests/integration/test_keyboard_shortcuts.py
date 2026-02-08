@@ -11,7 +11,6 @@ Best Practices Applied:
 
 from __future__ import annotations
 
-import platform
 import pytest
 from selenium.webdriver.common.keys import Keys
 
@@ -20,15 +19,11 @@ from conftest import (
     ADD_TAB_BUTTON,
     wait_for_tab_count,
     get_tabs,
+    get_modifier_key,
 )
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
-
-
-def get_modifier_key():
-    """Get the correct modifier key for the current platform."""
-    return Keys.COMMAND if platform.system() == "Darwin" else Keys.CONTROL
 
 
 def test_keyboard_shortcut_new_tab(prism_app_with_layouts):

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo, memo, useEffect } from 'react';
-import { Lock, X, LoaderCircle, Plus } from 'lucide-react';
+import { Lock, X, LoaderCircle, Plus, Columns2 } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { useShareLinks } from '@hooks/useShareLinks';
@@ -30,7 +30,7 @@ import { TAB_STYLE_LABELS, tabStyleVariants, migrateTabStyle } from '@constants/
 import { getTabIcon } from '@constants/tab-icons';
 import type { Tab, Theme } from '@types';
 import type { AppDispatch } from '@store';
-import { MAX_TAB_NAME_LENGTH } from '@store/workspaceSlice';
+import { MAX_TAB_NAME_LENGTH, MAX_LEAF_PANELS } from '@store/workspaceSlice';
 import { cn } from '@utils/cn';
 import { findTabById } from '@utils/tabs';
 import { makeComponentPath } from './Panel';
@@ -51,6 +51,8 @@ import {
   setTabStyle,
   refreshTab,
   clearRenameTab,
+  splitPanel,
+  selectPanelCount,
 } from '@store';
 
 // =============================================================================
@@ -125,6 +127,12 @@ const TabItem = memo(function TabItem({
   const isDefaultStyle = styleColor === 'default';
   const isLocked = tab.locked ?? false;
   const isEditing = editingTabId === tab.id;
+
+  // When rename is triggered via context menu, Radix restores focus to the tab
+  // trigger after the menu closes — stealing focus from the rename input. This
+  // ref is set synchronously in the rename onSelect (before the close animation)
+  // and checked in onCloseAutoFocus to prevent that focus restoration.
+  const preventFocusRestoreRef = useRef(false);
 
   // Add drag-and-drop functionality
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -267,11 +275,24 @@ const TabItem = memo(function TabItem({
       </ContextMenuTrigger>
 
       {/* ===== CONTEXT MENU ===== */}
-      <ContextMenuContent className="min-w-36" theme={theme} data-testid="prism-context-menu">
+      <ContextMenuContent
+        className="min-w-36"
+        theme={theme}
+        data-testid="prism-context-menu"
+        onCloseAutoFocus={(e) => {
+          if (preventFocusRestoreRef.current) {
+            e.preventDefault();
+            preventFocusRestoreRef.current = false;
+          }
+        }}
+      >
         <ContextMenuItem
           data-testid="prism-context-menu-rename"
           disabled={isLocked || isPinned}
-          onSelect={() => onStartRename(tab)}
+          onSelect={() => {
+            preventFocusRestoreRef.current = true;
+            onStartRename(tab);
+          }}
         >
           Rename
           <ContextMenuShortcut>⌃R</ContextMenuShortcut>
@@ -398,6 +419,7 @@ type TabBarProps = {
   tabs: Tab[];
   activeTabId: string | null;
   isPinned?: boolean;
+  isActive?: boolean;
   onOpenInfo?: (tab: Tab) => void;
 };
 
@@ -406,6 +428,7 @@ export const TabBar = memo(function TabBar({
   tabs,
   activeTabId,
   isPinned = false,
+  isActive = false,
   onOpenInfo,
 }: TabBarProps) {
   const dispatch = useAppDispatch();
@@ -487,6 +510,24 @@ export const TabBar = memo(function TabBar({
     if (isMaxTabsReached) return;
     dispatch(addTab({ panelId }));
   }, [isMaxTabsReached, panelId, dispatch]);
+
+  const panelCount = useAppSelector(selectPanelCount);
+  const isMaxPanelsReached = panelCount >= MAX_LEAF_PANELS;
+
+  const handleSplitPanel = useCallback(async () => {
+    if (isMaxPanelsReached || isMaxTabsReached) return;
+    const result = await dispatch(addTab({ panelId }));
+    if (addTab.fulfilled.match(result)) {
+      dispatch(
+        splitPanel({
+          panelId,
+          direction: 'horizontal',
+          tabId: result.payload.tab.id,
+          position: 'after',
+        })
+      );
+    }
+  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached]);
 
   // Listen for keyboard-triggered rename via renamingTabId
   useEffect(() => {
@@ -611,6 +652,27 @@ export const TabBar = memo(function TabBar({
           />
         )}
       </div>
+      {!isPinned && isActive && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              data-testid="prism-tabbar-split-button"
+              className="prism-tabbar-split flex h-full shrink-0 items-center justify-center transition-colors"
+              onClick={handleSplitPanel}
+              disabled={isMaxPanelsReached || isMaxTabsReached}
+            >
+              <Columns2 />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isMaxPanelsReached
+              ? 'Max panels reached'
+              : isMaxTabsReached
+                ? 'Max tabs reached'
+                : 'Split panel'}
+          </TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 });

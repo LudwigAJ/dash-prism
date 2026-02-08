@@ -207,7 +207,8 @@ def _is_app_async(app: "Dash") -> bool:
     :returns: ``True`` if app uses async callbacks, ``False`` otherwise.
     :rtype: bool
     """
-    return getattr(app, "use_async", False)
+    # Dash stores async mode as a private/protected attribute
+    return getattr(app, "_use_async", False)
 
 
 def _run_callback(
@@ -428,6 +429,11 @@ async def _render_tab_layout_async(
 ) -> Any:
     """Render a tab's layout (ASYNC version).
 
+    Separate implementation from the sync path because the callback runner
+    is async and must be awaited -- the shared ``_render_tab_layout_impl``
+    is synchronous and cannot await the coroutine returned by
+    ``_run_callback_async``.
+
     :param tab_id: The unique tab identifier.
     :type tab_id: str
     :param layout_id: The registered layout ID.
@@ -441,14 +447,51 @@ async def _render_tab_layout_async(
     :returns: The rendered Dash component tree.
     :rtype: Any
     """
-    return await _render_tab_layout_impl(
-        tab_id,
-        layout_id,
-        layout_params,
-        layout_option,
-        timeout,
-        callback_runner=_run_callback_async,
-    )
+    from .registry import get_layout, resolve_layout_params
+    from .utils import inject_tab_id
+
+    if not layout_id:
+        return None
+
+    registration = get_layout(layout_id)
+    if not registration:
+        return _create_error_component(f"Layout '{layout_id}' not found")
+
+    try:
+        resolved_params = resolve_layout_params(
+            registration,
+            layout_id,
+            layout_params,
+            layout_option,
+        )
+
+        if registration.is_callable and registration.callback is not None:
+            layout = await _run_callback_async(
+                registration.callback,
+                registration.is_async,
+                resolved_params,
+                timeout,
+            )
+        else:
+            layout = copy.deepcopy(registration.layout)
+
+        return inject_tab_id(layout, tab_id)
+
+    except TimeoutError as e:
+        return _create_error_component(
+            f"Layout '{layout_id}' timed out after {timeout}s.\n"
+            "The callback took too long to respond. Try refreshing the tab."
+        )
+    except TypeError as e:
+        return _create_error_component(
+            f"Error rendering layout '{layout_id}': {e}\n"
+            "Check that all required parameters are provided."
+        )
+    except ValueError as e:
+        return _create_error_component(str(e))
+    except Exception as e:
+        logger.exception(f"Unexpected error rendering layout '{layout_id}'", exc_info=e)
+        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
 
 
 # =============================================================================
@@ -607,6 +650,16 @@ def init(prism_id: str, app: "Dash") -> None:
                 )
             logger.info(f"Initial layout '{initial_layout}' validated successfully")
 
+    # Warn if suppress_callback_exceptions is not enabled
+    if not getattr(app.config, "suppress_callback_exceptions", False):
+        logger.warning(
+            "suppress_callback_exceptions is False. Callbacks targeting "
+            "components inside tab layouts will raise exceptions at startup "
+            "because those components don't exist in app.layout yet. "
+            "Set app = Dash(__name__, suppress_callback_exceptions=True) "
+            "to avoid this."
+        )
+
     # Capture metadata at init time (registry is frozen after this)
     from . import SERVER_SESSION_ID
 
@@ -672,13 +725,12 @@ def init(prism_id: str, app: "Dash") -> None:
                 raise PreventUpdate
 
             tab_id = content_id.get("index")
-
             layout_id = data.get("layoutId")
             layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
             timeout = data.get("timeout", 30)  # Default to 30s if not provided
 
-            if not layout_id:
+            if not tab_id or not layout_id:
                 raise PreventUpdate
 
             result = await _render_tab_layout_async(
@@ -712,7 +764,7 @@ def init(prism_id: str, app: "Dash") -> None:
             layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
 
-            if not layout_id:
+            if not tab_id or not layout_id:
                 raise PreventUpdate
 
             result = _render_tab_layout(

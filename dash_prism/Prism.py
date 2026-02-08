@@ -83,13 +83,13 @@ class Prism(PrismComponent):
         new tabs instantly show the layout dropdown for quick selection. If
         ``False``, users must click the SearchBar to see available layouts.
     :type newTabOpensDropdown: bool
-    :param readWorkspace: **Output property** - Read-only workspace state from Dash.
-        Use as an ``Output`` in callbacks to react to workspace changes.
+    :param readWorkspace: Read-only workspace state. Use as an ``Input`` or
+        ``State`` in Dash callbacks to react to workspace changes.
         The workspace dict contains: ``tabs`` (list of dict), ``panel`` (dict),
         ``activePanelId`` (str), ``activeTabIds`` (dict).
     :type readWorkspace: dict or None
-    :param updateWorkspace: **Input property** - Write workspace state to Prism.
-        Use as an ``Input`` in callbacks to programmatically update the workspace.
+    :param updateWorkspace: Write-only workspace state. Use as an ``Output``
+        in Dash callbacks to programmatically update the workspace.
         Partial updates are supported.
     :type updateWorkspace: dict or None
     :param children: Child components (typically :class:`PrismContent` instances).
@@ -98,6 +98,9 @@ class Prism(PrismComponent):
     :param registeredLayouts: Registry of available layouts that can be rendered in tabs.
         **Advanced** - Automatically populated by :func:`dash_prism.init`.
     :type registeredLayouts: dict or None
+    :param className: CSS class name(s) to add to the root container.
+        Appended to Prism's internal classes. Useful for custom sizing or layout.
+    :type className: str or None
     :param style: Inline CSS styles for the root container.
     :type style: dict or None
 
@@ -216,6 +219,7 @@ class Prism(PrismComponent):
         self,
         # Identity
         id: str | None = _UNSET,
+        className: str | None = _UNSET,
         style: dict[str, Any] | None = _UNSET,
         # Appearance
         theme: Literal["light", "dark"] = _UNSET,

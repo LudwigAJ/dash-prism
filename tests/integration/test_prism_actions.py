@@ -21,14 +21,6 @@ from conftest import check_browser_errors, PRISM_ROOT
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(autouse=True)
-def clear_registry():
-    """Clear registry before and after each test."""
-    dash_prism.clear_registry()
-    yield
-    dash_prism.clear_registry()
-
-
 def test_prism_action_renders_in_statusbar(dash_duo):
     """Test that Action components render in status bar."""
     app = Dash(__name__, suppress_callback_exceptions=True)

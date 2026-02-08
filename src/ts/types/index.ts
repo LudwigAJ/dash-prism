@@ -17,8 +17,6 @@ export type Theme = 'light' | 'dark';
 export type Size = 'sm' | 'md' | 'lg';
 export type StatusBarPosition = 'top' | 'bottom';
 
-export type styles = 'default' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink';
-
 // =============================================================================
 // Core Types
 // =============================================================================
@@ -100,7 +98,7 @@ export type PrismActionDef = {
   id: string;
   label: string;
   icon?: string;
-  style?: styles;
+  variant?: string;
   tooltip?: string;
   disabled?: boolean;
 };

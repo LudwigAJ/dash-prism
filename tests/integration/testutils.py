@@ -23,6 +23,7 @@ from selenium.webdriver.common.keys import Keys
 TAB_SELECTOR = "[data-testid^='prism-tab-']:not([data-testid*='close'])"
 PANEL_SELECTOR = "[data-testid^='prism-panel-']"
 ADD_TAB_BUTTON = "[data-testid='prism-tabbar-add-button']"
+SPLIT_PANEL_BUTTON = "[data-testid='prism-tabbar-split-button']"
 SEARCHBAR_INPUT = "[data-testid='prism-searchbar-input']"
 CONTEXT_MENU = "[data-testid='prism-context-menu']"
 PRISM_ROOT = ".prism-root"
@@ -379,17 +380,22 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> bool:
         """
         var callback = arguments[arguments.length - 1];
         var tabId = arguments[0];
-        var tab = document.querySelector("[data-testid='prism-tab-" + tabId + "']");
-        if (!tab) { callback(false); return; }
+        var tabWrapper = document.querySelector("[data-testid='prism-tab-" + tabId + "']");
+        if (!tabWrapper) { callback(false); return; }
 
-        // Dispatch dblclick event
+        // Target the inner TabsTrigger button — the onDoubleClick handler is
+        // on this child element, NOT on the outer wrapper div.  Events don't
+        // propagate downward, so we must dispatch directly on the button.
+        var trigger = tabWrapper.querySelector("[role='tab']");
+        if (!trigger) { callback(false); return; }
+
         var evt = new MouseEvent('dblclick', {
             bubbles: true, cancelable: true, view: window, detail: 2
         });
-        tab.dispatchEvent(evt);
+        trigger.dispatchEvent(evt);
 
         // Wait for React to process the state update
-        setTimeout(function() { callback(true); }, 100);
+        setTimeout(function() { callback(true); }, 150);
     """,
         tab_id,
     )
@@ -856,3 +862,33 @@ def cancel_drag_with_escape(dash_duo) -> None:
     """
     actions = ActionChains(dash_duo.driver)
     actions.send_keys(Keys.ESCAPE).pause(1.0).perform()
+
+
+# =============================================================================
+# Common Interaction Helpers
+# =============================================================================
+def get_modifier_key():
+    """Get the correct modifier key for the current platform.
+
+    Returns Keys.COMMAND on macOS, Keys.CONTROL elsewhere.
+    """
+    import platform
+
+    return Keys.COMMAND if platform.system() == "Darwin" else Keys.CONTROL
+
+
+def open_context_menu(dash_duo, tab_element):
+    """
+    Open context menu on a tab element.
+
+    Parameters
+    ----------
+    dash_duo : DashComposite
+        The dash testing fixture.
+    tab_element : WebElement
+        The tab element to right-click.
+    """
+    ActionChains(dash_duo.driver).context_click(tab_element).perform()
+    WebDriverWait(dash_duo.driver, 3).until(
+        EC.visibility_of_element_located((By.CSS_SELECTOR, CONTEXT_MENU))
+    )

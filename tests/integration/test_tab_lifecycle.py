@@ -167,7 +167,8 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
 
     The fix ensures the store is stable and tabs persist.
     """
-    import time
+    from selenium.webdriver.support.wait import WebDriverWait
+    from selenium.webdriver.common.by import By
 
     duo = prism_app_with_layouts
 
@@ -182,17 +183,13 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
     # Wait for the new tab to appear
     wait_for_tab_count(duo, 2)
 
-    # Critical: Wait for Redux sync cycle to complete
-    # The dashSyncMiddleware has a 500ms debounce, so we wait longer
-    # to ensure any potential state overwrites would have occurred
-    time.sleep(1.5)
+    # Wait for Redux sync cycle to complete (500ms debounce + processing).
+    # Poll for tab count stability rather than sleeping.
+    def tabs_still_at_2(driver):
+        return len(driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)) == 2
 
-    # Verify the tab is STILL there after the sync cycle
-    tabs_after_sync = get_tabs(duo)
-    assert len(tabs_after_sync) == 2, (
-        f"Tab should persist after Redux sync cycle. "
-        f"Expected 2 tabs, found {len(tabs_after_sync)}. "
-        "This may indicate a state synchronization regression."
+    WebDriverWait(duo.driver, 3).until(
+        tabs_still_at_2, message="Tab should persist after Redux sync cycle"
     )
 
     # Add another tab to verify continued functionality
@@ -200,14 +197,13 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
     add_button.click()
     wait_for_tab_count(duo, 3)
 
-    # Wait again for sync
-    time.sleep(1.5)
+    # Wait for sync cycle again
+    def tabs_still_at_3(driver):
+        return len(driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)) == 3
 
-    # Verify both new tabs persist
-    final_tabs = get_tabs(duo)
-    assert (
-        len(final_tabs) == 3
-    ), f"Both new tabs should persist. Expected 3 tabs, found {len(final_tabs)}."
+    WebDriverWait(duo.driver, 3).until(
+        tabs_still_at_3, message="Both new tabs should persist after Redux sync cycle"
+    )
 
     # Verify no browser errors occurred
     errors = check_browser_errors(duo)
