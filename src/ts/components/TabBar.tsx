@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo, memo, useEffect } from 'react';
-import { Lock, X, LoaderCircle, Plus, Columns2 } from 'lucide-react';
+import { Lock, X, Plus, Columns2 } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import { useShareLinks } from '@hooks/useShareLinks';
@@ -63,6 +63,8 @@ type TabItemProps = {
   tab: Tab;
   theme: Theme;
   isPinned: boolean;
+  isActiveTab: boolean;
+  isPanelActive: boolean;
   isMaxTabsReached: boolean;
   editingTabId: string | null;
   editingName: string;
@@ -93,6 +95,8 @@ const TabItem = memo(function TabItem({
   tab,
   theme,
   isPinned,
+  isActiveTab,
+  isPanelActive,
   isMaxTabsReached,
   editingTabId,
   editingName,
@@ -186,20 +190,77 @@ const TabItem = memo(function TabItem({
             data-default-style={isDefaultStyle || undefined}
             data-tab-style={styleColor}
           >
-            {/* Tab name (hidden when editing) */}
-            <span
-              className={cn(
-                'flex items-center gap-1.5 whitespace-nowrap',
-                isEditing && 'invisible'
-              )}
-            >
-              {TabIcon ? <TabIcon className="size-[0.85em] shrink-0" /> : null}
-              {tab.name.length > MAX_TAB_NAME_LENGTH
-                ? `${tab.name.slice(0, MAX_TAB_NAME_LENGTH)}…`
-                : tab.name}
+            {/* Content wrapper — dims text/icons in inactive panels without affecting tab background */}
+            <span className={cn('flex items-center gap-1.5', !isPanelActive && 'opacity-65')}>
+              {/* Tab name (hidden when editing) */}
+              <span
+                className={cn(
+                  'flex items-center gap-1.5 whitespace-nowrap',
+                  isEditing && 'invisible'
+                )}
+              >
+                {TabIcon ? <TabIcon className="size-[1.1em] shrink-0" /> : null}
+                {tab.name.length > MAX_TAB_NAME_LENGTH
+                  ? `${tab.name.slice(0, MAX_TAB_NAME_LENGTH)}…`
+                  : tab.name}
+              </span>
+
+              {/* Lock icon or close button or spinner*/}
+              {isLocked ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground flex items-center">
+                      <Lock className="size-[0.85em]" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Tab is locked</TooltipContent>
+                </Tooltip>
+              ) : !isPinned ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Close ${tab.name} tab`}
+                      data-testid={`prism-tab-close-${tab.id}`}
+                      className={cn(
+                        'group/close text-muted-foreground flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
+                        'hover:text-foreground hover:bg-muted/70',
+                        isLoading || isActiveTab
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover/tab:opacity-100'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseTab(tab.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onCloseTab(tab.id);
+                        }
+                      }}
+                    >
+                      {/* Show spinner when loading, but X on hover to allow cancellation */}
+                      {isLoading ? (
+                        <>
+                          <Spinner size="sm" className="shrink-0 group-hover/close:hidden" />
+                          <X className="hidden size-[1.2em] stroke-[2.5] group-hover/close:block" />
+                        </>
+                      ) : (
+                        <X className="size-[1.2em] stroke-[2.5]" />
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
+                </Tooltip>
+              ) : isLoading ? (
+                <Spinner className="text-muted-foreground" />
+              ) : null}
             </span>
 
-            {/* Rename input overlay */}
+            {/* Rename input overlay — outside content wrapper (absolutely positioned) */}
             {isEditing && (
               <input
                 ref={inputRef}
@@ -218,58 +279,6 @@ const TabItem = memo(function TabItem({
                 autoFocus
               />
             )}
-
-            {/* Lock icon or close button or spinner*/}
-            {isLocked ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-muted-foreground flex items-center">
-                    <Lock className="size-[0.85em]" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Tab is locked</TooltipContent>
-              </Tooltip>
-            ) : !isPinned ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Close ${tab.name} tab`}
-                    data-testid={`prism-tab-close-${tab.id}`}
-                    className={cn(
-                      'group/close text-muted-foreground flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
-                      'hover:text-foreground hover:bg-muted/70',
-                      isLoading ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCloseTab(tab.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onCloseTab(tab.id);
-                      }
-                    }}
-                  >
-                    {/* Show spinner when loading, but X on hover to allow cancellation */}
-                    {isLoading ? (
-                      <>
-                        <Spinner size="sm" className="shrink-0 group-hover/close:hidden" />
-                        <X className="hidden size-[1.25em] stroke-[2.5] group-hover/close:block" />
-                      </>
-                    ) : (
-                      <X className="size-[1.25em] stroke-[2.5]" />
-                    )}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
-              </Tooltip>
-            ) : isLoading ? (
-              <LoaderCircle className="text-muted-foreground size-[1.25em] animate-spin stroke-[2.5]" />
-            ) : null}
           </TabsTrigger>
         </div>
       </ContextMenuTrigger>
@@ -604,6 +613,8 @@ export const TabBar = memo(function TabBar({
                 tab={tab}
                 theme={theme}
                 isPinned={isPinned}
+                isActiveTab={tab.id === activeTabId}
+                isPanelActive={isActive}
                 isMaxTabsReached={isMaxTabsReached}
                 editingTabId={editingTabId}
                 editingName={editingName}
