@@ -316,6 +316,7 @@
   padding: 0.3em 0.85em;
 }
 
+/* Default SVG size — explicit size-* classes on icons override this */
 .prism-container [data-slot='tabs-trigger'] svg:not([class*='size-']) {
   width: 1em;
   height: 1em;
