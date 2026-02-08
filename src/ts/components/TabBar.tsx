@@ -256,7 +256,7 @@ const TabItem = memo(function TabItem({
                   <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
                 </Tooltip>
               ) : isLoading ? (
-                <Spinner className="text-muted-foreground" />
+                <Spinner size="sm" className="text-muted-foreground" />
               ) : null}
             </span>
 
