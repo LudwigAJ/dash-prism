@@ -58,7 +58,10 @@ def _start_async_prism_app(dash_duo):
     )
     async def async_greeting_layout():
         return html.Div(
-            [html.H1("Hello from async!"), html.P("Async layout rendered", id="async-greeting-content")],
+            [
+                html.H1("Hello from async!"),
+                html.P("Async layout rendered", id="async-greeting-content"),
+            ],
         )
 
     # Register an async parameterized callback layout
@@ -73,7 +76,10 @@ def _start_async_prism_app(dash_duo):
     )
     async def async_chart_layout(chart_type: str = "bar"):
         return html.Div(
-            [html.H2(f"Async Chart: {chart_type}"), html.P(f"{chart_type} data", id="async-chart-content")],
+            [
+                html.H2(f"Async Chart: {chart_type}"),
+                html.P(f"{chart_type} data", id="async-chart-content"),
+            ],
         )
 
     app.layout = html.Div(

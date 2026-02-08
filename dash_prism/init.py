@@ -207,6 +207,7 @@ def _is_app_async(app: "Dash") -> bool:
     :returns: ``True`` if app uses async callbacks, ``False`` otherwise.
     :rtype: bool
     """
+    # Dash stores async mode as a private/protected attribute
     return getattr(app, "_use_async", False)
 
 
@@ -724,13 +725,12 @@ def init(prism_id: str, app: "Dash") -> None:
                 raise PreventUpdate
 
             tab_id = content_id.get("index")
-
             layout_id = data.get("layoutId")
             layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
             timeout = data.get("timeout", 30)  # Default to 30s if not provided
 
-            if not layout_id:
+            if not tab_id or not layout_id:
                 raise PreventUpdate
 
             result = await _render_tab_layout_async(
@@ -764,7 +764,7 @@ def init(prism_id: str, app: "Dash") -> None:
             layout_params = data.get("layoutParams")
             layout_option = data.get("layoutOption") or None
 
-            if not layout_id:
+            if not tab_id or not layout_id:
                 raise PreventUpdate
 
             result = _render_tab_layout(

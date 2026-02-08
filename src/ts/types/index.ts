@@ -17,7 +17,6 @@ export type Theme = 'light' | 'dark';
 export type Size = 'sm' | 'md' | 'lg';
 export type StatusBarPosition = 'top' | 'bottom';
 
-
 // =============================================================================
 // Core Types
 // =============================================================================

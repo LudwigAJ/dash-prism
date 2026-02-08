@@ -80,11 +80,9 @@ def test_rename_via_context_menu(prism_app_with_layouts):
     # Click rename and wait for input
     rename_input_selector = _click_context_menu_rename(duo, tab_id)
 
-    # Type new name
-    rename_input = duo.find_element(rename_input_selector)
-    rename_input.clear()
-    rename_input.send_keys("My Custom Tab")
-    rename_input.send_keys(Keys.ENTER)
+    # Type new name (use React-compatible setter to avoid stale element from re-render)
+    set_input_value_react(duo, rename_input_selector, "My Custom Tab")
+    press_enter_on_element(duo, rename_input_selector)
 
     # Wait for rename input to disappear (commit)
     wait_for_element_invisible(duo, rename_input_selector, timeout=3)
@@ -162,19 +160,17 @@ def test_rename_cancel_with_escape(prism_app_with_layouts):
     rename_input_selector = _click_context_menu_rename(duo, tab_id)
 
     # Type a new name but press Escape to cancel
-    rename_input = duo.find_element(rename_input_selector)
-    rename_input.clear()
-    rename_input.send_keys("This should not stick")
-    rename_input.send_keys(Keys.ESCAPE)
+    set_input_value_react(duo, rename_input_selector, "This should not stick")
+    duo.find_element(rename_input_selector).send_keys(Keys.ESCAPE)
 
     # Wait for rename input to disappear
     wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
     # Verify original name is preserved
     tab_text = get_tabs(duo)[0].text
-    assert "This should not stick" not in tab_text, (
-        f"Escape should cancel rename, but tab text is '{tab_text}'"
-    )
+    assert (
+        "This should not stick" not in tab_text
+    ), f"Escape should cancel rename, but tab text is '{tab_text}'"
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"

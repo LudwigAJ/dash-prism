@@ -328,8 +328,7 @@ def test_updateWorkspace_modifies_state(dash_duo):
     expected_name = original_name + "-renamed"
     WebDriverWait(dash_duo.driver, 5).until(
         lambda d: any(
-            expected_name in t.text
-            for t in d.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+            expected_name in t.text for t in d.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
         ),
         message=f"Tab should be renamed to '{expected_name}'",
     )

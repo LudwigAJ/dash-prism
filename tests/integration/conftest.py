@@ -291,5 +291,3 @@ def prism_app_factory(dash_duo):
         return _start_prism_app(dash_duo, size=size)
 
     return _factory
-
-

@@ -69,8 +69,6 @@ type TabItemProps = {
   inputRef: React.RefObject<HTMLInputElement>;
   onStartRename: (tab: Tab) => void;
   onCommitRename: () => void;
-  onRenameBlur: () => void;
-  onRenameFocus: () => void;
   onCancelRename: () => void;
   onEditingNameChange: (name: string) => void;
   onCloseTab: (tabId: string, e?: React.MouseEvent) => void;
@@ -101,8 +99,6 @@ const TabItem = memo(function TabItem({
   inputRef,
   onStartRename,
   onCommitRename,
-  onRenameBlur,
-  onRenameFocus,
   onCancelRename,
   onEditingNameChange,
   onCloseTab,
@@ -131,6 +127,12 @@ const TabItem = memo(function TabItem({
   const isDefaultStyle = styleColor === 'default';
   const isLocked = tab.locked ?? false;
   const isEditing = editingTabId === tab.id;
+
+  // When rename is triggered via context menu, Radix restores focus to the tab
+  // trigger after the menu closes — stealing focus from the rename input. This
+  // ref is set synchronously in the rename onSelect (before the close animation)
+  // and checked in onCloseAutoFocus to prevent that focus restoration.
+  const preventFocusRestoreRef = useRef(false);
 
   // Add drag-and-drop functionality
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -205,8 +207,7 @@ const TabItem = memo(function TabItem({
                 className="prism-tab-rename-input absolute inset-0"
                 value={editingName}
                 onChange={(e) => onEditingNameChange(e.target.value)}
-                onBlur={onRenameBlur}
-                onFocus={onRenameFocus}
+                onBlur={onCommitRename}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onCommitRename();
                   if (e.key === 'Escape') onCancelRename();
@@ -274,11 +275,24 @@ const TabItem = memo(function TabItem({
       </ContextMenuTrigger>
 
       {/* ===== CONTEXT MENU ===== */}
-      <ContextMenuContent className="min-w-36" theme={theme} data-testid="prism-context-menu">
+      <ContextMenuContent
+        className="min-w-36"
+        theme={theme}
+        data-testid="prism-context-menu"
+        onCloseAutoFocus={(e) => {
+          if (preventFocusRestoreRef.current) {
+            e.preventDefault();
+            preventFocusRestoreRef.current = false;
+          }
+        }}
+      >
         <ContextMenuItem
           data-testid="prism-context-menu-rename"
           disabled={isLocked || isPinned}
-          onSelect={() => onStartRename(tab)}
+          onSelect={() => {
+            preventFocusRestoreRef.current = true;
+            onStartRename(tab);
+          }}
         >
           Rename
           <ContextMenuShortcut>⌃R</ContextMenuShortcut>
@@ -450,10 +464,6 @@ export const TabBar = memo(function TabBar({
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  // Timestamp of last rename start; used to detect premature blurs from
-  // Radix ContextMenu focus restoration (see handleRenameBlur).
-  const editStartRef = useRef(0);
-  const blurCommitRef = useRef<ReturnType<typeof setTimeout>>();
 
   // ================================================================================
   // Handlers
@@ -475,7 +485,6 @@ export const TabBar = memo(function TabBar({
   const startRename = useCallback(
     (tab: Tab) => {
       if (tab.locked || isPinned) return;
-      editStartRef.current = Date.now();
       setEditingTabId(tab.id);
       setEditingName(tab.name);
       setTimeout(() => inputRef.current?.select(), 0);
@@ -484,7 +493,6 @@ export const TabBar = memo(function TabBar({
   );
 
   const commitRename = useCallback(() => {
-    clearTimeout(blurCommitRef.current);
     if (editingTabId && editingName.trim()) {
       dispatch(renameTab({ tabId: editingTabId, name: editingName.trim() }));
     }
@@ -492,30 +500,7 @@ export const TabBar = memo(function TabBar({
     setEditingName('');
   }, [editingTabId, editingName, dispatch]);
 
-  const handleRenameBlur = useCallback(() => {
-    // When renaming via context menu, Radix restores focus to the tab trigger
-    // after the menu closes, which steals focus from the rename input and causes
-    // an unwanted blur→commit cycle. Detect this by checking if the blur happened
-    // within 300ms of entering rename mode, and re-focus the input instead.
-    clearTimeout(blurCommitRef.current);
-    if (Date.now() - editStartRef.current < 300 && inputRef.current) {
-      blurCommitRef.current = setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 50);
-      return;
-    }
-    blurCommitRef.current = setTimeout(() => {
-      commitRename();
-    }, 150);
-  }, [commitRename]);
-
-  const handleRenameFocus = useCallback(() => {
-    clearTimeout(blurCommitRef.current);
-  }, []);
-
   const cancelRename = useCallback(() => {
-    clearTimeout(blurCommitRef.current);
     setEditingTabId(null);
     setEditingName('');
     dispatch(clearRenameTab());
@@ -627,8 +612,6 @@ export const TabBar = memo(function TabBar({
                 inputRef={inputRef}
                 onStartRename={startRename}
                 onCommitRename={commitRename}
-                onRenameBlur={handleRenameBlur}
-                onRenameFocus={handleRenameFocus}
                 onCancelRename={cancelRename}
                 onEditingNameChange={setEditingName}
                 onCloseTab={closeTab}

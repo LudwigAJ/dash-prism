@@ -119,7 +119,9 @@ def test_search_filters_layouts(prism_app_with_layouts):
 
     # The callback layout item should NOT appear (filtered out)
     callback_items = duo.find_elements("[data-testid='prism-layout-item-test-callback']")
-    assert len(callback_items) == 0, "Callback layout should be filtered out when searching 'Static'"
+    assert (
+        len(callback_items) == 0
+    ), "Callback layout should be filtered out when searching 'Static'"
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
