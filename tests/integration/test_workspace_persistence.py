@@ -12,8 +12,6 @@ Best Practices Applied:
 
 from __future__ import annotations
 
-import time
-
 import pytest
 from dash import Dash, html, dcc, Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -31,14 +29,6 @@ from conftest import (
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture(autouse=True)
-def clear_registry():
-    """Clear registry before and after each test."""
-    dash_prism.clear_registry()
-    yield
-    dash_prism.clear_registry()
 
 
 def wait_for_storage(
@@ -312,8 +302,13 @@ def test_updateWorkspace_modifies_state(dash_duo):
     dash_duo.start_server(app)
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
-    # Wait for initial readWorkspace sync (debounced)
-    time.sleep(1)
+    # Wait for initial readWorkspace sync by observing the store callback output
+    WebDriverWait(dash_duo.driver, 10).until(
+        lambda d: d.execute_script(
+            "return document.querySelector('#workspace-store')?.dataset?.dash_is_loading !== 'true'"
+        ),
+        message="Workspace store should be populated after initial sync",
+    )
 
     # Get original tab name
     tabs = get_tabs(dash_duo)
@@ -326,13 +321,24 @@ def test_updateWorkspace_modifies_state(dash_duo):
 
     # Wait for updateWorkspace to take effect
     dash_duo.wait_for_text_to_equal("#update-status", "updated", timeout=5)
-    time.sleep(0.5)  # Small delay for React re-render
+
+    # Wait for the tab text to update after React re-render
+    from selenium.webdriver.common.by import By
+
+    expected_name = original_name + "-renamed"
+    WebDriverWait(dash_duo.driver, 5).until(
+        lambda d: any(
+            expected_name in t.text
+            for t in d.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        ),
+        message=f"Tab should be renamed to '{expected_name}'",
+    )
 
     # Verify tab was renamed
     tabs = get_tabs(dash_duo)
     assert len(tabs) == 1, "Should still have 1 tab"
-    assert tabs[0].text == original_name + "-renamed", (
-        f"Tab should be renamed from '{original_name}' to '{original_name}-renamed', "
+    assert tabs[0].text == expected_name, (
+        f"Tab should be renamed from '{original_name}' to '{expected_name}', "
         f"but got '{tabs[0].text}'"
     )
 

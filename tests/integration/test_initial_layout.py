@@ -33,14 +33,6 @@ from conftest import (
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(autouse=True)
-def clear_registry():
-    """Clear registry before and after each test."""
-    dash_prism.clear_registry()
-    yield
-    dash_prism.clear_registry()
-
-
 def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     """Regression test: initialLayout should load in the first tab on fresh workspace.
 

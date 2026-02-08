@@ -207,7 +207,7 @@ def _is_app_async(app: "Dash") -> bool:
     :returns: ``True`` if app uses async callbacks, ``False`` otherwise.
     :rtype: bool
     """
-    return getattr(app, "use_async", False)
+    return getattr(app, "_use_async", False)
 
 
 def _run_callback(

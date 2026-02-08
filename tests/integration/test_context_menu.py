@@ -24,25 +24,11 @@ from conftest import (
     get_tabs,
     wait_for_tab_count,
     wait_for_element_invisible,
+    open_context_menu,
 )
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
-
-
-def open_context_menu(dash_duo, tab_element):
-    """
-    Open context menu on a tab element.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_element : WebElement
-        The tab element to right-click.
-    """
-    ActionChains(dash_duo.driver).context_click(tab_element).perform()
-    dash_duo.wait_for_element(CONTEXT_MENU, timeout=3)
 
 
 def test_context_menu_appears_on_right_click(prism_app_with_layouts):

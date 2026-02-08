@@ -18,7 +18,6 @@ that refresh is correctly hidden/disabled in that case.
 
 from __future__ import annotations
 
-import platform
 import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
@@ -29,30 +28,12 @@ from conftest import (
     get_tabs,
     wait_for_tab_count,
     wait_for_element_invisible,
+    get_modifier_key,
+    open_context_menu,
 )
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
-
-
-def get_modifier_key():
-    """Get the correct modifier key for the current platform."""
-    return Keys.COMMAND if platform.system() == "Darwin" else Keys.CONTROL
-
-
-def open_context_menu(dash_duo, tab_element):
-    """
-    Open context menu on a tab element.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_element : WebElement
-        The tab element to right-click.
-    """
-    ActionChains(dash_duo.driver).context_click(tab_element).perform()
-    dash_duo.wait_for_element(CONTEXT_MENU, timeout=3)
 
 
 def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):

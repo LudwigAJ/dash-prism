@@ -75,6 +75,9 @@ from testutils import (
     drag_tab_to_other_panel,
     start_drag_without_drop,
     cancel_drag_with_escape,
+    # Common interaction helpers
+    get_modifier_key,
+    open_context_menu,
 )
 
 
@@ -290,41 +293,3 @@ def prism_app_factory(dash_duo):
     return _factory
 
 
-@pytest.fixture
-def simple_prism_app(dash_duo):
-    """
-    Create a minimal Prism app with one simple layout.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash[testing] fixture.
-
-    Returns
-    -------
-    DashComposite
-        The dash_duo instance with app started.
-    """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    # Single simple layout
-    dash_prism.register_layout(
-        id="simple",
-        name="Simple",
-        layout=html.Div("Simple content", id="simple-content"),
-    )
-
-    app.layout = html.Div(
-        [dash_prism.Prism(id="prism", persistence=False, style={"height": "100vh"})],
-        style={"height": "100vh", "margin": "0", "padding": "0"},
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app)
-
-    # Explicitly set window size after launch (critical for headless mode!)
-    dash_duo.driver.set_window_size(1920, 1080)
-
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-
-    return dash_duo
