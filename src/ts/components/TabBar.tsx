@@ -587,9 +587,7 @@ export const TabBar = memo(function TabBar({
       className="prism-tabbar border-border relative flex w-full shrink-0 items-stretch"
     >
       {/* Drop zone highlight overlay */}
-      {isOver && (
-        <div className="ring-primary bg-primary/10 pointer-events-none absolute inset-0 z-10 ring-2 ring-inset" />
-      )}
+      {isOver && <div className="bg-primary/15 pointer-events-none absolute inset-0 z-10" />}
       {/* Scrollable tab container with + button inside, hidden scrollbar */}
       <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden">
         {/* Radix TabsList - provides keyboard navigation and ARIA */}
