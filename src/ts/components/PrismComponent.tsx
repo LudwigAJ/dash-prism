@@ -152,7 +152,12 @@ export type PrismProps = {
   newTabOpensDropdown?: boolean;
 
   /**
-   * Styling props from Dash
+   * CSS class name(s) to add to the root container.
+   */
+  className?: string;
+
+  /**
+   * Inline CSS styles for the root container.
    */
   style?: Record<string, string>;
 } & DashComponentProps;
@@ -310,6 +315,7 @@ export function Prism({
   newTabOpensDropdown = true,
   updateWorkspace,
   readWorkspace,
+  className,
   style,
   children,
 }: PrismProps) {
@@ -335,7 +341,7 @@ export function Prism({
   return (
     <div
       id={id}
-      className={`prism-root prism-container ${theme === 'dark' ? 'dark' : ''} prism-size-${size} text-foreground`}
+      className={`prism-root prism-container ${theme === 'dark' ? 'dark' : ''} prism-size-${size} text-foreground${className ? ` ${className}` : ''}`}
       style={style}
     >
       <ErrorBoundary

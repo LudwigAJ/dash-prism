@@ -155,8 +155,9 @@ Handle clicks with callbacks:
        # Do work...
        return False  # Stop loading spinner
 
-Style options: ``'default'``, ``'primary'``, ``'secondary'``, ``'success'``,
-``'warning'``, ``'danger'``, or a hex color like ``'#FF5500'``.
+Variant options (``variant`` parameter): ``'default'``, ``'primary'``,
+``'secondary'``, ``'success'``, ``'warning'``, ``'danger'``, or a hex color
+like ``'#FF5500'``.
 
 Icons
 -----
@@ -229,8 +230,8 @@ Workspace State
 
 Prism exposes two properties for reading and writing workspace state:
 
-- ``readWorkspace`` — Output property containing the current workspace state
-- ``updateWorkspace`` — Input property for programmatically updating the workspace
+- ``readWorkspace`` — Read-only property containing the current workspace state (use as ``Input`` or ``State`` in callbacks)
+- ``updateWorkspace`` — Write-only property for programmatically updating the workspace (use as ``Output`` in callbacks)
 
 Reading State with Actions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -44,6 +44,7 @@ include = [
     { path = "dash_prism/*.js.LICENSE.txt", format = ["sdist", "wheel"] },
     { path = "dash_prism/*.json", format = ["sdist", "wheel"] },
     { path = "dash_prism/*.py", format = ["sdist", "wheel"] },
+    { path = "dash_prism/py.typed", format = ["sdist", "wheel"] },
 ]
 
 [tool.poetry.dependencies]

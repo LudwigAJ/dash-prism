@@ -5,10 +5,12 @@ import { cn } from '@utils/cn';
 import { DashComponentProps } from 'props';
 
 /** Style variants for action buttons */
-const ACTION_STYLE_CLASSES: Record<string, string> = {
+const ACTION_VARIANT_CLASSES: Record<string, string> = {
   default: '',
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  success: 'bg-green-600 text-white hover:bg-green-600/90',
+  warning: 'bg-amber-500 text-white hover:bg-amber-500/90',
   danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
 };
 
@@ -39,10 +41,10 @@ type PrismActionProps = {
 
   /**
    * Button style variant.
-   * Can be a preset ('default', 'primary', 'secondary', 'danger')
+   * Can be a preset ('default', 'primary', 'secondary', 'success', 'warning', 'danger')
    * or a hex color (e.g., '#FF5500').
    */
-  style?: string;
+  variant?: string;
 
   /**
    * Whether the button is disabled.
@@ -74,7 +76,7 @@ export function PrismAction({
   label,
   icon,
   tooltip,
-  style = 'default',
+  variant = 'default',
   disabled = false,
   loading = false,
   n_clicks = 0,
@@ -88,10 +90,10 @@ export function PrismAction({
   const IconComponent = icon ? getTabIcon(icon) : null;
 
   // Determine button styling
-  const isCustomColor = style && isHexColor(style);
-  const styleClasses =
-    !isCustomColor && style in ACTION_STYLE_CLASSES ? ACTION_STYLE_CLASSES[style] : '';
-  const customStyle = isCustomColor ? { backgroundColor: style, color: '#fff' } : undefined;
+  const isCustomColor = variant && isHexColor(variant);
+  const variantClasses =
+    !isCustomColor && variant in ACTION_VARIANT_CLASSES ? ACTION_VARIANT_CLASSES[variant] : '';
+  const customStyle = isCustomColor ? { backgroundColor: variant, color: '#fff' } : undefined;
 
   // Tooltip content
   const tooltipContent = tooltip ?? `Click to trigger "${label}"`;
@@ -109,7 +111,7 @@ export function PrismAction({
             'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
             'hover:bg-muted/70 border border-transparent',
             'flex items-center gap-1.5',
-            styleClasses,
+            variantClasses,
             disabled && 'cursor-not-allowed opacity-50',
             loading && 'cursor-wait'
           )}

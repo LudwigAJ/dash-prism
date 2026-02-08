@@ -36,11 +36,11 @@ class Action(PrismActionComponent):
     :param tooltip: Tooltip text shown on hover.
         If not provided, defaults to ``"Click to trigger {label}"``.
     :type tooltip: str or None
-    :param style: Button style variant or custom hex color.
-        Preset styles: ``'default'``, ``'primary'``, ``'secondary'``,
+    :param variant: Button style variant or custom hex color.
+        Preset variants: ``'default'``, ``'primary'``, ``'secondary'``,
         ``'success'``, ``'warning'``, ``'danger'``.
         Custom color: Any valid hex color (e.g., ``'#FF5500'``).
-    :type style: str or None
+    :type variant: str or None
     :param disabled: Whether the button is disabled. Disabled buttons cannot
         be clicked and appear grayed out. Can be controlled via Dash callbacks
         for dynamic enabling/disabling. Defaults to ``False``.
@@ -99,19 +99,19 @@ class Action(PrismActionComponent):
                 id='save',
                 label='Save',
                 icon='Save',
-                style='primary'
+                variant='primary'
             ),
             dash_prism.Action(
                 id='export',
                 label='Export',
                 icon='Download',
-                style='secondary'
+                variant='secondary'
             ),
             dash_prism.Action(
                 id='delete',
                 label='Delete All',
                 icon='Trash2',
-                style='danger',
+                variant='danger',
                 tooltip='WARNING: This will delete all data'
             ),
         ]
@@ -144,7 +144,7 @@ class Action(PrismActionComponent):
             id='custom',
             label='Custom',
             icon='Palette',
-            style='#FF5500',  # Custom orange color
+            variant='#FF5500',  # Custom orange color
             tooltip='Custom colored action'
         )
 
@@ -189,7 +189,7 @@ class Action(PrismActionComponent):
         id: str | None = _UNSET,
         icon: str | None = _UNSET,
         tooltip: str | None = _UNSET,
-        style: str | None = _UNSET,
+        variant: str | None = _UNSET,
         disabled: bool = _UNSET,
         loading: bool = _UNSET,
         n_clicks: int = _UNSET,
