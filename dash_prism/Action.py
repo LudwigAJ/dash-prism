@@ -28,11 +28,6 @@ class Action(PrismActionComponent):
     :param label: Button label text displayed in the status bar.
         This is the visible text users will see on the button. **Required**.
     :type label: str
-    :param icon: Icon name to display before the label.
-        Use :func:`get_available_icons` to see all available icons, or check
-        if a specific icon exists with ``icon_name in AVAILABLE_ICONS``.
-        Examples: ``'Rocket'``, ``'Brain'``, ``'BarChart3'``, ``'Coffee'``.
-    :type icon: str or None
     :param tooltip: Tooltip text shown on hover.
         If not provided, defaults to ``"Click to trigger {label}"``.
     :type tooltip: str or None
@@ -72,7 +67,6 @@ class Action(PrismActionComponent):
                     dash_prism.Action(
                         id='save-action',
                         label='Save',
-                        icon='Save',
                         tooltip='Save current workspace'
                     )
                 ]
@@ -98,19 +92,16 @@ class Action(PrismActionComponent):
             dash_prism.Action(
                 id='save',
                 label='Save',
-                icon='Save',
                 variant='primary'
             ),
             dash_prism.Action(
                 id='export',
                 label='Export',
-                icon='Download',
                 variant='secondary'
             ),
             dash_prism.Action(
                 id='delete',
                 label='Delete All',
-                icon='Trash2',
                 variant='danger',
                 tooltip='WARNING: This will delete all data'
             ),
@@ -143,7 +134,6 @@ class Action(PrismActionComponent):
         custom_action = dash_prism.Action(
             id='custom',
             label='Custom',
-            icon='Palette',
             variant='#FF5500',  # Custom orange color
             tooltip='Custom colored action'
         )
@@ -177,7 +167,6 @@ class Action(PrismActionComponent):
         - Each action has an independent ``n_clicks`` counter
         - The ``loading`` state automatically disables the button
         - Custom hex colors must be valid CSS hex colors (e.g., ``#RGB`` or ``#RRGGBB``)
-        - Icons use the Lucide icon library - ensure icon names match exactly
     """
 
     # Override _type to match what init.py expects (internal wire protocol)
@@ -187,7 +176,6 @@ class Action(PrismActionComponent):
         self,
         label: str = _UNSET,
         id: str | None = _UNSET,
-        icon: str | None = _UNSET,
         tooltip: str | None = _UNSET,
         variant: str | None = _UNSET,
         disabled: bool = _UNSET,

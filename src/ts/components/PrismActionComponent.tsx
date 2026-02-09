@@ -1,6 +1,5 @@
 import React, { useCallback, memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger, Spinner } from '@components/ui';
-import { getTabIcon } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
 import { DashComponentProps } from 'props';
 
@@ -26,12 +25,6 @@ type PrismActionProps = {
    * Button label text displayed in the StatusBar.
    */
   label: string;
-
-  /**
-   * Lucide icon name to display before the label.
-   * See: https://lucide.dev/icons
-   */
-  icon?: string;
 
   /**
    * Tooltip text shown on hover.
@@ -74,7 +67,6 @@ export function PrismAction({
   id,
   setProps,
   label,
-  icon,
   tooltip,
   variant = 'default',
   disabled = false,
@@ -85,9 +77,6 @@ export function PrismAction({
     if (disabled || loading) return;
     setProps?.({ n_clicks: n_clicks + 1 });
   }, [disabled, loading, n_clicks, setProps]);
-
-  // Resolve icon component
-  const IconComponent = icon ? getTabIcon(icon) : null;
 
   // Determine button styling
   const isCustomColor = variant && isHexColor(variant);
@@ -120,11 +109,7 @@ export function PrismAction({
           disabled={disabled || loading}
           aria-busy={loading}
         >
-          {loading ? (
-            <Spinner size="sm" />
-          ) : IconComponent ? (
-            <IconComponent className="size-[1em]" />
-          ) : null}
+          {loading ? <Spinner size="sm" /> : null}
           <span>{label}</span>
         </button>
       </TooltipTrigger>

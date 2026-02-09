@@ -1059,13 +1059,9 @@ app.layout = html.Div(
             theme=THEME,
             size=DEFAULT_SIZE,
             actions=[
-                dash_prism.Action(id="save", label="Save", icon="Save", tooltip="Save workspace"),
-                dash_prism.Action(
-                    id="load", label="Load", icon="FolderOpen", tooltip="Load workspace"
-                ),
-                dash_prism.Action(
-                    id="clear", label="Clear", icon="Trash2", tooltip="Clear all tabs"
-                ),
+                dash_prism.Action(id="save", label="Save", tooltip="Save workspace"),
+                dash_prism.Action(id="load", label="Load", tooltip="Load workspace"),
+                dash_prism.Action(id="clear", label="Clear", tooltip="Clear all tabs"),
             ],
             searchBarPlaceholder="Search layouts...",
             statusBarPosition="bottom",
