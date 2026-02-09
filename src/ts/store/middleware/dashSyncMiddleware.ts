@@ -3,6 +3,7 @@ import type { Middleware, UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
 import type { Workspace, PanelId } from '@types';
 import { clearSearchBarMode } from '../uiSlice';
+import { resetWorkspace } from '../workspaceSlice';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
 
@@ -133,24 +134,29 @@ export function createDashSyncMiddleware(
 }
 
 // =============================================================================
-// Validation Middleware (Development Only)
+// Validation Middleware
 // =============================================================================
 
 /**
- * Development-only middleware that validates state after each action.
- * Logs warnings if state invariants are violated.
+ * Middleware that validates state after workspace actions.
+ * In development: validates on all workspace actions.
+ * In production: validates only after rehydration (corrupted localStorage protection).
+ * If rehydration produces invalid state, dispatches resetWorkspace() to recover.
  */
 export const validationMiddleware: Middleware<object, RootState> =
   (store) => (next) => (action: UnknownAction) => {
     const result = next(action);
 
-    // Only validate in development
-    if (process.env.NODE_ENV === 'production') return result;
+    const isRehydrate = typeof action.type === 'string' && action.type === 'persist/REHYDRATE';
 
-    // Validate on workspace actions and undo/redo
+    // In production, only validate after rehydration
+    if (process.env.NODE_ENV === 'production' && !isRehydrate) return result;
+
+    // Validate on workspace actions, undo/redo, and rehydration
     const shouldValidate =
-      typeof action.type === 'string' &&
-      (action.type.startsWith('workspace/') || action.type.startsWith('@@redux-undo/'));
+      isRehydrate ||
+      (typeof action.type === 'string' &&
+        (action.type.startsWith('workspace/') || action.type.startsWith('@@redux-undo/')));
 
     if (shouldValidate) {
       const state = store.getState();
@@ -161,6 +167,11 @@ export const validationMiddleware: Middleware<object, RootState> =
       if (!validation.ok) {
         const { errors } = validation as { ok: false; errors: string[] };
         logger.validation(errors);
+
+        // On rehydration failure, reset to clean state to prevent crash
+        if (isRehydrate) {
+          store.dispatch(resetWorkspace() as unknown as UnknownAction);
+        }
       }
     }
 

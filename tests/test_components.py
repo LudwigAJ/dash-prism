@@ -42,12 +42,10 @@ def test_prism_action_component() -> None:
     action = dash_prism.Action(
         id="test-action",
         label="Test Action",
-        icon="Save",
     )
 
     assert action.id == "test-action"
     assert action.label == "Test Action"
-    assert action.icon == "Save"
 
 
 def test_prism_content_component() -> None:

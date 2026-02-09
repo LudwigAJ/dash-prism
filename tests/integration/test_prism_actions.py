@@ -26,8 +26,8 @@ def test_prism_action_renders_in_statusbar(dash_duo):
     app = Dash(__name__, suppress_callback_exceptions=True)
 
     # Create actions
-    action1 = dash_prism.Action(id="action1", label="Action 1", icon="Save")
-    action2 = dash_prism.Action(id="action2", label="Action 2", icon="Download")
+    action1 = dash_prism.Action(id="action1", label="Action 1")
+    action2 = dash_prism.Action(id="action2", label="Action 2")
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
@@ -54,7 +54,7 @@ def test_prism_action_click_triggers_callback(dash_duo):
     """Test that clicking Action triggers Dash callback."""
     app = Dash(__name__, suppress_callback_exceptions=True)
 
-    action = dash_prism.Action(id="test-action", label="Test Action", icon="Check")
+    action = dash_prism.Action(id="test-action", label="Test Action")
 
     @app.callback(Output("output", "children"), Input("test-action", "n_clicks"))
     def handle_action_click(n_clicks):
