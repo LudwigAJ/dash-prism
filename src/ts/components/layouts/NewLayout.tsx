@@ -15,6 +15,66 @@ type NewLayoutProps = {
   tabId: TabId;
 };
 
+type LayoutCardProps = {
+  id: string;
+  meta: { name: string; description?: string; params?: { name: string }[] };
+  isFavorite: boolean;
+  onLayoutClick: (layoutId: string) => void;
+  onToggleFavorite: (e: React.MouseEvent, layoutId: string) => void;
+};
+
+// Defined at module level so React sees a stable component identity across renders.
+// Defining inside NewLayout would cause unmount/remount on every re-render,
+// replacing DOM nodes and swallowing in-flight click events.
+function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: LayoutCardProps) {
+  return (
+    <Card
+      className={cn(
+        'hover:border-accent relative cursor-pointer transition-colors hover:shadow-md',
+        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+        'flex flex-col'
+      )}
+      onClick={() => onLayoutClick(id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onLayoutClick(id);
+        }
+      }}
+    >
+      {/* Favorite star button */}
+      <button
+        type="button"
+        onClick={(e) => onToggleFavorite(e, id)}
+        className={cn(
+          'absolute top-2 right-2 rounded-md p-1.5 transition-colors',
+          'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+          isFavorite ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+        )}
+        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        <Star className={cn('size-[1em]', isFavorite && 'fill-current')} />
+      </button>
+
+      <CardHeader className="flex-1 pr-10 pb-2">
+        <CardTitle className="text-[1.15em]">{meta.name}</CardTitle>
+        {meta.description && (
+          <CardDescription className="line-clamp-3 text-[1em]">{meta.description}</CardDescription>
+        )}
+      </CardHeader>
+      {meta.params && meta.params.length > 0 && (
+        <CardContent className="pt-0">
+          <p className="text-muted-foreground text-[0.85em]">
+            {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
+          </p>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 /**
  * Displays available layouts as cards for new/empty tabs.
  * Shows favorites at top, then remaining layouts.
@@ -29,8 +89,6 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   // Split into favorites and non-favorites
   const favoriteEntries = layoutEntries.filter(([id]) => favoriteLayouts.includes(id));
   const otherEntries = layoutEntries.filter(([id]) => !favoriteLayouts.includes(id));
-
-  const isFavorite = (layoutId: string) => favoriteLayouts.includes(layoutId);
 
   const handleToggleFavorite = (e: React.MouseEvent, layoutId: string) => {
     e.stopPropagation();
@@ -63,54 +121,6 @@ export function NewLayout({ tabId }: NewLayoutProps) {
     );
   }
 
-  const LayoutCard = ({ id, meta }: { id: string; meta: (typeof registeredLayouts)[string] }) => (
-    <Card
-      key={id}
-      className={cn(
-        'hover:border-accent relative cursor-pointer transition-colors hover:shadow-md',
-        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-        'flex flex-col'
-      )}
-      onClick={() => handleLayoutClick(id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleLayoutClick(id);
-        }
-      }}
-    >
-      {/* Favorite star button */}
-      <button
-        type="button"
-        onClick={(e) => handleToggleFavorite(e, id)}
-        className={cn(
-          'absolute top-2 right-2 rounded-md p-1.5 transition-colors',
-          'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-          isFavorite(id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-        )}
-        aria-label={isFavorite(id) ? 'Remove from favorites' : 'Add to favorites'}
-      >
-        <Star className={cn('size-[1em]', isFavorite(id) && 'fill-current')} />
-      </button>
-
-      <CardHeader className="flex-1 pr-10 pb-2">
-        <CardTitle className="text-[1.15em]">{meta.name}</CardTitle>
-        {meta.description && (
-          <CardDescription className="line-clamp-3 text-[1em]">{meta.description}</CardDescription>
-        )}
-      </CardHeader>
-      {meta.params && meta.params.length > 0 && (
-        <CardContent className="pt-0">
-          <p className="text-muted-foreground text-[0.85em]">
-            {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
-          </p>
-        </CardContent>
-      )}
-    </Card>
-  );
-
   return (
     <div className="bg-background flex h-full w-full flex-col overflow-auto p-[1.7em]">
       {/* Favorites Section */}
@@ -121,7 +131,14 @@ export function NewLayout({ tabId }: NewLayoutProps) {
           </h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
             {favoriteEntries.map(([id, meta]) => (
-              <LayoutCard key={id} id={id} meta={meta} />
+              <LayoutCard
+                key={id}
+                id={id}
+                meta={meta}
+                isFavorite={true}
+                onLayoutClick={handleLayoutClick}
+                onToggleFavorite={handleToggleFavorite}
+              />
             ))}
           </div>
         </section>
@@ -135,7 +152,14 @@ export function NewLayout({ tabId }: NewLayoutProps) {
           </h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
             {otherEntries.map(([id, meta]) => (
-              <LayoutCard key={id} id={id} meta={meta} />
+              <LayoutCard
+                key={id}
+                id={id}
+                meta={meta}
+                isFavorite={favoriteLayouts.includes(id)}
+                onLayoutClick={handleLayoutClick}
+                onToggleFavorite={handleToggleFavorite}
+              />
             ))}
           </div>
         </section>
