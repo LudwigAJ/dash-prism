@@ -19,7 +19,7 @@ import dash
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import MATCH, Input, Output, State, callback, dcc, html
+from dash import MATCH, Input, Output, State, callback, dcc, html, clientside_callback
 from dash.exceptions import PreventUpdate
 
 import dash_prism
@@ -1171,7 +1171,7 @@ def update_live_chart(n, data, title):
 # =============================================================================
 
 
-app.clientside_callback(
+clientside_callback(
     """
     function(n_clicks) {
         if (n_clicks > 0) {
@@ -1185,7 +1185,7 @@ app.clientside_callback(
     prevent_initial_call=True,
 )
 
-app.clientside_callback(
+clientside_callback(
     """
     function(n_clicks) {
         if (n_clicks > 0) {
@@ -1199,7 +1199,7 @@ app.clientside_callback(
     prevent_initial_call=True,
 )
 
-app.clientside_callback(
+clientside_callback(
     """
     function(n_clicks) {
         if (n_clicks > 0) {
