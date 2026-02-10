@@ -39,6 +39,8 @@ import {
   BarChart3,
   PieChart,
   LineChart,
+  Globe,
+  Heart,
 } from 'lucide-react';
 
 import iconsConfig from '../../icons.json';
@@ -88,6 +90,8 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
   BarChart3,
   PieChart,
   LineChart,
+  Globe,
+  Heart,
 };
 
 /**

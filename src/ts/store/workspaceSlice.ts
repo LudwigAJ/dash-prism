@@ -315,6 +315,10 @@ const workspaceSlice = createSlice({
       const sourcePanelId = tab.panelId;
       if (sourcePanelId === targetPanelId) return;
 
+      // Validate target panel exists as a leaf panel (prevents stale DnD events)
+      const leafPanelIds = getLeafPanelIds(state.panel);
+      if (!leafPanelIds.includes(targetPanelId)) return;
+
       // Remove from source
       const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
       if (sourceIdx !== undefined && sourceIdx !== -1) {

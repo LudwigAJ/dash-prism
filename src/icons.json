@@ -38,6 +38,8 @@
     "Binary",
     "BarChart3",
     "PieChart",
-    "LineChart"
+    "LineChart",
+    "Globe",
+    "Heart"
   ]
 }

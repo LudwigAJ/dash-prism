@@ -1171,40 +1171,47 @@ def update_live_chart(n, data, title):
 # =============================================================================
 
 
-@callback(
-    Output("prism-action-save", "n_clicks"),
-    Input("prism-action-save", "n_clicks"),
+app.clientside_callback(
+    """
+    function(n_clicks) {
+        if (n_clicks > 0) {
+            window.alert('Save action clicked! (n_clicks: ' + n_clicks + ')');
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("save", "loading"),
+    Input("save", "n_clicks"),
     prevent_initial_call=True,
 )
-def handle_save(n_clicks: int) -> int:
-    """Handle save action."""
-    if n_clicks:
-        print("Workspace saved.")
-    return n_clicks
 
-
-@callback(
-    Output("prism-action-load", "n_clicks"),
-    Input("prism-action-load", "n_clicks"),
+app.clientside_callback(
+    """
+    function(n_clicks) {
+        if (n_clicks > 0) {
+            window.alert('Load action clicked! (n_clicks: ' + n_clicks + ')');
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("load", "loading"),
+    Input("load", "n_clicks"),
     prevent_initial_call=True,
 )
-def handle_load(n_clicks: int) -> int:
-    """Handle load action."""
-    if n_clicks:
-        print("Workspace loaded.")
-    return n_clicks
 
-
-@callback(
-    Output("prism-action-clear", "n_clicks"),
-    Input("prism-action-clear", "n_clicks"),
+app.clientside_callback(
+    """
+    function(n_clicks) {
+        if (n_clicks > 0) {
+            window.alert('Clear action clicked! (n_clicks: ' + n_clicks + ')');
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("clear", "loading"),
+    Input("clear", "n_clicks"),
     prevent_initial_call=True,
 )
-def handle_clear(n_clicks: int) -> int:
-    """Handle clear action."""
-    if n_clicks:
-        print("Workspace cleared.")
-    return n_clicks
 
 
 # =============================================================================
