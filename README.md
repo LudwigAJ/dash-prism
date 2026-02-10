@@ -3,7 +3,7 @@
 [![CI](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/LudwigAJ/dash-prism/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/LudwigAJ/dash-prism/actions/workflows/codeql.yml/badge.svg)](https://github.com/LudwigAJ/dash-prism/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/dash-prism)](https://pypi.org/project/dash-prism/)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/dash-prism)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/dash-prism?link=https%3A%2F%2Fpypi.org%2Fproject%2Fdash-prism%2F)
 [![Python](https://img.shields.io/pypi/pyversions/dash-prism)](https://pypi.org/project/dash-prism/)
 ![License](https://img.shields.io/github/license/LudwigAJ/dash-prism.svg?style=flat)
 
