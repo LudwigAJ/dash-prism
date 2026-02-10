@@ -98,7 +98,7 @@ jobs:
         run: poetry install --with dev,test --no-interaction
 
       - name: Override Dash version
-        run: poetry run pip install dash==${{ matrix.dash-version }}
+        run: poetry run pip install --no-deps dash==${{ matrix.dash-version }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
