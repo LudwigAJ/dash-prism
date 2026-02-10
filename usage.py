@@ -570,6 +570,8 @@ def country_layout(country: str = "United States"):
                 "color": colors["text"],
                 "display": "flex",
                 "flexDirection": "column",
+                "gap": "8px",
+                "padding": "0 8px 8px 8px",
             }
         ),
     )
@@ -728,6 +730,7 @@ def continent_layout(continent: str = "Europe"):
                 "color": colors["text"],
                 "display": "flex",
                 "flexDirection": "column",
+                "gap": "8px",
             }
         ),
     )

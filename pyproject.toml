@@ -1,25 +1,11 @@
-[tool.poetry]
+[project]
 name = "dash_prism"
 version = "0.9.5"
 description = "Prism: Powerful multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = "Apache-2.0"
-authors = ["Ludwig Jonsson <developer-prism@protonmail.com>"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Framework :: Dash",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Visualization",
-    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
+authors = [
+    {name = "Ludwig Jonsson", email = "developer-prism@protonmail.com"},
 ]
 keywords = [
     "dash",
@@ -34,9 +20,26 @@ keywords = [
     "components",
     "drag-and-drop",
 ]
-homepage = "https://github.com/LudwigAJ/dash-prism"
-repository = "https://github.com/LudwigAJ/dash-prism.git"
-documentation = "https://ludwigaj.github.io/dash-prism"
+requires-python = ">=3.10"
+dynamic = ["classifiers", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/LudwigAJ/dash-prism"
+Repository = "https://github.com/LudwigAJ/dash-prism.git"
+Documentation = "https://ludwigaj.github.io/dash-prism"
+
+[tool.poetry]
+# Classifiers kept here + listed in [project.dynamic] so Poetry auto-enriches
+# (adds Python version + license classifiers automatically)
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Dash",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 # Include build artifacts in both sdist and wheel, even if gitignored
 include = [
@@ -55,6 +58,8 @@ dash = ">=3.1.1,<4.1"
 black = "==26.1.0"
 mypy = "==1.19.1"
 pyyaml = "^6.0.0"
+setuptools = ">=75.0.0"
+wheel = ">=0.45.0"
 dash = {version = ">=3.1.1,<4.1", extras = ["dev", "async"]}
 
 [tool.poetry.group.test.dependencies]
@@ -71,6 +76,7 @@ sphinx-rtd-theme = "^3.1.0"
 
 [tool.poetry.group.demo.dependencies]
 numpy = "^1.24.0"
+pandas = ">=1.5.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
