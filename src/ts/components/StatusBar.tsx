@@ -106,7 +106,7 @@ export function StatusBar({
         <TooltipTrigger asChild>
           <button
             data-testid="prism-statusbar-reset"
-            className="text-muted-foreground hover:text-destructive hover:bg-muted/70 rounded-sm p-1 transition-colors"
+            className="text-muted-foreground hover:text-destructive hover:bg-muted rounded-sm p-1 transition-colors"
             onClick={handleReset}
           >
             <Trash2 className="size-[1em]" />
@@ -122,7 +122,7 @@ export function StatusBar({
         <TooltipTrigger asChild>
           <button
             data-testid="prism-statusbar-help"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-sm p-1 transition-colors"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm p-1 transition-colors"
             onClick={() => onOpenHelp?.()}
           >
             <Info className="size-[1em]" />
@@ -141,7 +141,7 @@ export function StatusBar({
             className={cn(
               'rounded-sm p-1 transition-colors',
               canUndo
-                ? 'text-muted-foreground hover:text-foreground hover:bg-muted/70 cursor-pointer'
+                ? 'text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer'
                 : 'text-muted-foreground/40 cursor-not-allowed'
             )}
             onClick={handleUndo}
@@ -183,7 +183,7 @@ export function StatusBar({
       {/* Active Tab Info with Popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <div className="hover:bg-muted/70 flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
+          <div className="hover:bg-muted flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
             Tab: <span className="text-foreground">{activeTab?.name || '--'}</span>
             {activeTab?.locked && <Lock className="text-muted-foreground size-[1em]" />}
           </div>

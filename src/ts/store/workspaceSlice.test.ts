@@ -392,6 +392,35 @@ describe('workspaceSlice', () => {
       expect(getWorkspace(store).panelTabs['panel-2'][0]).toBe('tab-1');
       expect(getWorkspace(store).panelTabs['panel-2'][1]).toBe('tab-3');
     });
+
+    it('is a no-op when target panel does not exist', () => {
+      const store = createTestStore(createTwoPanelState());
+      const stateBefore = getWorkspace(store);
+
+      store.dispatch(
+        moveTab({
+          tabId: 'tab-1' as TabId,
+          targetPanelId: 'nonexistent-panel' as PanelId,
+        })
+      );
+
+      expect(getWorkspace(store)).toEqual(stateBefore);
+    });
+
+    it('is a no-op when target panel is a container (non-leaf)', () => {
+      const store = createTestStore(createTwoPanelState());
+      const stateBefore = getWorkspace(store);
+
+      // container-1 is the parent container, not a leaf panel
+      store.dispatch(
+        moveTab({
+          tabId: 'tab-1' as TabId,
+          targetPanelId: 'container-1' as PanelId,
+        })
+      );
+
+      expect(getWorkspace(store)).toEqual(stateBefore);
+    });
   });
 
   describe('reorderTab', () => {

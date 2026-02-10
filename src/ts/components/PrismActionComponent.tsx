@@ -98,7 +98,7 @@ export function PrismAction({
           data-testid={testId}
           className={cn(
             'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
-            'hover:bg-muted/70 border border-transparent',
+            'hover:bg-muted border border-transparent',
             'flex items-center gap-1.5',
             variantClasses,
             disabled && 'cursor-not-allowed opacity-50',

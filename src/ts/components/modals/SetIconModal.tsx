@@ -7,6 +7,7 @@ import {
   DialogFooter,
 } from '@components/ui/dialog';
 import { Button } from '@components/ui/button';
+import { Ban } from 'lucide-react';
 import { TAB_ICON_NAMES, getTabIcon, getIconLabel } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
 import type { Tab } from '@types';
@@ -27,20 +28,17 @@ export type SetIconModalProps = {
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows all available Lucide icons from TAB_ICONS constant.
- * Includes "Remove Icon" option if tab already has an icon.
+ * First icon is a "Ban" (no icon) option to remove the current icon.
  */
 export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconModalProps) {
   if (!tab) return null;
 
-  const handleSelectIcon = (iconName: string) => {
+  const handleSelectIcon = (iconName: string | undefined) => {
     onSelectIcon(tab.id, iconName);
     onOpenChange(false);
   };
 
-  const handleRemoveIcon = () => {
-    onSelectIcon(tab.id, undefined);
-    onOpenChange(false);
-  };
+  const noIconSelected = !tab.icon;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,6 +50,20 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
         {/* Scrollable icon grid */}
         <div className="mt-4 max-h-[300px] overflow-y-auto">
           <div className="grid grid-cols-6 gap-2 p-1">
+            {/* No icon option */}
+            <button
+              type="button"
+              onClick={() => handleSelectIcon(undefined)}
+              title="No icon"
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-md transition-colors',
+                'hover:bg-foreground/10 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+                noIconSelected && 'ring-foreground/35 ring-2'
+              )}
+            >
+              <Ban className="size-[1.25em]" />
+            </button>
+
             {TAB_ICON_NAMES.map((iconName) => {
               const Icon = getTabIcon(iconName);
               if (!Icon) return null;
@@ -66,8 +78,8 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
                   title={getIconLabel(iconName)}
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-md transition-colors',
-                    'hover:bg-muted focus:ring-ring focus:ring-2 focus:outline-none',
-                    isSelected && 'bg-primary/20 ring-primary ring-2'
+                    'hover:bg-foreground/10 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+                    isSelected && 'ring-foreground/35 ring-2'
                   )}
                 >
                   <Icon className="size-[1.25em]" />
@@ -78,11 +90,6 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
         </div>
 
         <DialogFooter className="mt-4 flex gap-2">
-          {tab.icon && (
-            <Button variant="outline" onClick={handleRemoveIcon}>
-              Remove Icon
-            </Button>
-          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

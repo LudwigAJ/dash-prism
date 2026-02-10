@@ -2,6 +2,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';
+import { removeTab } from './workspaceSlice';
 
 export const initialUiState: UiState = {
   searchBarModes: {},
@@ -54,6 +55,17 @@ const uiSlice = createSlice({
     closeSetIconModal(state) {
       state.setIconModalTabId = null;
     },
+  },
+
+  extraReducers: (builder) => {
+    // Clean up stale tab references when a tab is removed from workspaceSlice.
+    // Without this, modals/rename state could reference a deleted tab.
+    builder.addCase(removeTab, (state, action) => {
+      const { tabId } = action.payload;
+      if (state.renamingTabId === tabId) state.renamingTabId = null;
+      if (state.infoModalTabId === tabId) state.infoModalTabId = null;
+      if (state.setIconModalTabId === tabId) state.setIconModalTabId = null;
+    });
   },
 });
 

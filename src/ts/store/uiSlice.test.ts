@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import uiReducer, {
   initialUiState,
   setSearchBarMode,
@@ -22,7 +22,8 @@ import uiReducer, {
   openSetIconModal,
   closeSetIconModal,
 } from './uiSlice';
-import type { UiState } from './types';
+import workspaceReducer, { removeTab } from './workspaceSlice';
+import type { UiState, WorkspaceState } from './types';
 import type { PanelId, TabId } from '@types';
 
 // =============================================================================
@@ -252,6 +253,100 @@ describe('uiSlice', () => {
       expect(state.infoModalTabId).toBe('tab-2');
       expect(state.setIconModalTabId).toBe('tab-3');
       expect(state.helpModalOpen).toBe(false); // Only this changed
+    });
+  });
+
+  // ===========================================================================
+  // Cross-slice: removeTab clears stale UI references
+  // ===========================================================================
+
+  describe('cross-slice: removeTab cleanup', () => {
+    const panelId = 'panel-1' as PanelId;
+    const tabId = 'tab-1' as TabId;
+    const tab2Id = 'tab-2' as TabId;
+
+    /**
+     * Create a combined store with both workspace and UI reducers
+     * to test cross-slice extraReducers behavior.
+     */
+    function createCombinedStore(uiOverrides: Partial<UiState> = {}) {
+      const workspaceState: WorkspaceState = {
+        tabs: [
+          { id: tabId, name: 'Tab 1', panelId, createdAt: Date.now(), mountKey: 'm1' },
+          { id: tab2Id, name: 'Tab 2', panelId, createdAt: Date.now(), mountKey: 'm2' },
+        ],
+        panel: { id: panelId, order: 0, direction: 'horizontal', children: [], size: '100%' },
+        panelTabs: { [panelId]: [tabId, tab2Id] },
+        activeTabIds: { [panelId]: tabId },
+        activePanelId: panelId,
+        favoriteLayouts: [],
+        searchBarsHidden: false,
+      };
+
+      return configureStore({
+        reducer: combineReducers({
+          workspace: workspaceReducer,
+          ui: uiReducer,
+        }),
+        preloadedState: {
+          workspace: workspaceState,
+          ui: { ...initialUiState, ...uiOverrides },
+        },
+      });
+    }
+
+    it('clears renamingTabId when that tab is removed', () => {
+      const store = createCombinedStore({ renamingTabId: tabId });
+
+      store.dispatch(removeTab({ tabId }));
+
+      expect(store.getState().ui.renamingTabId).toBeNull();
+    });
+
+    it('clears infoModalTabId when that tab is removed', () => {
+      const store = createCombinedStore({ infoModalTabId: tabId });
+
+      store.dispatch(removeTab({ tabId }));
+
+      expect(store.getState().ui.infoModalTabId).toBeNull();
+    });
+
+    it('clears setIconModalTabId when that tab is removed', () => {
+      const store = createCombinedStore({ setIconModalTabId: tabId });
+
+      store.dispatch(removeTab({ tabId }));
+
+      expect(store.getState().ui.setIconModalTabId).toBeNull();
+    });
+
+    it('clears all stale references at once', () => {
+      const store = createCombinedStore({
+        renamingTabId: tabId,
+        infoModalTabId: tabId,
+        setIconModalTabId: tabId,
+      });
+
+      store.dispatch(removeTab({ tabId }));
+
+      const ui = store.getState().ui;
+      expect(ui.renamingTabId).toBeNull();
+      expect(ui.infoModalTabId).toBeNull();
+      expect(ui.setIconModalTabId).toBeNull();
+    });
+
+    it('does not clear references to a different tab', () => {
+      const store = createCombinedStore({
+        renamingTabId: tab2Id,
+        infoModalTabId: tab2Id,
+        setIconModalTabId: tab2Id,
+      });
+
+      store.dispatch(removeTab({ tabId }));
+
+      const ui = store.getState().ui;
+      expect(ui.renamingTabId).toBe(tab2Id);
+      expect(ui.infoModalTabId).toBe(tab2Id);
+      expect(ui.setIconModalTabId).toBe(tab2Id);
     });
   });
 });
