@@ -473,6 +473,35 @@ export const TabBar = memo(function TabBar({
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // ================================================================================
+  // Scroll Indicators
+  // ================================================================================
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    // Threshold accounts for sub-pixel rounding in scrollWidth
+    const SCROLL_THRESHOLD = 1;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - SCROLL_THRESHOLD);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    const observer = new ResizeObserver(updateScrollIndicators);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      observer.disconnect();
+    };
+  }, [updateScrollIndicators, tabs.length]);
 
   // ================================================================================
   // Handlers
@@ -598,7 +627,12 @@ export const TabBar = memo(function TabBar({
       {/* Drop zone highlight overlay */}
       {isOver && <div className="bg-primary/15 pointer-events-none absolute inset-0 z-10" />}
       {/* Scrollable tab container with + button inside, hidden scrollbar */}
-      <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden">
+      <div
+        ref={scrollContainerRef}
+        className="prism-tabbar-scroll scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden"
+        data-can-scroll-left={canScrollLeft || undefined}
+        data-can-scroll-right={canScrollRight || undefined}
+      >
         {/* Radix TabsList - provides keyboard navigation and ARIA */}
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
           <TabsList

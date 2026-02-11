@@ -177,23 +177,30 @@ function PrismInner({
 }) {
   const config = useConfig();
 
-  // Use a ref for setProps to avoid recreating the store when setProps reference changes.
-  // This is critical: when dashSyncMiddleware calls setProps(), Dash may re-render with
-  // a new setProps reference. Without this ref, the store would be recreated with fresh
-  // initial state, causing tabs to disappear.
+  // Use refs for setProps and registeredLayouts to avoid recreating the store
+  // when their object references change. This is critical: when dashSyncMiddleware
+  // calls setProps(), Dash may re-render with a new setProps reference. Without
+  // this ref, the store would be recreated with fresh initial state.
   const setPropsRef = useRef(config.setProps);
   useEffect(() => {
     setPropsRef.current = config.setProps;
   }, [config.setProps]);
 
-  // Stable setProps wrapper that always calls the latest setProps
+  const registeredLayoutsRef = useRef(config.registeredLayouts);
+  useEffect(() => {
+    registeredLayoutsRef.current = config.registeredLayouts;
+  }, [config.registeredLayouts]);
+
+  // Stable wrappers that always access the latest values via refs
   const stableSetProps = useMemo(
     () => (props: Record<string, unknown>) => setPropsRef.current?.(props),
     []
   );
+  const stableGetRegisteredLayouts = useMemo(() => () => registeredLayoutsRef.current, []);
 
   // Create store with config values - memoized to prevent recreation
-  // Note: stableSetProps is stable (empty deps), so it won't cause store recreation
+  // Note: stableSetProps and stableGetRegisteredLayouts are stable (empty deps),
+  // so they won't cause store recreation
   const { store, persistor, cleanup } = useMemo(
     () =>
       createPrismStore({
@@ -201,8 +208,15 @@ function PrismInner({
         persistenceType: config.persistenceType,
         maxTabs: config.maxTabs,
         setProps: stableSetProps,
+        getRegisteredLayouts: stableGetRegisteredLayouts,
       }),
-    [config.componentId, config.persistenceType, config.maxTabs, stableSetProps]
+    [
+      config.componentId,
+      config.persistenceType,
+      config.maxTabs,
+      stableSetProps,
+      stableGetRegisteredLayouts,
+    ]
   );
 
   // Clean up middleware resources on unmount to prevent memory leaks

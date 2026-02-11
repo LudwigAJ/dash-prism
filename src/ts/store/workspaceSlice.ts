@@ -8,13 +8,13 @@ import {
   getLeafPanelIds,
   findPanelById,
   updatePanelInTree,
-  removePanelFromTree,
   isLeafPanel,
   splitPanel as splitPanelTree,
   collapsePanel as collapsePanelTree,
 } from '@utils/panels';
 import { notifyUser } from '@utils/toastEmitter';
 import { canAddTab } from './selectors';
+import type { RegisteredLayouts } from '@types';
 
 // =============================================================================
 // Constants
@@ -22,6 +22,32 @@ import { canAddTab } from './selectors';
 
 export const MAX_TAB_NAME_LENGTH = 24;
 export const MAX_LEAF_PANELS = 20;
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Collapse a panel that has no tabs, removing it from the tree.
+ * Used by removeTab, moveTab, and splitPanel to clean up empty panels.
+ *
+ * @returns true if the panel was collapsed, false if it's the last panel or collapse failed
+ */
+function collapseEmptyPanel(state: WorkspaceState, panelId: PanelId): boolean {
+  const panelTabCount = state.panelTabs[panelId]?.length ?? 0;
+  if (panelTabCount > 0) return false;
+
+  const leafPanels = getLeafPanelIds(state.panel);
+  const otherPanels = leafPanels.filter((id) => id !== panelId);
+  if (otherPanels.length === 0) return false;
+
+  const result = collapsePanelTree(state.panel, panelId);
+  if (!result.success) return false;
+
+  delete state.activeTabIds[panelId];
+  delete state.panelTabs[panelId];
+  return true;
+}
 
 // =============================================================================
 // Initial State
@@ -96,6 +122,22 @@ export const addTab = createAsyncThunk<
     return rejectWithValue(`Maximum tabs limit reached (${extra.maxTabs})`);
   }
 
+  // Validate allowMultiple constraint
+  if (payload.layoutId) {
+    const registeredLayouts = extra.getRegisteredLayouts();
+    const layoutMeta = registeredLayouts[payload.layoutId];
+    if (layoutMeta && layoutMeta.allowMultiple === false) {
+      if (tabs.some((t) => t.layoutId === payload.layoutId)) {
+        notifyUser(
+          'info',
+          `"${layoutMeta.name}" is already open`,
+          `This layout does not allow multiple instances.`
+        );
+        return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
+      }
+    }
+  }
+
   // Create the new tab
   const newTab: Tab = {
     id: generateShortId(),
@@ -135,6 +177,20 @@ export const duplicateTab = createAsyncThunk<
   const originalTab = findTabById(tabs, tabId);
   if (!originalTab) {
     return rejectWithValue('Tab not found');
+  }
+
+  // Validate allowMultiple constraint
+  if (originalTab.layoutId) {
+    const registeredLayouts = extra.getRegisteredLayouts();
+    const layoutMeta = registeredLayouts[originalTab.layoutId];
+    if (layoutMeta && layoutMeta.allowMultiple === false) {
+      notifyUser(
+        'info',
+        `"${layoutMeta.name}" does not allow duplicates`,
+        `This layout does not allow multiple instances.`
+      );
+      return rejectWithValue(`Layout "${originalTab.layoutId}" does not allow multiple instances`);
+    }
   }
 
   const newTab: Tab = {
@@ -197,34 +253,25 @@ const workspaceSlice = createSlice({
       }
 
       // Handle empty panel: collapse or spawn new tab
-      const panelTabCount = state.panelTabs[panelId]?.length ?? 0;
-      if (panelTabCount === 0) {
-        const leafPanels = getLeafPanelIds(state.panel);
-        const otherPanels = leafPanels.filter((id) => id !== panelId);
-
-        if (otherPanels.length > 0) {
-          // Collapse the empty panel - there are other panels to use
-          const collapseResult = collapsePanelTree(state.panel, panelId);
-          if (collapseResult.success) {
-            delete state.activeTabIds[panelId];
-            delete state.panelTabs[panelId];
-            // Move focus to another panel
-            state.activePanelId = otherPanels[0];
-          }
-        } else {
-          // This is the last panel - spawn a new empty tab
-          const newTabId: TabId = generateShortId();
-          const newTab: Tab = {
-            id: newTabId,
-            name: 'New Tab',
-            panelId: panelId,
-            createdAt: Date.now(),
-            mountKey: generateShortId(),
-          };
-          state.tabs.push(newTab);
-          state.panelTabs[panelId] = [newTabId];
-          state.activeTabIds[panelId] = newTabId;
+      if (collapseEmptyPanel(state, panelId)) {
+        // Panel was collapsed — move focus to another panel
+        const remaining = getLeafPanelIds(state.panel);
+        if (remaining.length > 0) {
+          state.activePanelId = remaining[0];
         }
+      } else if ((state.panelTabs[panelId]?.length ?? 0) === 0) {
+        // This is the last panel - spawn a new empty tab
+        const newTabId: TabId = generateShortId();
+        const newTab: Tab = {
+          id: newTabId,
+          name: 'New Tab',
+          panelId: panelId,
+          createdAt: Date.now(),
+          mountKey: generateShortId(),
+        };
+        state.tabs.push(newTab);
+        state.panelTabs[panelId] = [newTabId];
+        state.activeTabIds[panelId] = newTabId;
       }
     },
 
@@ -349,19 +396,9 @@ const workspaceSlice = createSlice({
         }
       }
 
-      // Collapse source panel if it's now empty (and not the last panel)
-      const sourceEmpty = (state.panelTabs[sourcePanelId]?.length ?? 0) === 0;
-      if (sourceEmpty) {
-        const leafPanels = getLeafPanelIds(state.panel);
-        const otherPanels = leafPanels.filter((id) => id !== sourcePanelId);
-        if (otherPanels.length > 0) {
-          const collapseResult = collapsePanelTree(state.panel, sourcePanelId);
-          if (collapseResult.success) {
-            delete state.activeTabIds[sourcePanelId];
-            delete state.panelTabs[sourcePanelId];
-          }
-        }
-      }
+      // Collapse source panel if it's now empty (and not the last panel).
+      // Return value ignored: target panel already received focus above.
+      collapseEmptyPanel(state, sourcePanelId);
     },
 
     reorderTab(
@@ -521,18 +558,10 @@ const workspaceSlice = createSlice({
         }
       }
 
-      // Step 5: Clean up source panel if empty (for cross-panel splits)
+      // Step 5: Clean up source panel if empty (for cross-panel splits).
+      // Return value ignored: new panel already received focus above.
       if (!isSamePanelSplit) {
-        const sourceEmpty = (state.panelTabs[sourcePanelId]?.length ?? 0) === 0;
-        if (sourceEmpty) {
-          const leafPanels = getLeafPanelIds(state.panel);
-          const otherPanels = leafPanels.filter((id) => id !== sourcePanelId);
-          if (otherPanels.length > 0) {
-            removePanelFromTree(state.panel, sourcePanelId);
-            delete state.activeTabIds[sourcePanelId];
-            delete state.panelTabs[sourcePanelId];
-          }
-        }
+        collapseEmptyPanel(state, sourcePanelId);
       }
     },
 

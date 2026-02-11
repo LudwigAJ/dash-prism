@@ -1,5 +1,5 @@
 // src/ts/store/types.ts
-import type { Tab, Panel, PanelId, TabId } from '@types';
+import type { Tab, Panel, PanelId, TabId, RegisteredLayouts } from '@types';
 
 /**
  * Persisted workspace state - saved to localStorage/sessionStorage
@@ -44,6 +44,8 @@ export type StoreConfig = {
   persistenceType: 'local' | 'session' | 'memory';
   maxTabs: number;
   setProps?: (props: Record<string, unknown>) => void;
+  /** Getter for registered layouts — used by thunks to check constraints like allowMultiple */
+  getRegisteredLayouts?: () => RegisteredLayouts;
 };
 
 /**
@@ -51,4 +53,5 @@ export type StoreConfig = {
  */
 export type ThunkExtra = {
   maxTabs: number;
+  getRegisteredLayouts: () => RegisteredLayouts;
 };
