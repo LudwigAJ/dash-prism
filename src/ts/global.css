@@ -335,6 +335,45 @@
 }
 
 /* =============================================================================
+   TAB BAR SCROLL INDICATORS (gradient fades when tabs overflow)
+   ============================================================================= */
+
+.prism-tabbar-scroll {
+  position: relative;
+}
+
+.prism-tabbar-scroll::before,
+.prism-tabbar-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5em;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.prism-tabbar-scroll::before {
+  left: 0;
+  background: linear-gradient(to right, var(--background), transparent);
+}
+
+.prism-tabbar-scroll::after {
+  right: 0;
+  background: linear-gradient(to left, var(--background), transparent);
+}
+
+.prism-tabbar-scroll[data-can-scroll-left]::before {
+  opacity: 1;
+}
+
+.prism-tabbar-scroll[data-can-scroll-right]::after {
+  opacity: 1;
+}
+
+/* =============================================================================
    STATUS BAR SIZING (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 

@@ -24,7 +24,7 @@ import type { PanelId, TabId } from '@types';
 // =============================================================================
 
 function createTestStore(setProps?: (props: Record<string, unknown>) => void, maxTabs = 16) {
-  const thunkExtra: ThunkExtra = { maxTabs };
+  const thunkExtra: ThunkExtra = { maxTabs, getRegisteredLayouts: () => ({}) };
 
   const undoableWorkspaceReducer = undoable(workspaceReducer, {
     limit: 50,

@@ -52,8 +52,15 @@ import type { Tab, Panel, PanelId, TabId } from '@types';
  * Create a test store with optional preloaded state and maxTabs config.
  * Wraps workspace reducer with undoable() to match real store structure.
  */
-function createTestStore(preloadedState?: WorkspaceState, maxTabs = 16) {
-  const thunkExtra: ThunkExtra = { maxTabs };
+function createTestStore(
+  preloadedState?: WorkspaceState,
+  maxTabs = 16,
+  registeredLayouts: Record<string, { name: string; allowMultiple?: boolean }> = {}
+) {
+  const thunkExtra: ThunkExtra = {
+    maxTabs,
+    getRegisteredLayouts: () => registeredLayouts as import('@types').RegisteredLayouts,
+  };
 
   // Wrap workspace reducer with undoable to match real store structure
   const undoableWorkspaceReducer = undoable(workspaceReducer, {
@@ -998,6 +1005,120 @@ describe('workspaceSlice', () => {
         await store.dispatch(duplicateTab({ tabId: 'tab-0' as TabId }));
 
         expect(getWorkspace(store).tabs.length).toBe(101);
+      });
+    });
+
+    describe('addTab with allowMultiple constraint', () => {
+      it('blocks addTab when allowMultiple=false and layout already open', async () => {
+        const state = createTestState({
+          tabs: [
+            {
+              id: 'tab-1' as TabId,
+              name: 'Analytics',
+              panelId: 'test-panel-1' as PanelId,
+              layoutId: 'analytics',
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+        });
+        const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
+        const store = createTestStore(state, 16, layouts);
+
+        await store.dispatch(
+          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'analytics', name: 'Analytics' })
+        );
+
+        // Tab should not be added
+        expect(getWorkspace(store).tabs.length).toBe(1);
+      });
+
+      it('allows addTab when allowMultiple=false and layout not yet open', async () => {
+        const state = createTestState();
+        const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
+        const store = createTestStore(state, 16, layouts);
+
+        await store.dispatch(
+          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'analytics', name: 'Analytics' })
+        );
+
+        expect(getWorkspace(store).tabs.length).toBe(2);
+        expect(getWorkspace(store).tabs[1].layoutId).toBe('analytics');
+      });
+
+      it('allows addTab when allowMultiple=true even if layout already open', async () => {
+        const state = createTestState({
+          tabs: [
+            {
+              id: 'tab-1' as TabId,
+              name: 'Chart',
+              panelId: 'test-panel-1' as PanelId,
+              layoutId: 'chart',
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+        });
+        const layouts = { chart: { name: 'Chart', allowMultiple: true } };
+        const store = createTestStore(state, 16, layouts);
+
+        await store.dispatch(
+          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'chart', name: 'Chart 2' })
+        );
+
+        expect(getWorkspace(store).tabs.length).toBe(2);
+      });
+
+      it('allows addTab without layoutId (blank tab) regardless of constraints', async () => {
+        const store = createTestStore(undefined, 16, {});
+
+        await store.dispatch(addTab({ panelId: getWorkspace(store).activePanelId }));
+
+        expect(getWorkspace(store).tabs.length).toBe(2);
+      });
+    });
+
+    describe('duplicateTab with allowMultiple constraint', () => {
+      it('blocks duplicateTab when allowMultiple=false', async () => {
+        const state = createTestState({
+          tabs: [
+            {
+              id: 'tab-1' as TabId,
+              name: 'Analytics',
+              panelId: 'test-panel-1' as PanelId,
+              layoutId: 'analytics',
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+        });
+        const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
+        const store = createTestStore(state, 16, layouts);
+
+        await store.dispatch(duplicateTab({ tabId: 'tab-1' as TabId }));
+
+        expect(getWorkspace(store).tabs.length).toBe(1);
+      });
+
+      it('allows duplicateTab when allowMultiple=true', async () => {
+        const state = createTestState({
+          tabs: [
+            {
+              id: 'tab-1' as TabId,
+              name: 'Chart',
+              panelId: 'test-panel-1' as PanelId,
+              layoutId: 'chart',
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+        });
+        const layouts = { chart: { name: 'Chart', allowMultiple: true } };
+        const store = createTestStore(state, 16, layouts);
+
+        await store.dispatch(duplicateTab({ tabId: 'tab-1' as TabId }));
+
+        expect(getWorkspace(store).tabs.length).toBe(2);
       });
     });
 

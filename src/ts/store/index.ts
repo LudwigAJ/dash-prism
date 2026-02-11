@@ -142,7 +142,7 @@ const UNDO_EXCLUDED_ACTIONS = [
  * ```
  */
 export function createPrismStore(config: StoreConfig) {
-  const { componentId, persistenceType, maxTabs, setProps } = config;
+  const { componentId, persistenceType, maxTabs, setProps, getRegisteredLayouts } = config;
 
   // Configure persistence for workspace slice only
   // Important: We persist the workspace reducer BEFORE wrapping with redux-undo
@@ -175,7 +175,10 @@ export function createPrismStore(config: StoreConfig) {
   });
 
   // Create thunk extra argument
-  const thunkExtra: ThunkExtra = { maxTabs };
+  const thunkExtra: ThunkExtra = {
+    maxTabs,
+    getRegisteredLayouts: getRegisteredLayouts ?? (() => ({})),
+  };
 
   // Create dash sync middleware (returns middleware + cleanup function)
   const dashSync = createDashSyncMiddleware(setProps);
