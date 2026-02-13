@@ -780,6 +780,7 @@ const workspaceSlice = createSlice({
         }
         state.panelTabs[newTab.panelId].push(newTab.id);
         state.activeTabIds[newTab.panelId] = newTab.id;
+        state.activePanelId = newTab.panelId;
       });
   },
 });

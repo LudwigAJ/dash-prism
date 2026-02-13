@@ -245,7 +245,16 @@ def _run_callback(
                     "Consider optimizing the callback or increasing layoutTimeout."
                 )
 
-        return asyncio.run(_run_with_timeout())
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(_run_with_timeout())  # No loop running — safe
+        else:
+            raise RuntimeError(
+                "Cannot run async layout callback from within an existing event loop "
+                "(e.g. Jupyter, uvicorn). Either set use_async=True on your Dash app, "
+                "or make the layout callback synchronous."
+            )
     # Sync callback - no timeout enforcement (would require threading)
     return callback(**params)
 
