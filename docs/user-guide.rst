@@ -550,3 +550,33 @@ Callable layouts are useful for:
 
    **Async callable layouts** are supported but require ``app = Dash(__name__, use_async=True)``.
    The wrapping behavior is the same, but the wrapper preserves the async nature of your function.
+
+Background Callbacks
+~~~~~~~~~~~~~~~~~~~~
+
+If your layout callbacks are expensive (e.g. loading large datasets or running
+computations), you can offload them to a background process using Dash's
+`Background Callback Manager <https://dash.plotly.com/background-callbacks>`_.
+
+Pass ``background=True`` to ``init()`` to enable this:
+
+.. code-block:: python
+
+   from dash import Dash, DiskcacheManager
+   import diskcache
+
+   cache = diskcache.Cache("./cache")
+   background_callback_manager = DiskcacheManager(cache)
+
+   app = Dash(
+       __name__,
+       background_callback_manager=background_callback_manager,
+   )
+
+   # Register layouts as usual ...
+
+   dash_prism.init('workspace', app, background=True)
+
+This registers Prism's tab rendering callback with ``background=True``, so Dash
+executes it in a separate worker process (DiskCache) or on a task queue (Celery)
+instead of blocking the main server thread.

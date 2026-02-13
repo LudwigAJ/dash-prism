@@ -575,7 +575,7 @@ def _validate_prism_component(app: "Dash", prism_id: str) -> Optional[Any]:
 # =============================================================================
 
 
-def init(prism_id: str, app: "Dash") -> None:
+def init(prism_id: str, app: "Dash", background: bool = False) -> None:
     """
     Initialize Prism with a Dash application.
 
@@ -597,6 +597,12 @@ def init(prism_id: str, app: "Dash") -> None:
         The ID of the Prism component in the layout.
     app : Dash
         The Dash application instance.
+    background : bool, optional
+        If ``True``, the tab rendering callback is registered with
+        ``background=True`` so that Dash's Background Callback Manager
+        can execute it in a separate process (DiskCache) or on a task
+        queue (Celery). Requires a ``background_callback_manager`` to be
+        configured on the Dash app. Defaults to ``False``.
 
     Raises
     ------
@@ -621,6 +627,17 @@ def init(prism_id: str, app: "Dash") -> None:
         ... ])
         >>>
         >>> dash_prism.init('prism', app)
+
+    With background callbacks::
+
+        >>> from dash import DiskcacheManager
+        >>> import diskcache
+        >>>
+        >>> cache = diskcache.Cache("./cache")
+        >>> background_callback_manager = DiskcacheManager(cache)
+        >>> app = Dash(__name__, background_callback_manager=background_callback_manager)
+        >>>
+        >>> dash_prism.init('prism', app, background=True)
     """
     from dash import Input, Output, State, MATCH
     from dash.exceptions import PreventUpdate
@@ -718,13 +735,18 @@ def init(prism_id: str, app: "Dash") -> None:
         )
 
     # Create the tab rendering callback using pattern matching
+    callback_kwargs = dict(
+        prevent_initial_call=False,
+        background=background,
+    )
+
     if use_async:
 
         @app.callback(
             Output({"type": "prism-content", "index": MATCH}, "children"),
             Input({"type": "prism-content", "index": MATCH}, "id"),
             Input({"type": "prism-content", "index": MATCH}, "data"),
-            prevent_initial_call=False,
+            **callback_kwargs,
         )
         async def render_prism_content_async(content_id, data):
             """Async callback to render a tab's content."""
@@ -760,7 +782,7 @@ def init(prism_id: str, app: "Dash") -> None:
             Output({"type": "prism-content", "index": MATCH}, "children"),
             Input({"type": "prism-content", "index": MATCH}, "id"),
             Input({"type": "prism-content", "index": MATCH}, "data"),
-            prevent_initial_call=False,
+            **callback_kwargs,
         )
         def render_prism_content(content_id, data):
             """Sync callback to render a tab's content."""
