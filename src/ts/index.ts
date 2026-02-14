@@ -6,15 +6,13 @@ export { TabBar } from './components/TabBar';
 export { SearchBar } from './components/SearchBar';
 export { StatusBar } from './components/StatusBar';
 export { PrismContent } from './components/PrismContentComponent';
-export { PanelDropZone } from './components/PanelDropzone';
+export { PanelDropzone } from './components/PanelDropzone';
 
 // Layout Components
 export { NewLayout } from './components/layouts/NewLayout';
 
 // Error Boundary
 export { ErrorBoundary, type ErrorBoundaryLevel } from './components/ErrorBoundary';
-/** @deprecated Use ErrorBoundary instead */
-export { ErrorBoundary as ErrorLayout } from './components/ErrorBoundary';
 
 // Context
 export { ConfigProvider, useConfig } from './context/ConfigContext';
@@ -58,7 +56,7 @@ export {
   // Workspace actions
   addTab,
   removeTab,
-  selectTab,
+  activateTab,
   renameTab,
   lockTab,
   unlockTab,
@@ -108,7 +106,7 @@ export type {
 
 // Hooks
 export { usePrism, useActiveTab, usePanelTabs } from './hooks/usePrism';
-export { useTabs, useTabDrag } from './hooks/useTabs';
+export { useTabActions, useTabDrag } from './hooks/useTabs';
 export { usePanels } from './hooks/usePanels';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useDashSync } from './hooks/useDashSync';
@@ -117,7 +115,7 @@ export { useShareLinks } from './hooks/useShareLinks';
 // Types
 export type {
   Tab,
-  Panel as PanelType, // avoid name conflict with Panel component
+  PanelNode,
   LayoutMeta,
   LayoutParam,
   RegisteredLayouts,

@@ -1,16 +1,17 @@
 import React from 'react';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
+import type { PanelId } from '@types';
 import { usePrism } from '@hooks/usePrism';
 import { getLeafPanelIds } from '@utils/panels';
 
-type PanelDropZoneProps = {
-  panelId: string;
+type PanelDropzoneProps = {
+  panelId: PanelId;
   children: React.ReactNode;
   /** When true, disable all edge dropzones (no splits allowed) */
   isPinned?: boolean;
 };
 
-export function PanelDropZone({ panelId, children, isPinned = false }: PanelDropZoneProps) {
+export function PanelDropzone({ panelId, children, isPinned = false }: PanelDropzoneProps) {
   const { active } = useDndContext();
   const { state } = usePrism();
   const isActive = !!active;

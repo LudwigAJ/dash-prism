@@ -17,7 +17,7 @@ import workspaceReducer, {
   addTab,
   removeTab,
   duplicateTab,
-  selectTab,
+  activateTab,
   renameTab,
   lockTab,
   unlockTab,
@@ -42,7 +42,7 @@ import workspaceReducer, {
   MAX_LEAF_PANELS,
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
-import type { Tab, Panel, PanelId, TabId } from '@types';
+import type { Tab, PanelNode, PanelId, TabId } from '@types';
 
 // =============================================================================
 // Test Utilities
@@ -186,7 +186,7 @@ function getTab(store: TestStore, tabId: string): Tab | undefined {
 /**
  * Helper to count leaf panels.
  */
-function countLeafPanels(panel: Panel): number {
+function countLeafPanels(panel: PanelNode): number {
   if (panel.children.length === 0) return 1;
   return panel.children.reduce((count, child) => count + countLeafPanels(child), 0);
 }
@@ -904,11 +904,11 @@ describe('workspaceSlice', () => {
     });
   });
 
-  describe('selectTab', () => {
+  describe('activateTab', () => {
     it('sets the active tab for the panel', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(selectTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
 
       expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-2');
       expect(getWorkspace(store).activePanelId).toBe('panel-1');
@@ -1300,13 +1300,13 @@ describe('workspaceSlice', () => {
       });
     });
 
-    describe('selectTab edge cases', () => {
+    describe('activateTab edge cases', () => {
       it('is a no-op when tab does not exist', () => {
         const store = createTestStore(createTestState());
         const originalActiveTabId = getWorkspace(store).activeTabIds['test-panel-1'];
 
         store.dispatch(
-          selectTab({ tabId: 'nonexistent' as TabId, panelId: 'test-panel-1' as PanelId })
+          activateTab({ tabId: 'nonexistent' as TabId, panelId: 'test-panel-1' as PanelId })
         );
 
         // Should not change activeTabId when tab doesn't exist
@@ -1318,7 +1318,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(state);
 
         // Try to select tab-1 (belongs to panel-1) in panel-2
-        store.dispatch(selectTab({ tabId: 'tab-1' as TabId, panelId: 'panel-2' as PanelId }));
+        store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-2' as PanelId }));
 
         // Should not change panel-2's activeTabId
         expect(getWorkspace(store).activeTabIds['panel-2']).toBe('tab-3');
@@ -1440,7 +1440,7 @@ describe('workspaceSlice', () => {
       // Note: order is typed as 0 | 1, so we use modulo. For testing leaf panel count,
       // the exact order values don't affect the test logic since getLeafPanelIds
       // walks all children regardless of order.
-      const childPanels: Panel[] = panelIds.map((id, i) => ({
+      const childPanels: PanelNode[] = panelIds.map((id, i) => ({
         id,
         order: (i % 2) as 0 | 1,
         direction: 'horizontal' as const,

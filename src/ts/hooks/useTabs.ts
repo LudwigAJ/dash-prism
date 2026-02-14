@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useDndContext } from '@dnd-kit/core';
 import { useConfig } from '../context/ConfigContext';
+import type { PanelId, TabId } from '@types';
 import { findTabById, getTabsByPanelId } from '@utils/tabs';
 import {
   useAppDispatch,
@@ -27,7 +28,7 @@ import {
  * @example
  * ```tsx
  * function TabManager({ panelId }: { panelId: string }) {
- *   const { panelTabs, canAddTab, createTab, closeTab } = useTabs(panelId);
+ *   const { panelTabs, canAddTab, createTab, closeTab } = useTabActions(panelId);
  *
  *   return (
  *     <div>
@@ -40,7 +41,7 @@ import {
  * }
  * ```
  */
-export function useTabs(panelId: string) {
+export function useTabActions(panelId: PanelId) {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const { maxTabs } = useConfig();
@@ -56,21 +57,21 @@ export function useTabs(panelId: string) {
   );
 
   const closeTab = useCallback(
-    (tabId: string) => {
+    (tabId: TabId) => {
       dispatch(removeTab({ tabId }));
     },
     [dispatch]
   );
 
   const duplicateTabFn = useCallback(
-    (tabId: string) => {
+    (tabId: TabId) => {
       dispatch(duplicateTab({ tabId }));
     },
     [dispatch]
   );
 
   const moveTabFn = useCallback(
-    (tabId: string, targetPanelId: string) => {
+    (tabId: TabId, targetPanelId: PanelId) => {
       if (targetPanelId === panelId) return false;
       dispatch(moveTab({ tabId, targetPanelId }));
       return true;
@@ -79,7 +80,7 @@ export function useTabs(panelId: string) {
   );
 
   const renameTabFn = useCallback(
-    (tabId: string, name: string) => {
+    (tabId: TabId, name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return false;
       dispatch(renameTab({ tabId, name: trimmed }));
@@ -89,21 +90,21 @@ export function useTabs(panelId: string) {
   );
 
   const toggleLock = useCallback(
-    (tabId: string) => {
+    (tabId: TabId) => {
       dispatch(toggleTabLock({ tabId }));
     },
     [dispatch]
   );
 
   const setIcon = useCallback(
-    (tabId: string, icon?: string) => {
+    (tabId: TabId, icon?: string) => {
       dispatch(setTabIcon({ tabId, icon }));
     },
     [dispatch]
   );
 
   const setStyle = useCallback(
-    (tabId: string, style?: string) => {
+    (tabId: TabId, style?: string) => {
       dispatch(setTabStyle({ tabId, style }));
     },
     [dispatch]

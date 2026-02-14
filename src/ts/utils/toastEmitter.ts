@@ -20,7 +20,7 @@ export type ToastEvent = {
 type Listener = (event: ToastEvent) => void;
 const listeners = new Set<Listener>();
 
-export const toastEmitter = {
+const toastEmitter = {
   /**
    * Emit a toast event to all subscribers.
    * Called from reducer when operations fail/succeed.
@@ -38,6 +38,14 @@ export const toastEmitter = {
     return () => listeners.delete(fn);
   },
 };
+
+/**
+ * Subscribe to toast events.
+ * Returns an unsubscribe function for cleanup.
+ */
+export function subscribeToToasts(fn: Listener): () => void {
+  return toastEmitter.subscribe(fn);
+}
 
 /**
  * Notify the user with a toast message and log the details.

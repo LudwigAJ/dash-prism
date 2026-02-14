@@ -174,7 +174,7 @@ export function useTabs() {
  * @param panelId - The panel ID to get the active tab for
  * @returns The active Tab object, or null if no active tab
  */
-export function useActiveTab(panelId: string) {
+export function useActiveTab(panelId: PanelId) {
   const tabs = useAppSelector(selectTabs);
   const activeTabIds = useAppSelector(selectActiveTabIds);
   return getActiveTabForPanel(tabs, activeTabIds, panelId) ?? null;
@@ -186,7 +186,7 @@ export function useActiveTab(panelId: string) {
  * @param panelId - The panel ID to get tabs for
  * @returns Array of Tab objects in the panel
  */
-export function usePanelTabs(panelId: string) {
+export function usePanelTabs(panelId: PanelId) {
   const tabs = useAppSelector(selectTabs);
   return getTabsByPanelId(tabs, panelId);
 }
@@ -209,7 +209,7 @@ export function useWorkspace() {
   const panel = useAppSelector(selectPanel);
 
   const leafPanels = getLeafPanelIds(panel);
-  const isOnlyPanel = (panelId: string) => leafPanels.length === 1 && leafPanels[0] === panelId;
+  const isOnlyPanel = (panelId: PanelId) => leafPanels.length === 1 && leafPanels[0] === panelId;
 
   // Check if closing a tab would leave the workspace empty
   const canCloseTab = (panelId: PanelId, tabId: TabId) => {

@@ -1,5 +1,5 @@
 import { Draft } from 'immer';
-import type { Panel, PanelId, PanelDirection } from '@types';
+import type { PanelNode, PanelId, PanelDirection } from '@types';
 import { generateShortId } from '@utils/uuid';
 
 // =============================================================================
@@ -9,21 +9,21 @@ import { generateShortId } from '@utils/uuid';
 /**
  * Check if a panel is a leaf panel (can hold tabs)
  */
-export function isLeafPanel(root: Panel | Draft<Panel>): boolean {
+export function isLeafPanel(root: PanelNode | Draft<PanelNode>): boolean {
   return root.children.length === 0;
 }
 
 /**
  * Check if a panel is a container (has children)
  */
-export function isContainerPanel(root: Panel | Draft<Panel>): boolean {
+export function isContainerPanel(root: PanelNode | Draft<PanelNode>): boolean {
   return root.children.length > 0;
 }
 
 /**
  * Get all leaf panel IDs from a panel tree (recursive)
  */
-export function getLeafPanelIds(root: Panel | Draft<Panel>): PanelId[] {
+export function getLeafPanelIds(root: PanelNode | Draft<PanelNode>): PanelId[] {
   if (!root || !root.children) return [];
   if (isLeafPanel(root)) return [root.id];
   return root.children.flatMap(getLeafPanelIds);
@@ -32,7 +32,7 @@ export function getLeafPanelIds(root: Panel | Draft<Panel>): PanelId[] {
 /**
  * Count total number of leaf panels in a tree
  */
-export function countLeafPanels(root: Panel | Draft<Panel>): number {
+export function countLeafPanels(root: PanelNode | Draft<PanelNode>): number {
   return getLeafPanelIds(root).length;
 }
 
@@ -40,9 +40,9 @@ export function countLeafPanels(root: Panel | Draft<Panel>): number {
  * Find a panel by ID in the tree (recursive)
  */
 export function findPanelById(
-  root: Panel | Draft<Panel>,
+  root: PanelNode | Draft<PanelNode>,
   panelId: PanelId
-): Panel | Draft<Panel> | null {
+): PanelNode | Draft<PanelNode> | null {
   if (root.id === panelId) return root;
 
   for (const child of root.children) {
@@ -57,9 +57,9 @@ export function findPanelById(
  * Find parent panel (returns just the parent)
  */
 export function findParentPanel(
-  root: Panel | Draft<Panel>,
+  root: PanelNode | Draft<PanelNode>,
   panelId: PanelId
-): Panel | Draft<Panel> | null {
+): PanelNode | Draft<PanelNode> | null {
   if (root.id === panelId) return null;
 
   for (const child of root.children) {
@@ -75,9 +75,9 @@ export function findParentPanel(
  * Find parent panel with index (useful for splicing in mutations)
  */
 export function findParentPanelWithIndex(
-  root: Panel | Draft<Panel>,
+  root: PanelNode | Draft<PanelNode>,
   panelId: PanelId
-): { parent: Panel | Draft<Panel>; index: number } | null {
+): { parent: PanelNode | Draft<PanelNode>; index: number } | null {
   for (let i = 0; i < root.children.length; i++) {
     if (root.children[i].id === panelId) {
       return { parent: root, index: i };
@@ -91,7 +91,7 @@ export function findParentPanelWithIndex(
 /**
  * Find all leaf panels in the tree (recursive)
  */
-export function findAllLeaves(root: Panel | Draft<Panel>): Panel | Draft<Panel>[] {
+export function findAllLeaves(root: PanelNode | Draft<PanelNode>): PanelNode | Draft<PanelNode>[] {
   if (isLeafPanel(root)) return [root];
   return root.children.flatMap(findAllLeaves);
 }
@@ -99,7 +99,7 @@ export function findAllLeaves(root: Panel | Draft<Panel>): Panel | Draft<Panel>[
 /**
  * Check if a panel is the last (only) leaf panel in the tree
  */
-export function isLastPanel(root: Panel | Draft<Panel>, panelId: PanelId): boolean {
+export function isLastPanel(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
   const leafPanels = getLeafPanelIds(root);
   return leafPanels.length === 1 && leafPanels[0] === panelId;
 }
@@ -112,9 +112,9 @@ export function isLastPanel(root: Panel | Draft<Panel>, panelId: PanelId): boole
  * Update a panel in the tree by ID (in-place mutation)
  */
 export function updatePanelInTree(
-  root: Panel | Draft<Panel>,
+  root: PanelNode | Draft<PanelNode>,
   panelId: PanelId,
-  updater: (p: Panel | Draft<Panel>) => void
+  updater: (p: PanelNode | Draft<PanelNode>) => void
 ): boolean {
   if (root.id === panelId) {
     updater(root);
@@ -132,7 +132,7 @@ export function updatePanelInTree(
  * Remove a panel from tree with bubble-up behavior (in-place)
  * If parent has only one child after removal, child replaces parent
  */
-export function removePanelFromTree(root: Panel | Draft<Panel>, panelId: PanelId): boolean {
+export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
   const result = findParentPanelWithIndex(root, panelId);
   if (!result) return false;
 
@@ -187,7 +187,7 @@ export type SplitPanelResult = {
  * @returns Result indicating success/failure and new panel IDs
  */
 export function splitPanel(
-  rootPanel: Panel | Draft<Panel>,
+  rootPanel: PanelNode | Draft<PanelNode>,
   options: {
     panelId: PanelId;
     direction: PanelDirection;
@@ -222,7 +222,7 @@ export function splitPanel(
   const originalPanelOrder = position === 'before' ? 1 : 0;
 
   // Create the original panel as a child (keeps same ID!)
-  const originalPanelAsChild: Panel = {
+  const originalPanelAsChild: PanelNode = {
     id: panelId,
     order: originalPanelOrder,
     direction: panelToSplit.direction,
@@ -231,7 +231,7 @@ export function splitPanel(
   };
 
   // Create new sibling panel
-  const newSiblingPanel: Panel = {
+  const newSiblingPanel: PanelNode = {
     id: newPanelId,
     order: newPanelOrder,
     direction,
@@ -285,7 +285,7 @@ export type CollapsePanelResult = {
  * @returns Result indicating success/failure
  */
 export function collapsePanel(
-  rootPanel: Panel | Draft<Panel>,
+  rootPanel: PanelNode | Draft<PanelNode>,
   panelId: PanelId
 ): CollapsePanelResult {
   // Verify panel exists

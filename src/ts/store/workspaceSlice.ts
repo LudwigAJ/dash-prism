@@ -1,6 +1,6 @@
 // src/ts/store/workspaceSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import type { Tab, Panel, PanelId, TabId, LayoutId, PanelDirection } from '@types';
+import type { Tab, PanelNode, PanelId, TabId, LayoutId, PanelDirection } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
 import { findTabById, findTabIndex } from '@utils/tabs';
@@ -275,14 +275,14 @@ const workspaceSlice = createSlice({
       }
     },
 
-    selectTab(state, action: PayloadAction<{ tabId: TabId; panelId: PanelId }>) {
+    activateTab(state, action: PayloadAction<{ tabId: TabId; panelId: PanelId }>) {
       const { tabId, panelId } = action.payload;
 
       // Validate: tab must exist
       const tab = findTabById(state.tabs, tabId);
       if (!tab) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[selectTab] Tab not found: ${tabId}`);
+          console.warn(`[activateTab] Tab not found: ${tabId}`);
         }
         return;
       }
@@ -290,7 +290,9 @@ const workspaceSlice = createSlice({
       // Validate: tab must belong to the specified panel
       if (tab.panelId !== panelId) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[selectTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`);
+          console.warn(
+            `[activateTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`
+          );
         }
         return;
       }
@@ -788,7 +790,7 @@ const workspaceSlice = createSlice({
 // Export actions
 export const {
   removeTab,
-  selectTab,
+  activateTab,
   renameTab,
   lockTab,
   unlockTab,

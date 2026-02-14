@@ -6,9 +6,8 @@ import { SplitPane, Pane } from 'react-split-pane';
 import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
 import { SearchBar } from '@components/SearchBar';
-import { PanelDropZone } from '@components/PanelDropzone';
-import type { Panel as PanelType, Tab } from '@types';
-import type { TabId } from '@types';
+import { PanelDropzone } from '@components/PanelDropzone';
+import type { PanelNode, Tab, TabId, PanelId } from '@types';
 import { cn } from '@utils/cn';
 import { isLeafPanel, getLeafPanelIds } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
@@ -21,18 +20,18 @@ import {
   selectPanelTabs,
   selectActiveTabIds,
   selectActivePanelId,
-  selectTab,
+  activateTab,
   setActivePanel,
   resizePanel,
 } from '@store';
 import { usePortal } from '@context/PortalContext';
 
 type PanelProps = {
-  panel: PanelType;
+  panel: PanelNode;
   onOpenInfo?: (tab: Tab) => void;
 };
 
-export function makeComponentPath(componentId: string, tabId: string): string[] {
+export function makeComponentPath(componentId: string, tabId: TabId): string[] {
   return [componentId, 'content', tabId];
 }
 
@@ -43,8 +42,8 @@ export function makeComponentPath(componentId: string, tabId: string): string[] 
 // =============================================================================
 
 function useNativePanelFocus(
-  panelId: string,
-  activePanelId: string,
+  panelId: PanelId,
+  activePanelId: PanelId,
   dispatch: ReturnType<typeof useAppDispatch>
 ) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -73,7 +72,7 @@ function useNativePanelFocus(
 // =============================================================================
 
 type LeafPanelProps = {
-  panel: PanelType;
+  panel: PanelNode;
 };
 
 const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
@@ -95,7 +94,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
 
   const handleTabChange = useCallback(
     (tabId: string) => {
-      dispatch(selectTab({ tabId, panelId: panel.id }));
+      dispatch(activateTab({ tabId, panelId: panel.id }));
     },
     [dispatch, panel.id]
   );
@@ -126,7 +125,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
 
         <SearchBar panelId={panel.id} isPinned={isPinned} />
 
-        <PanelDropZone panelId={panel.id} isPinned={isPinned}>
+        <PanelDropzone panelId={panel.id} isPinned={isPinned}>
           <div className="relative flex h-full w-full flex-col overflow-auto">
             {tabs.map((tab) => {
               // Get portal node for tabs with layouts (content rendered via InPortal in WorkspaceView)
@@ -154,7 +153,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
               );
             })}
           </div>
-        </PanelDropZone>
+        </PanelDropzone>
       </Tabs>
     </div>
   );

@@ -10,7 +10,7 @@ import { Button } from '@components/ui/button';
 import { Ban } from 'lucide-react';
 import { TAB_ICON_NAMES, getTabIcon, getIconLabel } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
-import type { Tab } from '@types';
+import type { Tab, TabId } from '@types';
 
 export type SetIconModalProps = {
   /** Whether the modal is open */
@@ -20,7 +20,7 @@ export type SetIconModalProps = {
   /** Tab to set icon for */
   tab: Tab | null;
   /** Callback when an icon is selected */
-  onSelectIcon: (tabId: string, icon: string | undefined) => void;
+  onSelectIcon: (tabId: TabId, icon: string | undefined) => void;
 };
 
 /**
