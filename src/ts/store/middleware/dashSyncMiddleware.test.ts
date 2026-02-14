@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, { selectTab, addTab, removeTab } from '../workspaceSlice';
+import workspaceReducer, { activateTab, addTab, removeTab } from '../workspaceSlice';
 import uiReducer, { setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware, type DashSyncMiddlewareResult } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
@@ -76,7 +76,7 @@ describe('dashSyncMiddleware', () => {
       const { store, getState } = createTestStore(setProps);
 
       // First workspace action
-      store.dispatch(selectTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
 
       // Should sync immediately without waiting for debounce
       expect(setProps).toHaveBeenCalledTimes(1);
@@ -144,12 +144,12 @@ describe('dashSyncMiddleware', () => {
       const tabId = state.tabs[0]?.id;
 
       // First action
-      store.dispatch(selectTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
+      store.dispatch(activateTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Same selection again - state hasn't changed
       vi.advanceTimersByTime(500);
-      store.dispatch(selectTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
+      store.dispatch(activateTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
       vi.advanceTimersByTime(500);
 
       // Should still be 1 because state is identical
@@ -232,7 +232,7 @@ describe('dashSyncMiddleware', () => {
 
       // Should not throw
       expect(() => {
-        store.dispatch(selectTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+        store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
       }).not.toThrow();
     });
   });
@@ -265,11 +265,11 @@ describe('dashSyncMiddleware', () => {
       const { store, cleanup } = createTestStore(setProps);
 
       // First action - immediate
-      store.dispatch(selectTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Second action - debounced
-      store.dispatch(selectTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Cleanup before debounce fires

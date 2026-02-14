@@ -22,12 +22,12 @@ export type StatusBarPosition = 'top' | 'bottom';
 // =============================================================================
 
 export type Tab = {
-  id: string;
+  id: TabId;
   name: string;
-  panelId: string;
+  panelId: PanelId;
   createdAt: number;
   /** Layout ID or empty string if no layout assigned */
-  layoutId?: string;
+  layoutId?: LayoutId;
   layoutOption?: string;
   layoutParams?: Record<string, string>;
 
@@ -39,12 +39,12 @@ export type Tab = {
   style?: string;
 };
 
-export type Panel = {
-  id: string;
+export type PanelNode = {
+  id: PanelId;
   order: PanelOrder;
   direction: PanelDirection;
   pinned?: boolean;
-  children: Panel[];
+  children: PanelNode[];
   /** Size as percentage (0-100) */
   size?: string | number;
 };
@@ -81,7 +81,7 @@ export type RegisteredLayouts = Record<string, LayoutMeta>;
 
 export type Workspace = {
   tabs: Tab[];
-  panel: Panel;
+  panel: PanelNode;
   panelTabs: Record<PanelId, TabId[]>; // Order per panel
   activeTabIds: Record<PanelId, TabId>;
   activePanelId: PanelId;

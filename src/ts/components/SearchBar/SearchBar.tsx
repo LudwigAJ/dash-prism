@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import type { PanelId } from '@types';
 import { useSearchBarState } from './useSearchBarState';
 import { DisplayMode } from './DisplayMode';
 import { SearchMode } from './SearchMode';
@@ -6,7 +7,7 @@ import { ParamsMode } from './ParamsMode';
 import { OptionsMode } from './OptionsMode';
 
 type SearchBarProps = {
-  panelId: string;
+  panelId: PanelId;
   isPinned?: boolean;
 };
 

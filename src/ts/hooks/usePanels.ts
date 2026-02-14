@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import type { PanelId } from '@types';
 import { useAppDispatch, resizePanel } from '@store';
 
 /**
@@ -6,9 +7,9 @@ import { useAppDispatch, resizePanel } from '@store';
  */
 type UsePanelsOptions = {
   /** The panel ID being resized */
-  panelId: string;
+  panelId: PanelId;
   /** The sibling panel ID (for reference) */
-  siblingId: string;
+  siblingId: PanelId;
   /** Resize direction: horizontal (left/right) or vertical (up/down) */
   direction: 'horizontal' | 'vertical';
   /** Minimum size as percentage (default: 10) */

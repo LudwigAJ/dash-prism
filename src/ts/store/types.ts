@@ -1,5 +1,5 @@
 // src/ts/store/types.ts
-import type { Tab, Panel, PanelId, TabId, RegisteredLayouts } from '@types';
+import type { Tab, PanelNode, PanelId, TabId, RegisteredLayouts } from '@types';
 
 /**
  * Persisted workspace state - saved to localStorage/sessionStorage
@@ -13,7 +13,7 @@ import type { Tab, Panel, PanelId, TabId, RegisteredLayouts } from '@types';
  */
 export type WorkspaceState = {
   tabs: Tab[];
-  panel: Panel;
+  panel: PanelNode;
   panelTabs: Record<PanelId, TabId[]>;
   activeTabIds: Record<PanelId, TabId>;
   activePanelId: PanelId;

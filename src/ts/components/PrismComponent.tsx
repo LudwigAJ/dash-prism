@@ -16,7 +16,7 @@ import {
   useAppSelector,
   getWorkspaceStorageKey,
 } from '@store';
-import { toastEmitter } from '@utils/toastEmitter';
+import { subscribeToToasts } from '@utils/toastEmitter';
 import { toast } from 'sonner';
 import type {
   RegisteredLayouts,
@@ -228,7 +228,7 @@ function PrismInner({
 
   // Subscribe to toast events
   useEffect(() => {
-    const unsubscribe = toastEmitter.subscribe(({ type, message, description }) => {
+    const unsubscribe = subscribeToToasts(({ type, message, description }) => {
       toast[type](message, {
         description,
         cancel: {

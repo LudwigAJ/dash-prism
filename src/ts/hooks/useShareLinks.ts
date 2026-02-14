@@ -9,7 +9,7 @@ import {
   selectTabs,
   selectActivePanelId,
   addTab,
-  selectTab,
+  activateTab,
 } from '@store';
 
 /**
@@ -190,7 +190,7 @@ export function useShareLinks() {
           toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`, {
             cancel: { label: 'Dismiss', onClick: () => {} },
           });
-          dispatch(selectTab({ tabId: existing.id, panelId: existing.panelId }));
+          dispatch(activateTab({ tabId: existing.id, panelId: existing.panelId }));
           return false;
         }
       }

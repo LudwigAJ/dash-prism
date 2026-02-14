@@ -18,7 +18,7 @@ import { useAppDispatch, useAppSelector, selectTabs, selectPanel, setTabIcon } f
 // DashContentRenderer - Memoized component that renders Dash layout content
 // =============================================================================
 
-function makeSpec(
+function buildDashSpec(
   id: string,
   layoutId: string | undefined,
   layoutParams: Record<string, string> | undefined,
@@ -57,7 +57,7 @@ const DashContentRenderer = memo(
     const { id, layoutId, layoutParams, layoutOption } = tab;
 
     const spec = useMemo<DashComponent>(
-      () => makeSpec(id, layoutId, layoutParams, layoutOption, layoutTimeout),
+      () => buildDashSpec(id, layoutId, layoutParams, layoutOption, layoutTimeout),
       [id, layoutId, layoutParams, layoutOption, layoutTimeout]
     );
 

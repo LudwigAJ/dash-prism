@@ -1,4 +1,4 @@
-import type { Panel, Tab, Theme, Workspace } from '@types';
+import type { PanelNode, Tab, Theme, Workspace } from '@types';
 
 type ValidationSuccess = { ok: true; workspace: Workspace };
 type ValidationFailure = { ok: false; errors: string[] };
@@ -105,7 +105,7 @@ function validateTab(value: unknown, index: number, errors: string[]): Tab | nul
   };
 }
 
-function validatePanel(value: unknown, path: string, errors: string[]): Panel | null {
+function validatePanel(value: unknown, path: string, errors: string[]): PanelNode | null {
   if (!isRecord(value)) {
     errors.push(`${path}: expected object`);
     return null;
@@ -136,7 +136,7 @@ function validatePanel(value: unknown, path: string, errors: string[]): Panel | 
     return null;
   }
 
-  const normalizedChildren: Panel[] = [];
+  const normalizedChildren: PanelNode[] = [];
   children.forEach((child, index) => {
     const childPanel = validatePanel(child, `${path}.children[${index}]`, errors);
     if (childPanel) normalizedChildren.push(childPanel);
@@ -145,7 +145,7 @@ function validatePanel(value: unknown, path: string, errors: string[]): Panel | 
   return {
     id,
     order,
-    direction: direction as Panel['direction'],
+    direction: direction as PanelNode['direction'],
     children: normalizedChildren,
     pinned: normalizeOptional(value.pinned as boolean | null | undefined),
     size: normalizeOptional(value.size as string | number | null | undefined),
@@ -186,7 +186,7 @@ function validateActiveTabIds(value: unknown, errors: string[]): Record<string, 
   return result;
 }
 
-function collectLeafPanelIds(panel: Panel): string[] {
+function collectLeafPanelIds(panel: PanelNode): string[] {
   if (panel.children.length === 0) return [panel.id];
   return panel.children.flatMap(collectLeafPanelIds);
 }

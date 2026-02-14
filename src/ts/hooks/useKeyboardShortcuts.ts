@@ -15,7 +15,7 @@ import {
   selectCanUndo,
   addTab,
   removeTab,
-  selectTab,
+  activateTab,
   toggleTabLock,
   pinPanel,
   unpinPanel,
@@ -113,7 +113,7 @@ export function useKeyboardShortcuts() {
 
       const newTab = activePanelTabs[newIndex];
       if (newTab) {
-        dispatch(selectTab({ tabId: newTab.id as TabId, panelId: activePanelId }));
+        dispatch(activateTab({ tabId: newTab.id as TabId, panelId: activePanelId }));
       }
     },
     [getActivePanelTabs, activeTabIds, activePanelId, dispatch]

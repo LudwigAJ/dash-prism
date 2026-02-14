@@ -1,5 +1,6 @@
 import { useReducer, useRef, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import {
@@ -18,7 +19,7 @@ import {
   selectSearchBarsHidden,
   selectFavoriteLayouts,
   updateTabLayout,
-  selectTab,
+  activateTab,
   toggleSearchBars,
   toggleFavoriteLayout,
   setSearchBarMode,
@@ -28,7 +29,7 @@ import {
  * SearchBar state management hook.
  * Now uses a local reducer with derived mode instead of scattered useState calls.
  */
-export function useSearchBarState(panelId: string) {
+export function useSearchBarState(panelId: PanelId) {
   const globalDispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const activeTabIds = useAppSelector(selectActiveTabIds);
@@ -147,7 +148,7 @@ export function useSearchBarState(panelId: string) {
           toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
             cancel: { label: 'Dismiss', onClick: () => {} },
           });
-          globalDispatch(selectTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
+          globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
           dispatch({ type: 'RESET' });
           dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
           return;

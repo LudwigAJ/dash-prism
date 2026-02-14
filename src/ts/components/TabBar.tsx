@@ -28,7 +28,7 @@ import {
 } from '@components/ui';
 import { TAB_STYLE_LABELS, tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
-import type { Tab, Theme } from '@types';
+import type { Tab, TabId, PanelId, Theme } from '@types';
 import type { AppDispatch } from '@store';
 import { MAX_TAB_NAME_LENGTH, MAX_LEAF_PANELS } from '@store/workspaceSlice';
 import { cn } from '@utils/cn';
@@ -424,9 +424,9 @@ const TabItem = memo(function TabItem({
 // =============================================================================
 
 type TabBarProps = {
-  panelId: string;
+  panelId: PanelId;
   tabs: Tab[];
-  activeTabId: string | null;
+  activeTabId: TabId | null;
   isPinned?: boolean;
   isActive?: boolean;
   onOpenInfo?: (tab: Tab) => void;

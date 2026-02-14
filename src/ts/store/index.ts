@@ -119,7 +119,7 @@ const migrations = {
  */
 const UNDO_EXCLUDED_ACTIONS = [
   'workspace/syncWorkspace', // Backend sync should not be undoable
-  'workspace/selectTab', // Tab selection is not undoable
+  'workspace/activateTab', // Tab selection is not undoable
   'workspace/setActivePanel', // Panel focus is not undoable
   'workspace/resizePanel', // Resize is continuous, not undoable
 ];
