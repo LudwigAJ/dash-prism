@@ -62,11 +62,6 @@ jobs:
             docs/_build/html/ \
             deploy@${{ secrets.VPS_HOST }}:site/docs/
 
-      - name: Reload Caddy
-        run: |
-          ssh -i ~/.ssh/deploy_key deploy@${{ secrets.VPS_HOST }} \
-            'cd site && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile' || true
-
       - name: Cleanup SSH key
         if: always()
         run: rm -f ~/.ssh/deploy_key
