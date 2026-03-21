@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "Dash Prism"
 copyright = "2026, Ludwig Jonsson"
 author = "Ludwig Jonsson"
-release = "0.9.3"
+release = "0.9.9"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -32,5 +32,5 @@ html_theme_options = {
     "navigation_depth": 4,
     "collapse_navigation": False,
     "sticky_navigation": True,
-    'analytics_id': 'G-WB80DBLQ68',
+    "analytics_id": "G-WB80DBLQ68",
 }
