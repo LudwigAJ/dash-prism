@@ -136,7 +136,6 @@ Add buttons to the status bar:
            dash_prism.Action(
                id='save-btn',
                label='Save',
-               icon='Rocket',
                tooltip='Save workspace',
            ),
        ],
@@ -247,7 +246,6 @@ Use an Action to trigger reading the workspace. The Action provides the
            dash_prism.Action(
                id='export-btn',
                label='Export',
-               icon='Download',
                tooltip='Export workspace layout',
            ),
        ],
@@ -299,11 +297,11 @@ without replacing the entire workspace:
 
 .. code-block:: python
 
-   # Only update the theme
-   return {'theme': 'dark'}
-
    # Only update favorite layouts
    return {'favoriteLayouts': ['dashboard', 'analytics']}
+
+   # Only update which panel is active
+   return {'activePanelId': 'panel-abc'}
 
 Server-Side Persistence Pattern
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -316,8 +314,8 @@ persistence (useful when users access their workspace from multiple devices):
    dash_prism.Prism(
        id='workspace',
        actions=[
-           dash_prism.Action(id='save-btn', label='Save', icon='Save'),
-           dash_prism.Action(id='load-btn', label='Load', icon='FolderOpen'),
+           dash_prism.Action(id='save-btn', label='Save'),
+           dash_prism.Action(id='load-btn', label='Load'),
        ],
    )
 
