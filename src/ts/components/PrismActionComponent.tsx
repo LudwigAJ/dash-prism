@@ -8,8 +8,8 @@ const ACTION_VARIANT_CLASSES: Record<string, string> = {
   default: '',
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-  success: 'bg-green-600 text-white hover:bg-green-600/90',
-  warning: 'bg-amber-500 text-white hover:bg-amber-500/90',
+  success: 'bg-success text-success-foreground hover:bg-success/90',
+  warning: 'bg-warning text-warning-foreground hover:bg-warning/90',
   danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
 };
 
@@ -18,6 +18,21 @@ const ACTION_VARIANT_CLASSES: Record<string, string> = {
  */
 function isHexColor(value: string): boolean {
   return /^#([0-9A-Fa-f]{3}){1,2}$/.test(value);
+}
+
+/**
+ * Compute a contrasting text color (black or white) for a given hex background.
+ * Uses relative luminance to ensure WCAG-compliant contrast.
+ */
+function getContrastColor(hex: string): string {
+  const full = hex.length === 4
+    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+    : hex;
+  const r = parseInt(full.slice(1, 3), 16);
+  const g = parseInt(full.slice(3, 5), 16);
+  const b = parseInt(full.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? '#000' : '#fff';
 }
 
 type PrismActionProps = {
@@ -82,7 +97,9 @@ export function PrismAction({
   const isCustomColor = variant && isHexColor(variant);
   const variantClasses =
     !isCustomColor && variant in ACTION_VARIANT_CLASSES ? ACTION_VARIANT_CLASSES[variant] : '';
-  const customStyle = isCustomColor ? { backgroundColor: variant, color: '#fff' } : undefined;
+  const customStyle = isCustomColor
+    ? { backgroundColor: variant, color: getContrastColor(variant) }
+    : undefined;
 
   // Tooltip content
   const tooltipContent = tooltip ?? `Click to trigger "${label}"`;
