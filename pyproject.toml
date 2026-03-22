@@ -1,6 +1,6 @@
 [project]
 name = "dash_prism"
-version = "0.9.8"
+version = "0.9.9"
 description = "Prism: Powerful multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ python = "^3.10"
 dash = ">=3.1.1,<4.1"
 
 [tool.poetry.group.dev.dependencies]
-black = "==26.1.0"
+black = "==26.3.1"
 mypy = "==1.19.1"
 pyyaml = "^6.0.0"
 setuptools = "==81.0.0"
