@@ -25,9 +25,7 @@ function isHexColor(value: string): boolean {
  * Uses relative luminance to ensure WCAG-compliant contrast.
  */
 function getContrastColor(hex: string): string {
-  const full = hex.length === 4
-    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
-    : hex;
+  const full = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
   const r = parseInt(full.slice(1, 3), 16);
   const g = parseInt(full.slice(3, 5), 16);
   const b = parseInt(full.slice(5, 7), 16);
