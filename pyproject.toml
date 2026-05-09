@@ -1,6 +1,6 @@
 [project]
 name = "dash_prism"
-version = "0.9.9"
+version = "0.9.10"
 description = "Prism: Powerful multi-panel workspace manager for Plotly Dash"
 readme = "README.md"
 license = "Apache-2.0"
@@ -60,7 +60,7 @@ mypy = "==1.19.1"
 pyyaml = "^6.0.0"
 setuptools = "==81.0.0"
 wheel = ">=0.45.0"
-dash = {version = ">=3.1.1,<4.1", extras = ["dev", "async"]}
+dash = {version = ">=3.1.1,<4.2", extras = ["dev", "async"]}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.2"
@@ -69,7 +69,7 @@ pytest-xdist = "^3.8.0"
 pytest-rerunfailures = "^16.1"
 selenium = "^4.0.0"
 webdriver-manager = "^4.0.0"
-dash = {version = ">=3.1.1,<4.1", extras = ["testing"]}
+dash = {version = ">=3.1.1,<4.2", extras = ["testing"]}
 
 [tool.poetry.group.docs.dependencies]
 sphinx-rtd-theme = "^3.1.0"
