@@ -136,6 +136,7 @@ files = [
     "dash_prism/icons.py",
     "dash_prism/init.py",
     "dash_prism/Prism.py",
+    "dash_prism/PrismContent.py",
     "dash_prism/registry.py",
     "dash_prism/utils.py",
 ]

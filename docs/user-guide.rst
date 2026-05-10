@@ -158,10 +158,10 @@ Variant options (``variant`` parameter): ``'default'``, ``'primary'``,
 ``'secondary'``, ``'success'``, ``'warning'``, ``'danger'``, or a hex color
 like ``'#FF5500'``.
 
-Icons
------
+Tab Icons
+---------
 
-Use ``get_available_icons()`` to see all available icon names:
+Use ``get_available_icons()`` to see all icon names available for tab icons:
 
 .. code-block:: python
 
@@ -276,7 +276,6 @@ Use ``updateWorkspace`` to restore a previously saved workspace:
            dash_prism.Action(
                id='import-btn',
                label='Import',
-               icon='Upload',
                tooltip='Import workspace layout',
            ),
        ],

@@ -16,6 +16,12 @@ Action
 .. autoclass:: dash_prism.Action
    :members:
 
+PrismContent
+^^^^^^^^^^^^
+
+.. autoclass:: dash_prism.PrismContent
+   :members:
+
 Registration
 ------------
 

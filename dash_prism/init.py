@@ -2,7 +2,7 @@
 Prism Initialization
 ====================
 
-This module provides the :func:`init` function that sets up Prism with a Dash app.
+This module provides the :func:`dash_prism.init` function that sets up Prism with a Dash app.
 
 Responsibilities
 ----------------
@@ -24,8 +24,10 @@ from __future__ import annotations
 import asyncio
 import copy
 import warnings
+import inspect
 import logging
-from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
+from collections.abc import Callable
+from typing import Any, TYPE_CHECKING
 from weakref import WeakSet
 
 if TYPE_CHECKING:
@@ -40,7 +42,7 @@ _wrapped_layouts: WeakSet[Callable] = WeakSet()
 def _execute_and_inject_metadata(
     layout_tree: Any,
     prism_id: str,
-    layouts_metadata: Dict[str, Any],
+    layouts_metadata: dict[str, Any],
     session_id: str,
 ) -> Any:
     """Execute common validation and metadata injection logic.
@@ -68,7 +70,7 @@ def _execute_and_inject_metadata(
 def _create_layout_wrapper(
     original_layout: Callable,
     prism_id: str,
-    layouts_metadata: Dict[str, Any],
+    layouts_metadata: dict[str, Any],
     session_id: str,
     is_async: bool,
 ) -> Callable:
@@ -140,7 +142,7 @@ from .utils import find_component_by_id as _find_component_by_id
 def _inject_metadata_into_layout(
     layout_tree: Any,
     prism_id: str,
-    layouts_metadata: Dict[str, Any],
+    layouts_metadata: dict[str, Any],
     session_id: str,
 ) -> Any:
     """Find Prism component in layout tree and inject metadata.
@@ -164,7 +166,7 @@ def _inject_metadata_into_layout(
     return layout_tree
 
 
-def _get_layout_root(app: "Dash") -> Optional[Any]:
+def _get_layout_root(app: "Dash") -> Any | None:
     """Resolve the app layout root, calling a layout function if needed.
 
     :param app: The Dash application instance.
@@ -214,7 +216,7 @@ def _is_app_async(app: "Dash") -> bool:
 def _run_callback(
     callback: Callable[..., Any],
     is_async: bool,
-    params: Dict[str, Any],
+    params: dict[str, Any],
     timeout: int = 30,
 ) -> Any:
     """Execute a layout callback in a SYNC context.
@@ -262,7 +264,7 @@ def _run_callback(
 async def _run_callback_async(
     callback: Callable[..., Any],
     is_async: bool,
-    params: Dict[str, Any],
+    params: dict[str, Any],
     timeout: int = 30,
 ) -> Any:
     """Execute a layout callback in an ASYNC context with timeout.
@@ -312,7 +314,7 @@ def _create_error_component(message: str) -> Any:
     :param message: The error message to display.
     :type message: str
     :returns: Error component with styling.
-    :rtype: dash.html.Div
+    :rtype: Any
     """
     from dash import html
 
@@ -328,8 +330,8 @@ def _create_error_component(message: str) -> Any:
 def _render_tab_layout_impl(
     tab_id: str,
     layout_id: str,
-    layout_params: Optional[Dict[str, Any]],
-    layout_option: Optional[str],
+    layout_params: dict[str, Any] | None,
+    layout_option: str | None,
     timeout: int,
     callback_runner: Callable,
 ) -> Any:
@@ -400,8 +402,8 @@ def _render_tab_layout_impl(
 def _render_tab_layout(
     tab_id: str,
     layout_id: str,
-    layout_params: Optional[Dict[str, Any]],
-    layout_option: Optional[str] = None,
+    layout_params: dict[str, Any] | None,
+    layout_option: str | None = None,
     timeout: int = 30,
 ) -> Any:
     """Render a tab's layout (SYNC version).
@@ -432,8 +434,8 @@ def _render_tab_layout(
 async def _render_tab_layout_async(
     tab_id: str,
     layout_id: str,
-    layout_params: Optional[Dict[str, Any]],
-    layout_option: Optional[str] = None,
+    layout_params: dict[str, Any] | None,
+    layout_option: str | None = None,
     timeout: int = 30,
 ) -> Any:
     """Render a tab's layout (ASYNC version).
@@ -515,7 +517,7 @@ def _validate_init(app: "Dash", prism_id: str) -> list[str]:
     :type app: Dash
     :param prism_id: The Prism component ID.
     :type prism_id: str
-    :returns: List of error messages (empty if valid).
+    :returns: list of error messages (empty if valid).
     :rtype: list[str]
     """
     errors: list[str] = []
@@ -535,7 +537,7 @@ def _validate_init(app: "Dash", prism_id: str) -> list[str]:
     return errors
 
 
-def _validate_prism_component(app: "Dash", prism_id: str) -> Optional[Any]:
+def _validate_prism_component(app: "Dash", prism_id: str) -> Any | None:
     """Find and validate the Prism component in the app layout.
 
     :param app: The Dash application.
@@ -576,8 +578,7 @@ def _validate_prism_component(app: "Dash", prism_id: str) -> Optional[Any]:
 
 
 def init(prism_id: str, app: "Dash", background: bool = False) -> None:
-    """
-    Initialize Prism with a Dash application.
+    """Initialize Prism with a Dash application.
 
     This function performs the following:
 
@@ -591,53 +592,52 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
     - If app has ``use_async=True``, async callbacks are used
     - Otherwise, sync callbacks are used (async layouts run via ``asyncio.run()``)
 
-    Parameters
-    ----------
-    prism_id : str
-        The ID of the Prism component in the layout.
-    app : Dash
-        The Dash application instance.
-    background : bool, optional
-        If ``True``, the tab rendering callback is registered with
+    :param prism_id: The ID of the Prism component in the layout.
+    :type prism_id: str
+    :param app: The Dash application instance.
+    :type app: Dash
+    :param background: If ``True``, the tab rendering callback is registered with
         ``background=True`` so that Dash's Background Callback Manager
         can execute it in a separate process (DiskCache) or on a task
         queue (Celery). Requires a ``background_callback_manager`` to be
         configured on the Dash app. Defaults to ``False``.
+    :type background: bool
+    :raises: :exc:`dash_prism.InitializationError` if critical validation fails.
 
-    Raises
-    ------
-    InitializationError
-        If critical validation fails.
+    .. rubric:: Examples
 
-    Examples
-    --------
-    Basic usage::
+    Basic usage:
 
-        >>> import dash_prism
-        >>> from dash import Dash, html
-        >>>
-        >>> app = Dash(__name__)
-        >>>
-        >>> @dash_prism.register_layout(id='home', name='Home')
-        ... def home_layout():
-        ...     return html.Div('Welcome!')
-        >>>
-        >>> app.layout = html.Div([
-        ...     dash_prism.Prism(id='prism')
-        ... ])
-        >>>
-        >>> dash_prism.init('prism', app)
+    .. code-block:: python
 
-    With background callbacks::
+        import dash_prism
+        from dash import Dash, html
 
-        >>> from dash import DiskcacheManager
-        >>> import diskcache
-        >>>
-        >>> cache = diskcache.Cache("./cache")
-        >>> background_callback_manager = DiskcacheManager(cache)
-        >>> app = Dash(__name__, background_callback_manager=background_callback_manager)
-        >>>
-        >>> dash_prism.init('prism', app, background=True)
+        app = Dash(__name__)
+
+        @dash_prism.register_layout(id='home', name='Home')
+        def home_layout():
+            return html.Div('Welcome!')
+
+        app.layout = html.Div([
+            dash_prism.Prism(id='prism')
+        ])
+
+        dash_prism.init('prism', app)
+
+    With background callbacks:
+
+    .. code-block:: python
+
+        import dash_prism
+        import diskcache
+        from dash import Dash, DiskcacheManager
+
+        cache = diskcache.Cache("./cache")
+        background_callback_manager = DiskcacheManager(cache)
+        app = Dash(__name__, background_callback_manager=background_callback_manager)
+
+        dash_prism.init('prism', app, background=True)
     """
     from dash import Input, Output, State, MATCH
     from dash.exceptions import PreventUpdate
@@ -702,7 +702,7 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
         else:
             # Wrap the layout function to inject metadata on every render
             # This creates a closure in the wrapper, avoiding registry lookups on every render
-            is_async = asyncio.iscoroutinefunction(original_layout)
+            is_async = inspect.iscoroutinefunction(original_layout)
             wrapped_layout = _create_layout_wrapper(
                 original_layout, prism_id, layouts_metadata, session_id, is_async
             )

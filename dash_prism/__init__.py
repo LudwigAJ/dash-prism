@@ -2,7 +2,7 @@
 Dash Prism
 ==========
 
-A powerful tabbed workspace component for building dynamic, multi-panel
+A powerful tabbed workspace component for building dynamic, lazy-loaded, multi-panel
 Dash applications with drag-and-drop functionality.
 
 Features
@@ -77,48 +77,48 @@ API Reference
 Core Components
 ~~~~~~~~~~~~~~~
 
-- :class:`Prism`: Main workspace component
-- :class:`Action`: Action buttons for status bar (alias: ``PrismAction``)
-- :class:`PrismContent`: Content wrapper for layouts
+- :class:`dash_prism.Prism`: Main workspace component
+- :class:`dash_prism.Action`: Action buttons for status bar (alias: ``PrismAction``)
+- :class:`dash_prism.PrismContent`: Content wrapper for layouts
 
 Registration API
 ~~~~~~~~~~~~~~~~
 
-- :func:`register_layout`: Register a layout (decorator or direct)
-- :func:`get_layout`: Retrieve registered layout by ID
-- :func:`get_registered_layouts_metadata`: Get all layout metadata
-- :func:`clear_registry`: Clear all registered layouts
-- :data:`registry`: Global layout registry instance
+- :func:`dash_prism.register_layout`: Register a layout (decorator or direct)
+- :func:`dash_prism.get_layout`: Retrieve registered layout by ID
+- :func:`dash_prism.get_registered_layouts_metadata`: Get all layout metadata
+- :func:`dash_prism.clear_registry`: Clear all registered layouts
+- :data:`dash_prism.registry`: Global layout registry instance
 
 Initialization
 ~~~~~~~~~~~~~~
 
-- :func:`init`: Initialize Prism with Dash app
-- :exc:`InitializationError`: Raised when initialization fails
+- :func:`dash_prism.init`: Initialize Prism with Dash app
+- :exc:`dash_prism.InitializationError`: Raised when initialization fails
 
 Utilities
 ~~~~~~~~~
 
-- :func:`walk_layout`: Traverse component tree
-- :func:`inject_tab_id`: Add tab IDs for isolation
-- :func:`render_layout_for_tab`: Render layout for specific tab
-- :func:`find_component_by_id`: Find component in tree
-- :func:`update_component_props`: Update component properties
-- :func:`validate_workspace`: Validate workspace structure
-- :exc:`InvalidWorkspace`: Raised on invalid workspace
+- :func:`dash_prism.walk_layout`: Traverse component tree
+- :func:`dash_prism.inject_tab_id`: Add tab IDs for isolation
+- :func:`dash_prism.render_layout_for_tab`: Render layout for specific tab
+- :func:`dash_prism.find_component_by_id`: Find component in tree
+- :func:`dash_prism.update_component_props`: Update component properties
+- :func:`dash_prism.validate_workspace`: Validate workspace structure
+- :exc:`dash_prism.InvalidWorkspace`: Raised on invalid workspace
 
 Classes
 ~~~~~~~
 
-- :class:`LayoutRegistration`: Represents a registered layout
-- :class:`LayoutParameter`: Describes a layout parameter
-- :class:`LayoutRegistry`: Registry for managing layouts
+- :class:`dash_prism.LayoutRegistration`: Represents a registered layout
+- :class:`dash_prism.LayoutParameter`: Describes a layout parameter
+- :class:`dash_prism.LayoutRegistry`: Registry for managing layouts
 
 Notes
 -----
 
-The :class:`Prism` component is auto-generated from TypeScript definitions.
-For the complete TypeScript API, see the source repository.
+The public component classes wrap Dash-generated component classes so the
+Python API can keep stable documentation and type annotations.
 """
 
 from __future__ import print_function as _
@@ -130,15 +130,18 @@ import uuid as _uuid
 
 import dash as _dash
 
-# Auto-generated component imports (from dash-generate-components)
-# noinspection PyUnresolvedReferences
-from ._imports_ import *
-from ._imports_ import __all__ as _component_all
+# Auto-generated component imports (from dash-generate-components).
+# These are kept private here so the public package API points users at the
+# documented wrappers below. The generated files remain importable from their
+# modules for Dash internals and debugging, but are not top-level exports.
+from .PrismActionComponent import PrismActionComponent as _GeneratedPrismActionComponent
+from .PrismComponent import PrismComponent as _GeneratedPrismComponent
+from .PrismContentComponent import PrismContentComponent as _GeneratedPrismContentComponent
 
 # User-facing wrapper classes (override auto-generated with our documented versions)
 from .Action import Action, PrismAction
 from .Prism import Prism
-from .PrismContentComponent import PrismContentComponent as PrismContent
+from .PrismContent import PrismContent
 
 if not hasattr(_dash, "__plotly_dash") and not hasattr(_dash, "development"):
     print(
@@ -190,9 +193,16 @@ _js_dist = [
 _css_dist: list[dict[str, str]] = []
 
 
-for _component in _component_all:
-    setattr(locals()[_component], "_js_dist", _js_dist)
-    setattr(locals()[_component], "_css_dist", _css_dist)
+for _component in (
+    _GeneratedPrismActionComponent,
+    _GeneratedPrismComponent,
+    _GeneratedPrismContentComponent,
+    Action,
+    Prism,
+    PrismContent,
+):
+    setattr(_component, "_js_dist", _js_dist)
+    setattr(_component, "_css_dist", _css_dist)
 
 
 # =============================================================================
