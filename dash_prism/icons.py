@@ -30,7 +30,7 @@ def _load_icons() -> frozenset[str]:
     if not icons_path.exists():
         raise FileNotFoundError(
             f"icons.json not found. Expected at {icons_path}. "
-            "Run 'npm run build' to generate it."
+            "Run 'pnpm run build' to generate it."
         )
 
     with icons_path.open("r", encoding="utf-8") as f:

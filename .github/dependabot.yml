@@ -16,7 +16,7 @@ updates:
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major"]
 
-  # npm — package.json + package-lock.json
+  # Node — Dependabot's "npm" ecosystem auto-detects pnpm-lock.yaml and uses pnpm.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

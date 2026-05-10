@@ -128,12 +128,12 @@ cd dash-prism
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install dependencies
+# Install dependencies (pnpm via Corepack or `brew install pnpm`)
 poetry install --with dev,test,docs,demo
-npm install
+pnpm install
 
 # Build
-npm run build
+pnpm run build
 ```
 
 ### Using Just
@@ -141,7 +141,7 @@ npm run build
 If you have [just](https://github.com/casey/just) installed:
 
 ```bash
-just install   # Install Python and npm dependencies
+just install   # Install Python and pnpm dependencies
 just build     # Build the package
 just test      # Run tests
 ```
