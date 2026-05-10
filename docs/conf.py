@@ -43,7 +43,7 @@ html_theme_options = {
 }
 html_js_files = [
     (
-        "https://www.googletagmanager.com/gtag/js?id=G-D6ZVSRVGRM",
+        "https://www.googletagmanager.com/gtag/js?id=G-V4ZRTXT9W8",
         {"async": "async"},
     ),
     "js/google-analytics.js",
