@@ -15,6 +15,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major"]
+      # setuptools 82+ removed pkg_resources, which older Dash imports at build time.
+      - dependency-name: "setuptools"
+        update-types: ["version-update:semver-major"]
 
   # Node — Dependabot's "npm" ecosystem auto-detects pnpm-lock.yaml and uses pnpm.
   - package-ecosystem: "npm"
