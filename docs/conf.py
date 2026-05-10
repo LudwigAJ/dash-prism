@@ -35,11 +35,8 @@ nitpick_ignore = [
     ("py:class", "dash_prism.registry.LayoutRegistration"),
 ]
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 html_title = "Dash Prism"
 html_theme_options = {
-    "navigation_depth": 4,
-    "collapse_navigation": False,
-    "sticky_navigation": True,
-    "analytics_id": "G-WB80DBLQ68",
+    "navigation_with_keys": True,
 }
