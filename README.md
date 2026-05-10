@@ -10,8 +10,7 @@
 A multi-panel workspace manager for Plotly Dash applications.
 
 **Live Demo:** https://dash-prism-demo.vercel.app/    
-**Docs (github):** https://ludwigaj.github.io/dash-prism/    
-**Docs (dev):** https://dash-prism.ludwigaj.com     
+**Docs:** https://ludwigaj.github.io/dash-prism/    
 **PyPI:** https://pypi.org/project/dash-prism/      
  
 ## What is Dash Prism?

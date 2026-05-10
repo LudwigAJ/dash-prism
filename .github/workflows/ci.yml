@@ -77,10 +77,17 @@ jobs:
   test-dash-version:
     name: Test Dash ${{ matrix.dash-version }}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
         dash-version: ["3.1.1", "3.2.0", "3.3.0", "3.4.0", "4.0.0", "4.1.0"]
+        experimental: [false]
+        include:
+          # Tracks the latest stable Dash release. Non-blocking: a new upstream
+          # release breaking us is informational, not a CI failure.
+          - dash-version: "latest"
+            experimental: true
 
     steps:
       - name: Checkout code
@@ -98,7 +105,13 @@ jobs:
         run: poetry install --with dev,test --no-interaction
 
       - name: Override Dash version
-        run: poetry run pip install --no-deps dash==${{ matrix.dash-version }}
+        run: |
+          if [ "${{ matrix.dash-version }}" = "latest" ]; then
+            poetry run pip install --no-deps --upgrade dash
+          else
+            poetry run pip install --no-deps dash==${{ matrix.dash-version }}
+          fi
+          poetry run python -c "import dash; print(f'Using Dash {dash.__version__}')"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
