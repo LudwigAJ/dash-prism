@@ -60,7 +60,7 @@ jobs:
           poetry run pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.12'
         with:
           name: coverage-reports-py${{ matrix.python-version }}
@@ -261,7 +261,7 @@ jobs:
           "
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
