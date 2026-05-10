@@ -2,47 +2,47 @@ set dotenv-load := false
 
 # Activate the virtual environment
 venv:
-    source npm run venv
+    source pnpm run venv
 
 # Generate components and build the bundle
 build:
-    npm run venv
-    npm run build
+    pnpm run venv
+    pnpm run build
 
 # Build the webpack bundle
 build-js:
-    npm run venv
-    npm run build:js
+    pnpm run venv
+    pnpm run build:js
 
 # Generate the components
 gen:
-    npm run venv
-    npm run build:backends
+    pnpm run venv
+    pnpm run build:backends
 
 # Rebuild the bundle on change
 watch:
-    npm run watch
+    pnpm run watch
 
 # Install Poetry dependencies & node modules.
 install:
     poetry install --with dev,test,docs,demo
-    npm install
+    pnpm install
 
 # Package the application for distribution using python wheel.
 package: clean build
-    npm run venv
+    pnpm run venv
     python -m build --wheel
 
 # Publish the package to pypi using twine.
 publish: package
-    npm run venv
-    npm publish
+    pnpm run venv
+    pnpm publish
     twine upload dist/*
 
 # format the codebase
 format:
-    npm run venv
-    npm run format
+    pnpm run venv
+    pnpm run format
 
 # format Python code with black
 format-py:
@@ -50,7 +50,7 @@ format-py:
 
 # check typescript no emit
 check:
-    npm run venv
+    pnpm run venv
     npx tsc --noEmit
 
 # type check Python with mypy
@@ -78,7 +78,7 @@ test-unit:
 
 # Run TypeScript unit tests
 test-ts:
-    npm run test:ts
+    pnpm run test:ts
 
 # Run Python unit tests only
 test-py:
@@ -94,7 +94,7 @@ test-integration-seq:
 
 # Run all tests (Python + TypeScript)
 test:
-    npm run test:ts
+    pnpm run test:ts
     source .venv/bin/activate && pip install -e . -q && pytest tests/ -v --ignore=tests/integration/
     source .venv/bin/activate && pytest tests/integration/ -v -n auto --dist loadfile --reruns 2 --reruns-delay 1
 

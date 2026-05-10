@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -35,20 +35,23 @@ jobs:
       - name: Install Python dependencies (dev + test groups)
         run: poetry install --with dev,test --no-interaction
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build JavaScript bundle
-        run: npm run build
+        run: pnpm run build
 
       - name: Run TypeScript unit tests
-        run: npm run test:ts
+        run: pnpm run test:ts
 
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v2
@@ -64,7 +67,7 @@ jobs:
           poetry run pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.12'
         with:
           name: coverage-reports-py${{ matrix.python-version }}
@@ -95,7 +98,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -117,17 +120,20 @@ jobs:
           fi
           poetry run python -c "import dash; print(f'Using Dash {dash.__version__}')"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build JavaScript bundle
-        run: npm run build
+        run: pnpm run build
 
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v2
@@ -144,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -169,7 +175,7 @@ jobs:
     needs: [test-py-version, test-dash-version, lint]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -182,17 +188,20 @@ jobs:
       - name: Install dependencies (dev group)
         run: poetry install --with dev --no-interaction
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build JavaScript bundle
-        run: npm run build
+        run: pnpm run build
 
       - name: Build package
         run: poetry build
@@ -265,7 +274,7 @@ jobs:
           "
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
           path: dist/

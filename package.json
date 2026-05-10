@@ -1,6 +1,7 @@
 {
   "name": "dash_prism",
   "version": "0.9.10",
+  "packageManager": "pnpm@11.0.9",
   "description": "Prism: Powerful multi-panel workspace manager for Plotly Dash",
   "main": "index.ts",
   "repository": {
@@ -16,8 +17,8 @@
     "build:js::dev": "webpack --mode development",
     "build:js": "webpack",
     "build:backends": "poetry run dash-generate-components ./src/ts/components dash_prism -p package-info.json --ignore '^(?!.*Prism).*$'",
-    "build": "npm run build:js && npm run build:backends",
-    "watch": "npm run build:js::dev -- --watch",
+    "build": "pnpm run build:js && pnpm run build:backends",
+    "watch": "pnpm run build:js::dev -- --watch",
     "dist": "poetry build --outdir dist/",
     "format": "prettier --write src --ignore-path=.prettierignore",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^25.6.2",
     "@types/react": "18.2.79",
     "@types/react-dom": "18.2.25",
     "@typescript-eslint/eslint-plugin": "^8.52.0",

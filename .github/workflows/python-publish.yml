@@ -23,7 +23,7 @@ jobs:
       url: https://pypi.org/p/dash-prism
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,17 +36,20 @@ jobs:
       - name: Install dependencies (dev group)
         run: poetry install --with dev --no-interaction
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend assets
-        run: npm run build
+        run: pnpm run build
 
       - name: Build package
         run: poetry build

@@ -47,6 +47,7 @@ dash_prism/_imports_.py
 
 # skip any AI noise for now until had time to properly review.
 .AGENTS.md
+AGENTS.md
 .CLAUDE.md
 .claude
 .agents 
