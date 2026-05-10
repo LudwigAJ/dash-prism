@@ -16,6 +16,7 @@ extensions = [
 
 exclude_patterns = ["_build"]
 master_doc = "index"
+html_static_path = ["_static"]
 
 autodoc_default_options = {
     "members": True,
@@ -40,3 +41,10 @@ html_title = "Dash Prism"
 html_theme_options = {
     "navigation_with_keys": True,
 }
+html_js_files = [
+    (
+        "https://www.googletagmanager.com/gtag/js?id=G-D6ZVSRVGRM",
+        {"async": "async"},
+    ),
+    "js/google-analytics.js",
+]
