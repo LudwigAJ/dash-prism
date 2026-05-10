@@ -56,9 +56,9 @@ dash = ">=3.1.1,<4.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "==26.3.1"
-mypy = "==1.19.1"
+mypy = "==1.20.2"
 pyyaml = "^6.0.0"
-setuptools = "==81.0.0"
+setuptools = "==82.0.1"
 wheel = ">=0.45.0"
 dash = {version = ">=3.1.1,<4.2", extras = ["dev", "async"]}
 
