@@ -32,18 +32,10 @@ Decorator for callback-based layouts::
 
 from __future__ import annotations
 
-import inspect
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-    overload,
-)
+import inspect
+from typing import Any, overload
 
 # =============================================================================
 # DATA CLASSES
@@ -67,9 +59,9 @@ class LayoutParameter:
     name: str
     has_default: bool = False
     default: Any = None
-    annotation: Optional[str] = None
+    annotation: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary for JSON serialization.
 
         :returns: Dictionary with camelCase keys for frontend consumption.
@@ -112,13 +104,13 @@ class LayoutRegistration:
     id: str
     name: str
     description: str = ""
-    keywords: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     allow_multiple: bool = False
     layout: Any = None
-    callback: Optional[Callable[..., Any]] = None
+    callback: Callable[..., Any] | None = None
     is_async: bool = False
-    parameters: List[LayoutParameter] = field(default_factory=list)
-    param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None
+    parameters: list[LayoutParameter] = field(default_factory=list)
+    param_options: dict[str, tuple[str, dict[str, Any]]] | None = None
 
     @property
     def is_callable(self) -> bool:
@@ -129,7 +121,7 @@ class LayoutRegistration:
         """
         return self.callback is not None
 
-    def to_metadata(self) -> Dict[str, Any]:
+    def to_metadata(self) -> dict[str, Any]:
         """Convert to metadata dict for frontend consumption.
 
         Does **not** include the actual layout component or callback function.
@@ -138,7 +130,7 @@ class LayoutRegistration:
         :rtype: dict[str, Any]
         """
         params = [] if self.param_options else [p.to_dict() for p in self.parameters]
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "keywords": self.keywords,
@@ -177,10 +169,10 @@ class LayoutRegistry:
     """
 
     def __init__(self) -> None:
-        self._layouts: Dict[str, LayoutRegistration] = {}
+        self._layouts: dict[str, LayoutRegistration] = {}
 
     @property
-    def layouts(self) -> Dict[str, LayoutRegistration]:
+    def layouts(self) -> dict[str, LayoutRegistration]:
         """Get a copy of all registered layouts.
 
         :returns: Dictionary mapping layout IDs to registrations.
@@ -200,7 +192,7 @@ class LayoutRegistry:
         """Iterate over layout IDs."""
         return iter(self._layouts)
 
-    def get(self, layout_id: str) -> Optional[LayoutRegistration]:
+    def get(self, layout_id: str) -> LayoutRegistration | None:
         """Get a registered layout by ID.
 
         :param layout_id: The unique identifier of the layout.
@@ -238,7 +230,7 @@ class LayoutRegistry:
         """Clear all registered layouts. Useful for testing."""
         self._layouts.clear()
 
-    def get_metadata(self) -> Dict[str, Dict[str, Any]]:
+    def get_metadata(self) -> dict[str, dict[str, Any]]:
         """Get metadata for all registered layouts.
 
         :returns: Dictionary mapping layout IDs to metadata dicts. This is what gets sent to the frontend.
@@ -256,7 +248,7 @@ registry = LayoutRegistry()
 # =============================================================================
 
 
-def _extract_parameters(func: Callable[..., Any]) -> List[LayoutParameter]:
+def _extract_parameters(func: Callable[..., Any]) -> list[LayoutParameter]:
     """Extract parameter information from a function signature.
 
     :param func: The function to inspect.
@@ -265,7 +257,7 @@ def _extract_parameters(func: Callable[..., Any]) -> List[LayoutParameter]:
     :rtype: list[LayoutParameter]
     """
     sig = inspect.signature(func)
-    parameters: List[LayoutParameter] = []
+    parameters: list[LayoutParameter] = []
 
     for param_name, param in sig.parameters.items():
         # Skip *args and **kwargs
@@ -279,7 +271,7 @@ def _extract_parameters(func: Callable[..., Any]) -> List[LayoutParameter]:
         default = param.default if has_default else None
 
         # Get type annotation as string
-        annotation: Optional[str] = None
+        annotation: str | None = None
         if param.annotation is not inspect.Parameter.empty:
             if isinstance(param.annotation, type):
                 annotation = param.annotation.__name__
@@ -312,13 +304,13 @@ def _is_async_function(func: Callable[..., Any]) -> bool:
 def _validate_registration(
     *,
     layout_id: str,
-    name: Optional[str],
+    name: str | None,
     description: str,
-    keywords: Optional[List[str]],
+    keywords: list[str] | None,
     allow_multiple: bool,
-    param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]],
+    param_options: dict[str, tuple[str, dict[str, Any]]] | None,
     layout: Any,
-    callback: Optional[Callable[..., Any]],
+    callback: Callable[..., Any] | None,
 ) -> None:
     """Validate registration parameters.
 
@@ -383,8 +375,8 @@ def _validate_registration(
 
 
 def _validate_param_options(
-    param_options: Dict[str, Tuple[str, Dict[str, Any]]],
-    parameters: List[LayoutParameter],
+    param_options: dict[str, tuple[str, dict[str, Any]]],
+    parameters: list[LayoutParameter],
 ) -> None:
     """Validate that param_options reference valid function parameters.
 
@@ -413,11 +405,11 @@ def _validate_param_options(
 def register_layout(
     id: str,  # noqa: A002
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     description: str = "",
-    keywords: Optional[List[str]] = None,
+    keywords: list[str] | None = None,
     allow_multiple: bool = False,
-    param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
+    param_options: dict[str, tuple[str, dict[str, Any]]] | None = None,
     layout: Any,
 ) -> None: ...
 
@@ -426,24 +418,24 @@ def register_layout(
 def register_layout(
     id: str,  # noqa: A002
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     description: str = "",
-    keywords: Optional[List[str]] = None,
+    keywords: list[str] | None = None,
     allow_multiple: bool = False,
-    param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
+    param_options: dict[str, tuple[str, dict[str, Any]]] | None = None,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
 def register_layout(
     id: str,  # noqa: A002
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     description: str = "",
-    keywords: Optional[List[str]] = None,
+    keywords: list[str] | None = None,
     allow_multiple: bool = False,
-    param_options: Optional[Dict[str, Tuple[str, Dict[str, Any]]]] = None,
+    param_options: dict[str, tuple[str, dict[str, Any]]] | None = None,
     layout: Any = None,
-) -> Union[None, Callable[[Callable[..., Any]], Callable[..., Any]]]:
+) -> None | Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Register a layout with Prism.
 
     Can be used in two ways:
@@ -577,7 +569,7 @@ def register_layout(
 # =============================================================================
 
 
-def get_layout(layout_id: str) -> Optional[LayoutRegistration]:
+def get_layout(layout_id: str) -> LayoutRegistration | None:
     """Get a registered layout by ID.
 
     :param layout_id: The ID of the layout to retrieve.
@@ -588,7 +580,7 @@ def get_layout(layout_id: str) -> Optional[LayoutRegistration]:
     return registry.get(layout_id)
 
 
-def get_registered_layouts_metadata() -> Dict[str, Dict[str, Any]]:
+def get_registered_layouts_metadata() -> dict[str, dict[str, Any]]:
     """Get metadata for all registered layouts.
 
     :returns: Dictionary mapping layout IDs to metadata dicts. Excludes actual components and callbacks.
@@ -600,9 +592,9 @@ def get_registered_layouts_metadata() -> Dict[str, Dict[str, Any]]:
 def resolve_layout_params(
     registration: LayoutRegistration,
     layout_id: str,
-    layout_params: Optional[Dict[str, Any]],
-    layout_option: Optional[str],
-) -> Dict[str, Any]:
+    layout_params: dict[str, Any] | None,
+    layout_option: str | None,
+) -> dict[str, Any]:
     """Resolve effective layout parameters.
 
     Single source of truth for parameter resolution across the codebase.
@@ -625,7 +617,7 @@ def resolve_layout_params(
     """
     # Validate layout_params input
     if layout_params is None:
-        resolved_params: Dict[str, Any] = {}
+        resolved_params: dict[str, Any] = {}
     elif not isinstance(layout_params, dict):
         raise ValueError(
             f"layoutParams must be an object/dict for layout '{layout_id}', "

@@ -6,7 +6,8 @@ This file provides a clean Python API that wraps the auto-generated PrismCompone
 
 from __future__ import annotations
 
-from typing import Any, Literal, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
 from dash.development.base_component import Component
 
@@ -60,9 +61,9 @@ class Prism(PrismComponent):
     :param statusBarPosition: Position of the status bar relative to the workspace.
         Options: ``'top'`` or ``'bottom'``. Defaults to ``'bottom'``.
     :type statusBarPosition: str
-    :param actions: Array of :class:`Action` components to display in the status bar.
+    :param actions: Array of :class:`dash_prism.Action` components to display in the status bar.
         Each action is a clickable button with its own ``n_clicks`` for callbacks.
-    :type actions: list[Action] or None
+    :type actions: list or None
     :param persistence: If ``True``, workspace state is persisted across browser sessions.
         The persistence method is controlled by ``persistence_type``. Defaults to ``False``.
     :type persistence: bool
@@ -92,7 +93,7 @@ class Prism(PrismComponent):
         in Dash callbacks to programmatically update the workspace.
         Partial updates are supported.
     :type updateWorkspace: dict or None
-    :param children: Child components (typically :class:`PrismContent` instances).
+    :param children: Child components (typically :class:`dash_prism.PrismContent` instances).
         **Advanced** - Usually managed automatically by :func:`dash_prism.init`.
     :type children: list or None
     :param registeredLayouts: Registry of available layouts that can be rendered in tabs.
@@ -154,13 +155,11 @@ class Prism(PrismComponent):
                     dash_prism.Action(
                         id='save-btn',
                         label='Save',
-                        icon='Save',
                         tooltip='Save current workspace'
                     ),
                     dash_prism.Action(
                         id='export-btn',
                         label='Export',
-                        icon='Download',
                         tooltip='Export workspace data'
                     ),
                 ],
@@ -195,7 +194,7 @@ class Prism(PrismComponent):
 
     .. seealso::
 
-        :class:`Action`
+        :class:`dash_prism.Action`
             Action button component for the status bar
 
         :func:`dash_prism.register_layout`

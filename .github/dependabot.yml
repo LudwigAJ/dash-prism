@@ -1,0 +1,60 @@
+version: 2
+updates:
+  # Python (Poetry) — pyproject.toml + poetry.lock
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-dev:
+        dependency-type: "development"
+    ignore:
+      # Stays compatible with Python 3.10 floor
+      - dependency-name: "mypy"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
+      # setuptools 82+ removed pkg_resources, which older Dash imports at build time.
+      - dependency-name: "setuptools"
+        update-types: ["version-update:semver-major"]
+
+  # Node — Dependabot's "npm" ecosystem auto-detects pnpm-lock.yaml and uses pnpm.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      js-minor-and-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Pinned to React 18 / Dash 3.x peer-dep ranges
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "css-loader"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "style-loader"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "webpack-cli"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-docgen"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "lucide-react"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions versions (actions/checkout, setup-python, etc.)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

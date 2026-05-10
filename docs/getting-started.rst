@@ -52,8 +52,8 @@ management:
    git clone https://github.com/LudwigAJ/dash-prism.git
    cd dash-prism
    poetry install --with dev,test,docs,demo
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
 
 Or with `just <https://github.com/casey/just>`_:
 

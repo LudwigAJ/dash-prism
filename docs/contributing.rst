@@ -5,15 +5,15 @@ Setup
 -----
 
 Dash Prism uses `Poetry <https://python-poetry.org/>`_ for Python dependency
-management and npm for the TypeScript frontend.
+management and `pnpm <https://pnpm.io/>`_ for the TypeScript frontend.
 
 .. code-block:: bash
 
    git clone https://github.com/LudwigAJ/dash-prism.git
    cd dash-prism
    poetry install --with dev,test,docs,demo
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
 
 If `just <https://github.com/casey/just>`_ is installed you can run
 ``just install && just build`` instead.
@@ -26,16 +26,16 @@ The project has both TypeScript (Vitest) and Python (pytest) tests:
 .. code-block:: bash
 
    # TypeScript tests
-   npm run test:ts
+   pnpm run test:ts
 
    # Python unit tests (no browser required)
-   npm run test:unit
+   pnpm run test:unit
 
    # Selenium integration tests (requires chromedriver)
-   npm run test:integration
+   pnpm run test:integration
 
    # All tests
-   npm run test
+   pnpm run test
 
 Or with ``just``:
 
@@ -59,8 +59,8 @@ Code Style
    mypy
 
    # TypeScript
-   npm run lint
-   npm run format
+   pnpm run lint
+   pnpm run format
 
 Building Docs
 -------------

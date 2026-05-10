@@ -50,16 +50,40 @@ def test_prism_action_component() -> None:
 
 def test_prism_content_component() -> None:
     """Test PrismContent component instantiation."""
-    # PrismContent is internal-only, import directly from the component module
-    from dash_prism.PrismContentComponent import PrismContentComponent
-
-    content = PrismContentComponent(
+    content = dash_prism.PrismContent(
         id="test-content",
         children=html.Div("Test content"),
     )
 
     assert content.id == "test-content"
     assert content.children is not None
+
+
+def test_public_component_serialization_contract() -> None:
+    """Public wrappers serialize to the React component names in the JS bundle."""
+    prism = dash_prism.Prism(id="test-prism", style={})
+    action = dash_prism.Action(id="test-action", label="Test Action")
+    content = dash_prism.PrismContent(
+        id={"type": "prism-content", "index": "tab-1"},
+        children=html.Div("Test content"),
+    )
+
+    assert prism.to_plotly_json()["type"] == "Prism"
+    assert prism.to_plotly_json()["namespace"] == "dash_prism"
+    assert action.to_plotly_json()["type"] == "PrismAction"
+    assert action.to_plotly_json()["namespace"] == "dash_prism"
+    assert content.to_plotly_json()["type"] == "PrismContent"
+    assert content.to_plotly_json()["namespace"] == "dash_prism"
+
+
+def test_generated_component_classes_are_not_public_exports() -> None:
+    """Generated classes remain outside the package-level public API."""
+    assert "PrismComponent" not in dash_prism.__all__
+    assert "PrismActionComponent" not in dash_prism.__all__
+    assert "PrismContentComponent" not in dash_prism.__all__
+    assert dash_prism.Prism.__module__ == "dash_prism.Prism"
+    assert dash_prism.Action.__module__ == "dash_prism.Action"
+    assert dash_prism.PrismContent.__module__ == "dash_prism.PrismContent"
 
 
 def test_prism_in_app_layout(dash_app: Dash) -> None:

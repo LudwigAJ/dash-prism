@@ -92,12 +92,11 @@ def test_prism_action_click_triggers_callback(dash_duo):
     dash_duo.wait_for_text_to_equal("#output", "Clicked 2 times", timeout=5)
 
 
-def test_prism_action_with_no_icon(dash_duo):
-    """Test Action without icon renders correctly."""
+def test_prism_action_renders_text_label(dash_duo):
+    """Test Action renders its text label correctly."""
     app = Dash(__name__, suppress_callback_exceptions=True)
 
-    # Action without icon
-    action = dash_prism.Action(id="no-icon-action", label="No Icon")
+    action = dash_prism.Action(id="label-action", label="Label Action")
 
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
@@ -107,11 +106,11 @@ def test_prism_action_with_no_icon(dash_duo):
     dash_duo.start_server(app)
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
-    # Wait for and verify action renders without icon
-    dash_duo.wait_for_element("[data-testid='prism-action-no-icon-action']", timeout=5)
-    action_button = dash_duo.find_element("[data-testid='prism-action-no-icon-action']")
-    assert action_button is not None, "Action without icon should render"
-    assert "No Icon" in action_button.text, "Action should have correct label"
+    # Wait for and verify action renders the label
+    dash_duo.wait_for_element("[data-testid='prism-action-label-action']", timeout=5)
+    action_button = dash_duo.find_element("[data-testid='prism-action-label-action']")
+    assert action_button is not None, "Action should render"
+    assert "Label Action" in action_button.text, "Action should have correct label"
 
     # Check no browser errors
     errors = check_browser_errors(dash_duo)

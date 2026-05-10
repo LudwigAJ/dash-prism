@@ -155,7 +155,7 @@ class Action(PrismActionComponent):
 
     .. seealso::
 
-        :class:`Prism`
+        :class:`dash_prism.Prism`
             Main workspace component
 
         :func:`dash_prism.init`

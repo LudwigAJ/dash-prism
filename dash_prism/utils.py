@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, Callable, Dict, List, Literal, Optional, Set
+from collections.abc import Callable
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +24,14 @@ logger = logging.getLogger(__name__)
 class InvalidWorkspace(Exception):
     """Exception raised when workspace validation fails.
 
-    :ivar errors: List of validation error messages describing what failed.
+    :ivar errors: list of validation error messages describing what failed.
     :type errors: list[str]
     """
 
-    def __init__(self, errors: List[str]) -> None:
+    def __init__(self, errors: list[str]) -> None:
         """Initialize the exception with validation errors.
 
-        :param errors: List of validation error messages.
+        :param errors: list of validation error messages.
         :type errors: list[str]
         """
         self.errors = errors
@@ -43,7 +44,7 @@ class InvalidWorkspace(Exception):
 # =============================================================================
 
 
-def _get_leaf_panel_ids(panel: Dict[str, Any], leaves: Optional[List[str]] = None) -> List[str]:
+def _get_leaf_panel_ids(panel: dict[str, Any], leaves: list[str] | None = None) -> list[str]:
     """Recursively collect all leaf panel IDs from a panel tree.
 
     A leaf panel is one with no children or an empty children list.
@@ -52,7 +53,7 @@ def _get_leaf_panel_ids(panel: Dict[str, Any], leaves: Optional[List[str]] = Non
     :type panel: dict[str, Any]
     :param leaves: Accumulator list for leaf IDs. Created if ``None``.
     :type leaves: list[str] | None
-    :returns: List of leaf panel IDs found in the tree.
+    :returns: list of leaf panel IDs found in the tree.
     :rtype: list[str]
     """
     if leaves is None:
@@ -77,8 +78,8 @@ def _get_leaf_panel_ids(panel: Dict[str, Any], leaves: Optional[List[str]] = Non
 
 
 def _validate_panel_structure(
-    panel: Dict[str, Any],
-    errors: List[str],
+    panel: dict[str, Any],
+    errors: list[str],
     path: str = "panel",
 ) -> None:
     """Recursively validate panel tree structure.
@@ -121,9 +122,9 @@ def _validate_panel_structure(
 
 
 def validate_workspace(
-    workspace: Dict[str, Any],
+    workspace: dict[str, Any],
     errors: Literal["raise", "ignore"] = "raise",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate that a dictionary is a valid Prism Workspace.
 
     Checks cross-key consistency between ``tabs``, ``panel``, ``panelTabs``,
@@ -132,12 +133,13 @@ def validate_workspace(
 
     :param workspace: Dictionary to be validated as a Prism workspace.
     :type workspace: dict[str, Any]
-    :param errors: Error handling mode. ``'raise'`` raises :exc:`InvalidWorkspace`
+    :param errors: Error handling mode. ``'raise'`` raises
+        :exc:`dash_prism.InvalidWorkspace`
         on failure, ``'ignore'`` logs errors and returns anyway. Defaults to ``'raise'``.
     :type errors: Literal['raise', 'ignore']
     :returns: The validated workspace dictionary (unchanged).
     :rtype: dict[str, Any]
-    :raises InvalidWorkspace: If ``errors='raise'`` and validation failed.
+    :raises: :class:`dash_prism.InvalidWorkspace` if ``errors='raise'`` and validation failed.
 
     **Example**::
 
@@ -150,7 +152,7 @@ def validate_workspace(
         }
         validate_workspace(workspace)  # Returns workspace if valid
     """
-    validation_errors: List[str] = []
+    validation_errors: list[str] = []
 
     if not isinstance(workspace, dict):
         validation_errors.append(f"Workspace must be a dict, got {type(workspace).__name__}")
@@ -223,7 +225,7 @@ def validate_workspace(
     }
 
     # Build mapping of tab_id -> list of panels it appears in (for duplicate check)
-    tab_to_panels: Dict[str, List[str]] = {}
+    tab_to_panels: dict[str, list[str]] = {}
     for panel_id, tab_list in panel_tabs.items():
         if not isinstance(panel_id, str) or not panel_id:
             validation_errors.append("panelTabs: panel IDs must be non-empty strings")
@@ -344,7 +346,7 @@ def validate_workspace(
 def walk_layout(
     layout: Any,
     transform: Callable[[Any], Any],
-    _visited: Optional[Set[int]] = None,
+    _visited: set[int] | None = None,
 ) -> Any:
     """Recursively walk and transform a Dash component tree.
 
@@ -435,7 +437,7 @@ def inject_tab_id(layout: Any, tab_id: str) -> Any:
         ])
         injected = inject_tab_id(layout, 'tab-abc-123')
         # String IDs become: {'type': 'my-input', 'index': 'tab-abc-123'}
-        # Dict IDs are left unchanged
+        # dict IDs are left unchanged
     """
     layout = copy.deepcopy(layout)
 
@@ -459,11 +461,11 @@ def inject_tab_id(layout: Any, tab_id: str) -> Any:
 # =============================================================================
 
 
-def render_layout_for_tab(data: Dict[str, Any]) -> Any:
+def render_layout_for_tab(data: dict[str, Any]) -> Any:
     """Render a layout for a tab based on its data.
 
     This is a synchronous helper function for manual rendering.
-    For callback-based rendering, see :func:`init.init`.
+    For callback-based rendering, see :func:`dash_prism.init`.
 
     :param data: Tab data dict containing ``tabId`` (unique ID), ``layoutId``
         (registered layout ID), ``layoutParams`` (callback parameters), and
@@ -474,7 +476,7 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
     :raises ValueError: If ``tabId`` is not provided.
 
     .. note:: This function does NOT handle async callbacks. Use the callback
-        created by :func:`init.init` for full async support.
+        created by :func:`dash_prism.init` for full async support.
     """
     from dash import html
 
@@ -548,7 +550,7 @@ def render_layout_for_tab(data: Dict[str, Any]) -> Any:
 # =============================================================================
 
 
-def find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
+def find_component_by_id(layout: Any, component_id: str) -> Any | None:
     """Find a component by its ID in a layout tree.
 
     :param layout: The root component to search.
@@ -558,7 +560,7 @@ def find_component_by_id(layout: Any, component_id: str) -> Optional[Any]:
     :returns: The component with matching ID, or ``None`` if not found.
     :rtype: Any | None
     """
-    result: Optional[Any] = None
+    result: Any | None = None
 
     def search(component: Any) -> Any:
         nonlocal result

@@ -1,7 +1,7 @@
 """Icon utilities for dash_prism.
 
 This module provides access to the available icon names that can be used
-with :class:`Action` and tab icons in :class:`Prism`.
+for tab icons in :class:`dash_prism.Prism`.
 
 The icon list is defined in ``src/icons.json`` (single source of truth)
 and copied to the package during build.
@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import List
 
 
 @lru_cache(maxsize=1)
@@ -30,7 +29,7 @@ def _load_icons() -> frozenset[str]:
     if not icons_path.exists():
         raise FileNotFoundError(
             f"icons.json not found. Expected at {icons_path}. "
-            "Run 'npm run build' to generate it."
+            "Run 'pnpm run build' to generate it."
         )
 
     with icons_path.open("r", encoding="utf-8") as f:
@@ -48,12 +47,11 @@ def _get_available_icons_set() -> frozenset[str]:
     return _load_icons()
 
 
-def get_available_icons() -> List[str]:
+def get_available_icons() -> list[str]:
     """Get a sorted list of available icon names.
 
-    These icons can be used with the ``icon`` parameter of :class:`Action`
-    and for tab icons in :class:`Prism`. Icons are from a curated subset
-    of `lucide-react <https://lucide.dev/icons>`_.
+    These icons can be used for tab icons in :class:`dash_prism.Prism`. Icons are from
+    a curated subset of `lucide-react <https://lucide.dev/icons>`_.
 
     :returns: Sorted list of available icon names.
     :rtype: list[str]
@@ -74,11 +72,11 @@ def get_available_icons() -> List[str]:
 
     .. seealso::
 
-        :data:`AVAILABLE_ICONS`
+        :data:`dash_prism.AVAILABLE_ICONS`
             Frozen set for membership testing.
 
-        :class:`Action`
-            Action component that uses icons.
+        :class:`dash_prism.Prism`
+            Workspace component whose tabs can use icons.
     """
     return sorted(_get_available_icons_set())
 
@@ -116,5 +114,5 @@ class _AvailableIconsProxy:
 #:     if 'Rocket' in dash_prism.AVAILABLE_ICONS:
 #:         print('Available!')
 #:
-#: For a sorted list, use :func:`get_available_icons`.
+#: For a sorted list, use :func:`dash_prism.get_available_icons`.
 AVAILABLE_ICONS: frozenset[str] = _AvailableIconsProxy()  # type: ignore[assignment]
