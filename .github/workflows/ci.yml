@@ -32,7 +32,7 @@ jobs:
         run: poetry install --with dev,test --no-interaction
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
@@ -114,7 +114,7 @@ jobs:
           poetry run python -c "import dash; print(f'Using Dash {dash.__version__}')"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
@@ -179,7 +179,7 @@ jobs:
         run: poetry install --with dev --no-interaction
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
