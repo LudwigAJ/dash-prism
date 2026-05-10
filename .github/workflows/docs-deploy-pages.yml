@@ -9,6 +9,10 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  # Opt into Node.js 24 for JS-based actions (default June 2026).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
