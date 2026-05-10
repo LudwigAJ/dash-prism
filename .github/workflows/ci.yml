@@ -13,7 +13,7 @@ env:
 
 jobs:
   test-py-version:
-    name: Test Python ${{ matrix.python-version }}
+    name: Test Python@${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -82,7 +82,7 @@ jobs:
           poetry run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
   test-dash-version:
-    name: Test Dash ${{ matrix.dash-version }}
+    name: Test Dash@${{ matrix.dash-version }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental == true }}
     strategy:
