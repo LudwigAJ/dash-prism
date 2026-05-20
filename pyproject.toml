@@ -55,7 +55,7 @@ python = "^3.10"
 dash = ">=3.1.1,<4.2"
 
 [tool.poetry.group.dev.dependencies]
-black = "==26.3.1"
+black = "==26.5.1"
 mypy = "==1.20.2"
 pyyaml = "^6.0.0"
 # setuptools 82+ removes pkg_resources, which dash.development.component_generator
@@ -69,9 +69,9 @@ dash = {version = ">=3.1.1,<4.2", extras = ["dev", "async"]}
 pytest = "^9.0.2"
 pytest-cov = "^7.0.0"
 pytest-xdist = "^3.8.0"
-pytest-rerunfailures = "^16.1"
+pytest-rerunfailures = "^16.2"
 selenium = "^4.0.0"
-webdriver-manager = "^4.0.0"
+webdriver-manager = "^4.1.1"
 dash = {version = ">=3.1.1,<4.2", extras = ["testing"]}
 
 [tool.poetry.group.docs.dependencies]
