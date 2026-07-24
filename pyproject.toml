@@ -61,7 +61,7 @@ pyyaml = "^6.0.0"
 # setuptools 82+ removes pkg_resources, which dash.development.component_generator
 # still imports (used by dash-generate-components at build time). Pin <82 until
 # Dash drops pkg_resources upstream.
-setuptools = ">=81.0.0,<82"
+setuptools = ">=83.0.0,<84"
 wheel = ">=0.45.0"
 dash = {version = ">=3.1.1,<4.2", extras = ["dev", "async"]}
 
