@@ -1,5 +1,6 @@
 // src/ts/store/types.ts
 import type { Tab, PanelNode, PanelId, TabId, RegisteredLayouts } from '@types';
+import type { Storage } from 'redux-persist';
 
 /**
  * Persisted workspace state - saved to localStorage/sessionStorage
@@ -46,6 +47,12 @@ export type StoreConfig = {
   setProps?: (props: Record<string, unknown>) => void;
   /** Getter for registered layouts — used by thunks to check constraints like allowMultiple */
   getRegisteredLayouts?: () => RegisteredLayouts;
+  /**
+   * Override the redux-persist storage engine. When omitted the engine is
+   * chosen from `persistenceType`. Intended for tests that need to seed or
+   * inspect persisted data without a browser.
+   */
+  storage?: Storage;
 };
 
 /**

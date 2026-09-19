@@ -122,6 +122,18 @@ const UNDO_EXCLUDED_ACTIONS = [
   'workspace/activateTab', // Tab selection is not undoable
   'workspace/setActivePanel', // Panel focus is not undoable
   'workspace/resizePanel', // Resize is continuous, not undoable
+  // redux-persist lifecycle actions. persistReducer sits inside undoable(), so
+  // these reach redux-undo and they do change state (the `_persist` marker and
+  // the rehydrated payload). If they were recorded, every fresh page load would
+  // start with Undo enabled, and one undo would replace the restored workspace
+  // with the empty pre-persist state whose `_persist.rehydrated === false`
+  // also silently stops redux-persist from writing for the rest of the session.
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
 ];
 
 // =============================================================================
@@ -142,7 +154,7 @@ const UNDO_EXCLUDED_ACTIONS = [
  * ```
  */
 export function createPrismStore(config: StoreConfig) {
-  const { componentId, persistenceType, maxTabs, setProps, getRegisteredLayouts } = config;
+  const { componentId, persistenceType, maxTabs, setProps, getRegisteredLayouts, storage } = config;
 
   // Configure persistence for workspace slice only
   // Important: We persist the workspace reducer BEFORE wrapping with redux-undo
@@ -151,7 +163,7 @@ export function createPrismStore(config: StoreConfig) {
   const workspacePersistConfig = {
     key: getWorkspacePersistKey(componentId),
     version: 1, // Increment this when adding new migrations
-    storage: getStorage(persistenceType),
+    storage: storage ?? getStorage(persistenceType),
     migrate: createMigrate(migrations, { debug: process.env.NODE_ENV !== 'production' }),
   };
 
@@ -164,7 +176,11 @@ export function createPrismStore(config: StoreConfig) {
       if (action.type === 'workspace/renameTab') return 'rename';
       return null;
     },
-    ignoreInitialState: true,
+    // The undo baseline is established by clearHistory() once rehydration has
+    // finished (see persistStore below), so the loaded workspace is exactly one
+    // undo away from the user's first action. `ignoreInitialState: true` would
+    // instead null that baseline and make the first action impossible to undo.
+    ignoreInitialState: false,
     syncFilter: true,
   });
 
@@ -201,8 +217,14 @@ export function createPrismStore(config: StoreConfig) {
     devTools: process.env.NODE_ENV !== 'production',
   });
 
-  // Create persistor
-  const persistor = persistStore(store);
+  // Create persistor. Once rehydration has finished, reset the undo history so
+  // the restored workspace is the baseline: nothing that happened while loading
+  // (the persist lifecycle, or the resetWorkspace() that validationMiddleware
+  // dispatches for corrupt persisted data) is one undo away, and the user's
+  // first real action can be undone back to exactly what was loaded.
+  const persistor = persistStore(store, undefined, () => {
+    store.dispatch(UndoActionCreators.clearHistory());
+  });
 
   /**
    * Cleanup function to dispose of store resources.
