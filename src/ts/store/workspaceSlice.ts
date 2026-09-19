@@ -1,6 +1,6 @@
 // src/ts/store/workspaceSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import type { Tab, PanelNode, PanelId, TabId, LayoutId, PanelDirection } from '@types';
+import type { Tab, PanelId, TabId, LayoutId, PanelDirection } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
 import { findTabById, findTabIndex } from '@utils/tabs';
@@ -15,7 +15,6 @@ import {
 import { notifyUser } from '@utils/toastEmitter';
 import { logger } from '@utils/logger';
 import { canAddTab } from './selectors';
-import type { RegisteredLayouts } from '@types';
 
 // =============================================================================
 // Constants

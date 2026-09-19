@@ -1,5 +1,4 @@
 import type { LucideIcon } from 'lucide-react';
-import { DashComponentProps } from '../props';
 
 export type { LucideIcon };
 
@@ -135,7 +134,7 @@ export type ShareData = {
  */
 export type BaseDashProps = {
   id?: string | Record<string, string>;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 /**

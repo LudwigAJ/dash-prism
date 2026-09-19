@@ -13,8 +13,6 @@ const isString = (value: unknown): value is string => typeof value === 'string';
 const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
-const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
-
 const isOptionalString = (value: unknown): value is string | null | undefined =>
   value === undefined || value === null || typeof value === 'string';
 

@@ -42,7 +42,7 @@ const DashContentRenderer = memo(
     if (!api?.ExternalWrapper) {
       return (
         <div className="text-muted-foreground flex h-full items-center justify-center">
-          <p>Dash API not available. Ensure you're using Dash 3.1.1+.</p>
+          <p>Dash API not available. Ensure you&apos;re using Dash 3.1.1+.</p>
         </div>
       );
     }

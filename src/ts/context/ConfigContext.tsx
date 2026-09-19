@@ -20,8 +20,8 @@ type ConfigContextValue = {
   maxTabs: number;
   persistence: boolean;
   persistenceType: PersistenceType;
-  searchBarPlaceholder?: string;
-  statusBarPosition?: StatusBarPosition;
+  searchBarPlaceholder: string;
+  statusBarPosition: StatusBarPosition;
   /** Layout ID to load in the first tab on initial load */
   initialLayout?: string;
   /** Whether new tabs auto-focus SearchBar and open dropdown (default: true) */

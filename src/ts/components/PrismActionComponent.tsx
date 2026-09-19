@@ -1,4 +1,4 @@
-import React, { useCallback, memo } from 'react';
+import React, { useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger, Spinner } from '@components/ui';
 import { cn } from '@utils/cn';
 import { DashComponentProps } from 'props';

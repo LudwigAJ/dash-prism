@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
@@ -77,6 +77,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
 
     // Clear timeout if conditions are no longer met
     clearTimeout(timeoutRef.current);
+    return undefined;
   }, [hasLayout, children, loadingState, timeoutMs, effectiveTimeout, data?.layoutId]);
 
   // ===== STATE 1: Timed out =====
@@ -90,7 +91,8 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
-              The layout "{data?.layoutId}" did not respond within {effectiveTimeout} seconds.
+              The layout &quot;{data?.layoutId}&quot; did not respond within {effectiveTimeout}{' '}
+              seconds.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

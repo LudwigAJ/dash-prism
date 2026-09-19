@@ -21,8 +21,9 @@
     "watch": "pnpm run build:js::dev -- --watch",
     "dist": "poetry build --outdir dist/",
     "format": "prettier --write src --ignore-path=.prettierignore",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "test": "poetry run pytest tests/ -n auto -v",
     "test:unit": "poetry run pytest tests/ --ignore=tests/integration/ -n auto -v",
     "test:integration": "poetry run pytest tests/integration/ -n auto -v",
@@ -32,6 +33,7 @@
     "coverage": "poetry run pytest tests/ --cov=dash_prism --cov-report=html --cov-report=term"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "18.2.79",

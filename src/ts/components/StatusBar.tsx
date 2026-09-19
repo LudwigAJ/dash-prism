@@ -32,15 +32,9 @@ type StatusBarProps = {
   actions?: JSX.Element[];
   lastSyncTime?: number;
   onOpenHelp?: () => void;
-  onOpenInfo?: (tabId: string) => void;
 };
 
-export function StatusBar({
-  actions = [],
-  lastSyncTime = Date.now(),
-  onOpenHelp,
-  onOpenInfo,
-}: StatusBarProps) {
+export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { clearPersistedState } = usePrism();
   const { maxTabs, componentId = 'prism' } = useConfig();

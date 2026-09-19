@@ -1,6 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { usePrism } from './usePrism';
-import { useConfig } from '@context/ConfigContext';
+import { useEffect, useCallback } from 'react';
 import { findPanelById } from '@utils/panels';
 import type { PanelId, TabId } from '@types';
 import {
@@ -51,9 +49,6 @@ export function useKeyboardShortcuts() {
   const activePanelId = useAppSelector(selectActivePanelId);
   const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
   const canUndo = useAppSelector(selectCanUndo);
-
-  // Track rename mode - when true, we prompt user for new name
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   // ========== Helper: Get active tab ==========
   const getActiveTab = useCallback(() => {

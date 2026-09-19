@@ -225,6 +225,7 @@ function PrismInner({
       }),
     [
       config.componentId,
+      config.serverSessionId,
       config.persistenceType,
       config.maxTabs,
       stableSetProps,
@@ -364,7 +365,6 @@ export function Prism({
   initialLayout,
   newTabOpensDropdown = true,
   updateWorkspace,
-  readWorkspace,
   className,
   style,
   children,

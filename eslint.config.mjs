@@ -5,6 +5,22 @@ import ts from 'typescript-eslint';
 import prettier from 'eslint-plugin-prettier';
 
 export default [
+  {
+    // Generated/vendored output, virtualenvs and docs are not linted. The webpack
+    // config is CommonJS with browser globals and its own formatting, so it is
+    // skipped too; vitest.config.ts is ordinary ESM TypeScript and stays linted.
+    ignores: [
+      'dash_prism/**',
+      'docs/**',
+      'node_modules/**',
+      '.venv/**',
+      'dist/**',
+      'htmlcov/**',
+      'coverage/**',
+      'internal_docs/**',
+      'webpack.config.js',
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {
@@ -18,7 +34,23 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...react.configs.recommended.rules,
       'prettier/prettier': 'error',
-      // your custom rules...
+      // Underscore-prefixed names are the conventional "intentionally unused" marker.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      // eslint-plugin-react-hooks 7 ships React Compiler rules in `recommended`.
+      // This project does not use the compiler, and these rules fire on patterns
+      // that are correct without it (dnd-kit's setNodeRef, a ref mirror written in
+      // render, resetting state when new children arrive, an icon component looked
+      // up from a static table). `exhaustive-deps` and `rules-of-hooks` stay on,
+      // and `exhaustive-deps` is an error (the recommended preset only warns,
+      // which would let the stale-closure bug fixed in 02 A-4 through CI).
+      'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/static-components': 'off',
     },
     settings: {
       react: { version: 'detect' },

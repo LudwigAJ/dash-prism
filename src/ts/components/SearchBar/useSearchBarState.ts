@@ -367,7 +367,14 @@ export function useSearchBarState(panelId: PanelId) {
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: true });
       focusInput();
     }
-  }, [activeTab?.layoutId, currentLayout, searchBarsHidden, activeTabId, newTabOpensDropdown]);
+  }, [
+    activeTab?.layoutId,
+    currentLayout,
+    searchBarsHidden,
+    activeTabId,
+    newTabOpensDropdown,
+    focusInput,
+  ]);
 
   // Report mode changes to Redux for StatusBar display
   useEffect(() => {
@@ -405,7 +412,7 @@ export function useSearchBarState(panelId: PanelId) {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [handleDismiss]);
+  }, [handleDismiss, state.showDropdown]);
 
   // ===== PUBLIC API =====
   return {

@@ -438,7 +438,6 @@ export const TabBar = memo(function TabBar({
   activeTabId,
   isPinned = false,
   isActive = false,
-  onOpenInfo,
 }: TabBarProps) {
   const dispatch = useAppDispatch();
   const allTabs = useAppSelector(selectTabs);
@@ -629,7 +628,7 @@ export const TabBar = memo(function TabBar({
       {/* Scrollable tab container with + button inside, hidden scrollbar */}
       <div
         ref={scrollContainerRef}
-        className="prism-tabbar-scroll scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-scroll overflow-y-hidden"
+        className="prism-tabbar-scroll flex min-w-0 flex-1 scrollbar-none items-stretch overflow-x-scroll overflow-y-hidden"
         data-can-scroll-left={canScrollLeft || undefined}
         data-can-scroll-right={canScrollRight || undefined}
       >

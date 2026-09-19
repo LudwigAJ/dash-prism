@@ -375,3 +375,63 @@ def test_searchbar_survives_page_resize(prism_app_with_layouts):
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"Window resize should not cause errors: {errors}"
+
+
+# =============================================================================
+# Click-outside dismissal (02 A-4)
+# =============================================================================
+#
+# The document `mousedown` listener that closes the dropdown used to be attached
+# only when the search-bar *mode* changed. A fresh tab is in search mode from
+# mount and the dropdown auto-opens, so no listener was ever attached for it;
+# the input's onBlur usually hid the bug. Both tests below fail on the old
+# effect dependencies and pass with `[handleDismiss, state.showDropdown]`.
+
+_LAYOUT_ITEM = "[data-testid='prism-layout-item-test-static']"
+
+
+def _dropdown_open(duo) -> bool:
+    return len(duo.find_elements(_LAYOUT_ITEM)) > 0
+
+
+def test_click_outside_closes_dropdown_when_focus_is_inside_it(prism_app_with_layouts):
+    duo = prism_app_with_layouts
+    wait_for_tab_count(duo, 1)
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=5)
+    duo.wait_for_element(_LAYOUT_ITEM, timeout=5)  # auto-opened for the fresh tab
+
+    # Move focus INTO the dropdown (the favourite star button) so that the
+    # input's onBlur does not dismiss it; only the document listener can.
+    duo.find_element(SEARCHBAR_INPUT).send_keys(Keys.TAB)
+    label = duo.driver.execute_script(
+        "return document.activeElement && document.activeElement.getAttribute('aria-label')"
+    )
+    assert label in ("Add to favorites", "Remove from favorites"), label
+    assert _dropdown_open(duo), "dropdown must stay open while focus is inside it"
+
+    # A real click on a non-interactive element outside the search bar.
+    duo.driver.find_element(By.XPATH, "//span[text()='Mode:']").click()
+
+    WebDriverWait(duo.driver, 3).until(
+        lambda d: not _dropdown_open(duo),
+        message="dropdown should close on click outside (A-4 click-outside listener)",
+    )
+    assert check_browser_errors(duo) == []
+
+
+def test_mousedown_outside_closes_dropdown_without_blur(prism_app_with_layouts):
+    duo = prism_app_with_layouts
+    wait_for_tab_count(duo, 1)
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=5)
+    duo.wait_for_element(_LAYOUT_ITEM, timeout=5)
+
+    # A synthetic mousedown does not move focus, so only the document listener
+    # attached by the click-outside effect can dismiss the dropdown.
+    duo.driver.execute_script(
+        "document.body.dispatchEvent(new MouseEvent('mousedown', {bubbles: true}))"
+    )
+    WebDriverWait(duo.driver, 3).until(
+        lambda d: not _dropdown_open(duo),
+        message="dropdown should close on mousedown outside (A-4 click-outside listener)",
+    )
+    assert check_browser_errors(duo) == []

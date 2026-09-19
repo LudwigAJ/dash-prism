@@ -249,7 +249,7 @@ export function splitPanel(
   // The original panel becomes a child, container takes its place
   panelToSplit.id = containerId;
   panelToSplit.direction = direction;
-  panelToSplit.children = children as any; // Type assertion for Immer Draft compatibility
+  panelToSplit.children = children;
 
   // Clean up size for nested containers (root keeps size)
   if (panelToSplit !== rootPanel && panelToSplit.size) {

@@ -50,13 +50,7 @@ type ResizeState = {
  * }
  * ```
  */
-export function usePanels({
-  panelId,
-  siblingId,
-  direction,
-  minSize = 10,
-  maxSize = 90,
-}: UsePanelsOptions) {
+export function usePanels({ panelId, direction, minSize = 10, maxSize = 90 }: UsePanelsOptions) {
   const dispatch = useAppDispatch();
   const [isResizing, setIsResizing] = useState(false);
   const stateRef = useRef<ResizeState | null>(null);

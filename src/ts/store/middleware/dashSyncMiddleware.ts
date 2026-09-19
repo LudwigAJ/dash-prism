@@ -1,5 +1,5 @@
 // src/ts/store/middleware/dashSyncMiddleware.ts
-import type { Middleware, UnknownAction } from '@reduxjs/toolkit';
+import { isAction, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
 import type { Workspace, PanelId } from '@types';
 import { clearSearchBarMode } from '../uiSlice';
@@ -81,54 +81,54 @@ export function createDashSyncMiddleware(
     lastSyncRef = '';
   };
 
-  const middleware: Middleware<object, RootState> =
-    (store) => (next) => (action: UnknownAction) => {
-      const result = next(action);
+  const middleware: Middleware<object, RootState> = (store) => (next) => (action: unknown) => {
+    const result = next(action);
+    if (!isAction(action)) return result;
 
-      // Sync on workspace actions, undo/redo actions, AND after persistence rehydration
-      const isWorkspaceAction =
-        typeof action.type === 'string' &&
-        (action.type.startsWith('workspace/') ||
-          action.type === '@@redux-undo/UNDO' ||
-          action.type === '@@redux-undo/REDO' ||
-          action.type === '@@redux-undo/JUMP' ||
-          action.type === 'persist/REHYDRATE');
+    // Sync on workspace actions, undo/redo actions, AND after persistence rehydration
+    const isWorkspaceAction =
+      typeof action.type === 'string' &&
+      (action.type.startsWith('workspace/') ||
+        action.type === '@@redux-undo/UNDO' ||
+        action.type === '@@redux-undo/REDO' ||
+        action.type === '@@redux-undo/JUMP' ||
+        action.type === 'persist/REHYDRATE');
 
-      if (isWorkspaceAction) {
-        const state = store.getState();
-        // Access .present because workspace is wrapped with redux-undo
-        const present = state.workspace.present;
-        const workspace: Partial<Workspace> = {
-          tabs: present.tabs,
-          panel: present.panel,
-          panelTabs: present.panelTabs,
-          activeTabIds: present.activeTabIds,
-          activePanelId: present.activePanelId,
-          favoriteLayouts: present.favoriteLayouts,
-          searchBarsHidden: present.searchBarsHidden,
-        };
+    if (isWorkspaceAction) {
+      const state = store.getState();
+      // Access .present because workspace is wrapped with redux-undo
+      const present = state.workspace.present;
+      const workspace: Partial<Workspace> = {
+        tabs: present.tabs,
+        panel: present.panel,
+        panelTabs: present.panelTabs,
+        activeTabIds: present.activeTabIds,
+        activePanelId: present.activePanelId,
+        favoriteLayouts: present.favoriteLayouts,
+        searchBarsHidden: present.searchBarsHidden,
+      };
 
-        if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
 
-        if (isFirstSync) {
-          isFirstSync = false;
-          doSync(workspace);
-        } else {
-          pendingWorkspace = workspace;
-          timeoutId = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
-        }
-
-        // Clean up searchBarModes when a panel is collapsed
-        if (action.type === 'workspace/collapsePanel') {
-          const panelId = (action as unknown as { payload: { panelId: PanelId } }).payload?.panelId;
-          if (panelId) {
-            store.dispatch(clearSearchBarMode({ panelId }));
-          }
-        }
+      if (isFirstSync) {
+        isFirstSync = false;
+        doSync(workspace);
+      } else {
+        pendingWorkspace = workspace;
+        timeoutId = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
       }
 
-      return result;
-    };
+      // Clean up searchBarModes when a panel is collapsed
+      if (action.type === 'workspace/collapsePanel') {
+        const panelId = (action as unknown as { payload: { panelId: PanelId } }).payload?.panelId;
+        if (panelId) {
+          store.dispatch(clearSearchBarMode({ panelId }));
+        }
+      }
+    }
+
+    return result;
+  };
 
   return { middleware, cleanup };
 }
@@ -144,8 +144,9 @@ export function createDashSyncMiddleware(
  * If rehydration produces invalid state, dispatches resetWorkspace() to recover.
  */
 export const validationMiddleware: Middleware<object, RootState> =
-  (store) => (next) => (action: UnknownAction) => {
+  (store) => (next) => (action: unknown) => {
     const result = next(action);
+    if (!isAction(action)) return result;
 
     const isRehydrate = typeof action.type === 'string' && action.type === 'persist/REHYDRATE';
 

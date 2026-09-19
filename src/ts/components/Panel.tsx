@@ -1,7 +1,6 @@
-import React, { useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import React, { useEffect, useCallback, memo, useRef } from 'react';
 import { OutPortal } from 'react-reverse-portal';
-import { usePrism, usePanelTabs, useActiveTab } from '@hooks/usePrism';
-import { useConfig } from '@context/ConfigContext';
+import { useActiveTab } from '@hooks/usePrism';
 import { SplitPane, Pane } from 'react-split-pane';
 import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
@@ -9,7 +8,7 @@ import { SearchBar } from '@components/SearchBar';
 import { PanelDropzone } from '@components/PanelDropzone';
 import type { PanelNode, Tab, TabId, PanelId } from '@types';
 import { cn } from '@utils/cn';
-import { isLeafPanel, getLeafPanelIds } from '@utils/panels';
+import { isLeafPanel } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
 import { NewLayout } from '@components/layouts';
 import { ErrorBoundary } from '@components/ErrorBoundary';
@@ -18,7 +17,6 @@ import {
   useAppSelector,
   selectTabs,
   selectPanelTabs,
-  selectActiveTabIds,
   selectActivePanelId,
   activateTab,
   setActivePanel,
@@ -192,7 +190,7 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
   // Container panel → SplitPane
   // Children: Pane for leaves, SplitPane (via recursion) for containers
 
-  const renderedChildren = panel.children.map((child, index) => {
+  const renderedChildren = panel.children.map((child) => {
     const childIsLeaf = isLeafPanel(child);
 
     // Calculate size - use stored size or distribute evenly

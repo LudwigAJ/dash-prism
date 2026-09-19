@@ -10,7 +10,6 @@ import {
   useSensors,
   MeasuringStrategy,
   type DragStartEvent,
-  type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
@@ -41,7 +40,6 @@ export function DndProvider({ children }: DndProviderProps) {
   const panel = useAppSelector(selectPanel);
   const panelTabs = useAppSelector(selectPanelTabs);
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
-  const [overPanelId, setOverPanelId] = useState<string | null>(null);
 
   // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
   const isSingleTabMode = useMemo(() => {
@@ -83,36 +81,10 @@ export function DndProvider({ children }: DndProviderProps) {
     setActiveTab(tab ?? null);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-
-    // In single-tab mode, no visual feedback
-    if (isSingleTabMode) {
-      setOverPanelId(null);
-      return;
-    }
-
-    if (!over) {
-      setOverPanelId(null);
-      return;
-    }
-
-    // Check if over a panel drop zone
-    const overId = String(over.id);
-    if (overId.startsWith('panel-drop-')) {
-      setOverPanelId(overId.replace('panel-drop-', ''));
-    } else {
-      // Over a tab - find its panel
-      const overTab = tabs?.find((t) => t.id === overId);
-      setOverPanelId(overTab?.panelId ?? null);
-    }
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     setActiveTab(null);
-    setOverPanelId(null);
 
     // Single-tab mode: no-op, tab returns to origin
     if (isSingleTabMode) {
@@ -127,8 +99,7 @@ export function DndProvider({ children }: DndProviderProps) {
     // Case 1: Dropped on a panel drop zone (cross-panel move or split)
     // Use data object from droppable instead of parsing string ID
     const dropData = over.data.current as
-      | { panelId?: string; edge?: string; type?: string }
-      | undefined;
+      { panelId?: string; edge?: string; type?: string } | undefined;
 
     if (dropData?.edge) {
       const { edge, panelId: targetPanelId } = dropData;
@@ -197,7 +168,6 @@ export function DndProvider({ children }: DndProviderProps) {
 
   const handleDragCancel = () => {
     setActiveTab(null);
-    setOverPanelId(null);
   };
 
   return (
@@ -210,7 +180,6 @@ export function DndProvider({ children }: DndProviderProps) {
         },
       }}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >

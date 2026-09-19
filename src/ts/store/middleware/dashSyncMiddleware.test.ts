@@ -13,9 +13,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, { activateTab, addTab, removeTab } from '../workspaceSlice';
+import workspaceReducer, { activateTab, addTab } from '../workspaceSlice';
 import uiReducer, { setSearchBarMode, openHelpModal } from '../uiSlice';
-import { createDashSyncMiddleware, type DashSyncMiddlewareResult } from './dashSyncMiddleware';
+import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
 import type { PanelId, TabId } from '@types';
 
@@ -73,7 +73,7 @@ describe('dashSyncMiddleware', () => {
   describe('sync triggering', () => {
     it('first sync is immediate', () => {
       const setProps = vi.fn();
-      const { store, getState } = createTestStore(setProps);
+      const { store } = createTestStore(setProps);
 
       // First workspace action
       store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
@@ -170,7 +170,7 @@ describe('dashSyncMiddleware', () => {
 
     it('does not sync on UI-only actions', () => {
       const setProps = vi.fn();
-      const { store, getState } = createTestStore(setProps);
+      const { store } = createTestStore(setProps);
 
       // UI action - should not trigger sync
       store.dispatch(setSearchBarMode({ panelId: 'panel-1' as PanelId, mode: 'search' }));

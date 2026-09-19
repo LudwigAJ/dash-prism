@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { subscribeToToasts, notifyUser, type ToastEvent } from './toastEmitter';
+import { subscribeToToasts, notifyUser } from './toastEmitter';
 
 describe('toastEmitter', () => {
   // Store unsubscribe functions to clean up after each test
