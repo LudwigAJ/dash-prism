@@ -460,9 +460,10 @@ def test_callable_layout_sync(dash_app: Dash) -> None:
     assert "test-layout" in prism.registeredLayouts
     assert prism.registeredLayouts["test-layout"]["name"] == "Test Layout"
 
-    # Verify serverSessionId was injected
-    assert hasattr(prism, "serverSessionId")
-    assert prism.serverSessionId is not None
+    # Verify the derived serverSessionId fingerprint was injected
+    from dash_prism.init import _compute_server_session_id
+
+    assert prism.serverSessionId == _compute_server_session_id(dash_prism.registry)
 
 
 def test_callable_layout_async(dash_app: Dash) -> None:
@@ -499,9 +500,10 @@ def test_callable_layout_async(dash_app: Dash) -> None:
     assert isinstance(prism.registeredLayouts, dict)
     assert "async-test-layout" in prism.registeredLayouts
 
-    # Verify serverSessionId was injected
-    assert hasattr(prism, "serverSessionId")
-    assert prism.serverSessionId is not None
+    # Verify the derived serverSessionId fingerprint was injected
+    from dash_prism.init import _compute_server_session_id
+
+    assert prism.serverSessionId == _compute_server_session_id(dash_prism.registry)
 
 
 def test_callable_layout_with_params(dash_app: Dash) -> None:
@@ -1005,3 +1007,65 @@ def test_registered_sync_callback_passes_client_timeout() -> None:
     assert resp.status_code == 200
     assert "timed out after 0.05s" in text
     assert "slow-done" not in text
+
+
+# =============================================================================
+# serverSessionId (01 §1.3 / 02 B-2)
+# =============================================================================
+
+
+def test_compute_server_session_id_is_stable_and_order_independent() -> None:
+    from dash_prism.init import _compute_server_session_id
+
+    a = _compute_server_session_id(["home", "about"])
+    assert a == _compute_server_session_id(["about", "home"])
+    assert a == _compute_server_session_id(iter(["home", "about"]))
+    assert len(a) == 12 and all(c in "0123456789abcdef" for c in a)
+    assert a != _compute_server_session_id(["home"])
+    assert a != _compute_server_session_id(["home", "about", "extra"])
+    assert _compute_server_session_id([]) == _compute_server_session_id(())
+
+
+def test_init_injects_layout_fingerprint_as_server_session_id(prism_app: Dash) -> None:
+    from dash_prism.init import _compute_server_session_id, _find_component_by_id
+
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
+    dash_prism.register_layout(id="about", name="About", layout=html.Div("a"))
+    dash_prism.init("test-prism", prism_app)
+
+    prism = _find_component_by_id(prism_app.layout, "test-prism")
+    assert prism.serverSessionId == _compute_server_session_id(["about", "home"])
+
+
+def test_init_keeps_an_explicit_server_session_id() -> None:
+    from dash_prism.init import _find_component_by_id
+
+    app = Dash(__name__, suppress_callback_exceptions=True)
+    app.layout = html.Div([dash_prism.Prism(id="p", serverSessionId="release-42", style={})])
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
+    dash_prism.init("p", app)
+
+    assert _find_component_by_id(app.layout, "p").serverSessionId == "release-42"
+
+
+def test_callable_layout_keeps_an_explicit_server_session_id(dash_app: Dash) -> None:
+    """The override must survive the per-render injection of the callable path too."""
+    from dash_prism.init import _find_component_by_id
+
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
+
+    def layout():
+        return html.Div([dash_prism.Prism(id="p", serverSessionId="release-42", style={})])
+
+    dash_app.layout = layout
+    dash_prism.init("p", dash_app)
+
+    prism = _find_component_by_id(dash_app.layout(), "p")
+    assert prism.serverSessionId == "release-42"
+    assert "home" in prism.registeredLayouts
+
+
+def test_per_process_server_session_id_constant_is_gone() -> None:
+    """The per-process UUID could never match across gunicorn workers or restarts."""
+    assert "SERVER_SESSION_ID" not in dash_prism.__all__
+    assert not hasattr(dash_prism, "SERVER_SESSION_ID")

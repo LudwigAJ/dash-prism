@@ -21,6 +21,8 @@ import uiReducer, {
   closeHelpModal,
   openSetIconModal,
   closeSetIconModal,
+  setLoadNotice,
+  clearLoadNotice,
 } from './uiSlice';
 import workspaceReducer, { removeTab } from './workspaceSlice';
 import type { UiState, WorkspaceState } from './types';
@@ -204,6 +206,19 @@ describe('uiSlice', () => {
       store.dispatch(closeHelpModal());
 
       expect(getUiState(store).helpModalOpen).toBe(false);
+    });
+  });
+
+  describe('setLoadNotice / clearLoadNotice', () => {
+    it('starts empty, records the closed-tab count and clears it', () => {
+      const store = createTestStore();
+      expect(getUiState(store).loadNotice).toBeNull();
+
+      store.dispatch(setLoadNotice({ closedTabs: 2 }));
+      expect(getUiState(store).loadNotice).toEqual({ closedTabs: 2 });
+
+      store.dispatch(clearLoadNotice());
+      expect(getUiState(store).loadNotice).toBeNull();
     });
   });
 

@@ -20,6 +20,12 @@ export type WorkspaceState = {
   activePanelId: PanelId;
   favoriteLayouts: string[];
   searchBarsHidden: boolean;
+  /**
+   * Fingerprint of the server-side layout registry this workspace was last
+   * reconciled against (the Prism `serverSessionId` prop). Compared on
+   * rehydrate; see `reconcileWithServer`.
+   */
+  serverSessionId?: string;
 };
 
 /**
@@ -34,6 +40,13 @@ export type UiState = {
   infoModalTabId: TabId | null;
   helpModalOpen: boolean;
   setIconModalTabId: TabId | null;
+  /**
+   * Set by the reconcile middleware when loading the persisted workspace closed
+   * tabs whose layouts no longer exist. Rendered once as a toast by
+   * `<LoadNotice />` (which then clears it) — the reducer cannot toast during
+   * REHYDRATE because nothing has subscribed to toasts yet at that point.
+   */
+  loadNotice: { closedTabs: number } | null;
 };
 
 /**

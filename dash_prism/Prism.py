@@ -38,9 +38,15 @@ class Prism(PrismComponent):
     :param id: Unique identifier for this component in Dash callbacks.
         Use this ID to read workspace state or update component properties.
     :type id: str or None
-    :param serverSessionId: Server session identifier used to invalidate
-        stale persisted workspaces after server restarts. Automatically set
-        by :func:`dash_prism.init` unless explicitly provided.
+    :param serverSessionId: Fingerprint of the server-side layout registry, stored
+        with the persisted workspace. On load, tabs whose layout is no longer in
+        ``registeredLayouts`` are closed instead of showing an error; the rest of
+        the workspace is kept and the stored fingerprint is updated so the registry
+        change is recorded. :func:`dash_prism.init` derives it from the registered
+        layout IDs (stable across workers and restarts). Which tabs are closed
+        depends only on ``registeredLayouts`` (nothing is closed while no layout
+        is registered at all); setting this by hand merely changes the recorded
+        fingerprint.
     :type serverSessionId: str or None
     :param theme: Visual theme for the workspace. Controls colors, backgrounds,
         and overall appearance. Defaults to ``'light'``.

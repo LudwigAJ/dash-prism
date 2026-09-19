@@ -219,6 +219,9 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
   if (!isOptionalBoolean(value.searchBarsHidden)) {
     errors.push('searchBarsHidden: expected boolean or null');
   }
+  if (!isOptionalString(value.serverSessionId)) {
+    errors.push('serverSessionId: expected string or null');
+  }
 
   if (!Array.isArray(tabsValue) || !isRecord(panelValue)) {
     return { ok: false, errors };

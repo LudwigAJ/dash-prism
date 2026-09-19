@@ -14,6 +14,8 @@ import {
   selectTabs,
   useAppDispatch,
   useAppSelector,
+  selectLoadNotice,
+  clearLoadNotice,
   getWorkspaceStorageKey,
   resolvePersistenceType,
 } from '@store';
@@ -53,8 +55,15 @@ export type PrismProps = {
   id?: string;
 
   /**
-   * Server session identifier used to invalidate stale persisted workspaces.
-   * Automatically injected by dash_prism.init() unless overridden.
+   * Fingerprint of the server-side layout registry, stored with the persisted
+   * workspace. On load, tabs whose layout is no longer in registeredLayouts are
+   * closed instead of showing an error; the rest of the workspace is kept and
+   * the stored fingerprint is updated so the registry change is recorded.
+   * dash_prism.init() derives it from the registered layout IDs (stable across
+   * workers and restarts). Which tabs are closed depends only on
+   * registeredLayouts (nothing is closed while no layout is registered at
+   * all); setting this by hand merely changes the recorded fingerprint. Read
+   * once when the component mounts.
    */
   serverSessionId?: string;
 
@@ -208,6 +217,7 @@ function PrismInner({
     () =>
       createPrismStore({
         componentId: config.componentId,
+        serverSessionId: config.serverSessionId,
         persistenceType: config.persistenceType,
         maxTabs: config.maxTabs,
         setProps: stableSetProps,
@@ -251,12 +261,35 @@ function PrismInner({
           <InitialLayoutLoader />
           <DndProvider>
             <Toaster />
+            <LoadNotice />
             <WorkspaceView actions={actions}>{children}</WorkspaceView>
           </DndProvider>
         </PortalProvider>
       </PersistGate>
     </Provider>
   );
+}
+
+/**
+ * Shows the "tabs closed on load" toast recorded by the reconcile middleware.
+ * Rendered as a sibling *after* <Toaster /> so sonner has subscribed by the time
+ * this effect runs (sibling effects run in tree order); the middleware itself
+ * fires during REHYDRATE, before anything here is mounted.
+ */
+function LoadNotice() {
+  const notice = useAppSelector(selectLoadNotice);
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (!notice) return;
+    const n = notice.closedTabs;
+    toast.info(`Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`, {
+      cancel: { label: 'Dismiss', onClick: () => {} },
+    });
+    dispatch(clearLoadNotice());
+  }, [notice, dispatch]);
+
+  return null;
 }
 
 /**

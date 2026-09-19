@@ -506,12 +506,20 @@ Initialization (``dash_prism.init``)
 The ``init()`` function connects Prism to your Dash application and is **required** for Prism to function. It performs three critical tasks:
 
 1. **Injects layout metadata** into the Prism component so the UI knows which layouts are available
-2. **Injects server session ID** to invalidate stale persisted workspaces after server restarts
+2. **Injects a server session fingerprint** (``serverSessionId``, derived from the registered
+   layout IDs) that is stored with persisted workspaces, so tabs whose layouts were removed
+   are closed on the next load instead of showing an error
 3. **Creates callbacks** to render tab contents dynamically
 
 .. code-block:: python
 
    dash_prism.init('workspace', app)
+
+.. versionchanged:: 1.0.0
+   The module-level ``dash_prism.SERVER_SESSION_ID`` constant (a new random
+   value per process) was removed. ``init()`` now derives ``serverSessionId``
+   from the registered layout IDs, so it is identical across workers and
+   restarts; pass ``serverSessionId=...`` to ``Prism`` to override it.
 
 Static vs Callable Layouts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

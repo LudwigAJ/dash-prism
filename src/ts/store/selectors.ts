@@ -49,6 +49,7 @@ export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
 export const selectInfoModalTabId = (state: RootState) => state.ui.infoModalTabId;
 export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
 export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
+export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
 // =============================================================================
 // Derived Selectors (memoized)

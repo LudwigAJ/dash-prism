@@ -38,11 +38,13 @@ import workspaceReducer, {
   toggleFavoriteLayout,
   resetWorkspace,
   syncWorkspace,
+  reconcileWithServer,
   MAX_TAB_NAME_LENGTH,
   MAX_LEAF_PANELS,
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
 import type { Tab, PanelNode, PanelId, TabId } from '@types';
+import { subscribeToToasts, type ToastEvent } from '@utils/toastEmitter';
 
 // =============================================================================
 // Test Utilities
@@ -1176,6 +1178,147 @@ describe('workspaceSlice', () => {
 
       // Should fall back to first leaf panel
       expect(getWorkspace(store).activePanelId).toBe(panelId);
+    });
+  });
+
+  describe('reconcileWithServer (02 B-2)', () => {
+    /** Two panels: panel-1 has a locked tab on layout 'gone' and a tab on 'home'; panel-2 one tab on 'gone'. */
+    function createStaleState(): WorkspaceState {
+      const state = createTwoPanelState();
+      state.tabs[0].layoutId = 'gone';
+      state.tabs[0].locked = true;
+      state.tabs[1].layoutId = 'home';
+      state.tabs[2].layoutId = 'gone';
+      state.serverSessionId = 'old';
+      return state;
+    }
+
+    function collectToasts() {
+      const events: ToastEvent[] = [];
+      const unsubscribe = subscribeToToasts((e) => events.push(e));
+      return { events, unsubscribe };
+    }
+
+    it('is a no-op (same reference) when the id matches and every layout is known', () => {
+      const state = createStaleState();
+      state.serverSessionId = 'same';
+      const store = createTestStore(state);
+      const before = getWorkspace(store);
+
+      store.dispatch(
+        reconcileWithServer({ serverSessionId: 'same', registeredLayoutIds: ['gone', 'home'] })
+      );
+
+      expect(getWorkspace(store)).toBe(before);
+    });
+
+    it('records a new server session id without touching tabs when nothing is stale', () => {
+      const state = createTwoPanelState();
+      const store = createTestStore(state);
+
+      store.dispatch(reconcileWithServer({ serverSessionId: 'v1', registeredLayoutIds: ['home'] }));
+
+      expect(getWorkspace(store).serverSessionId).toBe('v1');
+      expect(getWorkspace(store).tabs.map((t) => t.id)).toEqual(['tab-1', 'tab-2', 'tab-3']);
+    });
+
+    it('closes tabs whose layout is no longer registered, locked ones included, without toasting from the reducer', () => {
+      const store = createTestStore(createStaleState());
+      const { events, unsubscribe } = collectToasts();
+
+      store.dispatch(
+        reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: ['home'] })
+      );
+      unsubscribe();
+
+      const ws = getWorkspace(store);
+      expect(ws.tabs.map((t) => t.id)).toEqual(['tab-2']);
+      // panel-2 lost its only tab and collapsed; panel-1 remains as the single leaf
+      expect(Object.keys(ws.panelTabs)).toEqual(['panel-1']);
+      expect(ws.panelTabs['panel-1']).toEqual(['tab-2']);
+      expect(ws.activeTabIds['panel-1']).toBe('tab-2');
+      expect(ws.activePanelId).toBe('panel-1');
+      expect(ws.serverSessionId).toBe('new');
+      // The toast is raised later by <LoadNotice /> from ui.loadNotice (set by the
+      // reconcile middleware): during REHYDRATE nobody is subscribed yet.
+      expect(events).toHaveLength(0);
+    });
+
+    it('keeps the saved active panel when a different panel collapses', () => {
+      const state = createStaleState();
+      // panel-2 (only tab on 'gone') will collapse; the user had panel-1 focused.
+      state.activePanelId = 'panel-1' as PanelId;
+      state.tabs[0].layoutId = 'home';
+      state.tabs[0].locked = false;
+      const store = createTestStore(state);
+
+      store.dispatch(
+        reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: ['home'] })
+      );
+
+      expect(getWorkspace(store).activePanelId).toBe('panel-1');
+    });
+
+    it('moves focus when the active panel itself collapses', () => {
+      const state = createStaleState();
+      state.activePanelId = 'panel-2' as PanelId;
+      state.tabs[0].layoutId = 'home';
+      state.tabs[0].locked = false;
+      const store = createTestStore(state);
+
+      store.dispatch(
+        reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: ['home'] })
+      );
+
+      expect(getWorkspace(store).activePanelId).toBe('panel-1');
+    });
+
+    it('prunes unknown layouts even when the session id has not changed (safety net)', () => {
+      const state = createStaleState();
+      state.serverSessionId = 'same';
+      const store = createTestStore(state);
+
+      store.dispatch(
+        reconcileWithServer({ serverSessionId: 'same', registeredLayoutIds: ['home'] })
+      );
+
+      expect(getWorkspace(store).tabs.map((t) => t.id)).toEqual(['tab-2']);
+    });
+
+    it('spawns a blank tab when every tab is closed', () => {
+      const state = createTestState();
+      state.tabs[0].layoutId = 'gone';
+      const store = createTestStore(state);
+
+      store.dispatch(reconcileWithServer({ serverSessionId: 'v2', registeredLayoutIds: ['home'] }));
+
+      const ws = getWorkspace(store);
+      expect(ws.tabs).toHaveLength(1);
+      expect(ws.tabs[0].layoutId).toBeUndefined();
+      expect(ws.tabs[0].name).toBe('New Tab');
+      expect(ws.panelTabs[state.panel.id]).toEqual([ws.tabs[0].id]);
+      expect(ws.activeTabIds[state.panel.id]).toBe(ws.tabs[0].id);
+    });
+
+    it('keeps tabs that have no layout', () => {
+      const state = createTwoPanelState(); // no layoutIds at all
+      const store = createTestStore(state);
+
+      store.dispatch(reconcileWithServer({ serverSessionId: 'v1', registeredLayoutIds: ['home'] }));
+
+      expect(getWorkspace(store).tabs).toHaveLength(3);
+    });
+
+    it('never prunes when the registry is empty (metadata may not be injected)', () => {
+      const store = createTestStore(createStaleState());
+      const { events, unsubscribe } = collectToasts();
+
+      store.dispatch(reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: [] }));
+      unsubscribe();
+
+      expect(getWorkspace(store).tabs).toHaveLength(3);
+      expect(getWorkspace(store).serverSessionId).toBe('new');
+      expect(events).toHaveLength(0);
     });
   });
 

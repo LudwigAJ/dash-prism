@@ -22,7 +22,7 @@ import {
   selectCanRedo,
 } from './index';
 import type { WorkspaceState } from './types';
-import type { PanelId, TabId } from '@types';
+import type { PanelId, TabId, RegisteredLayouts } from '@types';
 
 // =============================================================================
 // Test Utilities
@@ -79,18 +79,28 @@ function savedWorkspace(overrides: Partial<Persisted> = {}): Persisted {
   };
 }
 
-function createStore(options: { storage?: Storage; setProps?: () => void } = {}) {
+function createStore(
+  options: {
+    storage?: Storage;
+    setProps?: () => void;
+    serverSessionId?: string;
+    registeredLayouts?: RegisteredLayouts;
+  } = {}
+) {
   const setProps = options.setProps ?? vi.fn();
   const result = createPrismStore({
     componentId: COMPONENT_ID,
+    serverSessionId: options.serverSessionId,
     persistenceType: options.storage ? 'local' : 'memory',
     maxTabs: 16,
     setProps,
-    getRegisteredLayouts: () => ({}),
+    getRegisteredLayouts: () => options.registeredLayouts ?? {},
     storage: options.storage,
   });
   return { ...result, setProps };
 }
+
+const LAYOUTS: RegisteredLayouts = { home: { name: 'Home' }, about: { name: 'About' } };
 
 type Created = ReturnType<typeof createStore>;
 
@@ -280,6 +290,120 @@ describe('createPrismStore', () => {
       created.store.dispatch(undo());
       expect(present(created).tabs).toHaveLength(1);
       expect(present(created)._persist?.rehydrated).toBe(true);
+
+      created.cleanup();
+    });
+  });
+
+  describe('server session reconciliation on load (02 B-2)', () => {
+    it('closes tabs whose layouts are gone when the persisted session id differs', async () => {
+      const saved = savedWorkspace({ serverSessionId: 'old' });
+      saved.tabs[1].layoutId = 'gone';
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const setProps = vi.fn();
+      const created = createStore({
+        storage,
+        serverSessionId: 'new',
+        registeredLayouts: LAYOUTS,
+        setProps,
+      });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a']);
+      expect(present(created).serverSessionId).toBe('new');
+      // The pruning happened before the undo baseline was reset
+      expect(history(created).past).toHaveLength(0);
+      expect(selectCanUndo(created.store.getState())).toBe(false);
+      // ...and the UI is told how many tabs were closed so it can toast once mounted
+      expect(created.store.getState().ui.loadNotice).toEqual({ closedTabs: 1 });
+      // The first sync to Dash already carries the pruned workspace
+      const firstSync = setProps.mock.calls[0][0] as { readWorkspace: WorkspaceState };
+      expect(firstSync.readWorkspace.tabs.map((t) => t.id)).toEqual(['tab-a']);
+
+      created.cleanup();
+    });
+
+    it('resets corrupt persisted state before reconciling (middleware order)', async () => {
+      // Corrupt (activePanelId names no leaf) AND referencing an unknown layout.
+      // validationMiddleware's post-step must run before reconcile's: the reset
+      // workspace has nothing to prune, so no load notice is recorded. If the
+      // order were inverted, reconcile would prune the corrupt payload first and
+      // leave a notice about tabs that the reset then discarded anyway.
+      const corrupt = savedWorkspace({
+        activePanelId: 'does-not-exist' as PanelId,
+        serverSessionId: 'old',
+      });
+      corrupt.tabs[0].layoutId = 'gone';
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(corrupt) });
+      const created = createStore({ storage, serverSessionId: 'new', registeredLayouts: LAYOUTS });
+      await settle(created);
+
+      expect(present(created).tabs).toHaveLength(1);
+      expect(present(created).tabs[0].name).toBe('New Tab');
+      expect(present(created).serverSessionId).toBe('new');
+      expect(created.store.getState().ui.loadNotice).toBeNull();
+      expect(history(created).past).toHaveLength(0);
+
+      created.cleanup();
+    });
+
+    it('rejects a persisted serverSessionId that is not a string', async () => {
+      const saved = savedWorkspace({ serverSessionId: 42 as unknown as string });
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage, serverSessionId: 'v1', registeredLayouts: LAYOUTS });
+      await settle(created);
+
+      // validateWorkspace failed -> fresh workspace, then the id is recorded
+      expect(present(created).tabs).toHaveLength(1);
+      expect(present(created).tabs[0].name).toBe('New Tab');
+      expect(present(created).serverSessionId).toBe('v1');
+
+      created.cleanup();
+    });
+
+    it('keeps a workspace whose session id matches and whose layouts all exist', async () => {
+      const saved = savedWorkspace({ serverSessionId: 'same' });
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage, serverSessionId: 'same', registeredLayouts: LAYOUTS });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
+      expect(present(created).serverSessionId).toBe('same');
+      expect(created.store.getState().ui.loadNotice).toBeNull();
+
+      created.cleanup();
+    });
+
+    it('still closes tabs for unknown layouts when the session id matches', async () => {
+      const saved = savedWorkspace({ serverSessionId: 'same' });
+      saved.tabs[0].layoutId = 'gone';
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage, serverSessionId: 'same', registeredLayouts: LAYOUTS });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-b']);
+
+      created.cleanup();
+    });
+
+    it('records the session id on a fresh workspace (memory persistence)', async () => {
+      const created = createStore({ serverSessionId: 'v1', registeredLayouts: LAYOUTS });
+      await settle(created);
+
+      expect(present(created).serverSessionId).toBe('v1');
+      expect(present(created).tabs).toHaveLength(1);
+      expect(history(created).past).toHaveLength(0);
+
+      created.cleanup();
+    });
+
+    it('does not prune anything when no layouts are registered', async () => {
+      const saved = savedWorkspace({ serverSessionId: 'old' });
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage, serverSessionId: 'new' });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
 
       created.cleanup();
     });

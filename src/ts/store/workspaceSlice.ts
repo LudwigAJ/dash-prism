@@ -13,6 +13,7 @@ import {
   collapsePanel as collapsePanelTree,
 } from '@utils/panels';
 import { notifyUser } from '@utils/toastEmitter';
+import { logger } from '@utils/logger';
 import { canAddTab } from './selectors';
 import type { RegisteredLayouts } from '@types';
 
@@ -46,6 +47,76 @@ function collapseEmptyPanel(state: WorkspaceState, panelId: PanelId): boolean {
 
   delete state.activeTabIds[panelId];
   delete state.panelTabs[panelId];
+  return true;
+}
+
+/**
+ * Remove a tab and repair the surrounding state: panelTabs, the panel's active
+ * tab, collapsing a panel that became empty, or spawning a blank tab when the
+ * last tab of the last panel was removed.
+ *
+ * Shared by the user-facing `removeTab` (which respects locks) and by
+ * `reconcileWithServer` (which must also drop locked tabs whose layout is gone).
+ *
+ * @returns true if a tab was removed
+ */
+function removeTabFromState(
+  state: WorkspaceState,
+  tabId: TabId,
+  options: { ignoreLock?: boolean } = {}
+): boolean {
+  const tabIndex = findTabIndex(state.tabs, tabId);
+  if (tabIndex === -1) return false;
+
+  const tab = state.tabs[tabIndex];
+  if (tab.locked && !options.ignoreLock) return false;
+
+  const panelId = tab.panelId;
+
+  // Note: Undo is handled by redux-undo wrapping the entire slice.
+  // When user dispatches undo(), the entire state reverts to before this action.
+
+  // Remove from tabs array
+  state.tabs.splice(tabIndex, 1);
+
+  // Remove from panelTabs
+  const idx = state.panelTabs[panelId]?.indexOf(tabId);
+  if (idx !== undefined && idx !== -1) {
+    state.panelTabs[panelId].splice(idx, 1);
+  }
+
+  // Update active tab
+  if (state.activeTabIds[panelId] === tabId) {
+    const remaining = state.panelTabs[panelId] ?? [];
+    const lastTab = remaining[remaining.length - 1];
+    if (lastTab) {
+      state.activeTabIds[panelId] = lastTab;
+    } else {
+      delete state.activeTabIds[panelId];
+    }
+  }
+
+  // Handle empty panel: collapse or spawn new tab
+  if (collapseEmptyPanel(state, panelId)) {
+    // Panel was collapsed — move focus to another panel
+    const remaining = getLeafPanelIds(state.panel);
+    if (remaining.length > 0) {
+      state.activePanelId = remaining[0];
+    }
+  } else if ((state.panelTabs[panelId]?.length ?? 0) === 0) {
+    // This is the last panel - spawn a new empty tab
+    const newTabId: TabId = generateShortId();
+    const newTab: Tab = {
+      id: newTabId,
+      name: 'New Tab',
+      panelId: panelId,
+      createdAt: Date.now(),
+      mountKey: generateShortId(),
+    };
+    state.tabs.push(newTab);
+    state.panelTabs[panelId] = [newTabId];
+    state.activeTabIds[panelId] = newTabId;
+  }
   return true;
 }
 
@@ -235,58 +306,54 @@ const workspaceSlice = createSlice({
     // -------------------------------------------------------------------------
 
     removeTab(state, action: PayloadAction<{ tabId: TabId }>) {
-      const { tabId } = action.payload;
-      const tabIndex = findTabIndex(state.tabs, tabId);
-      if (tabIndex === -1) return;
+      removeTabFromState(state, action.payload.tabId);
+    },
 
-      const tab = state.tabs[tabIndex];
-      if (tab.locked) return;
+    /**
+     * Reconcile a (re)hydrated workspace with the server it is now talking to.
+     *
+     * Dispatched once after redux-persist's REHYDRATE. `serverSessionId` is the
+     * fingerprint of the server's layout registry (Prism prop of the same name,
+     * derived by dash_prism.init() from the registered layout IDs). When it
+     * differs from the one stored with the workspace, or when any tab references
+     * a layout the server no longer knows, those tabs are closed (locked or not)
+     * instead of rendering a "Layout not found" error, and the new fingerprint
+     * is recorded. Nothing else is touched: the workspace is never wiped.
+     *
+     * An empty `registeredLayoutIds` list disables pruning, because it cannot be
+     * told apart from metadata that has not been injected.
+     */
+    reconcileWithServer(
+      state,
+      action: PayloadAction<{ serverSessionId?: string; registeredLayoutIds: LayoutId[] }>
+    ) {
+      const { serverSessionId, registeredLayoutIds } = action.payload;
+      const known = new Set(registeredLayoutIds);
+      const staleTabIds =
+        registeredLayoutIds.length > 0
+          ? state.tabs.filter((tab) => tab.layoutId && !known.has(tab.layoutId)).map((t) => t.id)
+          : [];
 
-      const panelId = tab.panelId;
+      if (staleTabIds.length === 0 && state.serverSessionId === serverSessionId) return;
 
-      // Note: Undo is handled by redux-undo wrapping the entire slice.
-      // When user dispatches undo(), the entire state reverts to before this action.
-
-      // Remove from tabs array
-      state.tabs.splice(tabIndex, 1);
-
-      // Remove from panelTabs
-      const idx = state.panelTabs[panelId]?.indexOf(tabId);
-      if (idx !== undefined && idx !== -1) {
-        state.panelTabs[panelId].splice(idx, 1);
+      // Pruning may collapse panels; keep the saved focus if that panel survives
+      // instead of letting the collapse move it to the first remaining panel.
+      const savedActivePanelId = state.activePanelId;
+      for (const tabId of staleTabIds) {
+        removeTabFromState(state, tabId, { ignoreLock: true });
       }
-
-      // Update active tab
-      if (state.activeTabIds[panelId] === tabId) {
-        const remaining = state.panelTabs[panelId] ?? [];
-        const lastTab = remaining[remaining.length - 1];
-        if (lastTab) {
-          state.activeTabIds[panelId] = lastTab;
-        } else {
-          delete state.activeTabIds[panelId];
-        }
+      if (getLeafPanelIds(state.panel).includes(savedActivePanelId)) {
+        state.activePanelId = savedActivePanelId;
       }
+      state.serverSessionId = serverSessionId;
 
-      // Handle empty panel: collapse or spawn new tab
-      if (collapseEmptyPanel(state, panelId)) {
-        // Panel was collapsed — move focus to another panel
-        const remaining = getLeafPanelIds(state.panel);
-        if (remaining.length > 0) {
-          state.activePanelId = remaining[0];
-        }
-      } else if ((state.panelTabs[panelId]?.length ?? 0) === 0) {
-        // This is the last panel - spawn a new empty tab
-        const newTabId: TabId = generateShortId();
-        const newTab: Tab = {
-          id: newTabId,
-          name: 'New Tab',
-          panelId: panelId,
-          createdAt: Date.now(),
-          mountKey: generateShortId(),
-        };
-        state.tabs.push(newTab);
-        state.panelTabs[panelId] = [newTabId];
-        state.activeTabIds[panelId] = newTabId;
+      if (staleTabIds.length > 0) {
+        // The user-facing toast is raised by <LoadNotice /> once the UI has
+        // mounted (see reconcileMiddleware); this runs inside REHYDRATE, before
+        // any toast subscriber exists.
+        logger.info(
+          `[reconcileWithServer] Closed ${staleTabIds.length} tab(s) whose layout is no longer registered (serverSessionId=${serverSessionId ?? 'none'})`
+        );
       }
     },
 
@@ -824,6 +891,7 @@ const workspaceSlice = createSlice({
 // Export actions
 export const {
   removeTab,
+  reconcileWithServer,
   activateTab,
   renameTab,
   lockTab,

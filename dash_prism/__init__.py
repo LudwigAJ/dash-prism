@@ -126,7 +126,6 @@ from __future__ import print_function as _
 import json as _json
 import os as _os
 import sys as _sys
-import uuid as _uuid
 
 import dash as _dash
 
@@ -169,9 +168,6 @@ except PackageNotFoundError:
     __version__ = _package_info["version"]
 
 package_name = "dash_prism"
-
-# Stable per-process session identifier (used for persistence invalidation)
-SERVER_SESSION_ID = str(_uuid.uuid4())
 
 _js_dist = [
     {
@@ -268,7 +264,6 @@ __all__ = [
     # Initialization
     "init",
     "InitializationError",
-    "SERVER_SESSION_ID",
     # Icons
     "AVAILABLE_ICONS",
     "get_available_icons",

@@ -8,7 +8,10 @@ import type { RegisteredLayouts, Theme, Size, StatusBarPosition, PersistenceType
 type ConfigContextValue = {
   /** Component ID for namespacing persistence storage */
   componentId?: string;
-  /** Server session fingerprint to invalidate stale persistence */
+  /**
+   * Fingerprint of the server's layout registry, stored with the persisted
+   * workspace; read once when the store is created (see reconcileWithServer).
+   */
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   /** Tab content specs from Dash callback - keyed by tab ID */

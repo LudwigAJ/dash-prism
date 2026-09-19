@@ -22,12 +22,13 @@ Async Handling
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import math
 import copy
 import warnings
 import inspect
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any, TYPE_CHECKING
 from weakref import WeakSet
 
@@ -38,6 +39,24 @@ logger = logging.getLogger("dash_prism")
 
 # Track which layout functions we've already wrapped to prevent infinite wrapping
 _wrapped_layouts: WeakSet[Callable] = WeakSet()
+
+
+def _compute_server_session_id(layout_ids: Iterable[str]) -> str:
+    """Fingerprint the set of registered layout IDs.
+
+    The result is identical on every worker and across restarts for the same
+    set of layouts, and changes when a layout is added or removed. The frontend
+    stores it with persisted workspaces so a registry change is recorded; on
+    load it closes tabs whose layouts are no longer registered (see the
+    ``serverSessionId`` prop of :class:`dash_prism.Prism`).
+
+    :param layout_ids: Registered layout IDs (order does not matter).
+    :type layout_ids: Iterable[str]
+    :returns: A 12-character hexadecimal fingerprint.
+    :rtype: str
+    """
+    joined = "\n".join(sorted(layout_ids))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
 
 
 def _execute_and_inject_metadata(
@@ -692,7 +711,9 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
 
     1. Validates the setup and provides clear error messages
     2. Finds the Prism component in ``app.layout`` by ID
-    3. Injects ``registeredLayouts`` metadata from the layout registry
+    3. Injects ``registeredLayouts`` metadata from the layout registry and, unless
+       set explicitly, a ``serverSessionId`` fingerprint of the registered layout
+       IDs, so persisted workspaces can drop tabs whose layouts were removed
     4. Creates the appropriate callback (sync or async) to render tab contents
 
     The callback type is determined automatically:
@@ -794,10 +815,8 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
         )
 
     # Capture metadata at init time (registry is frozen after this)
-    from . import SERVER_SESSION_ID
-
     layouts_metadata = get_registered_layouts_metadata()
-    session_id = SERVER_SESSION_ID
+    session_id = _compute_server_session_id(registry)
 
     # Handle callable vs static layouts
     original_layout = app.layout

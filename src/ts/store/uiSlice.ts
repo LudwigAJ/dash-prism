@@ -10,6 +10,7 @@ export const initialUiState: UiState = {
   infoModalTabId: null,
   helpModalOpen: false,
   setIconModalTabId: null,
+  loadNotice: null,
 };
 
 const uiSlice = createSlice({
@@ -34,6 +35,14 @@ const uiSlice = createSlice({
 
     openInfoModal(state, action: PayloadAction<{ tabId: TabId }>) {
       state.infoModalTabId = action.payload.tabId;
+    },
+
+    setLoadNotice(state, action: PayloadAction<{ closedTabs: number }>) {
+      state.loadNotice = action.payload;
+    },
+
+    clearLoadNotice(state) {
+      state.loadNotice = null;
     },
 
     closeInfoModal(state) {
@@ -80,6 +89,8 @@ export const {
   closeHelpModal,
   openSetIconModal,
   closeSetIconModal,
+  setLoadNotice,
+  clearLoadNotice,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

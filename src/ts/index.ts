@@ -53,6 +53,7 @@ export {
   selectInfoModalTabId,
   selectHelpModalOpen,
   selectSetIconModalTabId,
+  selectLoadNotice,
   // Workspace actions
   addTab,
   removeTab,
@@ -88,6 +89,8 @@ export {
   closeHelpModal,
   openSetIconModal,
   closeSetIconModal,
+  setLoadNotice,
+  clearLoadNotice,
   // Initial states
   createInitialWorkspaceState,
   initialUiState,

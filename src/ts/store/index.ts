@@ -20,6 +20,7 @@ import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'r
 import workspaceReducer, { createInitialWorkspaceState } from './workspaceSlice';
 import uiReducer, { initialUiState } from './uiSlice';
 import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
+import { createReconcileMiddleware } from './middleware/reconcileMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
 import { generateShortId } from '@utils/uuid';
 
@@ -136,6 +137,7 @@ const UNDO_EXCLUDED_ACTIONS = [
   'workspace/activateTab', // Tab selection is not undoable
   'workspace/setActivePanel', // Panel focus is not undoable
   'workspace/resizePanel', // Resize is continuous, not undoable
+  'workspace/reconcileWithServer', // Closing tabs for removed layouts cannot be undone
   // redux-persist lifecycle actions. persistReducer sits inside undoable(), so
   // these reach redux-undo and they do change state (the `_persist` marker and
   // the rehydrated payload). If they were recorded, every fresh page load would
@@ -168,7 +170,15 @@ const UNDO_EXCLUDED_ACTIONS = [
  * ```
  */
 export function createPrismStore(config: StoreConfig) {
-  const { componentId, persistenceType, maxTabs, setProps, getRegisteredLayouts, storage } = config;
+  const {
+    componentId,
+    serverSessionId,
+    persistenceType,
+    maxTabs,
+    setProps,
+    getRegisteredLayouts,
+    storage,
+  } = config;
 
   // Configure persistence for workspace slice only
   // Important: We persist the workspace reducer BEFORE wrapping with redux-undo
@@ -213,6 +223,15 @@ export function createPrismStore(config: StoreConfig) {
   // Create dash sync middleware (returns middleware + cleanup function)
   const dashSync = createDashSyncMiddleware(setProps);
 
+  // Reconcile the rehydrated workspace with the server's layout registry.
+  // Placed before validationMiddleware in the chain so that, after the reducer
+  // runs, validation (and its corrupt-state reset) happens first and the
+  // reconciliation sees a valid workspace.
+  const reconcile = createReconcileMiddleware(
+    () => serverSessionId,
+    thunkExtra.getRegisteredLayouts
+  );
+
   // Configure store
   const store = configureStore({
     reducer: rootReducer,
@@ -227,6 +246,7 @@ export function createPrismStore(config: StoreConfig) {
         },
       })
         .concat(dashSync.middleware)
+        .concat(reconcile)
         .concat(validationMiddleware),
     devTools: process.env.NODE_ENV !== 'production',
   });
