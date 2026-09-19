@@ -1069,7 +1069,7 @@ app.layout = html.Div(
             searchBarPlaceholder="Search layouts...",
             statusBarPosition="bottom",
             persistence=True,
-            persistence_type="memory",
+            persistence_type="local",
             newTabOpensDropdown=False,
             maxTabs=16,
         ),

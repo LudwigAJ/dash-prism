@@ -191,6 +191,12 @@ Enable workspace persistence:
 - ``'session'`` — Persists for current tab only (sessionStorage)
 - ``'memory'`` — No persistence
 
+``persistence`` is the on/off switch and ``persistence_type`` only chooses the
+storage when it is on. With ``persistence=False`` (the default) nothing is written
+to the browser, whatever ``persistence_type`` says. Because ``persistence_type``
+defaults to ``'memory'``, ``persistence=True`` on its own persists nothing and
+emits a ``UserWarning``; always set both.
+
 Initial Layout
 --------------
 

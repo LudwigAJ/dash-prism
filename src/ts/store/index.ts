@@ -59,6 +59,20 @@ const memoryStorage: Storage = {
   removeItem: () => Promise.resolve(),
 };
 
+/**
+ * Resolve the storage engine that should actually be used.
+ *
+ * `persistence` is the on/off switch (as in Dash core components) and
+ * `persistence_type` only selects where to store when it is on. With
+ * `persistence=false` nothing may be written, whatever `persistence_type` says.
+ */
+export function resolvePersistenceType(
+  persistence: boolean,
+  persistenceType: 'local' | 'session' | 'memory'
+): 'local' | 'session' | 'memory' {
+  return persistence ? persistenceType : 'memory';
+}
+
 function getStorage(type: 'local' | 'session' | 'memory'): Storage {
   switch (type) {
     case 'local':

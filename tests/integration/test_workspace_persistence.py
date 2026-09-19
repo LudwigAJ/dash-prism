@@ -170,6 +170,58 @@ def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
 
 
 # =============================================================================
+# persistence flag gates storage (02 B-1)
+# =============================================================================
+
+STORAGE_KEY = "persist:prism-workspace-prism"
+
+
+def _persistence_app(*, persistence: bool, persistence_type: str) -> Dash:
+    app = Dash(__name__, suppress_callback_exceptions=True)
+    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test content"))
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=persistence,
+                persistence_type=persistence_type,
+                style={"height": "90vh"},
+            )
+        ]
+    )
+    dash_prism.init("prism", app)
+    return app
+
+
+def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
+    """persistence=False must win over persistence_type='local' (02 B-1)."""
+    dash_duo.start_server(_persistence_app(persistence=False, persistence_type="local"))
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.driver.execute_script("localStorage.clear(); sessionStorage.clear();")
+
+    # A workspace change that would be written straight away if persistence were on
+    dash_duo.find_element(ADD_TAB_BUTTON).click()
+    wait_for_tab_count(dash_duo, 2)
+
+    assert wait_for_storage(dash_duo, STORAGE_KEY, "local", timeout=2.0) is None
+    assert wait_for_storage(dash_duo, STORAGE_KEY, "session", timeout=0.5) is None
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_persistence_true_with_local_type_writes_workspace(dash_duo):
+    """The documented combination stores the workspace in localStorage."""
+    dash_duo.start_server(_persistence_app(persistence=True, persistence_type="local"))
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+
+    dash_duo.find_element(ADD_TAB_BUTTON).click()
+    wait_for_tab_count(dash_duo, 2)
+
+    stored = wait_for_storage(dash_duo, STORAGE_KEY, "local", timeout=5.0)
+    assert stored is not None and '"tabs"' in stored
+    assert check_browser_errors(dash_duo) == []
+
+
+# =============================================================================
 # readWorkspace / updateWorkspace Integration Tests
 # =============================================================================
 

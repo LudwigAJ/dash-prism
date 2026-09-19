@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getWorkspacePersistKey, getWorkspaceStorageKey } from './index';
+import { getWorkspacePersistKey, getWorkspaceStorageKey, resolvePersistenceType } from './index';
 
 describe('getWorkspacePersistKey', () => {
   it('returns base key when no componentId is provided', () => {
@@ -51,5 +51,19 @@ describe('getWorkspaceStorageKey', () => {
     const persistKey = getWorkspacePersistKey();
     const storageKey = getWorkspaceStorageKey();
     expect(storageKey).toBe(`persist:${persistKey}`);
+  });
+});
+
+describe('resolvePersistenceType (02 B-1)', () => {
+  it('returns memory whenever persistence is off, regardless of persistence_type', () => {
+    expect(resolvePersistenceType(false, 'local')).toBe('memory');
+    expect(resolvePersistenceType(false, 'session')).toBe('memory');
+    expect(resolvePersistenceType(false, 'memory')).toBe('memory');
+  });
+
+  it('passes persistence_type through when persistence is on', () => {
+    expect(resolvePersistenceType(true, 'local')).toBe('local');
+    expect(resolvePersistenceType(true, 'session')).toBe('session');
+    expect(resolvePersistenceType(true, 'memory')).toBe('memory');
   });
 });

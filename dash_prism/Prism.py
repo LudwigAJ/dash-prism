@@ -6,6 +6,7 @@ This file provides a clean Python API that wraps the auto-generated PrismCompone
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 from typing import Any, Literal
 
@@ -64,14 +65,17 @@ class Prism(PrismComponent):
     :param actions: Array of :class:`dash_prism.Action` components to display in the status bar.
         Each action is a clickable button with its own ``n_clicks`` for callbacks.
     :type actions: list or None
-    :param persistence: If ``True``, workspace state is persisted across browser sessions.
-        The persistence method is controlled by ``persistence_type``. Defaults to ``False``.
+    :param persistence: If ``True``, workspace state is persisted in the browser
+        using the storage selected by ``persistence_type``. If ``False`` (default),
+        nothing is written to storage and ``persistence_type`` is ignored.
     :type persistence: bool
-    :param persistence_type: Where to persist workspace state. Options:
-        ``'local'`` (localStorage, persists across browser sessions),
-        ``'session'`` (sessionStorage, persists only for current tab session),
-        ``'memory'`` (no persistence, state lost on page refresh).
-        Defaults to ``'memory'``.
+    :param persistence_type: Where to persist workspace state when ``persistence``
+        is ``True``. Options: ``'local'`` (localStorage, persists across browser
+        sessions), ``'session'`` (sessionStorage, persists only for the current
+        browser tab), ``'memory'`` (no storage, state is lost on page refresh).
+        Defaults to ``'memory'``, so ``persistence=True`` on its own persists
+        nothing: set ``persistence_type='local'`` or ``'session'`` as well. A
+        :class:`UserWarning` is emitted for that no-op combination.
     :type persistence_type: str
     :param initialLayout: Layout ID to automatically load in the first tab on
         initial page load. Must match a layout registered via
@@ -251,4 +255,17 @@ class Prism(PrismComponent):
             if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
         }
         explicit.update(kwargs)
+
+        if (
+            explicit.get("persistence") is True
+            and explicit.get("persistence_type", "memory") == "memory"
+        ):
+            warnings.warn(
+                "Prism(persistence=True) has no effect while persistence_type is 'memory' "
+                "(the default). Pass persistence_type='local' or 'session' to persist the "
+                "workspace, or drop persistence=True.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         super().__init__(**explicit)

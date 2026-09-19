@@ -104,7 +104,7 @@ def analytics():
     return html.Div('Analytics content here')
 
 app.layout = html.Div([
-    dash_prism.Prism(id='workspace', persistence=True)
+    dash_prism.Prism(id='workspace', persistence=True, persistence_type='local')
 ])
 
 dash_prism.init('workspace', app)

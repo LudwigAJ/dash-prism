@@ -15,6 +15,7 @@ import {
   useAppDispatch,
   useAppSelector,
   getWorkspaceStorageKey,
+  resolvePersistenceType,
 } from '@store';
 import { subscribeToToasts } from '@utils/toastEmitter';
 import { toast } from 'sonner';
@@ -126,14 +127,16 @@ export type PrismProps = {
   actions?: JSX.Element[];
 
   /**
-   * If to persist workspace state. Defaults to false.
+   * Whether to persist workspace state in the browser. When false (the default)
+   * nothing is written to storage and persistence_type is ignored.
    */
   persistence?: boolean;
 
   /**
-   * Where to persist workspace state: 'local' for localStorage,
-   * 'session' for sessionStorage, or 'memory' for no persistence.
-   * Defaults to 'memory'.
+   * Where to persist workspace state when persistence is true: 'local' for
+   * localStorage (survives browser restarts), 'session' for sessionStorage
+   * (current browser tab only), or 'memory' for no storage. Defaults to 'memory',
+   * so set this together with persistence=True.
    */
   persistence_type?: PersistenceType;
 
@@ -333,10 +336,14 @@ export function Prism({
   style,
   children,
 }: PrismProps) {
+  // `persistence` is the on/off switch; `persistence_type` only applies when it is on.
+  // Resolve once here so every consumer (store, error boundary) sees the same answer.
+  const persistenceType = resolvePersistenceType(persistence, persistence_type);
+
   // Create stable callback for clearing storage from error boundary
   const handleClearStorage = useCallback(() => {
-    clearWorkspaceStorage(persistence_type, id);
-  }, [persistence_type, id]);
+    clearWorkspaceStorage(persistenceType, id);
+  }, [persistenceType, id]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -370,7 +377,7 @@ export function Prism({
           size={size}
           maxTabs={maxTabs}
           persistence={persistence}
-          persistenceType={persistence_type}
+          persistenceType={persistenceType}
           searchBarPlaceholder={searchBarPlaceholder}
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}

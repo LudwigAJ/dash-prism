@@ -92,3 +92,24 @@ def test_prism_in_app_layout(dash_app: Dash) -> None:
 
     assert dash_app.layout is not None
     assert len(dash_app.layout.children) == 1
+
+
+def test_prism_warns_when_persistence_true_but_type_is_memory() -> None:
+    """persistence=True with the default persistence_type='memory' persists nothing."""
+    with pytest.warns(UserWarning, match="persistence_type is 'memory'"):
+        dash_prism.Prism(id="p", persistence=True, style={})
+    with pytest.warns(UserWarning, match="persistence_type is 'memory'"):
+        dash_prism.Prism(id="p", persistence=True, persistence_type="memory", style={})
+
+
+def test_prism_does_not_warn_for_effective_persistence_combinations() -> None:
+    """Only the no-op combination warns."""
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        dash_prism.Prism(id="p", persistence=True, persistence_type="local", style={})
+        dash_prism.Prism(id="p", persistence=True, persistence_type="session", style={})
+        dash_prism.Prism(id="p", persistence=False, persistence_type="local", style={})
+        dash_prism.Prism(id="p", persistence_type="local", style={})
+        dash_prism.Prism(id="p", style={})
