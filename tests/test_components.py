@@ -113,3 +113,30 @@ def test_prism_does_not_warn_for_effective_persistence_combinations() -> None:
         dash_prism.Prism(id="p", persistence=False, persistence_type="local", style={})
         dash_prism.Prism(id="p", persistence_type="local", style={})
         dash_prism.Prism(id="p", style={})
+
+
+def test_prop_docstrings_match_behaviour() -> None:
+    """Both docstring sources must describe the real behaviour (02 B-4).
+
+    ``PrismComponent`` is generated from the TypeScript JSDoc; ``Prism`` carries
+    the hand-written docstring that Sphinx publishes (``docs/api.rst`` autoclass)
+    and ``help()`` shows. B-4 was exactly these two drifting apart, so both are
+    checked here.
+    """
+    from dash_prism.PrismComponent import PrismComponent
+
+    claims = (
+        "counting every panel together",  # maxTabs is global, not per panel
+        "500 ms",  # readWorkspace sync cadence
+        "ping-pongs with Prism",  # what an echoing callback really does
+    )
+    # The generator wraps lines, so compare whitespace-normalised text.
+    for cls in (dash_prism.Prism, PrismComponent):
+        doc = " ".join((cls.__doc__ or "").split())
+        assert "allowed per panel" not in doc, cls.__name__
+        for claim in claims:
+            assert claim in doc, f"{cls.__name__} docstring is missing {claim!r}"
+
+    generated = " ".join((PrismComponent.__doc__ or "").split())
+    assert "Prism -> Dash" in generated
+    assert "Dash -> Prism" in generated

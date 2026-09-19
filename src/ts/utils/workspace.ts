@@ -1,4 +1,4 @@
-import type { PanelNode, Tab, Theme, Workspace } from '@types';
+import type { PanelNode, Tab, Workspace } from '@types';
 
 type ValidationSuccess = { ok: true; workspace: Workspace };
 type ValidationFailure = { ok: false; errors: string[] };
@@ -36,11 +36,6 @@ const isOptionalStringOrNumber = (value: unknown): value is string | number | nu
   value === null ||
   typeof value === 'string' ||
   (typeof value === 'number' && Number.isFinite(value));
-
-const isTheme = (value: unknown): value is Theme => value === 'light' || value === 'dark';
-
-const isOptionalTheme = (value: unknown): value is Theme | null | undefined =>
-  value === undefined || value === null || isTheme(value);
 
 const normalizeOptional = <T>(value: T | null | undefined): T | undefined => value ?? undefined;
 
@@ -211,9 +206,6 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
   if (!isOptionalStringArray(value.favoriteLayouts)) {
     errors.push('favoriteLayouts: expected string[] or null');
   }
-  if (!isOptionalTheme(value.theme)) {
-    errors.push('theme: expected "light" or "dark" or null');
-  }
   if (!isOptionalBoolean(value.searchBarsHidden)) {
     errors.push('searchBarsHidden: expected boolean or null');
   }
@@ -246,7 +238,6 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
 
   const activePanelId = activePanelIdValue as string;
   const favoriteLayouts = normalizeOptional(value.favoriteLayouts as string[] | null | undefined);
-  const theme = normalizeOptional(value.theme as Theme | null | undefined);
   const searchBarsHidden = normalizeOptional(value.searchBarsHidden as boolean | null | undefined);
 
   const workspace: Workspace = {
@@ -256,7 +247,6 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     activeTabIds: normalizedActiveTabIds,
     activePanelId,
     favoriteLayouts,
-    theme,
     searchBarsHidden,
   };
 

@@ -85,7 +85,6 @@ export type Workspace = {
   activeTabIds: Record<PanelId, TabId>;
   activePanelId: PanelId;
   favoriteLayouts?: string[];
-  theme?: Theme;
   searchBarsHidden?: boolean;
 };
 

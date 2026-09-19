@@ -238,6 +238,21 @@ Prism exposes two properties for reading and writing workspace state:
 - ``readWorkspace`` — Read-only property containing the current workspace state (use as ``Input`` or ``State`` in callbacks)
 - ``updateWorkspace`` — Write-only property for programmatically updating the workspace (use as ``Output`` in callbacks)
 
+``readWorkspace`` is a dict with the keys ``tabs``, ``panel``, ``panelTabs`` (the
+tab order within each panel), ``activeTabIds``, ``activePanelId``,
+``favoriteLayouts`` and ``searchBarsHidden``. It is refreshed at most every
+500 ms. ``updateWorkspace`` accepts the same keys; missing keys keep their current
+value, each tab's ``panelId`` decides which panel it belongs to, and the order in
+``panelTabs`` is preserved.
+
+.. warning::
+
+   Wiring ``Input('workspace', 'readWorkspace')`` straight into
+   ``Output('workspace', 'updateWorkspace')`` is a wasted round trip: Prism skips
+   a sync whose workspace is unchanged, so a plain echo stops after one pass. A
+   callback that returns a *different* workspace on every pass, however,
+   ping-pongs with Prism every 500 ms.
+
 Reading State with Actions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

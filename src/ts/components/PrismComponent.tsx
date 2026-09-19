@@ -96,7 +96,8 @@ export type PrismProps = {
   size?: Size;
 
   /**
-   * Maximum number of tabs allowed per panel.
+   * Maximum number of tabs allowed in the whole workspace, counting every
+   * panel together (not per panel). Values below 1 mean unlimited. Default 16.
    */
   maxTabs?: number;
 
@@ -106,9 +107,11 @@ export type PrismProps = {
   searchBarPlaceholder?: string;
 
   /**
-   * Timeout in seconds for layout loading.
-   * If children don't arrive within this time after a layout is selected,
-   * an error state is shown. Default is 30 seconds.
+   * Timeout in seconds for layout loading. Default 30. The browser shows a
+   * timeout card if a tab's content has not arrived within this time, and the
+   * render callback gives up on layout callbacks that run longer and renders an
+   * error tab instead (async layouts in every app; synchronous layouts only in
+   * apps created with use_async=True).
    */
   layoutTimeout?: number;
 
@@ -118,14 +121,21 @@ export type PrismProps = {
   statusBarPosition?: StatusBarPosition;
 
   /**
-   * Read-only workspace state from Dash.
-   * Updates trigger re-hydration of the internal state.
+   * Current workspace state, written by Prism for Dash (Prism -> Dash).
+   * Use it as an Input or State in callbacks; Prism never reads it back.
+   * Keys: tabs, panel, panelTabs (tab order per panel), activeTabIds,
+   * activePanelId, favoriteLayouts, searchBarsHidden. It is updated at most
+   * every 500 ms after the first sync.
    */
-  readWorkspace?: Workspace; // OUTPUT: Prism -> Dash (current state)
+  readWorkspace?: Workspace;
 
   /**
-   * Write-only output property.
-   * Workspace state changes are written here for Dash callbacks.
+   * Workspace state pushed from Dash into Prism (Dash -> Prism). Set it from a
+   * callback Output. Partial updates are merged into the current workspace and
+   * healed: tab.panelId decides which panel a tab belongs to and the order in
+   * panelTabs is kept. Feeding readWorkspace straight back in is a wasted round
+   * trip (Prism skips a sync whose workspace is unchanged), but a callback that
+   * returns a different workspace every time ping-pongs with Prism every 500 ms.
    */
   updateWorkspace?: Partial<Workspace>;
 

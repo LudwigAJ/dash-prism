@@ -55,7 +55,8 @@ class Prism(PrismComponent):
         Options: ``'sm'`` (small), ``'md'`` (medium, default), ``'lg'`` (large).
         Defaults to ``'md'``.
     :type size: str
-    :param maxTabs: Maximum number of tabs allowed in the workspace. Prevents users
+    :param maxTabs: Maximum number of tabs allowed in the whole workspace,
+        counting every panel together (not per panel). Prevents users
         from creating too many tabs which could impact performance. Values less than
         ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``.
     :type maxTabs: int
@@ -101,14 +102,20 @@ class Prism(PrismComponent):
         new tabs instantly show the layout dropdown for quick selection. If
         ``False``, users must click the SearchBar to see available layouts.
     :type newTabOpensDropdown: bool
-    :param readWorkspace: Read-only workspace state. Use as an ``Input`` or
-        ``State`` in Dash callbacks to react to workspace changes.
-        The workspace dict contains: ``tabs`` (list of dict), ``panel`` (dict),
-        ``activePanelId`` (str), ``activeTabIds`` (dict).
+    :param readWorkspace: Current workspace state, written by Prism for Dash.
+        Use it as an ``Input`` or ``State`` in callbacks; Prism never reads it
+        back. Keys: ``tabs`` (list of dict), ``panel`` (dict), ``panelTabs``
+        (dict, tab order per panel), ``activeTabIds`` (dict), ``activePanelId``
+        (str), ``favoriteLayouts`` (list of str), ``searchBarsHidden`` (bool).
+        Updated at most every 500 ms after the first sync.
     :type readWorkspace: dict or None
-    :param updateWorkspace: Write-only workspace state. Use as an ``Output``
-        in Dash callbacks to programmatically update the workspace.
-        Partial updates are supported.
+    :param updateWorkspace: Workspace state pushed from Dash into Prism. Use it as
+        an ``Output`` in callbacks. Partial updates are merged into the current
+        workspace and healed: each tab's ``panelId`` decides which panel it belongs
+        to and the order in ``panelTabs`` is kept. Feeding ``readWorkspace`` straight
+        back in is a wasted round trip (Prism skips a sync whose workspace is
+        unchanged), but a callback that returns a different workspace every time
+        ping-pongs with Prism every 500 ms.
     :type updateWorkspace: dict or None
     :param children: Child components (typically :class:`dash_prism.PrismContent` instances).
         **Advanced** - Usually managed automatically by :func:`dash_prism.init`.
