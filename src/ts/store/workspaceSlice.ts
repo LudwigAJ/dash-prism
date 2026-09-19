@@ -714,17 +714,36 @@ const workspaceSlice = createSlice({
         state.tabs = validTabs;
       }
 
-      // 2. Rebuild panelTabs from tabs to ensure consistency
-      const rebuiltPanelTabs: Record<PanelId, TabId[]> = {};
+      // 2. Heal panelTabs without discarding tab order.
+      // panelTabs is the source of truth for the order of tabs within a panel:
+      // reorderTab only touches panelTabs, while `tabs` stays in creation order.
+      // Rebuilding panelTabs from `tabs` (the previous behaviour) therefore reset
+      // every user reorder on each updateWorkspace, including a plain
+      // readWorkspace -> updateWorkspace echo. Instead keep the incoming/current
+      // order per panel, drop ids that no longer exist, belong to another panel
+      // (tab.panelId is authoritative) or are duplicated, and append tabs that
+      // are missing from their panel's list.
+      const tabById = new Map(state.tabs.map((tab) => [tab.id, tab]));
+      const healedPanelTabs: Record<PanelId, TabId[]> = {};
       for (const panelId of leafPanelIds) {
-        rebuiltPanelTabs[panelId] = [];
+        const seen = new Set<TabId>();
+        // updateWorkspace payloads are untyped at runtime: tolerate a missing or
+        // malformed per-panel list by rebuilding that panel from `tabs` order.
+        const incoming = state.panelTabs[panelId];
+        healedPanelTabs[panelId] = (Array.isArray(incoming) ? incoming : []).filter((tabId) => {
+          const tab = tabById.get(tabId);
+          if (!tab || tab.panelId !== panelId || seen.has(tabId)) return false;
+          seen.add(tabId);
+          return true;
+        });
       }
       for (const tab of state.tabs) {
-        if (rebuiltPanelTabs[tab.panelId]) {
-          rebuiltPanelTabs[tab.panelId].push(tab.id);
+        const list = healedPanelTabs[tab.panelId];
+        if (list && !list.includes(tab.id)) {
+          list.push(tab.id);
         }
       }
-      state.panelTabs = rebuiltPanelTabs;
+      state.panelTabs = healedPanelTabs;
 
       // 3. Validate and fix activeTabIds
       const tabIdSet = new Set(state.tabs.map((t) => t.id));

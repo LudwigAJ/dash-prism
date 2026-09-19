@@ -943,7 +943,7 @@ describe('workspaceSlice', () => {
       expect(getWorkspace(store).tabs[0].id).toBe('tab-1');
     });
 
-    it('rebuilds panelTabs to match tabs array', () => {
+    it('replaces stale ids in panelTabs with the tabs that exist', () => {
       const state = createTestState();
       const store = createTestStore(state);
       const panelId = state.panel.id;
@@ -960,8 +960,180 @@ describe('workspaceSlice', () => {
         })
       );
 
-      // panelTabs should be rebuilt from tabs
+      // The unknown id is dropped and the real tab is appended
       expect(getWorkspace(store).panelTabs[panelId]).toEqual(['new-tab']);
+    });
+
+    describe('panelTabs order (02 A-3)', () => {
+      /** Three tabs in one panel, created a-b-c but displayed c-a-b. */
+      function createReorderedState(): WorkspaceState {
+        const panelId = 'panel-1' as PanelId;
+        const mk = (id: string, createdAt: number) => ({
+          id: id as TabId,
+          name: id,
+          panelId,
+          createdAt,
+          mountKey: `m-${id}`,
+        });
+        return {
+          tabs: [mk('tab-a', 1), mk('tab-b', 2), mk('tab-c', 3)],
+          panel: { id: panelId, order: 0, direction: 'horizontal', children: [], size: '100%' },
+          panelTabs: { [panelId]: ['tab-c', 'tab-a', 'tab-b'] as TabId[] },
+          activeTabIds: { [panelId]: 'tab-c' as TabId },
+          activePanelId: panelId,
+          favoriteLayouts: [],
+          searchBarsHidden: false,
+        };
+      }
+
+      it('keeps the order from the payload when a readWorkspace snapshot is echoed back', () => {
+        const store = createTestStore(createReorderedState());
+        const snapshot = getWorkspace(store);
+
+        // What a Dash callback wired Input('readWorkspace') -> Output('updateWorkspace') sends
+        store.dispatch(
+          syncWorkspace({
+            tabs: snapshot.tabs,
+            panel: snapshot.panel,
+            panelTabs: snapshot.panelTabs,
+            activeTabIds: snapshot.activeTabIds,
+            activePanelId: snapshot.activePanelId,
+          })
+        );
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-c', 'tab-a', 'tab-b']);
+        expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-c');
+      });
+
+      it('survives a real reorderTab followed by a readWorkspace/updateWorkspace round trip', () => {
+        const store = createTestStore(createTwoPanelState());
+        store.dispatch(reorderTab({ panelId: 'panel-1' as PanelId, fromIndex: 0, toIndex: 1 }));
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
+
+        const snapshot = getWorkspace(store);
+        store.dispatch(syncWorkspace({ ...snapshot }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
+        expect(getWorkspace(store).panelTabs['panel-2']).toEqual(['tab-3']);
+      });
+
+      it('keeps the current order when the payload does not include panelTabs', () => {
+        const store = createTestStore(createReorderedState());
+
+        store.dispatch(syncWorkspace({ searchBarsHidden: true }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-c', 'tab-a', 'tab-b']);
+      });
+
+      it('keeps the current order when only tabs are sent, appending new tabs at the end', () => {
+        const state = createReorderedState();
+        const store = createTestStore(state);
+        const panelId = state.panel.id;
+
+        store.dispatch(
+          syncWorkspace({
+            tabs: [
+              ...state.tabs,
+              { id: 'tab-d' as TabId, name: 'tab-d', panelId, createdAt: 4, mountKey: 'm-d' },
+            ],
+          })
+        );
+
+        expect(getWorkspace(store).panelTabs[panelId]).toEqual([
+          'tab-c',
+          'tab-a',
+          'tab-b',
+          'tab-d',
+        ]);
+      });
+
+      it('appends tabs missing from their panel list without reordering the rest', () => {
+        const state = createReorderedState();
+        state.panelTabs = { 'panel-1': ['tab-c', 'tab-a'] as TabId[] }; // tab-b missing
+        const store = createTestStore(state);
+
+        store.dispatch(syncWorkspace({ panelTabs: state.panelTabs }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-c', 'tab-a', 'tab-b']);
+      });
+
+      it('drops ids that are unknown, duplicated, or belong to another panel', () => {
+        const store = createTestStore(createTwoPanelState());
+
+        store.dispatch(
+          syncWorkspace({
+            panelTabs: {
+              // tab-3 lives in panel-2 (tab.panelId wins), ghost does not exist, tab-1 twice
+              'panel-1': ['tab-3', 'ghost', 'tab-2', 'tab-1', 'tab-1'] as TabId[],
+              'panel-2': [] as TabId[],
+            },
+          })
+        );
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
+        expect(getWorkspace(store).panelTabs['panel-2']).toEqual(['tab-3']);
+      });
+
+      it('tolerates a non-array per-panel value from updateWorkspace', () => {
+        const store = createTestStore(createReorderedState());
+
+        expect(() =>
+          store.dispatch(syncWorkspace({ panelTabs: { 'panel-1': 'tab-a' as never } }))
+        ).not.toThrow();
+
+        // Malformed list: that panel is rebuilt from tabs order
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-a', 'tab-b', 'tab-c']);
+      });
+
+      it('builds the list for a panel missing from the payload from tabs order', () => {
+        const store = createTestStore(createTwoPanelState());
+
+        store.dispatch(syncWorkspace({ panelTabs: { 'panel-1': ['tab-2', 'tab-1'] as TabId[] } }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
+        expect(getWorkspace(store).panelTabs['panel-2']).toEqual(['tab-3']);
+      });
+
+      it('drops panelTabs keys that are not leaf panels', () => {
+        const store = createTestStore(createTwoPanelState());
+
+        store.dispatch(
+          syncWorkspace({
+            panelTabs: {
+              'panel-1': ['tab-2', 'tab-1'],
+              'panel-2': ['tab-3'],
+              'container-1': ['tab-1'],
+              'gone-panel': ['tab-3'],
+            } as Record<PanelId, TabId[]>,
+          })
+        );
+
+        expect(Object.keys(getWorkspace(store).panelTabs).sort()).toEqual(['panel-1', 'panel-2']);
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
+        expect(getWorkspace(store).panelTabs['panel-2']).toEqual(['tab-3']);
+      });
+
+      it('falls back to the first displayed tab (not the first created) when the active tab disappears', () => {
+        const state = createReorderedState();
+        state.panelTabs = { 'panel-1': ['tab-b', 'tab-c', 'tab-a'] as TabId[] };
+        state.activeTabIds = { 'panel-1': 'tab-b' as TabId };
+        const store = createTestStore(state);
+
+        store.dispatch(syncWorkspace({ tabs: state.tabs.filter((t) => t.id !== 'tab-b') }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-c', 'tab-a']);
+        expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-c');
+      });
+
+      it('removes tabs from panelTabs when they are removed from tabs', () => {
+        const state = createReorderedState();
+        const store = createTestStore(state);
+
+        store.dispatch(syncWorkspace({ tabs: state.tabs.filter((t) => t.id !== 'tab-a') }));
+
+        expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-c', 'tab-b']);
+        expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-c');
+      });
     });
 
     it('fixes activeTabIds referencing non-existent tabs', () => {
