@@ -53,33 +53,48 @@ function collapseEmptyPanel(state: WorkspaceState, panelId: PanelId): boolean {
 // Initial State
 // =============================================================================
 
-const initialPanelId: PanelId = generateShortId();
-const initialTabId: TabId = generateShortId();
+/**
+ * Build a fresh initial workspace state: one panel containing one blank
+ * "New Tab".
+ *
+ * This is a factory rather than a module-level constant on purpose:
+ * - IDs must not be generated while the bundle is evaluating. `generateShortId`
+ *   touches `crypto`, and any failure there would stop `window.dash_prism`
+ *   from ever being defined (02 A-1).
+ * - Every store, and every `resetWorkspace`, must get its own IDs and
+ *   `createdAt`. A module-level constant would make two Prism instances on
+ *   one page share tab/panel IDs, and a reset would reuse the IDs of the
+ *   very first tab, so React would not see a new key (02 A-6).
+ */
+export function createInitialWorkspaceState(): WorkspaceState {
+  const panelId: PanelId = generateShortId();
+  const tabId: TabId = generateShortId();
 
-export const initialWorkspaceState: WorkspaceState = {
-  tabs: [
-    {
-      id: initialTabId,
-      name: 'New Tab',
-      panelId: initialPanelId,
-      layoutId: undefined,
-      createdAt: Date.now(),
-      mountKey: generateShortId(),
+  return {
+    tabs: [
+      {
+        id: tabId,
+        name: 'New Tab',
+        panelId,
+        layoutId: undefined,
+        createdAt: Date.now(),
+        mountKey: generateShortId(),
+      },
+    ],
+    panel: {
+      id: panelId,
+      order: 0,
+      direction: 'horizontal',
+      children: [],
+      size: '100%',
     },
-  ],
-  panel: {
-    id: initialPanelId,
-    order: 0,
-    direction: 'horizontal',
-    children: [],
-    size: '100%',
-  },
-  panelTabs: { [initialPanelId]: [initialTabId] },
-  activeTabIds: { [initialPanelId]: initialTabId },
-  activePanelId: initialPanelId,
-  favoriteLayouts: [],
-  searchBarsHidden: false,
-};
+    panelTabs: { [panelId]: [tabId] },
+    activeTabIds: { [panelId]: tabId },
+    activePanelId: panelId,
+    favoriteLayouts: [],
+    searchBarsHidden: false,
+  };
+}
 
 // =============================================================================
 // Async Thunks (for maxTabs validation)
@@ -213,7 +228,7 @@ export const duplicateTab = createAsyncThunk<
 
 const workspaceSlice = createSlice({
   name: 'workspace',
-  initialState: initialWorkspaceState,
+  initialState: createInitialWorkspaceState,
   reducers: {
     // -------------------------------------------------------------------------
     // Tab Actions (synchronous)
@@ -660,7 +675,7 @@ const workspaceSlice = createSlice({
     // Use dispatch(undo()) from redux-undo instead.
 
     resetWorkspace() {
-      return initialWorkspaceState;
+      return createInitialWorkspaceState();
     },
 
     /**

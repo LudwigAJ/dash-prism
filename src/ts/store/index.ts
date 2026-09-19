@@ -17,7 +17,7 @@ import storage from 'redux-persist/lib/storage';
 import storageSession from 'redux-persist/lib/storage/session';
 import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'redux-undo';
 
-import workspaceReducer, { initialWorkspaceState } from './workspaceSlice';
+import workspaceReducer, { createInitialWorkspaceState } from './workspaceSlice';
 import uiReducer, { initialUiState } from './uiSlice';
 import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
@@ -275,7 +275,7 @@ export const jump = UndoActionCreators.jump;
 // =============================================================================
 
 // Export initial states
-export { initialWorkspaceState, initialUiState };
+export { createInitialWorkspaceState, initialUiState };
 
 // Export slice actions
 export * from './workspaceSlice';

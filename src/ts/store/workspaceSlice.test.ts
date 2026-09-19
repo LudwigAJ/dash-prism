@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
 import workspaceReducer, {
-  initialWorkspaceState,
+  createInitialWorkspaceState,
   addTab,
   removeTab,
   duplicateTab,
@@ -762,7 +762,7 @@ describe('workspaceSlice', () => {
   });
 
   describe('resetWorkspace', () => {
-    it('resets state to initialWorkspaceState', () => {
+    it('resets state to a fresh initial workspace', () => {
       const state = createTwoPanelState();
       state.favoriteLayouts = ['layout-1', 'layout-2'];
       state.searchBarsHidden = true;
@@ -773,6 +773,119 @@ describe('workspaceSlice', () => {
       expect(getWorkspace(store).tabs.length).toBe(1);
       expect(getWorkspace(store).favoriteLayouts).toEqual([]);
       expect(getWorkspace(store).searchBarsHidden).toBe(false);
+    });
+
+    it('generates new tab and panel IDs instead of reusing the initial ones (02 A-6)', () => {
+      // No preloaded state: the reducer builds its own initial state lazily.
+      const store = createTestStore();
+      const before = getWorkspace(store);
+
+      store.dispatch(resetWorkspace());
+      const after = getWorkspace(store);
+
+      expect(after.tabs).toHaveLength(1);
+      expect(after.tabs[0].id).not.toBe(before.tabs[0].id);
+      expect(after.tabs[0].mountKey).not.toBe(before.tabs[0].mountKey);
+      expect(after.panel.id).not.toBe(before.panel.id);
+      expect(after.panelTabs).toEqual({ [after.panel.id]: [after.tabs[0].id] });
+      expect(after.activeTabIds).toEqual({ [after.panel.id]: after.tabs[0].id });
+      expect(after.activePanelId).toBe(after.panel.id);
+    });
+
+    it('resets twice in a row without reusing IDs', () => {
+      const store = createTestStore();
+      store.dispatch(resetWorkspace());
+      const first = getWorkspace(store);
+      store.dispatch(resetWorkspace());
+      const second = getWorkspace(store);
+
+      expect(second.tabs[0].id).not.toBe(first.tabs[0].id);
+      expect(second.panel.id).not.toBe(first.panel.id);
+    });
+  });
+
+  describe('createInitialWorkspaceState', () => {
+    it('returns an internally consistent single-panel, single-tab state', () => {
+      const s = createInitialWorkspaceState();
+
+      expect(s.tabs).toHaveLength(1);
+      expect(s.tabs[0].name).toBe('New Tab');
+      expect(s.tabs[0].layoutId).toBeUndefined();
+      expect(s.tabs[0].panelId).toBe(s.panel.id);
+      expect(s.panel.children).toEqual([]);
+      expect(s.panelTabs).toEqual({ [s.panel.id]: [s.tabs[0].id] });
+      expect(s.activeTabIds).toEqual({ [s.panel.id]: s.tabs[0].id });
+      expect(s.activePanelId).toBe(s.panel.id);
+      expect(s.favoriteLayouts).toEqual([]);
+      expect(s.searchBarsHidden).toBe(false);
+    });
+
+    it('returns fresh objects and fresh IDs on every call', () => {
+      const a = createInitialWorkspaceState();
+      const b = createInitialWorkspaceState();
+
+      expect(a).not.toBe(b);
+      expect(a.tabs[0].id).not.toBe(b.tabs[0].id);
+      expect(a.tabs[0].mountKey).not.toBe(b.tabs[0].mountKey);
+      expect(a.panel.id).not.toBe(b.panel.id);
+    });
+
+    it('computes createdAt at call time, not at module load (02 A-6)', () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(1_000);
+        const a = createInitialWorkspaceState();
+        vi.setSystemTime(2_000);
+        const b = createInitialWorkspaceState();
+
+        expect(a.tabs[0].createdAt).toBe(1_000);
+        expect(b.tabs[0].createdAt).toBe(2_000);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('gives two stores on the same page independent initial IDs', () => {
+      const a = getWorkspace(createTestStore());
+      const b = getWorkspace(createTestStore());
+
+      expect(a.tabs[0].id).not.toBe(b.tabs[0].id);
+      expect(a.panel.id).not.toBe(b.panel.id);
+    });
+
+    it('lets the slice module load when crypto.randomUUID is unavailable (02 A-1)', async () => {
+      // Regression: IDs used to be generated at module scope via crypto.randomUUID(),
+      // which is undefined on plain-HTTP, non-localhost origins, so the bundle threw
+      // while loading and window.dash_prism was never defined.
+      vi.resetModules();
+      vi.stubGlobal('crypto', undefined);
+      try {
+        const mod = await import('./workspaceSlice');
+        const state = mod.createInitialWorkspaceState();
+        expect(state.tabs[0].id).toMatch(/^[0-9a-f]{8}$/);
+        expect(state.panel.id).toMatch(/^[0-9a-f]{8}$/);
+      } finally {
+        vi.unstubAllGlobals();
+        vi.resetModules();
+      }
+    });
+
+    it('never generates IDs while the module is being evaluated (02 A-1 guard)', async () => {
+      // Stricter than the crypto stub above: with the fallback generator in place a
+      // module-scope call would no longer throw, so make the generator itself throw
+      // during module evaluation. Importing must still succeed.
+      vi.resetModules();
+      vi.doMock('@utils/uuid', () => ({
+        generateShortId: () => {
+          throw new Error('generateShortId() called at module scope');
+        },
+      }));
+      try {
+        await expect(import('./workspaceSlice')).resolves.toBeDefined();
+      } finally {
+        vi.doUnmock('@utils/uuid');
+        vi.resetModules();
+      }
     });
   });
 

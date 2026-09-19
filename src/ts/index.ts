@@ -89,7 +89,7 @@ export {
   openSetIconModal,
   closeSetIconModal,
   // Initial states
-  initialWorkspaceState,
+  createInitialWorkspaceState,
   initialUiState,
 } from './store';
 
