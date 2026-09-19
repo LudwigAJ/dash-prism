@@ -56,9 +56,16 @@ class Prism(PrismComponent):
     :param searchBarPlaceholder: Placeholder text shown in the layout search bar.
         Defaults to ``'Search layouts...'``.
     :type searchBarPlaceholder: str
-    :param layoutTimeout: Timeout in seconds for layout loading. If a layout callback
-        doesn't respond within this time, an error state is shown. Defaults to ``30``.
-    :type layoutTimeout: int
+    :param layoutTimeout: Timeout in seconds for layout loading. Defaults to ``30``.
+        Enforced in two places: the browser shows a timeout card if a tab's content
+        has not arrived within this time, and the render callback gives up on layout
+        callbacks that run longer than this and renders an error tab instead. The
+        server-side limit applies to ``async`` layout callbacks in every app, and to
+        synchronous layout callbacks only when the app runs with ``use_async=True``;
+        a synchronous callback in a synchronous app cannot be interrupted. Values that
+        are not finite positive numbers (including ``None``, ``0`` and negatives) fall
+        back to the default on both sides; there is no "unlimited" setting.
+    :type layoutTimeout: float
     :param statusBarPosition: Position of the status bar relative to the workspace.
         Options: ``'top'`` or ``'bottom'``. Defaults to ``'bottom'``.
     :type statusBarPosition: str
@@ -237,7 +244,7 @@ class Prism(PrismComponent):
         initialLayout: str | None = _UNSET,
         newTabOpensDropdown: bool = _UNSET,
         searchBarPlaceholder: str = _UNSET,
-        layoutTimeout: int = _UNSET,
+        layoutTimeout: float = _UNSET,
         # Advanced — typically managed by dash_prism.init()
         children: list[Component] | None = _UNSET,
         serverSessionId: str | None = _UNSET,

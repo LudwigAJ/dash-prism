@@ -391,6 +391,17 @@ the entire workspace. This is a **global** limit, not per-panel.
 - Set to ``0`` (or any value less than ``1``) for unlimited tabs
 - When the limit is reached, new tab actions are blocked with a console warning
 
+Layout Timeout
+^^^^^^^^^^^^^^
+
+``layoutTimeout`` (seconds, default ``30``) bounds how long a tab waits for its
+layout. The browser shows a timeout card when the content has not arrived in
+time, and the render callback stops waiting for a layout callback that runs
+longer than this and renders an error tab instead. The server-side limit
+covers ``async`` layout callbacks in every app and synchronous callbacks in
+apps created with ``use_async=True``; a synchronous callback in a synchronous
+app runs to completion regardless.
+
 Caveats
 -------
 

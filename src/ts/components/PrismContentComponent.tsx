@@ -4,12 +4,15 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
 import type { TabId, LayoutId } from '@types';
 import { DashComponentProps } from 'props';
+import { normalizeLayoutTimeout } from '@utils/dashSpec';
 
 type ContentData = {
   tabId?: TabId;
   layoutId?: LayoutId;
   layoutParams?: Record<string, string>;
   layoutOption?: string;
+  /** Server-side render timeout in seconds (the Prism layoutTimeout prop). */
+  timeout?: number;
 };
 
 type PrismContentProps = {
@@ -18,13 +21,14 @@ type PrismContentProps = {
    */
   children?: React.ReactNode;
   /**
-   * Data props passed from Dash (tabId, layoutId, layoutParams, layoutOption).
+   * Tab request passed to the render callback (tabId, layoutId, layoutParams,
+   * layoutOption, timeout). Set by Prism; not meant to be edited by hand.
    */
   data?: ContentData;
   /**
-   * Timeout in seconds for layout loading.
-   * Only triggers when layoutId is set but children don't arrive.
-   * Default is 30 seconds.
+   * Client-side timeout in seconds for layout loading, set by Prism from its
+   * own layoutTimeout prop. If the rendered content has not arrived within this
+   * time after a layout is selected, a timeout card is shown. Default is 30.
    */
   layoutTimeout?: number;
 } & DashComponentProps;
@@ -43,7 +47,9 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasLayout = Boolean(data?.layoutId);
-  const timeoutMs = layoutTimeout * 1000;
+  // Prism already normalises the value it passes; guard again for standalone use.
+  const effectiveTimeout = normalizeLayoutTimeout(layoutTimeout);
+  const timeoutMs = effectiveTimeout * 1000;
 
   // Reset timeout state when children arrive or layoutId changes
   useEffect(() => {
@@ -61,7 +67,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
     if (hasLayout && !children && loadingState) {
       timeoutRef.current = setTimeout(() => {
         logger.error(
-          `[Prism] Layout loading timed out after ${layoutTimeout}s for layout: ${data?.layoutId}`
+          `[Prism] Layout loading timed out after ${effectiveTimeout}s for layout: ${data?.layoutId}`
         );
         setTimedOut(true);
       }, timeoutMs);
@@ -71,7 +77,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
 
     // Clear timeout if conditions are no longer met
     clearTimeout(timeoutRef.current);
-  }, [hasLayout, children, loadingState, timeoutMs, data?.layoutId]);
+  }, [hasLayout, children, loadingState, timeoutMs, effectiveTimeout, data?.layoutId]);
 
   // ===== STATE 1: Timed out =====
   if (timedOut && !children) {
@@ -84,7 +90,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
-              The layout "{data?.layoutId}" did not respond within {layoutTimeout} seconds.
+              The layout "{data?.layoutId}" did not respond within {effectiveTimeout} seconds.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

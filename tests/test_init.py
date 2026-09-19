@@ -769,3 +769,239 @@ def test_async_render_static_layout(prism_app: Dash) -> None:
 
     assert result is not None
     assert not asyncio.iscoroutine(result)
+
+
+# =============================================================================
+# layoutTimeout plumbing (01 §1.1 / 02 B-3)
+# =============================================================================
+
+
+def test_coerce_timeout_accepts_positive_numbers_and_numeric_strings() -> None:
+    from dash_prism.init import _coerce_timeout
+
+    assert _coerce_timeout(12) == 12.0
+    assert _coerce_timeout(2.5) == 2.5
+    assert _coerce_timeout("7") == 7.0
+    assert _coerce_timeout("0.25") == 0.25
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [None, "abc", "", 0, -1, 0.0, float("inf"), float("nan"), True, False, [], {}, 10**400],
+)
+def test_coerce_timeout_falls_back_to_default(bad: object) -> None:
+    from dash_prism.init import DEFAULT_LAYOUT_TIMEOUT, _coerce_timeout
+
+    assert _coerce_timeout(bad) == DEFAULT_LAYOUT_TIMEOUT
+    assert _coerce_timeout(bad, default=5.0) == 5.0
+
+
+@pytest.mark.parametrize(
+    "content_id, data",
+    [
+        (None, {"layoutId": "x"}),
+        ("prism-content", {"layoutId": "x"}),
+        ({"type": "prism-content", "index": "t1"}, None),
+        ({"type": "prism-content", "index": "t1"}, "not-a-dict"),
+        ({"type": "prism-content", "index": "t1"}, {}),
+        ({"type": "prism-content", "index": "t1"}, {"layoutId": ""}),
+        ({"type": "prism-content", "index": "t1"}, {"layoutId": None}),
+        ({"type": "prism-content"}, {"layoutId": "x"}),
+        ({"type": "prism-content", "index": ""}, {"layoutId": "x"}),
+    ],
+)
+def test_parse_content_request_rejects_malformed_inputs(content_id: object, data: object) -> None:
+    from dash.exceptions import PreventUpdate
+
+    from dash_prism.init import _parse_content_request
+
+    with pytest.raises(PreventUpdate):
+        _parse_content_request(content_id, data)
+
+
+def test_parse_content_request_extracts_fields_and_timeout() -> None:
+    from dash_prism.init import DEFAULT_LAYOUT_TIMEOUT, _parse_content_request
+
+    content_id = {"type": "prism-content", "index": "t1"}
+
+    assert _parse_content_request(
+        content_id,
+        {"layoutId": "home", "layoutParams": {"a": "1"}, "layoutOption": "", "timeout": 12},
+    ) == ("t1", "home", {"a": "1"}, None, 12.0)
+
+    assert _parse_content_request(content_id, {"layoutId": "home"}) == (
+        "t1",
+        "home",
+        None,
+        None,
+        DEFAULT_LAYOUT_TIMEOUT,
+    )
+
+    assert _parse_content_request(
+        content_id, {"layoutId": "chart", "layoutOption": "bar", "timeout": None}
+    ) == ("t1", "chart", None, "bar", DEFAULT_LAYOUT_TIMEOUT)
+
+
+def _error_message(component: object) -> str:
+    """Text of the ``html.Pre`` inside an error component from ``_create_error_component``."""
+    return str(component.children[1].children)  # type: ignore[attr-defined]
+
+
+def _sync_prism_app() -> Dash:
+    """A Dash app forced into sync mode.
+
+    On every supported Dash (>= 3.1.1) use_async defaults to True when the async
+    extras are installed, so the sync render callback must be requested explicitly.
+    """
+    app = Dash(__name__, use_async=False, suppress_callback_exceptions=True)
+    app.layout = html.Div([dash_prism.Prism(id="test-prism", style={})])
+    return app
+
+
+def test_sync_callback_honours_client_timeout_for_async_layouts() -> None:
+    """Regression for 01 §1.1: the sync callback used to ignore data["timeout"]."""
+    import asyncio
+
+    app = _sync_prism_app()
+
+    @dash_prism.register_layout(id="slow-async", name="Slow Async")
+    async def slow_layout():
+        await asyncio.sleep(0.3)
+        return html.Div("done", id="slow-done")
+
+    # Sync mode with an async layout: init() warns, and the callback runs the
+    # layout through asyncio.run(wait_for(...)) with the client's timeout.
+    with pytest.warns(UserWarning, match="async"):
+        dash_prism.init("test-prism", app)
+
+    from dash_prism.init import _render_content_request
+
+    content_id = {"type": "prism-content", "index": "tab-1"}
+
+    timed_out = _render_content_request(content_id, {"layoutId": "slow-async", "timeout": 0.05})
+    assert timed_out.className == "prism-error-tab"
+    assert "timed out after 0.05s" in _error_message(timed_out)
+
+    rendered = _render_content_request(content_id, {"layoutId": "slow-async", "timeout": 5})
+    assert rendered.id == {"type": "slow-done", "index": "tab-1"}
+
+
+def test_sync_callback_uses_default_timeout_when_client_sends_garbage() -> None:
+    import asyncio
+
+    app = _sync_prism_app()
+
+    @dash_prism.register_layout(id="quick-async", name="Quick Async")
+    async def quick_layout():
+        await asyncio.sleep(0.01)
+        return html.Div("ok", id="quick-done")
+
+    with pytest.warns(UserWarning, match="async"):
+        dash_prism.init("test-prism", app)
+
+    from dash_prism.init import _render_content_request
+
+    content_id = {"type": "prism-content", "index": "tab-1"}
+    rendered = _render_content_request(content_id, {"layoutId": "quick-async", "timeout": "abc"})
+    assert rendered.id == {"type": "quick-done", "index": "tab-1"}
+
+
+def test_async_callback_honours_client_timeout() -> None:
+    import asyncio
+
+    app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
+    app.layout = html.Div([dash_prism.Prism(id="async-prism", style={})])
+
+    @dash_prism.register_layout(id="slow-async", name="Slow Async")
+    async def slow_layout():
+        await asyncio.sleep(0.3)
+        return html.Div("done", id="slow-done")
+
+    @dash_prism.register_layout(id="slow-sync", name="Slow Sync")
+    def slow_sync_layout():
+        import time
+
+        # The executor branch is asyncio.wait_for(run_in_executor(...)); on Python
+        # 3.10/3.11 a finished executor future wins over an expired timer, so keep
+        # a wide margin between this sleep and the 0.05 s timeout below.
+        time.sleep(1.0)
+        return html.Div("done", id="slow-sync-done")
+
+    dash_prism.init("async-prism", app)
+
+    from dash_prism.init import _render_content_request_async
+
+    content_id = {"type": "prism-content", "index": "tab-1"}
+
+    for layout_id in ("slow-async", "slow-sync"):
+        timed_out = asyncio.run(
+            _render_content_request_async(content_id, {"layoutId": layout_id, "timeout": 0.05})
+        )
+        assert timed_out.className == "prism-error-tab"
+        assert "timed out after 0.05s" in _error_message(timed_out)
+
+    rendered = asyncio.run(
+        _render_content_request_async(content_id, {"layoutId": "slow-async", "timeout": 5})
+    )
+    assert rendered.id == {"type": "slow-done", "index": "tab-1"}
+
+
+def test_render_content_request_raises_prevent_update_for_bad_input(prism_app: Dash) -> None:
+    import asyncio
+
+    from dash.exceptions import PreventUpdate
+
+    from dash_prism.init import _render_content_request, _render_content_request_async
+
+    with pytest.raises(PreventUpdate):
+        _render_content_request({"type": "prism-content", "index": "t"}, {})
+    with pytest.raises(PreventUpdate):
+        asyncio.run(_render_content_request_async(None, {"layoutId": "x"}))
+
+
+def test_render_callback_is_registered_once(prism_app: Dash) -> None:
+    dash_prism.register_layout(id="static", name="Static", layout=html.Div("s"))
+    dash_prism.init("test-prism", prism_app)
+
+    keys = [k for k in prism_app.callback_map if "prism-content" in k]
+    assert len(keys) == 1
+
+
+def test_registered_sync_callback_passes_client_timeout() -> None:
+    """Regression through the real Dash dispatcher: the registered sync callback
+    must forward data["timeout"] (the wrapper is where 01 §1.1 lived)."""
+    import asyncio
+    import json
+
+    app = _sync_prism_app()
+
+    @dash_prism.register_layout(id="slow-async", name="Slow Async")
+    async def slow_layout():
+        await asyncio.sleep(0.3)
+        return html.Div("done", id="slow-done")
+
+    with pytest.warns(UserWarning, match="async"):
+        dash_prism.init("test-prism", app)
+
+    key = next(k for k in app.callback_map if "prism-content" in k)
+    cid = {"type": "prism-content", "index": "tab-1"}
+    sid = json.dumps(cid, sort_keys=True, separators=(",", ":"))
+    body = {
+        "output": key,
+        "outputs": {"id": cid, "property": "children"},
+        "inputs": [
+            {"id": cid, "property": "id", "value": cid},
+            {
+                "id": cid,
+                "property": "data",
+                "value": {"tabId": "tab-1", "layoutId": "slow-async", "timeout": 0.05},
+            },
+        ],
+        "changedPropIds": [f"{sid}.data"],
+        "state": [],
+    }
+    resp = app.server.test_client().post("/_dash-update-component", json=body)
+    text = resp.get_data(as_text=True)
+    assert resp.status_code == 200
+    assert "timed out after 0.05s" in text
+    assert "slow-done" not in text

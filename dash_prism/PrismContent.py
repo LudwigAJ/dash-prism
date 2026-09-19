@@ -28,10 +28,13 @@ class PrismContent(PrismContentComponent):
     :type children: dash.development.base_component.Component | list | str | int | float | None
     :param id: Pattern-matching Dash ID for the tab content host.
     :type id: str | dict | None
-    :param data: Tab and layout metadata passed from Prism to the render callback.
+    :param data: Tab request passed from Prism to the render callback. Keys:
+        ``tabId``, ``layoutId``, ``layoutParams``, ``layoutOption`` and
+        ``timeout`` (seconds, mirrors ``layoutTimeout``).
     :type data: dict or None
-    :param layoutTimeout: Timeout in seconds for layout loading. Defaults to ``30``.
-    :type layoutTimeout: int or float
+    :param layoutTimeout: Client-side timeout in seconds for layout loading.
+        Set by Prism from its own ``layoutTimeout`` prop. Defaults to ``30``.
+    :type layoutTimeout: float
     """
 
     # Match the React export used by WorkspaceView's ExternalWrapper spec.
@@ -42,7 +45,7 @@ class PrismContent(PrismContentComponent):
         children: Component | list[Component] | str | int | float | None = _UNSET,
         id: str | dict[str, Any] | None = _UNSET,
         data: dict[str, Any] | None = _UNSET,
-        layoutTimeout: int | float = _UNSET,
+        layoutTimeout: float = _UNSET,
         **kwargs: Any,
     ):
         _locals = locals()

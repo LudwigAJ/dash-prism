@@ -12,36 +12,12 @@ import { InfoModal } from '@components/modals/InfoModal';
 import { SetIconModal } from '@components/modals/SetIconModal';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import type { Tab, DashComponent, DashComponentApi } from '@types';
+import { buildDashSpec } from '@utils/dashSpec';
 import { useAppDispatch, useAppSelector, selectTabs, selectPanel, setTabIcon } from '@store';
 
 // =============================================================================
 // DashContentRenderer - Memoized component that renders Dash layout content
 // =============================================================================
-
-function buildDashSpec(
-  id: string,
-  layoutId: string | undefined,
-  layoutParams: Record<string, string> | undefined,
-  layoutOption: string | undefined,
-  timeout: number
-): DashComponent {
-  return {
-    namespace: 'dash_prism',
-    type: 'PrismContent',
-    props: {
-      // CRITICAL: ID must be an OBJECT, not stringified!
-      id: { type: 'prism-content', index: id },
-      data: {
-        tabId: id,
-        layoutId,
-        // Keep undefined for absent values (consistent with Tab type)
-        layoutParams,
-        layoutOption,
-        timeout,
-      },
-    },
-  };
-}
 
 /**
  * Memoized Dash content renderer.
