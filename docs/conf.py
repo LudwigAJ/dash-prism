@@ -1,12 +1,34 @@
 import os
+import re
 import sys
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 sys.path.insert(0, os.path.abspath(".."))
 
 project = "Dash Prism"
 copyright = "2026, Ludwig Jonsson"
 author = "Ludwig Jonsson"
-release = "0.9.11"
+
+
+def _read_release() -> str:
+    """The version lives in pyproject.toml only (package.json must match; CI checks).
+
+    Read it from the checkout when building docs from source, and fall back to
+    the installed package metadata when the docs are built from a wheel.
+    """
+    pyproject = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
+    if os.path.exists(pyproject):
+        with open(pyproject, encoding="utf-8") as fh:
+            match = re.search(r'^version\s*=\s*"([^"]+)"', fh.read(), re.MULTILINE)
+        if match:
+            return match.group(1)
+    try:
+        return _pkg_version("dash_prism")
+    except PackageNotFoundError:
+        raise RuntimeError("cannot determine the dash_prism version") from None
+
+
+release = _read_release()
 
 extensions = [
     "sphinx.ext.autodoc",

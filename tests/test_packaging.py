@@ -4,6 +4,7 @@ Regression tests for packaging and documentation claims (01 §4, §6).
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -82,3 +83,23 @@ def test_removed_public_helpers_are_gone() -> None:
 
     assert not hasattr(dash_prism, "render_layout_for_tab")
     assert not hasattr(dash_prism.utils, "render_layout_for_tab")
+
+
+def _pyproject_version() -> str:
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    assert match, "pyproject.toml must declare [project].version"
+    return match.group(1)
+
+
+def test_package_json_version_matches_pyproject() -> None:
+    """The JS bundle and the Python package are released together (00 §2.7)."""
+    package_json = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    assert package_json["version"] == _pyproject_version()
+
+
+def test_docs_do_not_hardcode_the_version() -> None:
+    """docs/conf.py derives `release` from the package; no third copy to keep in sync."""
+    conf = (ROOT / "docs" / "conf.py").read_text(encoding="utf-8")
+    assert not re.search(r'^release\s*=\s*"', conf, re.MULTILINE)
+    assert "_read_release()" in conf

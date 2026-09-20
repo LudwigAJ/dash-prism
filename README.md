@@ -80,7 +80,7 @@ Dash Prism supports both light and dark themes, so the workspace adapts to your 
 
 ## Installation
 
-**Requirements:** Python 3.10+, Dash 3.1.1 – 4.4.x
+**Requirements:** Python 3.10+, Dash 3.1.1 – 4.4.x, pydantic 2.10+
 
 ```bash
 pip install dash-prism
@@ -112,6 +112,37 @@ dash_prism.init('workspace', app)
 if __name__ == '__main__':
     app.run(debug=True)
 ```
+
+## Configuration
+
+Every behavioural knob is a keyword argument of `dash_prism.Prism`; all of them
+can also be driven from Dash callbacks (`Output('workspace', '<prop>')`).
+
+| Prop | Default | What it does |
+|---|---|---|
+| `theme` | `'light'` | `'light'` or `'dark'` colour scheme |
+| `size` | `'md'` | Density preset: `'sm'`, `'md'`, `'lg'` |
+| `maxTabs` | `16` | Tab limit for the whole workspace; `< 1` = unlimited. Can be changed at any time |
+| `maxPanels` | `20` | Split limit; `1` disables splitting, `< 1` = unlimited |
+| `persistence` / `persistence_type` | `False` / `'memory'` | Save the workspace to `'local'` or `'session'` storage (set both) |
+| `initialLayout` | `None` | Layout to open in the first tab of a fresh workspace |
+| `emptyTabView` | `'layouts'` | What an empty tab shows: `'layouts'` (cards), `'hint'` (shortcut hint) or `'none'` |
+| `newTabOpensDropdown` | `True` | Open the layout search when a new tab is created |
+| `showStatusBar` / `statusBarPosition` | `True` / `'bottom'` | Status bar visibility and side |
+| `statusBarItems` | all | Ordered subset of `reset`, `help`, `undo`, `mode`, `panels`, `tab`, `count`, `updated` |
+| `searchBarPlaceholder` | `'Search layouts...'` | Placeholder text of the layout search |
+| `enableKeyboardShortcuts` | `True` | Keyboard shortcuts and their help section |
+| `enableShareLinks` | `True` | `#p:` share links (context menu item and URL listener) |
+| `layoutTimeout` | `30` | Seconds a layout may take to render before the tab shows a timeout card |
+| `actions` | `[]` | `dash_prism.Action` buttons in the status bar that fire Dash callbacks |
+
+`id`, `persistence` and `persistence_type` are read when the component mounts;
+changing them remounts the workspace. Layout parameters can be typed and
+validated with `typing.Annotated` + `dash_prism.Param`, or with a pydantic
+model. See the
+[user guide](https://ludwigaj.github.io/dash-prism/user-guide.html) for every
+option and [CHANGELOG.md](https://github.com/LudwigAJ/dash-prism/blob/main/CHANGELOG.md)
+for release notes.
 
 ## Development
 
