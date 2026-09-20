@@ -43,6 +43,8 @@ type ConfigContextValue = {
   emptyTabView: EmptyTabView;
   /** Whether Prism's keyboard shortcuts are installed (default: true) */
   enableKeyboardShortcuts: boolean;
+  /** Whether share links can be created and are read from the URL hash (default: true) */
+  enableShareLinks: boolean;
   /** Timeout in seconds for layout loading (default: 30) */
   layoutTimeout: number;
   /** Dash setProps callback for syncing state to Dash */
@@ -73,6 +75,7 @@ type ConfigProviderProps = {
   newTabOpensDropdown?: boolean;
   emptyTabView?: EmptyTabView;
   enableKeyboardShortcuts?: boolean;
+  enableShareLinks?: boolean;
   layoutTimeout?: number;
   setProps?: (props: Record<string, unknown>) => void;
 };
@@ -95,6 +98,7 @@ export function ConfigProvider({
   newTabOpensDropdown = true,
   emptyTabView = 'layouts',
   enableKeyboardShortcuts = true,
+  enableShareLinks = true,
   layoutTimeout = 30,
   setProps,
 }: ConfigProviderProps) {
@@ -116,6 +120,7 @@ export function ConfigProvider({
       newTabOpensDropdown,
       emptyTabView,
       enableKeyboardShortcuts,
+      enableShareLinks,
       layoutTimeout,
       setProps,
     }),
@@ -136,6 +141,7 @@ export function ConfigProvider({
       newTabOpensDropdown,
       emptyTabView,
       enableKeyboardShortcuts,
+      enableShareLinks,
       layoutTimeout,
       setProps,
     ]

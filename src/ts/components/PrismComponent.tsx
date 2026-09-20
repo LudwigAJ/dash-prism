@@ -209,6 +209,14 @@ export type PrismProps = {
   enableKeyboardShortcuts?: boolean;
 
   /**
+   * Whether users can copy a share link for a tab from its context menu and
+   * whether Prism opens tabs from "#p:" share hashes in the page URL. Set to
+   * false for apps that must not expose deep links or that use the URL hash
+   * themselves. Default true.
+   */
+  enableShareLinks?: boolean;
+
+  /**
    * CSS class name(s) to add to the root container.
    */
   className?: string;
@@ -413,6 +421,7 @@ export function Prism({
   newTabOpensDropdown = true,
   emptyTabView = 'layouts',
   enableKeyboardShortcuts = true,
+  enableShareLinks = true,
   updateWorkspace,
   className,
   style,
@@ -481,6 +490,7 @@ export function Prism({
           newTabOpensDropdown={newTabOpensDropdown}
           emptyTabView={emptyTabView}
           enableKeyboardShortcuts={enableKeyboardShortcuts}
+          enableShareLinks={enableShareLinks}
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >

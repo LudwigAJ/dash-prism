@@ -33,7 +33,7 @@ export type HelpModalProps = {
  * NOT in Redux (see Reversibility Philosophy section).
  */
 export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalProps) {
-  const { enableKeyboardShortcuts } = useConfig();
+  const { enableKeyboardShortcuts, enableShareLinks } = useConfig();
   // Platform detection for keyboard shortcuts
   const isMac = useMemo(
     () => typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform),
@@ -205,10 +205,12 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
             <p className="text-muted-foreground text-sm">
               <strong className="text-foreground">Locked tabs</strong> cannot be closed or renamed
             </p>
-            <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Share</strong> a tab to copy a link that opens the
-              same layout
-            </p>
+            {enableShareLinks && (
+              <p className="text-muted-foreground text-sm">
+                <strong className="text-foreground">Share</strong> a tab to copy a link that opens
+                the same layout
+              </p>
+            )}
           </div>
 
           <h4 className={sectionTitleClass}>Panel Management</h4>

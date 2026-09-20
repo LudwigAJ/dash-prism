@@ -129,6 +129,11 @@ class Prism(PrismComponent):
         shortcuts; the shortcut hints in the context menu, the empty-tab hint and
         the help dialog are hidden too. Defaults to ``True``.
     :type enableKeyboardShortcuts: bool
+    :param enableShareLinks: Whether users can copy a share link for a tab from its
+        context menu and whether Prism opens tabs from ``#p:`` share hashes in the
+        page URL on load. Set to ``False`` for apps that must not expose deep links
+        or that use the URL hash themselves. Defaults to ``True``.
+    :type enableShareLinks: bool
     :param readWorkspace: Current workspace state, written by Prism for Dash.
         Use it as an ``Input`` or ``State`` in callbacks; Prism never reads it
         back. Keys: ``tabs`` (list of dict), ``panel`` (dict), ``panelTabs``
@@ -289,6 +294,7 @@ class Prism(PrismComponent):
         newTabOpensDropdown: bool = _UNSET,
         emptyTabView: Literal["layouts", "hint", "none"] = _UNSET,
         enableKeyboardShortcuts: bool = _UNSET,
+        enableShareLinks: bool = _UNSET,
         searchBarPlaceholder: str = _UNSET,
         layoutTimeout: float = _UNSET,
         # Advanced — typically managed by dash_prism.init()

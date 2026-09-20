@@ -101,7 +101,7 @@ export function useShareLinks() {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const activePanelId = useAppSelector(selectActivePanelId);
-  const { registeredLayouts, maxTabs } = useConfig();
+  const { registeredLayouts, maxTabs, enableShareLinks } = useConfig();
 
   // =========================================================================
   // Generate Share Link (Pure Function - no state change)
@@ -275,17 +275,19 @@ export function useShareLinks() {
 
   // Listen for hash changes (user pastes link while app is open)
   useEffect(() => {
+    if (!enableShareLinks) return undefined;
     const handleHashChange = () => processShareHash();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [processShareHash]);
+  }, [processShareHash, enableShareLinks]);
 
   // Process hash on mount (user opens share link directly)
   useEffect(() => {
+    if (!enableShareLinks) return undefined;
     const timer = setTimeout(processShareHash, 100);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount
+  }, [enableShareLinks]); // Only on mount (and if the prop flips)
 
   return {
     generateShareLink,

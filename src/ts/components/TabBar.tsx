@@ -117,7 +117,7 @@ const TabItem = memo(function TabItem({
 }: TabItemProps) {
   // Now useLoading is called at component top-level (not in a loop)
   const ctx = window.dash_component_api?.useDashContext?.();
-  const { componentId = 'prism', enableKeyboardShortcuts } = useConfig();
+  const { componentId = 'prism', enableKeyboardShortcuts, enableShareLinks } = useConfig();
   // Use componentId from config instead of hard-coded 'prism'
   const componentPath = useMemo(
     () => makeComponentPath(componentId, tab.id),
@@ -320,8 +320,8 @@ const TabItem = memo(function TabItem({
           Info
         </ContextMenuItem>
 
-        {/* Share - only available if tab has a layoutId */}
-        {tab.layoutId && (
+        {/* Share - only available if tab has a layoutId and share links are enabled */}
+        {enableShareLinks && tab.layoutId && (
           <ContextMenuItem data-testid="prism-context-menu-share" onSelect={() => onShareTab(tab)}>
             Share
           </ContextMenuItem>

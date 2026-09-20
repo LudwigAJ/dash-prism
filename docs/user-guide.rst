@@ -414,6 +414,7 @@ Configuration
        statusBarItems=['reset', 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'],
        emptyTabView='layouts',  # 'layouts' | 'hint' | 'none'
        enableKeyboardShortcuts=True,  # False if they clash with your app's shortcuts
+       enableShareLinks=True,   # False to disable tab share links and '#p:' hashes
    )
 
 Tab Limits
@@ -456,6 +457,15 @@ favorites first. ``emptyTabView`` changes that body:
 the tab body, the second whether the search bar dropdown opens for a new tab.
 ``emptyTabView='none'`` together with ``newTabOpensDropdown=False`` leaves a new
 tab with no visible cue, so that combination emits a ``UserWarning``.
+
+Share Links
+^^^^^^^^^^^
+
+The tab context menu offers **Share**, which copies a link that reopens the same
+layout (with its parameters) in a new tab; the link carries the layout in a
+``#p:`` hash that Prism reads on load and on every hash change.
+``enableShareLinks=False`` removes the menu item and ignores such hashes, for
+apps that must not expose deep links or that use the URL hash themselves.
 
 Layout Timeout
 ^^^^^^^^^^^^^^
