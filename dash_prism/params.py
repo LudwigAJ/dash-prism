@@ -334,21 +334,23 @@ def _strip_optional(tp: Any) -> tuple[Any, bool]:
     return tp, False
 
 
-def _optional(tp: Any) -> Any:
-    """Return ``Optional[tp]``, or ``tp`` unchanged if typing refuses the union.
+def _nullable_choice_type(choices: Sequence[Any]) -> Any:
+    """Build ``Optional[Literal[*choices]]`` by whichever route typing allows.
 
     Python 3.10 deduplicates a union's members by hashing them, so a ``Literal``
-    synthesised from unhashable choices (a list, a dict) raises ``TypeError``
-    here; 3.11 added a fallback and accepts it. This happens outside pydantic's
-    reach, and registration must not fail because a signature defeats typing, so
-    the non-null type is kept -- which is what such a parameter got anyway
-    before nullability was preserved at all.
+    of unhashable choices (a list, a dict) cannot go inside ``Optional`` there
+    at all; 3.11 added a fallback and takes it. ``Literal`` itself tolerates
+    unhashable members on every supported version, so express the blank as a
+    ``None`` member instead and the parameter stays nullable everywhere.
     """
+    literal = Literal[tuple(choices)]  # type: ignore[valid-type]
     try:
-        return typing.Optional[tp]
+        return typing.Optional[literal]
     except TypeError:
-        logger.debug("Could not make %r optional; keeping it non-null.", tp)
-        return tp
+        logger.debug(
+            "typing refused Optional[%r]; expressing the blank as a Literal member.", literal
+        )
+        return Literal[tuple([*choices, None])]  # type: ignore[valid-type]
 
 
 def _absorb_constraints(obj: Any, merged: dict[str, Any]) -> None:
@@ -803,14 +805,16 @@ class PydanticValidator:
             base, _ = _unwrap_annotated(tp)
             inner, inner_nullable = _strip_optional(base)
             if p.meta.choices is not None and get_origin(inner) is not Literal:
-                tp = Literal[tuple(p.meta.choices)]  # type: ignore[valid-type]
-                if inner_nullable:
-                    # describe_type reports such a parameter nullable, so the
-                    # search bar offers a blank and prepare_client_params turns
-                    # it into None. Rebuilding the type from the choices alone
-                    # would drop the Optional and reject that None, leaving the
-                    # user no input that could succeed except picking a choice.
-                    tp = _optional(tp)
+                # describe_type reports such a parameter nullable, so the search
+                # bar offers a blank and prepare_client_params turns it into
+                # None. Rebuilding the type from the choices alone would drop
+                # the Optional and reject that None, leaving the user no input
+                # that could succeed except picking a choice.
+                tp = (
+                    _nullable_choice_type(p.meta.choices)
+                    if inner_nullable
+                    else Literal[tuple(p.meta.choices)]  # type: ignore[valid-type]
+                )
             field_kwargs = p.meta.as_field_kwargs()
             if describe_type(tp)[0] == "unknown":
                 # pydantic cannot build a schema for an arbitrary class (a

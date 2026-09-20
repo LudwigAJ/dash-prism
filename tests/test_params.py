@@ -335,32 +335,50 @@ def test_required_param_choices_still_reject_a_blank():
     assert [e.field for e in exc.value.errors] == ["ticker"]
 
 
-def test_optional_wrap_gives_up_instead_of_raising(monkeypatch):
-    """``typing.Optional[...]`` raises for members it cannot hash.
+class _RefusesTheUnion:
+    """Stands in for Python 3.10's ``typing``, which cannot put an unhashable
+    ``Literal`` inside a union."""
 
-    A Literal built from unhashable choices is exactly that on Python 3.10,
-    which hashes a union's members to deduplicate them; 3.11 added a fallback,
-    so the refusal has to be injected to test the guard on any version. The
-    wrap happens outside the guard that keeps a signature pydantic cannot model
-    from aborting the import of the whole app, so it needs one of its own.
-    """
-    assert P._optional(Literal["a", "b"]) == Optional[Literal["a", "b"]]
+    def __getitem__(self, item):
+        raise TypeError("unhashable type: 'list'")  # what 3.10 raises
 
-    class _RefusesTheUnion:
-        def __getitem__(self, item):
-            raise TypeError("unhashable type: 'list'")  # what 3.10 raises
+
+def test_a_nullable_choice_type_takes_whichever_route_typing_allows(monkeypatch):
+    """3.11 puts the Literal in a union; 3.10 cannot and uses a None member."""
+    assert P._nullable_choice_type(["a", "b"]) == Optional[Literal["a", "b"]]
 
     monkeypatch.setattr(P.typing, "Optional", _RefusesTheUnion())
 
-    assert P._optional(Literal["a", "b"]) == Literal["a", "b"]
+    assert P._nullable_choice_type(["a", "b"]) == Literal["a", "b", None]
 
 
-def test_unhashable_choices_on_an_optional_parameter_still_register():
-    """Registration must survive choices that cannot form a union.
+def test_an_optional_choice_is_still_nullable_when_typing_refuses_the_union(monkeypatch):
+    """The 3.10 route has to behave like the 3.11 one, not merely register.
 
-    Only discriminating on Python 3.10, which CI covers: 3.11+ builds the union
-    happily. Before the guard this raised TypeError out of register_layout and
-    killed the import of the app.
+    An earlier fix kept the type non-null when ``typing`` refused the union,
+    which left exactly the bug it was fixing in place on 3.10: the search bar
+    offered a blank the server would not take.
+    """
+
+    def layout(ticker: Annotated[Optional[str], Param(choices=["BTPS", "FRTR"])] = None):
+        return html.Div()
+
+    monkeypatch.setattr(P.typing, "Optional", _RefusesTheUnion())
+    validator = P.build_validator("refused-union", P.introspect_callable(layout))
+
+    assert validator.validate({"ticker": ""}) == {"ticker": None}
+    assert validator.validate({"ticker": "FRTR"}) == {"ticker": "FRTR"}
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"ticker": "DBR"})
+    assert [e.field for e in exc.value.errors] == ["ticker"]
+
+
+def test_unhashable_choices_on_an_optional_parameter_stay_nullable():
+    """Choices that cannot form a union must register *and* keep their blank.
+
+    On 3.11+ both assertions hold whatever route is taken, so this is a guard
+    there; on 3.10, where the union cannot be built at all, the second one is
+    the whole point.
     """
 
     def layout(rows: Annotated[Optional[list], Param(choices=[[1, 2], [3, 4]])] = None):
@@ -369,6 +387,7 @@ def test_unhashable_choices_on_an_optional_parameter_still_register():
     validator = P.build_validator("unhashable-choices", P.introspect_callable(layout))
 
     assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
+    assert validator.validate({"rows": ""}) == {"rows": None}
 
 
 # =============================================================================
