@@ -45,6 +45,11 @@ function checkScalar(type: ParamType, raw: string, param: LayoutParam): string |
     }
     case 'enum': {
       const choices = param.choices ?? [];
+      // An array of enum items (list[Literal[...]]) carries no item-level
+      // choices in the metadata, so there is nothing here to check the item
+      // against. The server knows the item type; let it answer, as we already
+      // do for object and unknown.
+      if (choices.length === 0) return null;
       return choices.some((ch) => String(ch) === raw)
         ? null
         : `Must be one of: ${choices.map(String).join(', ')}`;

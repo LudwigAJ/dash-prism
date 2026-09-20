@@ -165,7 +165,12 @@ def test_blank_is_accepted_for_an_optional_parameter_with_choices(dash_duo):
 
 
 def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
-    """The blank must not be won by widening the parameter to anything."""
+    """A picked choice arrives as itself, not as the blank.
+
+    This does not catch widening -- a parameter relaxed to ``Any`` passes it
+    too. ``test_optional_param_choices_still_reject_a_value_outside_the_list``
+    is what guards that.
+    """
     duo = _start_optional(dash_duo)
     _enter_params_mode(duo, search="Optional", layout_id="optional")
     duo.wait_for_element(CHOICE.format("FRTR"), timeout=5)
@@ -175,3 +180,62 @@ def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
     duo.wait_for_element("[id*='optional-content']", timeout=10)
     assert duo.find_element("[id*='optional-content']").text == "ticker='FRTR'"
     assert check_browser_errors(duo) == []
+
+
+def _start_items(dash_duo):
+    """Serve a layout that restricts its list's *items*, not the whole list."""
+    app = Dash(__name__, suppress_callback_exceptions=True)
+
+    @dash_prism.register_layout(id="items", name="Items", allow_multiple=True)
+    def items_layout(tags: list[Literal["a", "b"]]):
+        return html.Div(f"tags={tags!r}", id="items-content")
+
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=False,
+                persistence_type="memory",
+                style={"height": "100vh"},
+            )
+        ],
+        style={"height": "100vh"},
+    )
+    dash_prism.init("prism", app)
+    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    return dash_duo
+
+
+def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
+    """``list[Literal['a', 'b']]`` is what the collection-choices error advises.
+
+    Its metadata says ``items='enum'`` but carries no item-level choices, and
+    the client checked each item against the *parameter's* choices -- which are
+    empty -- so every value, including this one, was refused with "Must be one
+    of: " before it could ever reach the server.
+    """
+    duo = _start_items(dash_duo)
+    _enter_params_mode(duo, search="Items", layout_id="items")
+
+    set_input_value_react(duo, PARAM_INPUT, "a,b")
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
+
+    duo.wait_for_element("[id*='items-content']", timeout=10)
+    assert duo.find_element("[id*='items-content']").text == "tags=['a', 'b']"
+    assert check_browser_errors(duo) == []
+
+
+def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
+    """Handing the check to the server must not mean nothing checks it."""
+    duo = _start_items(dash_duo)
+    _enter_params_mode(duo, search="Items", layout_id="items")
+
+    set_input_value_react(duo, PARAM_INPUT, "a,zzz")
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
+
+    duo.wait_for_element("[data-testid='prism-validation-error']", timeout=10)
+    panel = duo.find_element("[data-testid='prism-validation-error']").text
+    assert "tags.1" in panel
+    assert "Input should be 'a' or 'b'" in panel
+    assert duo.find_elements("[id*='items-content']") == []

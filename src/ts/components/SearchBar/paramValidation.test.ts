@@ -90,6 +90,21 @@ describe('checkParamInput', () => {
     });
   });
 
+  it('leaves enum items to the server when the metadata carries no item choices', () => {
+    // list[Literal['a', 'b']] reports items: 'enum' but no choices, because the
+    // choices on the parameter describe whole values, not items. Checking each
+    // item against that empty list rejected every value the callback accepts.
+    const tags = param({ type: 'array', items: 'enum', choices: null });
+    expect(checkParamInput(tags, 'a, b')).toEqual({ ok: true, value: 'a,b' });
+
+    // A scalar enum still has its own choices and is still checked here.
+    const kind = param({ type: 'enum', choices: ['bar', 'line'] });
+    expect(checkParamInput(kind, 'pie')).toEqual({
+      ok: false,
+      message: 'Must be one of: bar, line',
+    });
+  });
+
   it('never blocks unknown or object types', () => {
     expect(checkParamInput(param({ type: 'unknown' }), 'anything').ok).toBe(true);
     expect(checkParamInput(param({ type: 'object' }), '{"a":1}').ok).toBe(true);
