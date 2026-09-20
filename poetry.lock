@@ -3069,7 +3069,10 @@ enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
 
+[extras]
+pydantic = ["pydantic"]
+
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "f8f336fc645b2d554a4afb64e9d5a6d88c74791a0525ea59ee72a4dd431b4137"
+content-hash = "ba95836895aca54a7f7e352d13aa314cf6a993f68e63a7480bfbb257d078a84a"
