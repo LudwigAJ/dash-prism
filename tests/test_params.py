@@ -369,3 +369,24 @@ def test_unhashable_choices_on_an_optional_parameter_still_register():
     validator = P.build_validator("unhashable-choices", P.introspect_callable(layout))
 
     assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
+
+
+def test_a_parameter_pydantic_cannot_model_does_not_disable_its_siblings():
+    """One unschematisable parameter used to take every other one down with it.
+
+    ``describe_type`` only rewrites a bare unknown class to ``Any``; nested in a
+    container it reaches pydantic, which refuses the whole model. The fallback
+    then made *every* field ``Any``, so ``n`` silently accepted anything.
+    """
+
+    def layout(cfg: dict[str, _AppType], n: int = 1):
+        return html.Div()
+
+    validator = P.build_validator("partly-modelable", P.introspect_callable(layout))
+
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"cfg": "anything", "n": "not-an-int"})
+    assert [e.field for e in exc.value.errors] == ["n"]
+
+    # The parameter it could not model is still passed through untouched.
+    assert validator.validate({"cfg": "anything", "n": "7"}) == {"cfg": "anything", "n": 7}

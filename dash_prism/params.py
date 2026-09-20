@@ -625,6 +625,36 @@ def prepare_client_params(
     return out
 
 
+def _model_keeping_what_pydantic_accepts(
+    model_name: str, config: Any, fields: Mapping[str, Any]
+) -> Any:
+    """Rebuild a model, degrading only the fields pydantic refused.
+
+    A single parameter pydantic cannot schematise -- ``dict[str, SomeAppClass]``,
+    say -- used to take every other parameter down with it, so a sibling
+    annotated ``int`` silently accepted any string at all.
+    """
+    from pydantic import Field, create_model
+
+    def build(items: Mapping[str, Any]) -> Any:
+        return create_model(  # type: ignore[call-overload]
+            model_name or "LayoutParams", __config__=config, **items
+        )
+
+    kept: dict[str, Any] = {}
+    for name, field in fields.items():
+        try:
+            build({name: field})
+        except Exception:
+            kept[name] = (Any, Field(field[1].default))
+        else:
+            kept[name] = field
+    try:
+        return build(kept)
+    except Exception:  # pragma: no cover - a combination none of the parts showed
+        return build({name: (Any, Field(field[1].default)) for name, field in fields.items()})
+
+
 class LayoutValidator(typing.Protocol):
     """Validates and coerces incoming parameters for one layout."""
 
@@ -748,15 +778,11 @@ class PydanticValidator:
             # Fall back to a model that accepts every parameter unchanged.
             logger.warning(
                 "dash_prism: could not build a validation model for layout '%s' (%s); "
-                "its parameters will be passed through without validation.",
+                "the parameters it could not model are passed through without validation.",
                 layout_id,
                 exc,
             )
-            model = create_model(  # type: ignore[call-overload]
-                model_name or "LayoutParams",
-                __config__=config,
-                **{name: (Any, Field(field[1].default)) for name, field in fields.items()},
-            )
+            model = _model_keeping_what_pydantic_accepts(model_name, config, fields)
         return cls(layout_id, model, None, nullable, arrays, choices, passthrough)
 
     def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
