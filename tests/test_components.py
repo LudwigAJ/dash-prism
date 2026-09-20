@@ -205,3 +205,15 @@ def test_prism_component_status_bar_items_prop() -> None:
     assert "statusBarItems" in prism.available_properties
     assert prism.to_plotly_json()["props"]["statusBarItems"] == ["count", "updated"]
     assert "statusBarItems" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
+
+
+def test_prism_component_enable_keyboard_shortcuts_prop() -> None:
+    prism = dash_prism.Prism(id="test-prism", enableKeyboardShortcuts=False, style={})
+
+    assert prism.enableKeyboardShortcuts is False
+    assert "enableKeyboardShortcuts" in prism.available_properties
+    assert prism.to_plotly_json()["props"]["enableKeyboardShortcuts"] is False
+    assert (
+        "enableKeyboardShortcuts"
+        not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
+    )

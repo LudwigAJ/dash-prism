@@ -21,7 +21,7 @@ export function resolveEmptyTabView(view: EmptyTabViewKind | undefined): EmptyTa
  * `emptyTabView` config prop.
  */
 export function EmptyTabView({ tabId }: EmptyTabViewProps) {
-  const { emptyTabView } = useConfig();
+  const { emptyTabView, enableKeyboardShortcuts } = useConfig();
   const view = resolveEmptyTabView(emptyTabView);
 
   if (view === 'layouts') {
@@ -36,9 +36,11 @@ export function EmptyTabView({ tabId }: EmptyTabViewProps) {
       >
         <p>
           Use the search bar to open a layout
-          <span className="ml-2 opacity-70">
-            (<kbd className="font-mono">Ctrl</kbd>+<kbd className="font-mono">Space</kbd>)
-          </span>
+          {enableKeyboardShortcuts && (
+            <span className="ml-2 opacity-70">
+              (<kbd className="font-mono">Ctrl</kbd>+<kbd className="font-mono">Space</kbd>)
+            </span>
+          )}
         </p>
       </div>
     );

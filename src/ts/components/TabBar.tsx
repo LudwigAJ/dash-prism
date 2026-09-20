@@ -117,7 +117,7 @@ const TabItem = memo(function TabItem({
 }: TabItemProps) {
   // Now useLoading is called at component top-level (not in a loop)
   const ctx = window.dash_component_api?.useDashContext?.();
-  const { componentId = 'prism' } = useConfig();
+  const { componentId = 'prism', enableKeyboardShortcuts } = useConfig();
   // Use componentId from config instead of hard-coded 'prism'
   const componentPath = useMemo(
     () => makeComponentPath(componentId, tab.id),
@@ -304,7 +304,7 @@ const TabItem = memo(function TabItem({
           }}
         >
           Rename
-          <ContextMenuShortcut>⌃R</ContextMenuShortcut>
+          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃R</ContextMenuShortcut>}
         </ContextMenuItem>
 
         <ContextMenuItem
@@ -313,7 +313,7 @@ const TabItem = memo(function TabItem({
           onSelect={() => onDuplicateTab(tab)}
         >
           Duplicate
-          <ContextMenuShortcut>⌃B</ContextMenuShortcut>
+          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃B</ContextMenuShortcut>}
         </ContextMenuItem>
 
         <ContextMenuItem data-testid="prism-context-menu-info" onSelect={() => onOpenInfo?.(tab)}>
@@ -334,7 +334,7 @@ const TabItem = memo(function TabItem({
             onSelect={() => dispatch(refreshTab({ tabId: tab.id }))}
           >
             Refresh
-            <ContextMenuShortcut>⌃⇧R</ContextMenuShortcut>
+            {enableKeyboardShortcuts && <ContextMenuShortcut>⌃⇧R</ContextMenuShortcut>}
           </ContextMenuItem>
         )}
 
@@ -376,7 +376,7 @@ const TabItem = memo(function TabItem({
             onSelect={() => dispatch(lockTab({ tabId: tab.id }))}
           >
             Lock Tab
-            <ContextMenuShortcut>⌃O</ContextMenuShortcut>
+            {enableKeyboardShortcuts && <ContextMenuShortcut>⌃O</ContextMenuShortcut>}
           </ContextMenuItem>
         )}
         {isLocked && !isPinned && (
@@ -385,7 +385,7 @@ const TabItem = memo(function TabItem({
             onSelect={() => dispatch(unlockTab({ tabId: tab.id }))}
           >
             Unlock Tab
-            <ContextMenuShortcut>⌃O</ContextMenuShortcut>
+            {enableKeyboardShortcuts && <ContextMenuShortcut>⌃O</ContextMenuShortcut>}
           </ContextMenuItem>
         )}
 
@@ -393,13 +393,13 @@ const TabItem = memo(function TabItem({
         {!isPinned && (
           <ContextMenuItem data-testid="prism-context-menu-pin" onSelect={onPinPanel}>
             Pin Panel
-            <ContextMenuShortcut>⌃I</ContextMenuShortcut>
+            {enableKeyboardShortcuts && <ContextMenuShortcut>⌃I</ContextMenuShortcut>}
           </ContextMenuItem>
         )}
         {isPinned && (
           <ContextMenuItem data-testid="prism-context-menu-unpin" onSelect={onUnpinPanel}>
             Unpin Panel
-            <ContextMenuShortcut>⌃I</ContextMenuShortcut>
+            {enableKeyboardShortcuts && <ContextMenuShortcut>⌃I</ContextMenuShortcut>}
           </ContextMenuItem>
         )}
 
@@ -412,7 +412,7 @@ const TabItem = memo(function TabItem({
           onSelect={() => onCloseTab(tab.id)}
         >
           Close Tab
-          <ContextMenuShortcut>⌃D</ContextMenuShortcut>
+          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃D</ContextMenuShortcut>}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

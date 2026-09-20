@@ -26,6 +26,15 @@ export function isNewTabChord(event: KeyChordEvent): boolean {
   );
 }
 
+/**
+ * The Prism workspace a keystroke came from, or null when it came from outside
+ * every workspace (the page around it, or a portalled overlay).
+ */
+export function originWorkspace(target: EventTarget | null): Element | null {
+  const el = target as Element | null;
+  return el?.closest?.('.prism-view-workspace') ?? null;
+}
+
 /** Whether keystrokes on this element belong to text entry and must be left alone. */
 export function isEditableTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;

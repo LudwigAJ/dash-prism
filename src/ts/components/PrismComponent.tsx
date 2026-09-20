@@ -200,6 +200,15 @@ export type PrismProps = {
   emptyTabView?: EmptyTabView;
 
   /**
+   * Whether Prism installs its keyboard shortcuts (Ctrl/Cmd+Alt+N, Ctrl/Cmd+D,
+   * J, K, O, I, R, Shift+R, Y, B, U and Ctrl+Space). Set to false if they
+   * conflict with your application's own shortcuts; the shortcut hints in the
+   * context menu, the empty-tab hint and the help dialog are hidden too.
+   * Default true.
+   */
+  enableKeyboardShortcuts?: boolean;
+
+  /**
    * CSS class name(s) to add to the root container.
    */
   className?: string;
@@ -403,6 +412,7 @@ export function Prism({
   initialLayout,
   newTabOpensDropdown = true,
   emptyTabView = 'layouts',
+  enableKeyboardShortcuts = true,
   updateWorkspace,
   className,
   style,
@@ -470,6 +480,7 @@ export function Prism({
           initialLayout={initialLayout}
           newTabOpensDropdown={newTabOpensDropdown}
           emptyTabView={emptyTabView}
+          enableKeyboardShortcuts={enableKeyboardShortcuts}
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >

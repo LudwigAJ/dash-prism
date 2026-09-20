@@ -8,6 +8,7 @@ import {
   isEditableTarget,
   isNewTabChord,
   isOverlayOpen,
+  originWorkspace,
   type KeyChordEvent,
 } from './keyboardChords';
 
@@ -137,5 +138,25 @@ describe('createRootRegistry', () => {
     registry.claim(b);
 
     expect(registry.owns(a)).toBe(true);
+  });
+});
+
+describe('originWorkspace', () => {
+  function target(match: Element | null) {
+    return { closest: () => match } as unknown as EventTarget;
+  }
+
+  it('returns the workspace the keystroke came from', () => {
+    const workspace = {} as Element;
+    expect(originWorkspace(target(workspace))).toBe(workspace);
+  });
+
+  it('returns null for a keystroke outside every workspace', () => {
+    expect(originWorkspace(target(null))).toBeNull();
+    expect(originWorkspace(null)).toBeNull();
+  });
+
+  it('tolerates a target without closest (document, window)', () => {
+    expect(originWorkspace({} as EventTarget)).toBeNull();
   });
 });

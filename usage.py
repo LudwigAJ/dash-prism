@@ -1074,6 +1074,7 @@ app.layout = html.Div(
             persistence_type="local",
             newTabOpensDropdown=False,
             emptyTabView="layouts",
+            enableKeyboardShortcuts=True,
             maxTabs=16,
         ),
         dcc.Store(id="saved-workspace", storage_type="memory"),

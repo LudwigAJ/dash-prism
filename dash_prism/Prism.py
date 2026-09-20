@@ -123,6 +123,12 @@ class Prism(PrismComponent):
         so new tabs still surface the layout list; the quiet combination with
         ``newTabOpensDropdown=False`` emits a :class:`UserWarning`.
     :type emptyTabView: str
+    :param enableKeyboardShortcuts: Whether Prism installs its keyboard shortcuts
+        (Ctrl/Cmd+Alt+N, Ctrl/Cmd+D, J, K, O, I, R, Shift+R, Y, B, U and
+        Ctrl+Space). Set to ``False`` if they conflict with your application's own
+        shortcuts; the shortcut hints in the context menu, the empty-tab hint and
+        the help dialog are hidden too. Defaults to ``True``.
+    :type enableKeyboardShortcuts: bool
     :param readWorkspace: Current workspace state, written by Prism for Dash.
         Use it as an ``Input`` or ``State`` in callbacks; Prism never reads it
         back. Keys: ``tabs`` (list of dict), ``panel`` (dict), ``panelTabs``
@@ -282,6 +288,7 @@ class Prism(PrismComponent):
         initialLayout: str | None = _UNSET,
         newTabOpensDropdown: bool = _UNSET,
         emptyTabView: Literal["layouts", "hint", "none"] = _UNSET,
+        enableKeyboardShortcuts: bool = _UNSET,
         searchBarPlaceholder: str = _UNSET,
         layoutTimeout: float = _UNSET,
         # Advanced — typically managed by dash_prism.init()

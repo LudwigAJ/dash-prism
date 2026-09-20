@@ -41,6 +41,8 @@ type ConfigContextValue = {
   newTabOpensDropdown: boolean;
   /** What an empty tab renders in its body (default: 'layouts') */
   emptyTabView: EmptyTabView;
+  /** Whether Prism's keyboard shortcuts are installed (default: true) */
+  enableKeyboardShortcuts: boolean;
   /** Timeout in seconds for layout loading (default: 30) */
   layoutTimeout: number;
   /** Dash setProps callback for syncing state to Dash */
@@ -70,6 +72,7 @@ type ConfigProviderProps = {
   initialLayout?: string;
   newTabOpensDropdown?: boolean;
   emptyTabView?: EmptyTabView;
+  enableKeyboardShortcuts?: boolean;
   layoutTimeout?: number;
   setProps?: (props: Record<string, unknown>) => void;
 };
@@ -91,6 +94,7 @@ export function ConfigProvider({
   initialLayout,
   newTabOpensDropdown = true,
   emptyTabView = 'layouts',
+  enableKeyboardShortcuts = true,
   layoutTimeout = 30,
   setProps,
 }: ConfigProviderProps) {
@@ -111,6 +115,7 @@ export function ConfigProvider({
       initialLayout,
       newTabOpensDropdown,
       emptyTabView,
+      enableKeyboardShortcuts,
       layoutTimeout,
       setProps,
     }),
@@ -130,6 +135,7 @@ export function ConfigProvider({
       initialLayout,
       newTabOpensDropdown,
       emptyTabView,
+      enableKeyboardShortcuts,
       layoutTimeout,
       setProps,
     ]

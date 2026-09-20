@@ -118,3 +118,45 @@ def test_shortcuts_do_not_fire_while_a_context_menu_is_open(prism_app_with_layou
     WebDriverWait(duo.driver, 3).until(lambda d: not d.find_elements(*_css(CONTEXT_MENU)))
     duo.find_element("body").send_keys(modifier, "d")
     wait_for_tab_count(duo, 1, timeout=5)
+
+
+def test_keyboard_shortcuts_can_be_disabled(dash_duo):
+    """enableKeyboardShortcuts=False installs no listener and hides the help section."""
+    from dash import Dash, html
+
+    app = Dash(__name__, suppress_callback_exceptions=True)
+    from conftest import PRISM_ROOT, get_free_port  # noqa: E402
+
+    import dash_prism
+
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                enableKeyboardShortcuts=False,
+                persistence=False,
+                persistence_type="memory",
+                style={"height": "100vh"},
+            )
+        ],
+        style={"height": "100vh"},
+    )
+    dash_prism.init("prism", app)
+    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    wait_for_tab_count(dash_duo, 1)
+
+    body = dash_duo.find_element("body")
+    body.send_keys(get_modifier_key(), Keys.ALT, "n")
+    with pytest.raises(TimeoutException):
+        wait_for_tab_count(dash_duo, 2, timeout=1.5)
+    assert len(get_tabs(dash_duo)) == 1
+
+    # Help dialog no longer advertises shortcuts
+    dash_duo.find_element("[data-testid='prism-statusbar-help']").click()
+    dash_duo.wait_for_element("[role='dialog']", timeout=5)
+    # Section titles are rendered uppercase via CSS; compare case-insensitively.
+    dialog_text = dash_duo.find_element("[role='dialog']").text.lower()
+    assert "tab management" in dialog_text
+    assert "keyboard shortcuts" not in dialog_text

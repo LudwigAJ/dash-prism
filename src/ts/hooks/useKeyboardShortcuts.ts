@@ -4,7 +4,9 @@ import {
   isEditableTarget,
   isNewTabChord,
   isOverlayOpen,
+  originWorkspace,
 } from './keyboardChords';
+import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
 import type { PanelId, TabId } from '@types';
 import {
@@ -57,6 +59,7 @@ const rootRegistry = createRootRegistry<HTMLElement>();
  */
 export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
   const dispatch = useAppDispatch();
+  const { enableKeyboardShortcuts } = useConfig();
   const tabs = useAppSelector(selectTabs);
   const panel = useAppSelector(selectPanel);
   const panelTabs = useAppSelector(selectPanelTabs);
@@ -186,10 +189,12 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
   // ========== Instance scoping ==========
   // Track which Prism root the user touched last; only that instance handles
   // shortcuts. The first instance to mount owns them until another is used, and
-  // ownership passes to a surviving instance when the owner unmounts.
+  // ownership passes to a surviving instance when the owner unmounts. A
+  // workspace with shortcuts switched off never registers, so it cannot own the
+  // keyboard and silence a sibling that still wants it.
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return undefined;
+    if (!root || !enableKeyboardShortcuts) return undefined;
     const release = rootRegistry.register(root);
 
     const claim = () => rootRegistry.claim(root);
@@ -200,13 +205,20 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
       root.removeEventListener('focusin', claim);
       release();
     };
-  }, [rootRef]);
+  }, [rootRef, enableKeyboardShortcuts]);
 
   // ========== Keyboard event handler ==========
   useEffect(() => {
+    if (!enableKeyboardShortcuts) return undefined;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Another Prism instance on the page owns the shortcuts right now
       if (rootRef.current && !rootRegistry.owns(rootRef.current)) return;
+
+      // The keystroke happened inside a different workspace (one that may have
+      // shortcuts switched off); it is not ours to act on.
+      const origin = originWorkspace(e.target);
+      if (origin && rootRef.current && origin !== rootRef.current) return;
 
       // Skip shortcuts when user is typing in editable elements
       if (isEditableTarget(e.target)) return;
@@ -302,6 +314,7 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
+    enableKeyboardShortcuts,
     rootRef,
     activePanelId,
     searchBarsHidden,

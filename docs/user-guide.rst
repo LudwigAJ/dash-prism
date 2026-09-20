@@ -413,6 +413,7 @@ Configuration
        statusBarPosition='bottom',  # or 'top'
        statusBarItems=['reset', 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'],
        emptyTabView='layouts',  # 'layouts' | 'hint' | 'none'
+       enableKeyboardShortcuts=True,  # False if they clash with your app's shortcuts
    )
 
 Tab Limits
@@ -497,6 +498,10 @@ New tab is a three-key chord because Chrome, Edge and Safari keep plain
 ``Ctrl``/``Cmd`` + ``N`` for themselves and never deliver it to the page. The
 other bindings replace the browser's own default for the workspace the user
 last clicked in, wherever the keyboard focus happens to be.
+
+Pass ``enableKeyboardShortcuts=False`` to install none of them. The shortcut
+hints then disappear from the context menu, the help dialog and the empty-tab
+view as well, so nothing on screen advertises a binding that does nothing.
 
 Caveats
 -------

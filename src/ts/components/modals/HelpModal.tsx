@@ -9,6 +9,7 @@ import {
 } from '@components/ui/dialog';
 import { Button } from '@components/ui/button';
 import { cn } from '@utils/cn';
+import { useConfig } from '@context/ConfigContext';
 
 // Version injected at build time from package.json via webpack DefinePlugin
 const VERSION = process.env.APP_VERSION ?? '0.0.0';
@@ -32,6 +33,7 @@ export type HelpModalProps = {
  * NOT in Redux (see Reversibility Philosophy section).
  */
 export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalProps) {
+  const { enableKeyboardShortcuts } = useConfig();
   // Platform detection for keyboard shortcuts
   const isMac = useMemo(
     () => typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform),
@@ -79,110 +81,114 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
 
         {/* Scrollable content area */}
         <div className="-mr-2 flex-1 overflow-y-auto pt-2 pr-2">
-          <h4 className={sectionTitleClass}>Keyboard Shortcuts</h4>
-          <div className={sectionBoxClass}>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>New tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>{modKeys.alt}</kbd>
-                <kbd className={kbdClass}>N</kbd>
+          {enableKeyboardShortcuts && (
+            <>
+              <h4 className={sectionTitleClass}>Keyboard Shortcuts</h4>
+              <div className={sectionBoxClass}>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>New tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>{modKeys.alt}</kbd>
+                    <kbd className={kbdClass}>N</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Close tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>D</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Duplicate tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>B</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Undo</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>U</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Lock / unlock tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>O</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Rename tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>R</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Refresh tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>{modKeys.shift}</kbd>
+                    <kbd className={kbdClass}>R</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Pin / unpin panel</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>I</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Toggle search bars</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>Y</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Previous / next tab</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>J</kbd>
+                    <span className="text-muted-foreground text-xs">/</span>
+                    <kbd className={kbdClass}>K</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Focus search</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                    <kbd className={kbdClass}>Space</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Navigate results</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>↑</kbd>
+                    <span className="text-muted-foreground text-xs">/</span>
+                    <kbd className={kbdClass}>↓</kbd>
+                  </div>
+                </div>
+                <div className={shortcutRowClass}>
+                  <span className={shortcutLabelClass}>Select layout</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>Enter</kbd>
+                  </div>
+                </div>
+                <div className={cn(shortcutRowClass, 'border-b-0')}>
+                  <span className={shortcutLabelClass}>Cancel / Close modal</span>
+                  <div className="flex items-center gap-1">
+                    <kbd className={kbdClass}>Esc</kbd>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Close tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>D</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Duplicate tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>B</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Undo</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>U</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Lock / unlock tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>O</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Rename tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>R</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Refresh tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>{modKeys.shift}</kbd>
-                <kbd className={kbdClass}>R</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Pin / unpin panel</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>I</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Toggle search bars</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>Y</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Previous / next tab</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>J</kbd>
-                <span className="text-muted-foreground text-xs">/</span>
-                <kbd className={kbdClass}>K</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Focus search</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
-                <kbd className={kbdClass}>Space</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Navigate results</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>↑</kbd>
-                <span className="text-muted-foreground text-xs">/</span>
-                <kbd className={kbdClass}>↓</kbd>
-              </div>
-            </div>
-            <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Select layout</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>Enter</kbd>
-              </div>
-            </div>
-            <div className={cn(shortcutRowClass, 'border-b-0')}>
-              <span className={shortcutLabelClass}>Cancel / Close modal</span>
-              <div className="flex items-center gap-1">
-                <kbd className={kbdClass}>Esc</kbd>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
           <h4 className={sectionTitleClass}>Tab Management</h4>
           <div className={cn(sectionBoxClass, 'space-y-2')}>

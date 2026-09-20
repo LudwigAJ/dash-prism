@@ -39,7 +39,7 @@ type StatusBarProps = {
 export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { clearPersistedState } = usePrism();
-  const { maxTabs, componentId = 'prism', statusBarItems } = useConfig();
+  const { maxTabs, componentId = 'prism', statusBarItems, enableKeyboardShortcuts } = useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Select state from Redux
@@ -145,7 +145,13 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
             <Undo2 className="size-[1em]" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>{canUndo ? 'Undo last change (Ctrl+U)' : 'Nothing to undo'}</TooltipContent>
+        <TooltipContent>
+          {canUndo
+            ? enableKeyboardShortcuts
+              ? 'Undo last change (Ctrl+U)'
+              : 'Undo last change'
+            : 'Nothing to undo'}
+        </TooltipContent>
       </Tooltip>
     ),
     mode: (
