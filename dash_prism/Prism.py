@@ -60,6 +60,11 @@ class Prism(PrismComponent):
         from creating too many tabs which could impact performance. Values less than
         ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``.
     :type maxTabs: int
+    :param maxPanels: Maximum number of leaf panels the workspace can be split
+        into. Once reached, the split button and the edge drop zones disappear;
+        ``1`` disables splitting entirely. Values less than ``1``, and an
+        explicit ``None``, mean unlimited. Defaults to ``20``.
+    :type maxPanels: int or None
     :param searchBarPlaceholder: Placeholder text shown in the layout search bar.
         Defaults to ``'Search layouts...'``.
     :type searchBarPlaceholder: str
@@ -290,6 +295,7 @@ class Prism(PrismComponent):
         persistence_type: Literal["memory", "session", "local"] = _UNSET,
         # Behavior
         maxTabs: int = _UNSET,
+        maxPanels: int = _UNSET,
         initialLayout: str | None = _UNSET,
         newTabOpensDropdown: bool = _UNSET,
         emptyTabView: Literal["layouts", "hint", "none"] = _UNSET,

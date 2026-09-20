@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
+import { resolveMaxPanels } from '@store/workspaceSlice';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import type {
   RegisteredLayouts,
@@ -27,6 +28,8 @@ type ConfigContextValue = {
   theme: Theme;
   size: Size;
   maxTabs: number;
+  /** Maximum number of leaf panels (default: 20; below 1 = unlimited) */
+  maxPanels: number;
   persistence: boolean;
   persistenceType: PersistenceType;
   searchBarPlaceholder: string;
@@ -65,6 +68,8 @@ type ConfigProviderProps = {
   theme?: Theme;
   size?: Size;
   maxTabs?: number;
+  /** Omit for the default limit; null (Python None) means no limit. */
+  maxPanels?: number | null;
   persistence?: boolean;
   persistenceType?: PersistenceType;
   searchBarPlaceholder?: string;
@@ -88,6 +93,7 @@ export function ConfigProvider({
   theme = 'light',
   size = 'md',
   maxTabs = 16,
+  maxPanels,
   searchBarPlaceholder = 'Search layouts...',
   showStatusBar = true,
   statusBarPosition = 'bottom',
@@ -102,6 +108,8 @@ export function ConfigProvider({
   layoutTimeout = 30,
   setProps,
 }: ConfigProviderProps) {
+  const resolvedMaxPanels = resolveMaxPanels(maxPanels);
+
   const value = useMemo(
     () => ({
       componentId,
@@ -110,6 +118,7 @@ export function ConfigProvider({
       theme,
       size,
       maxTabs,
+      maxPanels: resolvedMaxPanels,
       searchBarPlaceholder: searchBarPlaceholder,
       showStatusBar,
       statusBarPosition: statusBarPosition,
@@ -133,6 +142,7 @@ export function ConfigProvider({
       theme,
       size,
       maxTabs,
+      resolvedMaxPanels,
       searchBarPlaceholder,
       showStatusBar,
       statusBarPosition,

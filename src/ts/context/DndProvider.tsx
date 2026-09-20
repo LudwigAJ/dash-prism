@@ -36,6 +36,7 @@ type DndProviderProps = {
 
 export function DndProvider({ children }: DndProviderProps) {
   const dispatch = useAppDispatch();
+  const { maxPanels } = useConfig();
   const tabs = useAppSelector(selectTabs);
   const panel = useAppSelector(selectPanel);
   const panelTabs = useAppSelector(selectPanelTabs);
@@ -112,6 +113,7 @@ export function DndProvider({ children }: DndProviderProps) {
 
         dispatch(
           splitPanel({
+            maxPanels,
             panelId: targetPanelId,
             direction,
             tabId: activeId,

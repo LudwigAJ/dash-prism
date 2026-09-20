@@ -226,3 +226,12 @@ def test_prism_component_enable_share_links_prop() -> None:
     assert "enableShareLinks" in prism.available_properties
     assert prism.to_plotly_json()["props"]["enableShareLinks"] is False
     assert "enableShareLinks" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
+
+
+def test_prism_component_max_panels_prop() -> None:
+    prism = dash_prism.Prism(id="test-prism", maxPanels=1, style={})
+
+    assert prism.maxPanels == 1
+    assert "maxPanels" in prism.available_properties
+    assert prism.to_plotly_json()["props"]["maxPanels"] == 1
+    assert "maxPanels" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]

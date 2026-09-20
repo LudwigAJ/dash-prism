@@ -21,7 +21,22 @@ import { canAddTab } from './selectors';
 // =============================================================================
 
 export const MAX_TAB_NAME_LENGTH = 24;
+/** Default for the maxPanels prop: the most leaf panels a workspace may be split into. */
 export const MAX_LEAF_PANELS = 20;
+
+/**
+ * Normalise the `maxPanels` prop into the number the split guard expects.
+ *
+ * An omitted prop (`undefined`) means the default limit, while an explicit
+ * `None` from Python arrives as `null` and means "no limit" — the same reading
+ * `maxTabs` gives it. Without this the UI treated `null` as unlimited and the
+ * reducer as 20, so the split button stayed enabled and then refused to work.
+ */
+export function resolveMaxPanels(value: number | null | undefined): number {
+  if (value === undefined) return MAX_LEAF_PANELS;
+  if (value === null) return 0; // 0 (like any value below 1) means unlimited
+  return value;
+}
 
 // =============================================================================
 // Helpers
@@ -561,17 +576,20 @@ const workspaceSlice = createSlice({
         direction: PanelDirection;
         tabId: TabId;
         position?: 'before' | 'after';
+        /** Panel limit from the maxPanels prop; values below 1 mean unlimited. */
+        maxPanels?: number;
       }>
     ) {
       const { panelId, direction, tabId, position = 'after' } = action.payload;
+      const maxPanels = action.payload.maxPanels ?? MAX_LEAF_PANELS;
 
       // Step 1: Validate split is allowed
       const currentLeafCount = getLeafPanelIds(state.panel).length;
-      if (currentLeafCount >= MAX_LEAF_PANELS) {
+      if (maxPanels >= 1 && currentLeafCount >= maxPanels) {
         notifyUser(
           'warning',
-          `Cannot split: maximum of ${MAX_LEAF_PANELS} panels reached`,
-          `Cannot split panel: maximum of ${MAX_LEAF_PANELS} panels reached.`
+          `Cannot split: maximum of ${maxPanels} panels reached`,
+          `Cannot split panel: maximum of ${maxPanels} panels reached.`
         );
         return;
       }

@@ -41,6 +41,7 @@ import workspaceReducer, {
   reconcileWithServer,
   MAX_TAB_NAME_LENGTH,
   MAX_LEAF_PANELS,
+  resolveMaxPanels,
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
 import type { Tab, PanelNode, PanelId, TabId } from '@types';
@@ -1843,6 +1844,26 @@ describe('workspaceSlice', () => {
   // MAX_LEAF_PANELS Tests
   // ===========================================================================
 
+  describe('resolveMaxPanels', () => {
+    it('falls back to the default when the prop is omitted', () => {
+      expect(resolveMaxPanels(undefined)).toBe(MAX_LEAF_PANELS);
+    });
+
+    it('treats an explicit null (Python None) as unlimited, like maxTabs does', () => {
+      // Dash sends null for None, which bypasses every destructuring default.
+      // Reading it as the default limit would leave the split button enabled
+      // while the reducer refused to split.
+      expect(resolveMaxPanels(null)).toBeLessThan(1);
+    });
+
+    it('passes a real limit through unchanged', () => {
+      expect(resolveMaxPanels(3)).toBe(3);
+      expect(resolveMaxPanels(1)).toBe(1);
+      expect(resolveMaxPanels(0)).toBe(0);
+      expect(resolveMaxPanels(-1)).toBe(-1);
+    });
+  });
+
   describe('MAX_LEAF_PANELS enforcement', () => {
     function createStateWithManyPanels(panelCount: number): WorkspaceState {
       // Create a state with multiple leaf panels
@@ -1916,6 +1937,37 @@ describe('workspaceSlice', () => {
       );
 
       expect(countLeafPanels(getWorkspace(store).panel)).toBe(leafCountBefore);
+    });
+
+    it('honours a lower maxPanels passed with the action (maxPanels prop)', () => {
+      const store = createTestStore(createStateWithManyPanels(2));
+      const before = getWorkspace(store);
+
+      store.dispatch(
+        splitPanel({
+          maxPanels: 2,
+          panelId: 'panel-0' as PanelId,
+          direction: 'horizontal',
+          tabId: 'extra-tab' as TabId,
+        })
+      );
+
+      expect(getWorkspace(store)).toBe(before);
+    });
+
+    it('treats maxPanels below 1 as unlimited', () => {
+      const store = createTestStore(createStateWithManyPanels(MAX_LEAF_PANELS));
+
+      store.dispatch(
+        splitPanel({
+          maxPanels: 0,
+          panelId: 'panel-0' as PanelId,
+          direction: 'horizontal',
+          tabId: 'extra-tab' as TabId,
+        })
+      );
+
+      expect(Object.keys(getWorkspace(store).panelTabs)).toHaveLength(MAX_LEAF_PANELS + 1);
     });
 
     it('allows split when below MAX_LEAF_PANELS limit', async () => {

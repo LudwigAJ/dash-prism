@@ -30,7 +30,7 @@ import { TAB_STYLE_LABELS, tabStyleVariants, migrateTabStyle } from '@constants/
 import { getTabIcon } from '@constants/tab-icons';
 import type { Tab, TabId, PanelId, Theme } from '@types';
 import type { AppDispatch } from '@store';
-import { MAX_TAB_NAME_LENGTH, MAX_LEAF_PANELS } from '@store/workspaceSlice';
+import { MAX_TAB_NAME_LENGTH } from '@store/workspaceSlice';
 import { cn } from '@utils/cn';
 import { findTabById } from '@utils/tabs';
 import { makeComponentPath } from './Panel';
@@ -443,7 +443,7 @@ export const TabBar = memo(function TabBar({
   const allTabs = useAppSelector(selectTabs);
   const renamingTabId = useAppSelector(selectRenamingTabId);
   const { openInfoModal, openSetIconModal } = usePrism();
-  const { maxTabs, theme } = useConfig();
+  const { maxTabs, theme, maxPanels } = useConfig();
   const { shareTab } = useShareLinks();
   const totalTabCount = allTabs.length;
   const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
@@ -549,7 +549,7 @@ export const TabBar = memo(function TabBar({
   }, [isMaxTabsReached, panelId, dispatch]);
 
   const panelCount = useAppSelector(selectPanelCount);
-  const isMaxPanelsReached = panelCount >= MAX_LEAF_PANELS;
+  const isMaxPanelsReached = maxPanels >= 1 && panelCount >= maxPanels;
 
   const handleSplitPanel = useCallback(async () => {
     if (isMaxPanelsReached || isMaxTabsReached) return;
@@ -557,6 +557,7 @@ export const TabBar = memo(function TabBar({
     if (addTab.fulfilled.match(result)) {
       dispatch(
         splitPanel({
+          maxPanels,
           panelId,
           direction: 'horizontal',
           tabId: result.payload.tab.id,
@@ -564,7 +565,7 @@ export const TabBar = memo(function TabBar({
         })
       );
     }
-  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached]);
+  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached, maxPanels]);
 
   // Listen for keyboard-triggered rename via renamingTabId
   useEffect(() => {
@@ -694,25 +695,19 @@ export const TabBar = memo(function TabBar({
           />
         )}
       </div>
-      {!isPinned && isActive && (
+      {!isPinned && isActive && !isMaxPanelsReached && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               data-testid="prism-tabbar-split-button"
               className="prism-tabbar-split flex h-full shrink-0 items-center justify-center transition-colors"
               onClick={handleSplitPanel}
-              disabled={isMaxPanelsReached || isMaxTabsReached}
+              disabled={isMaxTabsReached}
             >
               <Columns2 />
             </button>
           </TooltipTrigger>
-          <TooltipContent>
-            {isMaxPanelsReached
-              ? 'Max panels reached'
-              : isMaxTabsReached
-                ? 'Max tabs reached'
-                : 'Split panel'}
-          </TooltipContent>
+          <TooltipContent>{isMaxTabsReached ? 'Max tabs reached' : 'Split panel'}</TooltipContent>
         </Tooltip>
       )}
     </div>

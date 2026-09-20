@@ -105,6 +105,14 @@ export type PrismProps = {
   maxTabs?: number;
 
   /**
+   * Maximum number of leaf panels the workspace can be split into. Once
+   * reached, the split button and the edge drop zones disappear; 1 disables
+   * splitting entirely. Values below 1, and an explicit None, mean unlimited.
+   * Default 20.
+   */
+  maxPanels?: number | null;
+
+  /**
    * Placeholder text shown in the search bar.
    */
   searchBarPlaceholder?: string;
@@ -409,6 +417,7 @@ export function Prism({
   theme = 'light',
   size = 'md',
   maxTabs = 16,
+  maxPanels,
   showStatusBar = true,
   statusBarPosition = 'bottom',
   statusBarItems = ['reset', 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'],
@@ -480,6 +489,7 @@ export function Prism({
           theme={theme}
           size={size}
           maxTabs={maxTabs}
+          maxPanels={maxPanels}
           persistence={persistence}
           persistenceType={persistenceType}
           searchBarPlaceholder={searchBarPlaceholder}

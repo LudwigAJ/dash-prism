@@ -2,6 +2,7 @@ import React from 'react';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
 import type { PanelId } from '@types';
 import { usePrism } from '@hooks/usePrism';
+import { useConfig } from '@context/ConfigContext';
 import { getLeafPanelIds } from '@utils/panels';
 
 type PanelDropzoneProps = {
@@ -14,6 +15,7 @@ type PanelDropzoneProps = {
 export function PanelDropzone({ panelId, children, isPinned = false }: PanelDropzoneProps) {
   const { active } = useDndContext();
   const { state } = usePrism();
+  const { maxPanels } = useConfig();
   const isActive = !!active;
 
   // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
@@ -21,8 +23,11 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
   const tabCount = state.tabs?.length ?? 0;
   const isSingleTabMode = tabCount === 1 && leafPanelIds.length === 1;
 
-  // Disable dropzones entirely for pinned panels or single-tab mode
-  const dropzonesEnabled = isActive && !isPinned && !isSingleTabMode;
+  // Edge zones split the panel, so they are off once the maxPanels limit is reached
+  const isMaxPanelsReached = maxPanels >= 1 && leafPanelIds.length >= maxPanels;
+
+  // Disable dropzones entirely for pinned panels, single-tab mode, or at the panel limit
+  const dropzonesEnabled = isActive && !isPinned && !isSingleTabMode && !isMaxPanelsReached;
 
   // Create 4 separate droppable zones: left, right, top, bottom
   const leftZone = useDroppable({

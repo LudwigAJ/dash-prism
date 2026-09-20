@@ -408,6 +408,7 @@ Configuration
        theme='light',           # or 'dark'
        size='md',               # 'sm', 'md', 'lg'
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
+       maxPanels=20,            # Max leaf panels; 1 disables splitting (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
        showStatusBar=True,      # False hides the bar (and any actions)
        statusBarPosition='bottom',  # or 'top'
@@ -426,6 +427,11 @@ the entire workspace. This is a **global** limit, not per-panel.
 - Default: ``16``
 - Set to ``0`` (or any value less than ``1``) for unlimited tabs
 - When the limit is reached, new tab actions are blocked with a console warning
+
+``maxPanels`` limits how many leaf panels the workspace can be split into
+(default ``20``). At the limit the split button and the edge drop zones
+disappear; ``maxPanels=1`` disables splitting entirely, and values below ``1``
+or an explicit ``None`` mean unlimited.
 
 Status Bar
 ^^^^^^^^^^
