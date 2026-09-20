@@ -252,6 +252,13 @@ to the browser, whatever ``persistence_type`` says. Because ``persistence_type``
 defaults to ``'memory'``, ``persistence=True`` on its own persists nothing and
 emits a ``UserWarning``; always set both.
 
+``id``, ``persistence`` and ``persistence_type`` select the storage key and
+engine, so they are read once when the component mounts (``persistence=False``
+resolves to ``'memory'``, which is why it counts). Changing any of the three
+from a callback remounts the workspace: the state saved under the new key is
+loaded, or a fresh workspace is created, and the undo history starts over.
+Every other prop can be changed at any time without losing state.
+
 Initial Layout
 --------------
 
@@ -466,6 +473,9 @@ the entire workspace. This is a **global** limit, not per-panel.
 - Default: ``16``
 - Set to ``0`` (or any value less than ``1``) for unlimited tabs
 - When the limit is reached, new tab actions are blocked with a console warning
+- Can be changed from a callback at any time (``Output('workspace', 'maxTabs')``):
+  existing tabs and the undo history are kept and the new limit applies to the
+  next tab action
 
 ``maxPanels`` limits how many leaf panels the workspace can be split into
 (default ``20``). At the limit the split button and the edge drop zones

@@ -17,17 +17,6 @@ type PortalContextValue = {
    * Returns the same node on subsequent calls for the same tabId.
    */
   getPortalNode: (tabId: TabId) => HtmlPortalNode;
-
-  /**
-   * Remove a portal node when a tab is closed.
-   * Should be called when a tab is permanently removed.
-   */
-  removePortalNode: (tabId: TabId) => void;
-
-  /**
-   * Check if a portal exists for a tab.
-   */
-  hasPortal: (tabId: TabId) => boolean;
 };
 
 // =============================================================================
@@ -73,14 +62,6 @@ export function PortalProvider({ children }: PortalProviderProps) {
     return node;
   }, []);
 
-  const removePortalNode = useCallback((tabId: TabId): void => {
-    portalsRef.current.delete(tabId);
-  }, []);
-
-  const hasPortal = useCallback((tabId: TabId): boolean => {
-    return portalsRef.current.has(tabId);
-  }, []);
-
   // Clean up portals for tabs that no longer exist
   useEffect(() => {
     const currentTabIds = new Set(tabs.map((t) => t.id));
@@ -100,10 +81,7 @@ export function PortalProvider({ children }: PortalProviderProps) {
     }
   }, [tabs]);
 
-  const value = useMemo(
-    () => ({ getPortalNode, removePortalNode, hasPortal }),
-    [getPortalNode, removePortalNode, hasPortal]
-  );
+  const value = useMemo(() => ({ getPortalNode }), [getPortalNode]);
 
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
 }

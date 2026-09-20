@@ -230,7 +230,7 @@ export function createPrismStore(config: StoreConfig) {
 
   // Create thunk extra argument
   const thunkExtra: ThunkExtra = {
-    maxTabs,
+    getMaxTabs: typeof maxTabs === 'function' ? maxTabs : () => maxTabs,
     getRegisteredLayouts: getRegisteredLayouts ?? (() => ({})),
   };
 
@@ -335,12 +335,6 @@ export const redo = UndoActionCreators.redo;
  * @example dispatch(clearHistory())
  */
 export const clearHistory = UndoActionCreators.clearHistory;
-
-/**
- * Jump to a specific point in history.
- * @example dispatch(jump(-2)) // Go back 2 steps
- */
-export const jump = UndoActionCreators.jump;
 
 // =============================================================================
 // Re-exports

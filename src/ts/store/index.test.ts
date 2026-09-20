@@ -18,6 +18,7 @@ import type { Storage } from 'redux-persist';
 import {
   createPrismStore,
   getWorkspaceStorageKey,
+  addTab,
   removeTab,
   renameTab,
   undo,
@@ -105,6 +106,7 @@ function createStore(
     setProps?: () => void;
     serverSessionId?: string;
     registeredLayouts?: RegisteredLayouts;
+    maxTabs?: number | (() => number);
   } = {}
 ) {
   const setProps = options.setProps ?? vi.fn();
@@ -112,7 +114,7 @@ function createStore(
     componentId: COMPONENT_ID,
     serverSessionId: options.serverSessionId,
     persistenceType: options.storage ? 'local' : 'memory',
-    maxTabs: 16,
+    maxTabs: options.maxTabs ?? 16,
     setProps,
     getRegisteredLayouts: () => options.registeredLayouts ?? {},
     storage: options.storage,
@@ -502,6 +504,39 @@ describe('createPrismStore', () => {
       await settle(created);
 
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
+
+      created.cleanup();
+    });
+  });
+
+  describe('maxTabs read through a getter (02 A-8)', () => {
+    it('applies a limit changed after the store was created', async () => {
+      let limit = 1;
+      const created = createStore({ maxTabs: () => limit });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+
+      const rejected = await created.store.dispatch(addTab({ panelId }));
+      expect(addTab.rejected.match(rejected)).toBe(true);
+      expect(present(created).tabs).toHaveLength(1);
+
+      // Prism updates a ref when the maxTabs prop changes; the store itself is
+      // never rebuilt, so the undo history and pending sync survive.
+      limit = 2;
+      const fulfilled = await created.store.dispatch(addTab({ panelId }));
+      expect(addTab.fulfilled.match(fulfilled)).toBe(true);
+      expect(present(created).tabs).toHaveLength(2);
+
+      created.cleanup();
+    });
+
+    it('still accepts a plain number', async () => {
+      const created = createStore({ maxTabs: 1 });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+
+      const rejected = await created.store.dispatch(addTab({ panelId }));
+      expect(addTab.rejected.match(rejected)).toBe(true);
 
       created.cleanup();
     });

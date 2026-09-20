@@ -92,17 +92,17 @@ function isValidShareData(data: unknown): data is ShareData {
 }
 
 /**
- * useShareLinks - URL hash-based tab sharing
- *
- * - generateShareLink: Pure function (tab → URL string)
- * - shareTab: Side effect (clipboard + toast)
- * - processShareHash: Side effect → Redux action
+ * Share-link helpers for URL hash based tab sharing: `generateShareLink` (pure,
+ * tab to URL), `shareTab` (clipboard and toast) and `processShareHash` (hash to
+ * Redux action). No listeners and no timers, so this is safe to call from any
+ * component; TabBar uses it for the context-menu item and `useShareLinkListener`
+ * below owns the side effects.
  */
-export function useShareLinks() {
+export function useShareLink() {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const activePanelId = useAppSelector(selectActivePanelId);
-  const { registeredLayouts, maxTabs, enableShareLinks } = useConfig();
+  const { registeredLayouts, maxTabs } = useConfig();
 
   // =========================================================================
   // Generate Share Link (Pure Function - no state change)
@@ -287,9 +287,22 @@ export function useShareLinks() {
     }
   }, [spawnSharedTab]);
 
-  // =========================================================================
-  // URL Hash Listeners (Side Effects)
-  // =========================================================================
+  return {
+    generateShareLink,
+    shareTab,
+    spawnSharedTab,
+    processShareHash,
+  };
+}
+
+/**
+ * The side-effecting half: reads a "#p:" share hash on mount and on every hash
+ * change. Mount it exactly once per Prism instance (WorkspaceView does); one
+ * listener per panel would make N panels each try to open the shared tab.
+ */
+export function useShareLinkListener() {
+  const { processShareHash } = useShareLink();
+  const { enableShareLinks } = useConfig();
 
   // Listen for hash changes (user pastes link while app is open)
   useEffect(() => {
@@ -306,11 +319,4 @@ export function useShareLinks() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enableShareLinks]); // Only on mount (and if the prop flips)
-
-  return {
-    generateShareLink,
-    shareTab,
-    spawnSharedTab,
-    processShareHash,
-  };
 }

@@ -36,7 +36,10 @@ class Prism(PrismComponent):
     - **Type-Safe**: Complete type hints for Python 3.10+
 
     :param id: Unique identifier for this component in Dash callbacks.
-        Use this ID to read workspace state or update component properties.
+        Use this ID to read workspace state or update component properties. It
+        also scopes the persisted workspace (storage key), so it is read when the
+        component mounts; changing it afterwards remounts the workspace and
+        starts a fresh undo history.
     :type id: str or None
     :param serverSessionId: Fingerprint of the server-side layout registry, stored
         with the persisted workspace. On load, tabs whose layout is no longer in
@@ -58,7 +61,9 @@ class Prism(PrismComponent):
     :param maxTabs: Maximum number of tabs allowed in the whole workspace,
         counting every panel together (not per panel). Prevents users
         from creating too many tabs which could impact performance. Values less than
-        ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``.
+        ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``. Can be
+        changed from a callback at any time: existing tabs and the undo history are
+        kept and the new limit applies to the next tab action.
     :type maxTabs: int
     :param maxPanels: Maximum number of leaf panels the workspace can be split
         into. Once reached, the split button and the edge drop zones disappear;
@@ -99,7 +104,9 @@ class Prism(PrismComponent):
     :type actions: list or None
     :param persistence: If ``True``, workspace state is persisted in the browser
         using the storage selected by ``persistence_type``. If ``False`` (default),
-        nothing is written to storage and ``persistence_type`` is ignored.
+        nothing is written to storage and ``persistence_type`` is ignored. Read
+        when the component mounts; changing it afterwards remounts the workspace
+        and starts a fresh undo history.
     :type persistence: bool
     :param persistence_type: Where to persist workspace state when ``persistence``
         is ``True``. Options: ``'local'`` (localStorage, persists across browser
@@ -107,7 +114,9 @@ class Prism(PrismComponent):
         browser tab), ``'memory'`` (no storage, state is lost on page refresh).
         Defaults to ``'memory'``, so ``persistence=True`` on its own persists
         nothing: set ``persistence_type='local'`` or ``'session'`` as well. A
-        :class:`UserWarning` is emitted for that no-op combination.
+        :class:`UserWarning` is emitted for that no-op combination. Read when the
+        component mounts; changing it afterwards remounts the workspace and
+        starts a fresh undo history.
     :type persistence_type: str
     :param initialLayout: Layout ID to automatically load in the first tab on
         initial page load. Must match a layout registered via

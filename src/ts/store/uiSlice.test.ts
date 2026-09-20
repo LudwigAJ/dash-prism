@@ -13,6 +13,7 @@ import uiReducer, {
   initialUiState,
   setSearchBarMode,
   clearSearchBarMode,
+  pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
   openInfoModal,
@@ -136,6 +137,50 @@ describe('uiSlice', () => {
       store.dispatch(clearSearchBarMode({ panelId: 'panel-nonexistent' as PanelId }));
 
       expect(getUiState(store).searchBarModes['panel-1']).toBe('search');
+    });
+  });
+
+  describe('pruneSearchBarModes (Phase 3 A-7)', () => {
+    it('drops modes whose panel is not in the leaf list', () => {
+      const store = createTestStore({
+        searchBarModes: {
+          'panel-1': 'search',
+          'panel-2': 'display',
+          'panel-3': 'search',
+        } as Record<PanelId, 'search' | 'display'>,
+      });
+
+      store.dispatch(pruneSearchBarModes({ leafPanelIds: ['panel-2' as PanelId] }));
+
+      expect(getUiState(store).searchBarModes).toEqual({ 'panel-2': 'display' });
+    });
+
+    it('keeps every mode when all panels still exist', () => {
+      const store = createTestStore({
+        searchBarModes: { 'panel-1': 'search', 'panel-2': 'display' } as Record<
+          PanelId,
+          'search' | 'display'
+        >,
+      });
+
+      store.dispatch(
+        pruneSearchBarModes({ leafPanelIds: ['panel-1' as PanelId, 'panel-2' as PanelId] })
+      );
+
+      expect(getUiState(store).searchBarModes).toEqual({
+        'panel-1': 'search',
+        'panel-2': 'display',
+      });
+    });
+
+    it('clears everything when the leaf list is empty', () => {
+      const store = createTestStore({
+        searchBarModes: { 'panel-1': 'search' } as Record<PanelId, 'search'>,
+      });
+
+      store.dispatch(pruneSearchBarModes({ leafPanelIds: [] }));
+
+      expect(getUiState(store).searchBarModes).toEqual({});
     });
   });
 

@@ -56,7 +56,13 @@ export type StoreConfig = {
   componentId?: string;
   serverSessionId?: string;
   persistenceType: 'local' | 'session' | 'memory';
-  maxTabs: number;
+  /**
+   * Tab limit for the whole workspace (values below 1 mean unlimited). Pass a
+   * getter to let the limit change after the store exists: Prism passes a ref
+   * getter so a Dash callback that updates `maxTabs` does not rebuild the
+   * store (and lose the undo history) the way re-creating it would.
+   */
+  maxTabs: number | (() => number);
   setProps?: (props: Record<string, unknown>) => void;
   /** Getter for registered layouts — used by thunks to check constraints like allowMultiple */
   getRegisteredLayouts?: () => RegisteredLayouts;
@@ -72,6 +78,7 @@ export type StoreConfig = {
  * Thunk extra argument - injected config available in async thunks
  */
 export type ThunkExtra = {
-  maxTabs: number;
+  /** Live tab limit, read at dispatch time so prop changes apply immediately. */
+  getMaxTabs: () => number;
   getRegisteredLayouts: () => RegisteredLayouts;
 };

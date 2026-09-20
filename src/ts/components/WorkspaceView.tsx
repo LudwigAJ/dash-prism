@@ -2,7 +2,8 @@ import React, { memo, useMemo, useRef } from 'react';
 import { InPortal } from 'react-reverse-portal';
 import { usePrism } from '@hooks/usePrism';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
-import { useDashSync } from '@hooks/useDashSync';
+import { useLastChangeTime } from '@hooks/useLastChangeTime';
+import { useShareLinkListener } from '@hooks/useShareLinks';
 import { useConfig } from '@context/ConfigContext';
 import { usePortal } from '@context/PortalContext';
 import { Panel, makeComponentPath } from '@components/Panel';
@@ -85,7 +86,8 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
 
   // Hooks that use Redux
   useKeyboardShortcuts(rootRef);
-  const { lastSyncTime } = useDashSync();
+  useShareLinkListener();
+  const { lastSyncTime } = useLastChangeTime();
   const {
     infoModalTab,
     helpModalOpen,

@@ -61,7 +61,7 @@ function createTestStore(
   registeredLayouts: Record<string, { name: string; allowMultiple?: boolean }> = {}
 ) {
   const thunkExtra: ThunkExtra = {
-    maxTabs,
+    getMaxTabs: () => maxTabs,
     getRegisteredLayouts: () => registeredLayouts as import('@types').RegisteredLayouts,
   };
 

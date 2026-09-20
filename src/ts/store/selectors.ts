@@ -1,9 +1,7 @@
 // src/ts/store/selectors.ts
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
-import type { PanelId, TabId } from '@types';
-import { getLeafPanelIds, isLastPanel } from '@utils/panels';
-import { findTabById, getTabsByPanelId, getActiveTabForPanel } from '@utils/tabs';
+import { getLeafPanelIds } from '@utils/panels';
 
 // =============================================================================
 // Workspace Selectors (access .present for redux-undo wrapped state)
@@ -69,16 +67,6 @@ export function canAddTab(tabCount: number, maxTabs: number): boolean {
   return maxTabs < 1 || tabCount < maxTabs;
 }
 
-/**
- * Selector factory for checking if a new tab can be added.
- * Use this when you have maxTabs available.
- *
- * @param maxTabs - Maximum tabs allowed (0 or negative means unlimited)
- * @returns Selector that returns boolean
- */
-export const makeSelectCanAddTab = (maxTabs: number) =>
-  createSelector(selectTabCount, (tabCount) => canAddTab(tabCount, maxTabs));
-
 export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(
@@ -88,41 +76,6 @@ export const selectPanelCount = createSelector(
 
 // Note: selectCanUndo is defined above in Redux-Undo History Selectors
 // It uses state.workspace.past.length > 0 (redux-undo approach)
-
-/**
- * Factory selector for getting tabs in a specific panel
- */
-export const makeSelectPanelTabs = (panelId: PanelId) =>
-  createSelector(selectTabs, (tabs) => getTabsByPanelId(tabs, panelId));
-
-/**
- * Factory selector for getting active tab in a panel
- */
-export const makeSelectActiveTab = (panelId: PanelId) =>
-  createSelector(
-    selectTabs,
-    selectActiveTabIds,
-    (tabs, activeTabIds) => getActiveTabForPanel(tabs, activeTabIds, panelId) ?? null
-  );
-
-/**
- * Factory selector for search bar mode
- */
-export const makeSelectSearchBarMode = (panelId: PanelId) =>
-  createSelector(selectSearchBarModes, (modes) => modes[panelId] ?? 'display');
-
-/**
- * Check if a tab can be closed
- */
-export const makeSelectCanCloseTab = (panelId: PanelId, tabId: TabId) =>
-  createSelector(selectTabs, selectPanel, (tabs, panel) => {
-    const tab = findTabById(tabs, tabId);
-    if (!tab) return false;
-    if (tab.locked) return false;
-    if (!isLastPanel(panel, tab.panelId)) return true;
-    const panelTabs = getTabsByPanelId(tabs, panelId);
-    return panelTabs.length > 1;
-  });
 
 /**
  * Select workspace snapshot for Dash sync

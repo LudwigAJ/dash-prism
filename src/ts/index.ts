@@ -29,7 +29,6 @@ export {
   undo,
   redo,
   clearHistory,
-  jump,
   // Selectors
   selectTabs,
   selectPanel,
@@ -43,11 +42,6 @@ export {
   selectTabCount,
   selectPanelCount,
   selectWorkspaceSnapshot,
-  // Factory selectors
-  makeSelectPanelTabs,
-  makeSelectActiveTab,
-  makeSelectSearchBarMode,
-  makeSelectCanCloseTab,
   // UI selectors
   selectRenamingTabId,
   selectInfoModalTabId,
@@ -81,6 +75,8 @@ export {
   syncWorkspace,
   // UI actions
   setSearchBarMode,
+  clearSearchBarMode,
+  pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
   openInfoModal,
@@ -109,11 +105,9 @@ export type {
 
 // Hooks
 export { usePrism, useActiveTab, usePanelTabs } from './hooks/usePrism';
-export { useTabActions, useTabDrag } from './hooks/useTabs';
-export { usePanels } from './hooks/usePanels';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-export { useDashSync } from './hooks/useDashSync';
-export { useShareLinks } from './hooks/useShareLinks';
+export { useLastChangeTime } from './hooks/useLastChangeTime';
+export { useShareLink, useShareLinkListener } from './hooks/useShareLinks';
 
 // Types
 export type {

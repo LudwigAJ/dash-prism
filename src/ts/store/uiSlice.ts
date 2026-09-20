@@ -25,6 +25,19 @@ const uiSlice = createSlice({
       delete state.searchBarModes[action.payload.panelId];
     },
 
+    /**
+     * Drop search-bar modes for panels that no longer exist. Dispatched by
+     * dashSyncMiddleware after any workspace change, so internal collapses
+     * (removeTab, moveTab, splitPanel, reconcileWithServer, rehydrate) are
+     * covered as well as the explicit collapsePanel action.
+     */
+    pruneSearchBarModes(state, action: PayloadAction<{ leafPanelIds: PanelId[] }>) {
+      const keep = new Set<string>(action.payload.leafPanelIds);
+      for (const panelId of Object.keys(state.searchBarModes)) {
+        if (!keep.has(panelId)) delete state.searchBarModes[panelId as PanelId];
+      }
+    },
+
     startRenameTab(state, action: PayloadAction<{ tabId: TabId }>) {
       state.renamingTabId = action.payload.tabId;
     },
@@ -81,6 +94,7 @@ const uiSlice = createSlice({
 export const {
   setSearchBarMode,
   clearSearchBarMode,
+  pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
   openInfoModal,

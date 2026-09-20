@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { ConfigProvider, useConfig } from '@context/ConfigContext';
@@ -53,7 +53,9 @@ function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: s
  */
 export type PrismProps = {
   /**
-   * Unique ID to identify this component in Dash callbacks.
+   * Unique ID to identify this component in Dash callbacks. Also scopes the
+   * persisted workspace (storage key), so it is read when the component mounts;
+   * changing it afterwards remounts the workspace and starts a fresh undo history.
    */
   id?: string;
 
@@ -101,6 +103,8 @@ export type PrismProps = {
   /**
    * Maximum number of tabs allowed in the whole workspace, counting every
    * panel together (not per panel). Values below 1 mean unlimited. Default 16.
+   * Can be changed from a callback at any time; existing tabs and the undo
+   * history are kept, and the new limit applies to the next tab action.
    */
   maxTabs?: number;
 
@@ -173,7 +177,9 @@ export type PrismProps = {
 
   /**
    * Whether to persist workspace state in the browser. When false (the default)
-   * nothing is written to storage and persistence_type is ignored.
+   * nothing is written to storage and persistence_type is ignored. Read when the
+   * component mounts; changing it afterwards remounts the workspace and starts a
+   * fresh undo history.
    */
   persistence?: boolean;
 
@@ -181,7 +187,8 @@ export type PrismProps = {
    * Where to persist workspace state when persistence is true: 'local' for
    * localStorage (survives browser restarts), 'session' for sessionStorage
    * (current browser tab only), or 'memory' for no storage. Defaults to 'memory',
-   * so set this together with persistence=True.
+   * so set this together with persistence=True. Read when the component mounts;
+   * changing it afterwards remounts the workspace and starts a fresh undo history.
    */
   persistence_type?: PersistenceType;
 
@@ -250,10 +257,16 @@ function PrismInner({
 }) {
   const config = useConfig();
 
-  // Use refs for setProps and registeredLayouts to avoid recreating the store
-  // when their object references change. This is critical: when dashSyncMiddleware
-  // calls setProps(), Dash may re-render with a new setProps reference. Without
-  // this ref, the store would be recreated with fresh initial state.
+  // The store is created exactly once per mount (useState initialiser, not
+  // useMemo: React may discard a memo, and a dependency list keyed on props
+  // would rebuild the store, dropping the undo history and any debounced sync).
+  // Everything the store needs after creation is read through ref getters so
+  // later prop changes reach it without a rebuild:
+  //  - setProps: Dash hands out a new reference after every sync
+  //  - registeredLayouts: injected/updated by dash_prism.init and callbacks
+  //  - maxTabs: may be changed from a callback at any time
+  // componentId and persistenceType are baked into the persist key/engine, so
+  // Prism remounts PrismInner (via `key`) when either changes.
   const setPropsRef = useRef(config.setProps);
   useEffect(() => {
     setPropsRef.current = config.setProps;
@@ -264,34 +277,20 @@ function PrismInner({
     registeredLayoutsRef.current = config.registeredLayouts;
   }, [config.registeredLayouts]);
 
-  // Stable wrappers that always access the latest values via refs
-  const stableSetProps = useMemo(
-    () => (props: Record<string, unknown>) => setPropsRef.current?.(props),
-    []
-  );
-  const stableGetRegisteredLayouts = useMemo(() => () => registeredLayoutsRef.current, []);
+  const maxTabsRef = useRef(config.maxTabs);
+  useEffect(() => {
+    maxTabsRef.current = config.maxTabs;
+  }, [config.maxTabs]);
 
-  // Create store with config values - memoized to prevent recreation
-  // Note: stableSetProps and stableGetRegisteredLayouts are stable (empty deps),
-  // so they won't cause store recreation
-  const { store, persistor, cleanup } = useMemo(
-    () =>
-      createPrismStore({
-        componentId: config.componentId,
-        serverSessionId: config.serverSessionId,
-        persistenceType: config.persistenceType,
-        maxTabs: config.maxTabs,
-        setProps: stableSetProps,
-        getRegisteredLayouts: stableGetRegisteredLayouts,
-      }),
-    [
-      config.componentId,
-      config.serverSessionId,
-      config.persistenceType,
-      config.maxTabs,
-      stableSetProps,
-      stableGetRegisteredLayouts,
-    ]
+  const [{ store, persistor, cleanup }] = useState(() =>
+    createPrismStore({
+      componentId: config.componentId,
+      serverSessionId: config.serverSessionId,
+      persistenceType: config.persistenceType,
+      maxTabs: () => maxTabsRef.current,
+      setProps: (props: Record<string, unknown>) => setPropsRef.current?.(props),
+      getRegisteredLayouts: () => registeredLayoutsRef.current,
+    })
   );
 
   // Clean up middleware resources on unmount to prevent memory leaks
@@ -504,7 +503,11 @@ export function Prism({
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >
-          <PrismInner actions={actions} updateWorkspace={updateWorkspace}>
+          <PrismInner
+            key={`${id ?? ''}|${persistenceType}`}
+            actions={actions}
+            updateWorkspace={updateWorkspace}
+          >
             {children}
           </PrismInner>
         </ConfigProvider>

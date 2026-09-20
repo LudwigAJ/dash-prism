@@ -1,5 +1,5 @@
 // src/ts/store/middleware/reconcileMiddleware.ts
-import { isAction, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
+import { isAction, type Middleware } from '@reduxjs/toolkit';
 import { REHYDRATE } from 'redux-persist';
 import type { RegisteredLayouts } from '@types';
 import type { RootState } from '../index';
@@ -35,7 +35,7 @@ export function createReconcileMiddleware(
         reconcileWithServer({
           serverSessionId: getServerSessionId(),
           registeredLayoutIds: Object.keys(getRegisteredLayouts() ?? {}),
-        }) as unknown as UnknownAction
+        })
       );
       const after = new Set(store.getState().workspace.present.tabs.map((tab) => tab.id));
       let closedTabs = 0;
@@ -43,7 +43,7 @@ export function createReconcileMiddleware(
         if (!after.has(id)) closedTabs += 1;
       });
       if (closedTabs > 0) {
-        store.dispatch(setLoadNotice({ closedTabs }) as unknown as UnknownAction);
+        store.dispatch(setLoadNotice({ closedTabs }));
       }
     }
 

@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { getLeafPanelIds, isLastPanel } from '@utils/panels';
-import type { PanelId, TabId, Tab } from '@types';
+import type { PanelId, Tab } from '@types';
 import { findTabById, getActiveTabForPanel, getTabsByPanelId } from '@utils/tabs';
 import { usePortal } from '@context/PortalContext';
 import { useConfig } from '@context/ConfigContext';
@@ -161,14 +160,6 @@ export function usePrism() {
 }
 
 /**
- * Returns all tabs in the workspace.
- * Convenience selector for `state.tabs`.
- */
-export function useTabs() {
-  return useAppSelector(selectTabs);
-}
-
-/**
  * Returns the active tab for a specific panel.
  *
  * @param panelId - The panel ID to get the active tab for
@@ -189,48 +180,4 @@ export function useActiveTab(panelId: PanelId) {
 export function usePanelTabs(panelId: PanelId) {
   const tabs = useAppSelector(selectTabs);
   return getTabsByPanelId(tabs, panelId);
-}
-
-/**
- * Workspace-level utilities for checking constraints and getting overview info.
- *
- * @returns Object with panel info, helper functions, and counts
- *
- * @example
- * ```tsx
- * function StatusInfo() {
- *   const { tabCount, panelCount, canCloseTab } = useWorkspace();
- *   return <span>{tabCount} tabs in {panelCount} panels</span>;
- * }
- * ```
- */
-export function useWorkspace() {
-  const tabs = useAppSelector(selectTabs);
-  const panel = useAppSelector(selectPanel);
-
-  const leafPanels = getLeafPanelIds(panel);
-  const isOnlyPanel = (panelId: PanelId) => leafPanels.length === 1 && leafPanels[0] === panelId;
-
-  // Check if closing a tab would leave the workspace empty
-  const canCloseTab = (panelId: PanelId, tabId: TabId) => {
-    const tab = findTabById(tabs, tabId);
-    if (!tab) return false;
-    if (tab.locked) return false;
-
-    // If this is not the last panel, we can always close
-    if (!isLastPanel(panel, tab.panelId)) return true;
-
-    // In the last panel, we can close if there's more than 1 tab
-    const panelTabsList = getTabsByPanelId(tabs, panelId);
-    return panelTabsList.length > 1;
-  };
-
-  return {
-    panel,
-    leafPanels,
-    isOnlyPanel,
-    canCloseTab,
-    tabCount: tabs?.length ?? 0,
-    panelCount: leafPanels.length,
-  };
 }

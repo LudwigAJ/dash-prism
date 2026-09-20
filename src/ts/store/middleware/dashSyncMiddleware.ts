@@ -1,8 +1,9 @@
 // src/ts/store/middleware/dashSyncMiddleware.ts
-import { isAction, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
+import { isAction, type Middleware } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
-import type { Workspace, PanelId } from '@types';
-import { clearSearchBarMode } from '../uiSlice';
+import type { Workspace } from '@types';
+import { pruneSearchBarModes } from '../uiSlice';
+import { getLeafPanelIds } from '@utils/panels';
 import { resetWorkspace } from '../workspaceSlice';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
@@ -118,12 +119,14 @@ export function createDashSyncMiddleware(
         timeoutId = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
       }
 
-      // Clean up searchBarModes when a panel is collapsed
-      if (action.type === 'workspace/collapsePanel') {
-        const panelId = (action as unknown as { payload: { panelId: PanelId } }).payload?.panelId;
-        if (panelId) {
-          store.dispatch(clearSearchBarMode({ panelId }));
-        }
+      // Drop search-bar modes of panels that disappeared in this change, whatever
+      // removed them (collapsePanel, removeTab/moveTab/splitPanel collapsing an
+      // empty panel, reconciliation, rehydration).
+      const leafPanelIds = getLeafPanelIds(present.panel);
+      const leafSet = new Set<string>(leafPanelIds);
+      const stale = Object.keys(state.ui.searchBarModes).some((id) => !leafSet.has(id));
+      if (stale) {
+        store.dispatch(pruneSearchBarModes({ leafPanelIds }));
       }
     }
 
@@ -171,7 +174,7 @@ export const validationMiddleware: Middleware<object, RootState> =
 
         // On rehydration failure, reset to clean state to prevent crash
         if (isRehydrate) {
-          store.dispatch(resetWorkspace() as unknown as UnknownAction);
+          store.dispatch(resetWorkspace());
         }
       }
     }

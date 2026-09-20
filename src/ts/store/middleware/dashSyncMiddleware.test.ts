@@ -11,9 +11,15 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, isAction, type Middleware } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, { activateTab, addTab } from '../workspaceSlice';
+import workspaceReducer, {
+  activateTab,
+  addTab,
+  removeTab,
+  splitPanel,
+  collapsePanel,
+} from '../workspaceSlice';
 import uiReducer, { setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
@@ -24,7 +30,7 @@ import type { PanelId, TabId } from '@types';
 // =============================================================================
 
 function createTestStore(setProps?: (props: Record<string, unknown>) => void, maxTabs = 16) {
-  const thunkExtra: ThunkExtra = { maxTabs, getRegisteredLayouts: () => ({}) };
+  const thunkExtra: ThunkExtra = { getMaxTabs: () => maxTabs, getRegisteredLayouts: () => ({}) };
 
   const undoableWorkspaceReducer = undoable(workspaceReducer, {
     limit: 50,
@@ -38,12 +44,23 @@ function createTestStore(setProps?: (props: Record<string, unknown>) => void, ma
 
   const dashSync = createDashSyncMiddleware(setProps);
 
+  // dashSyncMiddleware dispatches into the store it was given, so a spy on
+  // store.dispatch never sees those actions. Record the stream from inside the
+  // chain instead, downstream of the middleware under test.
+  const dispatched: string[] = [];
+  const recorder: Middleware = () => (next) => (action: unknown) => {
+    if (isAction(action)) dispatched.push(action.type);
+    return next(action);
+  };
+
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         thunk: { extraArgument: thunkExtra },
-      }).concat(dashSync.middleware),
+      })
+        .concat(dashSync.middleware)
+        .concat(recorder),
   });
 
   // Return store with typed dispatch for async thunks
@@ -53,7 +70,12 @@ function createTestStore(setProps?: (props: Record<string, unknown>) => void, ma
       dispatch: (action: any) => any;
     },
     cleanup: dashSync.cleanup,
-    getState: () => store.getState() as { workspace: { present: WorkspaceState } },
+    dispatched,
+    getState: () =>
+      store.getState() as {
+        workspace: { present: WorkspaceState };
+        ui: { searchBarModes: Record<string, string> };
+      },
   };
 }
 
@@ -306,6 +328,78 @@ describe('dashSyncMiddleware', () => {
       expect(removeEventListenerSpy).toHaveBeenCalledWith('pagehide', expect.any(Function));
 
       removeEventListenerSpy.mockRestore();
+    });
+  });
+
+  // ===========================================================================
+  // Search-bar mode cleanup (Phase 3 A-7): stale modes are pruned after any
+  // workspace change that removes a panel, not only after collapsePanel.
+  // ===========================================================================
+  describe('search-bar mode cleanup', () => {
+    async function splitIntoTwoPanels(store: ReturnType<typeof createTestStore>['store']) {
+      const rootPanelId = store.getState().workspace.present.panel.id as PanelId;
+      await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab A' }));
+      await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab B' }));
+      const [tabA, tabB] = store.getState().workspace.present.tabs;
+      store.dispatch(
+        splitPanel({ panelId: rootPanelId, direction: 'horizontal', tabId: tabB.id as TabId })
+      );
+      const leafIds = store
+        .getState()
+        .workspace.present.panel.children.map((child: { id: string }) => child.id as PanelId);
+      const newPanelId = leafIds.find((id: PanelId) => id !== rootPanelId) as PanelId;
+      return { rootPanelId, newPanelId, tabA, tabB };
+    }
+
+    it('prunes the mode of a panel collapsed by removing its last tab', async () => {
+      const { store, getState } = createTestStore(vi.fn());
+      const { rootPanelId, newPanelId, tabB } = await splitIntoTwoPanels(store);
+
+      store.dispatch(setSearchBarMode({ panelId: rootPanelId, mode: 'search' }));
+      store.dispatch(setSearchBarMode({ panelId: newPanelId, mode: 'display' }));
+      expect(Object.keys(getState().ui.searchBarModes).sort()).toEqual(
+        [rootPanelId, newPanelId].sort()
+      );
+
+      // removeTab collapses the now-empty panel internally; no collapsePanel
+      // action is ever dispatched.
+      store.dispatch(removeTab({ tabId: tabB.id as TabId }));
+
+      expect(getState().ui.searchBarModes[newPanelId]).toBeUndefined();
+      expect(getState().ui.searchBarModes[rootPanelId]).toBe('search');
+    });
+
+    it('still prunes after an explicit collapsePanel', async () => {
+      const { store, getState } = createTestStore(vi.fn());
+      const { rootPanelId, newPanelId } = await splitIntoTwoPanels(store);
+      store.dispatch(setSearchBarMode({ panelId: newPanelId, mode: 'search' }));
+
+      store.dispatch(collapsePanel({ panelId: newPanelId }));
+
+      expect(getState().ui.searchBarModes[newPanelId]).toBeUndefined();
+      expect(getState().ui.searchBarModes[rootPanelId]).toBeUndefined();
+    });
+
+    it('does not dispatch prune actions when nothing is stale', async () => {
+      const { store, dispatched } = createTestStore(vi.fn());
+      const { rootPanelId, tabA } = await splitIntoTwoPanels(store);
+      store.dispatch(setSearchBarMode({ panelId: rootPanelId, mode: 'search' }));
+
+      dispatched.length = 0;
+      store.dispatch(activateTab({ panelId: rootPanelId, tabId: tabA.id as TabId }));
+
+      expect(dispatched).not.toContain('ui/pruneSearchBarModes');
+    });
+
+    it('does dispatch a prune action when a mode is stale (the guard above has teeth)', async () => {
+      const { store, dispatched } = createTestStore(vi.fn());
+      const { newPanelId, tabB } = await splitIntoTwoPanels(store);
+      store.dispatch(setSearchBarMode({ panelId: newPanelId, mode: 'search' }));
+
+      dispatched.length = 0;
+      store.dispatch(removeTab({ tabId: tabB.id as TabId }));
+
+      expect(dispatched).toContain('ui/pruneSearchBarModes');
     });
   });
 });

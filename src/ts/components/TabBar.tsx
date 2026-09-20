@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, memo, useEffect } from '
 import { Lock, X, Plus, Columns2 } from 'lucide-react';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
-import { useShareLinks } from '@hooks/useShareLinks';
+import { useShareLink } from '@hooks/useShareLinks';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
@@ -444,7 +444,7 @@ export const TabBar = memo(function TabBar({
   const renamingTabId = useAppSelector(selectRenamingTabId);
   const { openInfoModal, openSetIconModal } = usePrism();
   const { maxTabs, theme, maxPanels } = useConfig();
-  const { shareTab } = useShareLinks();
+  const { shareTab } = useShareLink();
   const totalTabCount = allTabs.length;
   const isMaxTabsReached = maxTabs >= 1 && totalTabCount >= maxTabs;
 

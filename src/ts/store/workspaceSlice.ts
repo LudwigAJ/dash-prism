@@ -213,13 +213,13 @@ export const addTab = createAsyncThunk<
   const { tabs } = getState().workspace.present;
 
   // Validate maxTabs limit using shared canAddTab helper
-  if (!canAddTab(tabs.length, extra.maxTabs)) {
+  if (!canAddTab(tabs.length, extra.getMaxTabs())) {
     notifyUser(
       'warning',
-      `Maximum tabs limit reached (${extra.maxTabs})`,
-      `Cannot add tab: maximum of ${extra.maxTabs} tabs reached.`
+      `Maximum tabs limit reached (${extra.getMaxTabs()})`,
+      `Cannot add tab: maximum of ${extra.getMaxTabs()} tabs reached.`
     );
-    return rejectWithValue(`Maximum tabs limit reached (${extra.maxTabs})`);
+    return rejectWithValue(`Maximum tabs limit reached (${extra.getMaxTabs()})`);
   }
 
   // Validate allowMultiple constraint
@@ -251,7 +251,7 @@ export const addTab = createAsyncThunk<
   };
 
   // Pass maxTabs through for race condition guard in reducer
-  return { tab: newTab, maxTabs: extra.maxTabs };
+  return { tab: newTab, maxTabs: extra.getMaxTabs() };
 });
 
 /** Return type for duplicateTab thunk */
@@ -265,11 +265,11 @@ export const duplicateTab = createAsyncThunk<
   const { tabs } = getState().workspace.present;
 
   // Validate maxTabs limit using shared canAddTab helper
-  if (!canAddTab(tabs.length, extra.maxTabs)) {
+  if (!canAddTab(tabs.length, extra.getMaxTabs())) {
     notifyUser(
       'warning',
-      `Cannot duplicate: maximum tabs limit reached (${extra.maxTabs})`,
-      `DUPLICATE_TAB blocked: workspace at maxTabs limit (${extra.maxTabs})`
+      `Cannot duplicate: maximum tabs limit reached (${extra.getMaxTabs()})`,
+      `DUPLICATE_TAB blocked: workspace at maxTabs limit (${extra.getMaxTabs()})`
     );
     return rejectWithValue(`Maximum tabs limit reached`);
   }
@@ -304,7 +304,7 @@ export const duplicateTab = createAsyncThunk<
   };
 
   // Pass maxTabs through for race condition guard in reducer
-  return { tab: newTab, maxTabs: extra.maxTabs };
+  return { tab: newTab, maxTabs: extra.getMaxTabs() };
 });
 
 // =============================================================================

@@ -180,13 +180,3 @@ export function migrateTabStyle(style: string | undefined): TabStyleColor {
   // Unknown style, fall back to default
   return 'default';
 }
-
-/**
- * @deprecated Use tabStyleVariants({ color, theme }) instead.
- * Get the CSS classes for a tab style based on the current theme.
- * Returns empty string for default or invalid styles.
- */
-export function getTabStyleClasses(style: string | undefined, theme: 'light' | 'dark'): string {
-  const color = migrateTabStyle(style);
-  return tabStyleVariants({ color, theme });
-}
