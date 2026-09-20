@@ -1069,6 +1069,7 @@ app.layout = html.Div(
             searchBarPlaceholder="Search layouts...",
             showStatusBar=True,
             statusBarPosition="bottom",
+            statusBarItems=["reset", "help", "undo", "mode", "panels", "tab", "count", "updated"],
             persistence=True,
             persistence_type="local",
             newTabOpensDropdown=False,

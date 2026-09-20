@@ -23,7 +23,7 @@ UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
 ACTION_BUTTON = "[data-testid='prism-action-save']"
 
 
-def _app(show_status_bar: bool) -> Dash:
+def _app(show_status_bar: bool, items: list[str] | None = None) -> Dash:
     app = Dash(__name__, suppress_callback_exceptions=True)
     dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
     # Passing actions with showStatusBar=False warns on purpose (covered by the
@@ -33,6 +33,7 @@ def _app(show_status_bar: bool) -> Dash:
         prism = dash_prism.Prism(
             id="prism",
             showStatusBar=show_status_bar,
+            statusBarItems=items,
             actions=[dash_prism.Action(id="save", label="Save")],
             persistence=False,
             persistence_type="memory",
@@ -58,8 +59,59 @@ def test_status_bar_hidden(dash_duo):
     assert check_browser_errors(dash_duo) == []
 
 
+def _segment_order(dash_duo) -> list[str]:
+    """Names of the status bar segments, in the order they appear in the DOM."""
+    testids = dash_duo.driver.execute_script(
+        "return Array.from("
+        "  document.querySelectorAll('.prism-status-bar [data-testid^=\"prism-statusbar-\"]')"
+        ").map(el => el.getAttribute('data-testid'));"
+    )
+    return [testid.removeprefix("prism-statusbar-") for testid in testids]
+
+
 def test_status_bar_shown_by_default(dash_duo):
     dash_duo.start_server(_app(True), port=get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_items_selects_segments(dash_duo):
+    dash_duo.start_server(_app(True, ["count", "help"]), port=get_free_port())
+    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+    dash_duo.wait_for_element("[data-testid='prism-statusbar-count']", timeout=10)
+
+    for hidden in ("reset", "undo", "mode", "panels", "tab", "updated"):
+        assert dash_duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
+    # Actions are always appended
+    dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
+
+    assert _segment_order(dash_duo) == ["count", "help"]
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_items_follows_the_listed_order(dash_duo):
+    """The prop is an ordered subset: reversing the list reverses the bar."""
+    dash_duo.start_server(_app(True, ["help", "count"]), port=get_free_port())
+    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+
+    assert _segment_order(dash_duo) == ["help", "count"]
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
+    """'updated' is pinned right whatever position it is listed in."""
+    dash_duo.start_server(_app(True, ["updated", "count", "reset"]), port=get_free_port())
+    dash_duo.wait_for_element("[data-testid='prism-statusbar-updated']", timeout=10)
+
+    assert _segment_order(dash_duo) == ["count", "reset", "updated"]
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_items_empty_leaves_only_actions(dash_duo):
+    dash_duo.start_server(_app(True, []), port=get_free_port())
+    dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
+
+    for hidden in ("reset", "help", "undo", "mode", "panels", "tab", "count", "updated"):
+        assert dash_duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
     assert check_browser_errors(dash_duo) == []

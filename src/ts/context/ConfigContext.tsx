@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
+import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import type {
   RegisteredLayouts,
   Theme,
@@ -6,6 +7,7 @@ import type {
   StatusBarPosition,
   PersistenceType,
   EmptyTabView,
+  StatusBarItem,
 } from '@types';
 
 // =============================================================================
@@ -31,6 +33,8 @@ type ConfigContextValue = {
   /** Whether the status bar is rendered at all (default: true) */
   showStatusBar: boolean;
   statusBarPosition: StatusBarPosition;
+  /** Built-in status bar segments to show, in order (default: all) */
+  statusBarItems: readonly StatusBarItem[];
   /** Layout ID to load in the first tab on initial load */
   initialLayout?: string;
   /** Whether new tabs auto-focus SearchBar and open dropdown (default: true) */
@@ -62,6 +66,7 @@ type ConfigProviderProps = {
   searchBarPlaceholder?: string;
   showStatusBar?: boolean;
   statusBarPosition?: StatusBarPosition;
+  statusBarItems?: readonly StatusBarItem[];
   initialLayout?: string;
   newTabOpensDropdown?: boolean;
   emptyTabView?: EmptyTabView;
@@ -80,6 +85,7 @@ export function ConfigProvider({
   searchBarPlaceholder = 'Search layouts...',
   showStatusBar = true,
   statusBarPosition = 'bottom',
+  statusBarItems = DEFAULT_STATUS_BAR_ITEMS,
   persistence = false,
   persistenceType = 'memory',
   initialLayout,
@@ -99,6 +105,7 @@ export function ConfigProvider({
       searchBarPlaceholder: searchBarPlaceholder,
       showStatusBar,
       statusBarPosition: statusBarPosition,
+      statusBarItems,
       persistence,
       persistenceType,
       initialLayout,
@@ -119,6 +126,7 @@ export function ConfigProvider({
       searchBarPlaceholder,
       showStatusBar,
       statusBarPosition,
+      statusBarItems,
       initialLayout,
       newTabOpensDropdown,
       emptyTabView,

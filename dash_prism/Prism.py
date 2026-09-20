@@ -82,6 +82,13 @@ class Prism(PrismComponent):
     :param statusBarPosition: Position of the status bar relative to the workspace.
         Options: ``'top'`` or ``'bottom'``. Defaults to ``'bottom'``.
     :type statusBarPosition: str
+    :param statusBarItems: Which built-in status bar segments to show, in order.
+        Any of ``'reset'``, ``'help'``, ``'undo'``, ``'mode'``, ``'panels'``,
+        ``'tab'``, ``'count'``, ``'updated'``. ``'updated'`` is always placed at
+        the far right, after any ``actions``; unknown names are ignored and an
+        empty list leaves only the actions (``showStatusBar=False`` hides the bar
+        altogether). Defaults to all segments.
+    :type statusBarItems: list[str]
     :param actions: Array of :class:`dash_prism.Action` components to display in the status bar.
         Each action is a clickable button with its own ``n_clicks`` for callbacks.
     :type actions: list or None
@@ -264,6 +271,9 @@ class Prism(PrismComponent):
         actions: Sequence[Component] | None = _UNSET,
         showStatusBar: bool = _UNSET,
         statusBarPosition: Literal["top", "bottom"] = _UNSET,
+        statusBarItems: Sequence[
+            Literal["reset", "help", "undo", "mode", "panels", "tab", "count", "updated"]
+        ] = _UNSET,
         # Persistence
         persistence: bool = _UNSET,
         persistence_type: Literal["memory", "session", "local"] = _UNSET,

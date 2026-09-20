@@ -127,6 +127,7 @@ export type {
   Workspace,
   StatusBarPosition,
   EmptyTabView,
+  StatusBarItem,
   ShareData,
   DashComponent,
 } from './types';

@@ -20,6 +20,7 @@ import {
   resolvePersistenceType,
 } from '@store';
 import { subscribeToToasts } from '@utils/toastEmitter';
+import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import { toast } from 'sonner';
 import type {
   RegisteredLayouts,
@@ -29,6 +30,7 @@ import type {
   StatusBarPosition,
   PersistenceType,
   EmptyTabView,
+  StatusBarItem,
 } from '@types';
 import '../global.css';
 import { DashComponentProps } from 'props';
@@ -127,6 +129,14 @@ export type PrismProps = {
    * Position of the status bar relative to the workspace.
    */
   statusBarPosition?: StatusBarPosition;
+
+  /**
+   * Which built-in status bar segments to show, in this order: 'reset',
+   * 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'. 'updated' is
+   * always placed at the far right, after any actions. Unknown names are
+   * ignored; an empty list leaves only the actions. Default: all segments.
+   */
+  statusBarItems?: ('reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated')[];
 
   /**
    * Current workspace state, written by Prism for Dash (Prism -> Dash).
@@ -384,6 +394,7 @@ export function Prism({
   maxTabs = 16,
   showStatusBar = true,
   statusBarPosition = 'bottom',
+  statusBarItems = ['reset', 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'],
   searchBarPlaceholder = 'Search layouts...',
   layoutTimeout = 30,
   actions = [],
@@ -397,6 +408,19 @@ export function Prism({
   style,
   children,
 }: PrismProps) {
+  // A fresh array literal arrives on every render (the default above, or a new
+  // list from Dash); key it by content so the config context stays referentially
+  // stable and consumers do not re-render on every sync. An explicit None from
+  // Python arrives as null, which bypasses the destructuring default: treat it
+  // (and any non-array) as "all segments".
+  const statusBarItemsKey = (
+    Array.isArray(statusBarItems) ? statusBarItems : DEFAULT_STATUS_BAR_ITEMS
+  ).join('|');
+  const stableStatusBarItems = useMemo(
+    () => statusBarItemsKey.split('|').filter(Boolean) as StatusBarItem[],
+    [statusBarItemsKey]
+  );
+
   // `persistence` is the on/off switch; `persistence_type` only applies when it is on.
   // Resolve once here so every consumer (store, error boundary) sees the same answer.
   const persistenceType = resolvePersistenceType(persistence, persistence_type);
@@ -442,6 +466,7 @@ export function Prism({
           searchBarPlaceholder={searchBarPlaceholder}
           showStatusBar={showStatusBar}
           statusBarPosition={statusBarPosition}
+          statusBarItems={stableStatusBarItems}
           initialLayout={initialLayout}
           newTabOpensDropdown={newTabOpensDropdown}
           emptyTabView={emptyTabView}

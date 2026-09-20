@@ -17,6 +17,9 @@ export type Size = 'sm' | 'md' | 'lg';
 export type StatusBarPosition = 'top' | 'bottom';
 /** What an empty tab (no layout selected) renders in its body. */
 export type EmptyTabView = 'layouts' | 'hint' | 'none';
+/** A built-in status bar segment; see the statusBarItems prop. */
+export type StatusBarItem =
+  'reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated';
 
 // =============================================================================
 // Core Types

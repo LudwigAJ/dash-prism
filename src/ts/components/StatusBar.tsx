@@ -12,6 +12,8 @@ import {
   PopoverContent,
 } from '@components/ui';
 import { cn } from '@utils/cn';
+import { resolveStatusBarItems } from '@constants/statusBar';
+import type { StatusBarItem } from '@types';
 import type { DashComponent, DashComponentApi } from '@types';
 import { isDashComponent } from '@types';
 import {
@@ -37,7 +39,7 @@ type StatusBarProps = {
 export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { clearPersistedState } = usePrism();
-  const { maxTabs, componentId = 'prism' } = useConfig();
+  const { maxTabs, componentId = 'prism', statusBarItems } = useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Select state from Redux
@@ -93,9 +95,12 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     }
   }, [clearPersistedState, dispatch]);
 
-  return (
-    <div className="prism-status-bar bg-card text-card-foreground border-border flex items-center gap-2 border-t px-3 py-1.5 text-xs">
-      {/* Reset Button */}
+  const items = resolveStatusBarItems(statusBarItems);
+  const leftItems = items.filter((item) => item !== 'updated');
+  const showUpdated = items.includes('updated');
+
+  const segments: Record<Exclude<StatusBarItem, 'updated'>, React.ReactNode> = {
+    reset: (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -108,10 +113,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         </TooltipTrigger>
         <TooltipContent>Reset workspace (clear saved state)</TooltipContent>
       </Tooltip>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* Help Button */}
+    ),
+    help: (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -124,10 +127,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         </TooltipTrigger>
         <TooltipContent>Help</TooltipContent>
       </Tooltip>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* Undo Button */}
+    ),
+    undo: (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -146,36 +147,33 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         </TooltipTrigger>
         <TooltipContent>{canUndo ? 'Undo last change (Ctrl+U)' : 'Nothing to undo'}</TooltipContent>
       </Tooltip>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* SearchBar Mode */}
+    ),
+    mode: (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" data-testid="prism-statusbar-mode">
             <span className="text-muted-foreground">Mode:</span>
             <span className="text-foreground font-medium">{searchBarMode}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent>SearchBar mode for active panel</TooltipContent>
       </Tooltip>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* Panel Count + Active Panel ID */}
-      <div className="flex items-center gap-1">
+    ),
+    panels: (
+      <div className="flex items-center gap-1" data-testid="prism-statusbar-panels">
         Panels: <span className="text-foreground font-medium">{panelCount}</span>
         {panelCount > 1 && (
           <span className="text-muted-foreground">({activePanelId.slice(0, 8)})</span>
         )}
       </div>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* Active Tab Info with Popover */}
+    ),
+    tab: (
       <Popover>
         <PopoverTrigger asChild>
-          <div className="hover:bg-muted flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors">
+          <div
+            className="hover:bg-muted flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors"
+            data-testid="prism-statusbar-tab"
+          >
             Tab: <span className="text-foreground">{activeTab?.name || '--'}</span>
             {activeTab?.locked && <Lock className="text-muted-foreground size-[1em]" />}
           </div>
@@ -196,16 +194,25 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
           </PopoverContent>
         )}
       </Popover>
-
-      <span className="text-border opacity-60">|</span>
-
-      {/* Tab Count */}
-      <div className="flex items-center gap-1">
+    ),
+    count: (
+      <div className="flex items-center gap-1" data-testid="prism-statusbar-count">
         <span className="text-foreground">
           {maxTabs >= 1 ? `${tabCount}/${maxTabs}` : tabCount}
         </span>
         {tabCount === 1 ? 'tab' : 'tabs'}
       </div>
+    ),
+  };
+
+  return (
+    <div className="prism-status-bar bg-card text-card-foreground border-border flex items-center gap-2 border-t px-3 py-1.5 text-xs">
+      {leftItems.map((item, index) => (
+        <React.Fragment key={item}>
+          {index > 0 && <Sep />}
+          {segments[item as Exclude<StatusBarItem, 'updated'>]}
+        </React.Fragment>
+      ))}
 
       <div className="flex-1" />
 
@@ -237,7 +244,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 
               return (
                 <React.Fragment key={key}>
-                  {index > 0 && <span className="text-border opacity-60">|</span>}
+                  {index > 0 && <Sep />}
                   <api.ExternalWrapper
                     component={enhancedActionSpec}
                     componentPath={[componentId, 'actions', index]}
@@ -248,22 +255,32 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
               // It's already a React element - render directly
               return (
                 <React.Fragment key={index}>
-                  {index > 0 && <span className="text-border opacity-60">|</span>}
+                  {index > 0 && <Sep />}
                   {actionSpec}
                 </React.Fragment>
               );
             }
           })}
-          <span className="text-border opacity-60">|</span>
+          {showUpdated && <Sep />}
         </>
       )}
 
       {/* Last Updated */}
-      <div className="text-muted-foreground flex items-center gap-1">
-        Updated: <span className="text-foreground">{syncTimeDisplay}</span>
-      </div>
+      {showUpdated && (
+        <div
+          className="text-muted-foreground flex items-center gap-1"
+          data-testid="prism-statusbar-updated"
+        >
+          Updated: <span className="text-foreground">{syncTimeDisplay}</span>
+        </div>
+      )}
     </div>
   );
+}
+
+/** Thin vertical separator between status bar segments. */
+function Sep() {
+  return <span className="text-border opacity-60">|</span>;
 }
 
 // Helper component for info rows

@@ -196,3 +196,12 @@ def test_prism_warns_when_actions_are_hidden_by_show_status_bar() -> None:
         dash_prism.Prism(id="p", showStatusBar=False, actions=[], style={})
         dash_prism.Prism(id="p", showStatusBar=True, actions=[action], style={})
         dash_prism.Prism(id="p", actions=[action], style={})
+
+
+def test_prism_component_status_bar_items_prop() -> None:
+    prism = dash_prism.Prism(id="test-prism", statusBarItems=["count", "updated"], style={})
+
+    assert list(prism.statusBarItems) == ["count", "updated"]
+    assert "statusBarItems" in prism.available_properties
+    assert prism.to_plotly_json()["props"]["statusBarItems"] == ["count", "updated"]
+    assert "statusBarItems" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]

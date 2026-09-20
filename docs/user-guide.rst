@@ -411,6 +411,7 @@ Configuration
        layoutTimeout=30,        # Seconds before timeout
        showStatusBar=True,      # False hides the bar (and any actions)
        statusBarPosition='bottom',  # or 'top'
+       statusBarItems=['reset', 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'],
        emptyTabView='layouts',  # 'layouts' | 'hint' | 'none'
    )
 
@@ -433,6 +434,12 @@ shortcuts keep working, but the status bar is the only way into the help
 dialog and the workspace reset, so both go with it. Passing ``actions`` together with ``showStatusBar=False``
 emits a ``UserWarning`` because the buttons would be unreachable.
 ``statusBarPosition`` chooses ``'top'`` or ``'bottom'`` when the bar is shown.
+
+``statusBarItems`` picks which built-in segments appear and in what order:
+``'reset'``, ``'help'``, ``'undo'``, ``'mode'``, ``'panels'``, ``'tab'``,
+``'count'`` and ``'updated'`` (always at the far right, after any ``actions``).
+For example ``statusBarItems=['count', 'updated']`` keeps only the tab counter
+and the last-updated time next to your actions; ``[]`` leaves only the actions.
 
 Empty Tabs
 ^^^^^^^^^^
