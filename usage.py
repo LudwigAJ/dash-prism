@@ -13,7 +13,7 @@ from __future__ import annotations
 import random
 import time
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any, Literal
 
 import dash
 import numpy as np
@@ -23,6 +23,7 @@ from dash import MATCH, Input, Output, State, callback, dcc, html, clientside_ca
 from dash.exceptions import PreventUpdate
 
 import dash_prism
+from dash_prism import Param
 
 # =============================================================================
 # CONFIGURATION
@@ -337,6 +338,51 @@ def iris_layout():
 
 
 # ================================================================================
+# TYPED CHART (pydantic BaseModel parameters)
+# ================================================================================
+
+if dash_prism.has_pydantic():
+    from pydantic import BaseModel, Field
+
+    class TypedChartParams(BaseModel):
+        """All parameters of the typed chart, validated by pydantic before rendering."""
+
+        chart_type: Literal["bar", "line"] = "bar"
+        n: int = Field(20, ge=1, le=100, description="Number of points to plot")
+        seed: int = Field(0, ge=0, description="Random seed")
+
+    @dash_prism.register_layout(
+        id="typed-chart",
+        name="Typed Chart",
+        description="Parameters declared as a pydantic model (body-model style)",
+        keywords=["typed", "pydantic", "chart", "params"],
+        allow_multiple=True,
+    )
+    def typed_chart_layout(params: TypedChartParams):
+        """Layout whose single parameter is a validated pydantic model."""
+        colors = get_theme_colors()
+        rng = np.random.default_rng(params.seed)
+        xs = list(range(params.n))
+        ys = rng.standard_normal(params.n).cumsum().tolist()
+        trace = (
+            go.Bar(x=xs, y=ys, marker_color=colors["accent"])
+            if params.chart_type == "bar"
+            else go.Scatter(x=xs, y=ys, mode="lines", line={"color": colors["accent"]})
+        )
+        fig = go.Figure(trace, layout=get_plotly_layout())
+        return html.Div(
+            [
+                html.H3(
+                    f"{params.chart_type} chart, {params.n} points, seed {params.seed}",
+                    style={"color": colors["text"]},
+                ),
+                dcc.Graph(figure=fig, style={"height": "70vh"}),
+            ],
+            style={"padding": "16px"},
+        )
+
+
+# ================================================================================
 # DELAYED LAYOUT
 # ================================================================================
 
@@ -348,18 +394,16 @@ def iris_layout():
     keywords=["delay", "loading", "slow", "test", "spinner"],
     allow_multiple=False,
 )
-def delayed_layout(delay: str = "3"):
+def delayed_layout(
+    delay: Annotated[int, Param(ge=0, le=30, description="Seconds to wait before rendering")] = 3,
+):
     """Layout that simulates heavy computation.
 
-    Args:
-        delay: Delay in seconds as string
+    The search bar only accepts whole numbers between 0 and 30 for ``delay``,
+    and Prism hands the callback a real ``int`` (typed parameters, doc 04).
     """
     colors = get_theme_colors()
-
-    try:
-        delay_seconds = min(int(delay), 30)
-    except (ValueError, TypeError):
-        delay_seconds = 3
+    delay_seconds = delay
 
     time.sleep(delay_seconds)
 
@@ -455,7 +499,12 @@ COUNTRIES = [
     keywords=["country", "gapminder", "gdp", "population", "world", "economy"],
     allow_multiple=True,
 )
-def country_layout(country: str = "United States"):
+def country_layout(
+    country: Annotated[
+        str,
+        Param(min_length=2, description="Country name as spelled in the Gapminder dataset"),
+    ] = "United States",
+):
     """Country explorer dashboard.
 
     Args:
