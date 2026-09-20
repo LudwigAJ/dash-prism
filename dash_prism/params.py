@@ -42,35 +42,10 @@ logger = logging.getLogger("dash_prism")
 # OPTIONAL PYDANTIC DETECTION
 # =============================================================================
 
-_HAS_PYDANTIC: bool | None = None
-
-
-def has_pydantic() -> bool:
-    """Return ``True`` if pydantic v2 is importable.
-
-    The result is cached; tests may reset ``_HAS_PYDANTIC`` to ``None``.
-    """
-    global _HAS_PYDANTIC
-    if _HAS_PYDANTIC is None:
-        try:
-            import pydantic
-
-            major = int(str(pydantic.VERSION).split(".")[0])
-            _HAS_PYDANTIC = major >= 2
-            if not _HAS_PYDANTIC:
-                logger.warning(
-                    "dash_prism: pydantic %s found but v2 is required for parameter "
-                    "validation; falling back to basic coercion.",
-                    pydantic.VERSION,
-                )
-        except Exception:  # ImportError, or a broken install
-            _HAS_PYDANTIC = False
-    return _HAS_PYDANTIC
-
 
 def _is_base_model(tp: Any) -> bool:
     """Check whether ``tp`` is a pydantic v2 ``BaseModel`` subclass."""
-    if not has_pydantic() or not isinstance(tp, type):
+    if not isinstance(tp, type):
         return False
     from pydantic import BaseModel
 
@@ -224,15 +199,6 @@ class ParamValidationError(ValueError):
 
     def to_dict(self) -> dict[str, Any]:
         return {"layoutId": self.layout_id, "errors": [e.to_dict() for e in self.errors]}
-
-
-class _CoercionError(Exception):
-    """Internal: raised by the basic coercer for one value."""
-
-    def __init__(self, message: str, code: str) -> None:
-        self.message = message
-        self.code = code
-        super().__init__(message)
 
 
 # =============================================================================
@@ -582,128 +548,6 @@ _TRUE = {"true", "1", "yes", "on", "y", "t"}
 _FALSE = {"false", "0", "no", "off", "n", "f"}
 
 
-def _coerce_scalar(base: Any, value: Any, path: str) -> Any:
-    origin = get_origin(base)
-
-    if base is _EMPTY or base is Any:
-        return value
-
-    if base is bool:
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)) and value in (0, 1):
-            return bool(value)
-        if isinstance(value, str):
-            lowered = value.strip().lower()
-            if lowered in _TRUE:
-                return True
-            if lowered in _FALSE:
-                return False
-        raise _CoercionError("Input should be a valid boolean", "bool_parsing")
-
-    if base is int:
-        if isinstance(value, bool):
-            return int(value)
-        if isinstance(value, int):
-            return value
-        if isinstance(value, float) and value.is_integer():
-            return int(value)
-        if isinstance(value, str):
-            try:
-                return int(value.strip())
-            except ValueError:
-                pass
-        raise _CoercionError("Input should be a valid integer", "int_parsing")
-
-    if base is float:
-        if isinstance(value, bool):
-            return float(value)
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            try:
-                return float(value.strip())
-            except ValueError:
-                pass
-        raise _CoercionError("Input should be a valid number", "float_parsing")
-
-    if base is str:
-        if isinstance(value, str):
-            return value
-        if isinstance(value, (int, float, bool)):
-            return str(value)
-        raise _CoercionError("Input should be a valid string", "string_type")
-
-    if origin is Literal:
-        allowed = get_args(base)
-        if value in allowed:
-            return value
-        for candidate in allowed:  # allow "1" -> 1 for Literal[1, 2]
-            try:
-                if _coerce_scalar(type(candidate), value, path) == candidate:
-                    return candidate
-            except _CoercionError:
-                continue
-        expected = " or ".join(repr(a) for a in allowed)
-        raise _CoercionError(f"Input should be {expected}", "literal_error")
-
-    if isinstance(base, type) and issubclass(base, enum.Enum):
-        if isinstance(value, base):
-            return value
-        try:
-            return base(value)
-        except ValueError:
-            pass
-        if isinstance(value, str):
-            for member in base:
-                if member.name == value or str(member.value) == value:
-                    return member
-        expected = " or ".join(repr(m.value) for m in base)
-        raise _CoercionError(f"Input should be {expected}", "enum")
-
-    if origin in (list, tuple, set, frozenset, Sequence, typing.Sequence) or base in (
-        list,
-        tuple,
-        set,
-        frozenset,
-    ):
-        args = get_args(base)
-        item_type = args[0] if args else Any
-        if isinstance(value, str):
-            text = value.strip()
-            if text.startswith("["):
-                try:
-                    parts = json.loads(text)
-                except json.JSONDecodeError:
-                    raise _CoercionError("Input should be a valid JSON array", "list_type")
-            else:
-                parts = [p.strip() for p in text.split(",") if p.strip()]
-        elif isinstance(value, (list, tuple, set, frozenset)):
-            parts = list(value)
-        else:
-            raise _CoercionError("Input should be a valid list", "list_type")
-        items = [_coerce(item_type, p, f"{path}[{i}]") for i, p in enumerate(parts)]
-        container = origin or base
-        if container in (tuple, set, frozenset):
-            return container(items)
-        return items
-
-    if origin is dict or base is dict:
-        if isinstance(value, Mapping):
-            return dict(value)
-        if isinstance(value, str):
-            try:
-                loaded = json.loads(value)
-            except json.JSONDecodeError:
-                raise _CoercionError("Input should be a valid JSON object", "dict_type")
-            if isinstance(loaded, dict):
-                return loaded
-        raise _CoercionError("Input should be a valid dictionary", "dict_type")
-
-    # Unknown / user-defined type: pass through unchanged.
-    return value
-
-
 def _is_blank(value: Any) -> bool:
     return value is None or (
         isinstance(value, str) and value.strip().lower() in ("", "none", "null")
@@ -764,75 +608,6 @@ def prepare_client_params(
     return out
 
 
-def _coerce(tp: Any, value: Any, path: str) -> Any:
-    base, metadata = _unwrap_annotated(tp)
-    base, nullable = _strip_optional(base)
-    base, inner_meta = _unwrap_annotated(base)
-    meta, _ = _collect_metadata([*metadata, *inner_meta])
-
-    if value is None or (nullable and _is_blank(value)):
-        # An unannotated or Any parameter takes whatever it is given, including
-        # None; only a parameter with a real type rejects it.
-        if nullable or base is _EMPTY or base is Any:
-            return None
-        raise _CoercionError("Input should not be null", "none_forbidden")
-
-    result = _coerce_scalar(base, value, path)
-    _apply_constraints(meta, result)
-    return result
-
-
-def _apply_constraints(meta: Param, value: Any) -> None:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        if meta.ge is not None and value < meta.ge:
-            raise _CoercionError(
-                f"Input should be greater than or equal to {meta.ge}", "greater_than_equal"
-            )
-        if meta.gt is not None and value <= meta.gt:
-            raise _CoercionError(f"Input should be greater than {meta.gt}", "greater_than")
-        if meta.le is not None and value > meta.le:
-            raise _CoercionError(
-                f"Input should be less than or equal to {meta.le}", "less_than_equal"
-            )
-        if meta.lt is not None and value >= meta.lt:
-            raise _CoercionError(f"Input should be less than {meta.lt}", "less_than")
-    if isinstance(value, (str, list, tuple, set, frozenset)):
-        unit = "characters" if isinstance(value, str) else "items"
-        if meta.min_length is not None and len(value) < meta.min_length:
-            raise _CoercionError(
-                f"Input should have at least {meta.min_length} {unit}", "too_short"
-            )
-        if meta.max_length is not None and len(value) > meta.max_length:
-            raise _CoercionError(f"Input should have at most {meta.max_length} {unit}", "too_long")
-    if isinstance(value, str) and meta.pattern is not None:
-        if re.search(meta.pattern, value) is None:
-            raise _CoercionError(
-                f"String should match pattern '{meta.pattern}'", "string_pattern_mismatch"
-            )
-    if meta.choices is not None and value not in meta.choices:
-        expected = " or ".join(repr(c) for c in meta.choices)
-        raise _CoercionError(f"Input should be {expected}", "literal_error")
-
-
-def coerce_basic(tp: Any, value: Any, meta: Param | None = None) -> Any:
-    """Coerce ``value`` to annotation ``tp`` using only the standard library.
-
-    :raises ValueError: If coercion fails (message describes the problem).
-    """
-    try:
-        result = _coerce(tp, value, "")
-        if meta is not None:
-            _apply_constraints(meta, result)
-        return result
-    except _CoercionError as exc:
-        raise ValueError(exc.message) from None
-
-
-# =============================================================================
-# VALIDATORS
-# =============================================================================
-
-
 class LayoutValidator(typing.Protocol):
     """Validates and coerces incoming parameters for one layout."""
 
@@ -845,44 +620,6 @@ class LayoutValidator(typing.Protocol):
     def json_schema(self) -> dict[str, Any] | None:
         """Return a JSON Schema for the parameters, or ``None`` if unavailable."""
         ...
-
-
-class BasicValidator:
-    """Stdlib-only validator used when pydantic is not installed."""
-
-    def __init__(self, layout_id: str, spec: CallableSpec) -> None:
-        self.layout_id = layout_id
-        self.spec = spec
-        self._by_name = {p.name: p for p in spec.params}
-
-    def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
-        errors: list[FieldError] = []
-        out: dict[str, Any] = {}
-
-        for name, raw in params.items():
-            spec = self._by_name.get(name)
-            if spec is None:
-                if self.spec.accepts_var_kwargs:
-                    out[name] = raw
-                else:
-                    errors.append(FieldError(name, "Unexpected parameter", raw, "extra_forbidden"))
-                continue
-            try:
-                out[name] = _coerce(spec.annotation, raw, name)
-                _apply_constraints(spec.meta, out[name])
-            except _CoercionError as exc:
-                errors.append(FieldError(name, exc.message, raw, exc.code))
-
-        for spec in self.spec.params:
-            if not spec.has_default and spec.name not in params:
-                errors.append(FieldError(spec.name, "Field required", None, "missing"))
-
-        if errors:
-            raise ParamValidationError(self.layout_id, errors)
-        return out
-
-    def json_schema(self) -> dict[str, Any] | None:
-        return None
 
 
 class PydanticValidator:
@@ -1049,9 +786,5 @@ class PydanticValidator:
 
 
 def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
-    """Create the validator for a layout (pydantic if available, else basic)."""
-    if has_pydantic():
-        return PydanticValidator.from_spec(layout_id, spec)
-    if spec.body_model is not None:  # pragma: no cover - cannot happen without pydantic
-        raise ValueError("Model-style parameters require pydantic")
-    return BasicValidator(layout_id, spec)
+    """Create the validator for a layout."""
+    return PydanticValidator.from_spec(layout_id, spec)

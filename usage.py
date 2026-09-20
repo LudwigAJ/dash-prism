@@ -341,45 +341,46 @@ def iris_layout():
 # TYPED CHART (pydantic BaseModel parameters)
 # ================================================================================
 
-if dash_prism.has_pydantic():
-    from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 
-    class TypedChartParams(BaseModel):
-        """All parameters of the typed chart, validated by pydantic before rendering."""
 
-        chart_type: Literal["bar", "line"] = "bar"
-        n: int = Field(20, ge=1, le=100, description="Number of points to plot")
-        seed: int = Field(0, ge=0, description="Random seed")
+class TypedChartParams(BaseModel):
+    """All parameters of the typed chart, validated by pydantic before rendering."""
 
-    @dash_prism.register_layout(
-        id="typed-chart",
-        name="Typed Chart",
-        description="Parameters declared as a pydantic model (body-model style)",
-        keywords=["typed", "pydantic", "chart", "params"],
-        allow_multiple=True,
+    chart_type: Literal["bar", "line"] = "bar"
+    n: int = Field(20, ge=1, le=100, description="Number of points to plot")
+    seed: int = Field(0, ge=0, description="Random seed")
+
+
+@dash_prism.register_layout(
+    id="typed-chart",
+    name="Typed Chart",
+    description="Parameters declared as a pydantic model (body-model style)",
+    keywords=["typed", "pydantic", "chart", "params"],
+    allow_multiple=True,
+)
+def typed_chart_layout(params: TypedChartParams):
+    """Layout whose single parameter is a validated pydantic model."""
+    colors = get_theme_colors()
+    rng = np.random.default_rng(params.seed)
+    xs = list(range(params.n))
+    ys = rng.standard_normal(params.n).cumsum().tolist()
+    trace = (
+        go.Bar(x=xs, y=ys, marker_color=colors["accent"])
+        if params.chart_type == "bar"
+        else go.Scatter(x=xs, y=ys, mode="lines", line={"color": colors["accent"]})
     )
-    def typed_chart_layout(params: TypedChartParams):
-        """Layout whose single parameter is a validated pydantic model."""
-        colors = get_theme_colors()
-        rng = np.random.default_rng(params.seed)
-        xs = list(range(params.n))
-        ys = rng.standard_normal(params.n).cumsum().tolist()
-        trace = (
-            go.Bar(x=xs, y=ys, marker_color=colors["accent"])
-            if params.chart_type == "bar"
-            else go.Scatter(x=xs, y=ys, mode="lines", line={"color": colors["accent"]})
-        )
-        fig = go.Figure(trace, layout=get_plotly_layout())
-        return html.Div(
-            [
-                html.H3(
-                    f"{params.chart_type} chart, {params.n} points, seed {params.seed}",
-                    style={"color": colors["text"]},
-                ),
-                dcc.Graph(figure=fig, style={"height": "70vh"}),
-            ],
-            style={"padding": "16px"},
-        )
+    fig = go.Figure(trace, layout=get_plotly_layout())
+    return html.Div(
+        [
+            html.H3(
+                f"{params.chart_type} chart, {params.n} points, seed {params.seed}",
+                style={"color": colors["text"]},
+            ),
+            dcc.Graph(figure=fig, style={"height": "70vh"}),
+        ],
+        style={"padding": "16px"},
+    )
 
 
 # ================================================================================

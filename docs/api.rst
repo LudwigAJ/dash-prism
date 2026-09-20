@@ -67,8 +67,6 @@ Parameter Validation
 .. autoclass:: dash_prism.FieldError
    :members:
 
-.. autofunction:: dash_prism.has_pydantic
-
 Icons
 -----
 

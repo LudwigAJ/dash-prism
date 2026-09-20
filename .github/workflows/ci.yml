@@ -141,14 +141,6 @@ jobs:
           fi
           poetry run python -c "import dash; print(f'Using Dash {dash.__version__}')"
 
-      # Dash >= 4.3 depends on pydantic; older Dash does not. Remove it there so the
-      # stdlib parameter coercer (dash_prism/params.py) is exercised in CI.
-      - name: Remove pydantic for Dash < 4.3 (exercise stdlib fallback)
-        if: ${{ contains('3.1.1 3.2.0 3.3.0 3.4.0 4.0.0 4.1.0 4.2.0', matrix.dash-version) }}
-        run: |
-          poetry run pip uninstall -y pydantic pydantic-core
-          poetry run python -c "import dash_prism; assert not dash_prism.has_pydantic(); print('pydantic absent: basic validator active')"
-
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v2
         with:
@@ -296,13 +288,14 @@ jobs:
       - name: Smoke test wheel install
         run: |
           python -m venv /tmp/test-env
-          /tmp/test-env/bin/pip install "$(ls dist/*.whl)[pydantic]"
+          /tmp/test-env/bin/pip install "$(ls dist/*.whl)"
           /tmp/test-env/bin/python -c "
           import dash_prism
           print(f'Version: {dash_prism.__version__}')
           assert dash_prism.__version__, 'Version should not be empty'
           assert len(dash_prism.AVAILABLE_ICONS) > 0, 'Should have icons'
-          assert dash_prism.has_pydantic(), 'the [pydantic] extra should install pydantic v2'
+          import pydantic
+          assert int(pydantic.VERSION.split('.')[0]) >= 2, 'pydantic v2 must be installed'
           print('Smoke test passed!')
           "
 

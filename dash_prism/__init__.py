@@ -96,7 +96,6 @@ Parameter Validation
 - :class:`dash_prism.Param`: ``Annotated`` metadata for layout parameters
 - :exc:`dash_prism.ParamValidationError`: Raised when parameters fail validation
 - :class:`dash_prism.FieldError`: One failing field inside a ``ParamValidationError``
-- :func:`dash_prism.has_pydantic`: Whether pydantic v2 is available
 
 Initialization
 ~~~~~~~~~~~~~~
@@ -241,7 +240,6 @@ from .params import (
     Param,
     FieldError,
     ParamValidationError,
-    has_pydantic,
 )
 
 # Initialization
@@ -278,7 +276,6 @@ __all__ = [
     "Param",
     "FieldError",
     "ParamValidationError",
-    "has_pydantic",
     # Initialization
     "init",
     "InitializationError",

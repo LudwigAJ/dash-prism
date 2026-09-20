@@ -3,7 +3,6 @@
 # function-local classes cannot be resolved by typing.get_type_hints().
 
 import enum
-import sys
 from typing import Annotated, Literal, Optional
 
 import pytest
@@ -19,25 +18,6 @@ class Color(enum.Enum):
     BLUE = "blue"
 
 
-@pytest.fixture
-def no_pydantic(monkeypatch):
-    """Force the stdlib fallback even when pydantic is importable."""
-    monkeypatch.setattr(P, "_HAS_PYDANTIC", False)
-    yield
-
-
-@pytest.fixture
-def pydantic_blocked(monkeypatch):
-    """Prove the import path is guarded: `import pydantic` raises ImportError."""
-    monkeypatch.setitem(sys.modules, "pydantic", None)
-    monkeypatch.setattr(P, "_HAS_PYDANTIC", None)
-    yield
-    monkeypatch.setattr(P, "_HAS_PYDANTIC", None)
-
-
-requires_pydantic = pytest.mark.skipif(not P.has_pydantic(), reason="pydantic not installed")
-
-
 def _plain(country: str, n: int = 10, verbose: bool = False, ratio: Optional[float] = None):
     return html.Div()
 
@@ -51,23 +31,13 @@ def _annotated(
     return html.Div()
 
 
-@pytest.mark.parametrize("mode", ["pydantic", "basic"])
-def test_coercion_matrix(mode, monkeypatch):
-    if mode == "basic":
-        monkeypatch.setattr(P, "_HAS_PYDANTIC", False)
-    elif not P.has_pydantic():
-        pytest.skip("pydantic not installed")
+def test_coercion_matrix():
     v = P.build_validator("plain", P.introspect_callable(_plain))
     out = v.validate({"country": "SE", "n": "5", "verbose": "true", "ratio": ""})
     assert out == {"country": "SE", "n": 5, "verbose": True, "ratio": None}
 
 
-@pytest.mark.parametrize("mode", ["pydantic", "basic"])
-def test_field_errors_all_reported(mode, monkeypatch):
-    if mode == "basic":
-        monkeypatch.setattr(P, "_HAS_PYDANTIC", False)
-    elif not P.has_pydantic():
-        pytest.skip("pydantic not installed")
+def test_field_errors_all_reported():
     v = P.build_validator("plain", P.introspect_callable(_plain))
     with pytest.raises(ParamValidationError) as exc:
         v.validate({"n": "abc", "verbose": "maybe", "zzz": 1})
@@ -88,7 +58,7 @@ def test_layout_parameters_describe_types():
     assert params["n"].to_dict()["description"] == "Rows"
 
 
-def test_untyped_params_pass_through(no_pydantic):
+def test_untyped_params_pass_through():
     def f(a, b="x"):
         return html.Div()
 
@@ -96,7 +66,7 @@ def test_untyped_params_pass_through(no_pydantic):
     assert v.validate({"a": "1", "b": "2"}) == {"a": "1", "b": "2"}
 
 
-def test_var_kwargs_accept_extra(no_pydantic):
+def test_var_kwargs_accept_extra():
     def f(a: int, **rest):
         return html.Div()
 
@@ -119,15 +89,6 @@ def test_future_annotations_are_resolved():
     assert p.type == "integer" and p.constraints == {"minimum": 1}
 
 
-def test_fallback_without_pydantic_import(pydantic_blocked):
-    assert P.has_pydantic() is False
-    v = P.build_validator("plain", P.introspect_callable(_plain))
-    assert isinstance(v, P.BasicValidator)
-    assert v.json_schema() is None
-    assert v.validate({"country": "SE"}) == {"country": "SE"}
-
-
-@requires_pydantic
 def test_body_model_style():
     from pydantic import BaseModel, Field
 
@@ -149,7 +110,6 @@ def test_body_model_style():
     assert {e.field for e in exc.value.errors} == {"n", "title"}
 
 
-@requires_pydantic
 def test_body_model_must_be_only_param():
     from pydantic import BaseModel
 
@@ -185,10 +145,7 @@ def test_registry_metadata_has_schema_and_typed_params():
     by_name = {p["name"]: p for p in meta["params"]}
     assert by_name["n"]["type"] == "integer"
     assert by_name["kind"]["choices"] == ["a", "b"]
-    if P.has_pydantic():
-        assert meta["schema"]["properties"]["n"]["type"] == "integer"
-    else:
-        assert meta["schema"] is None
+    assert meta["schema"]["properties"]["n"]["type"] == "integer"
 
 
 # =============================================================================
@@ -285,8 +242,8 @@ def test_constraints_are_json_safe():
     json.dumps([p.to_dict() for p in params])
 
 
-def test_none_is_accepted_for_an_untyped_parameter(no_pydantic):
-    """The fallback must not be stricter than pydantic for an untyped parameter."""
+def test_none_is_accepted_for_an_untyped_parameter():
+    """An untyped parameter takes whatever it is given, including None."""
 
     def layout(anything=None):
         return html.Div()

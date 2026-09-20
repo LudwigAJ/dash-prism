@@ -94,11 +94,9 @@ an "Invalid parameters" panel listing each failing field instead of a
 traceback. ``param_options`` presets are validated when the layout is
 registered, so a bad preset fails at import time.
 
-Install ``pip install "dash-prism[pydantic]"`` for pydantic-backed validation
-(``pydantic.Field`` metadata, ``BaseModel`` parameters and a JSON Schema in the
-layout metadata). Dash ≥ 4.3 already depends on pydantic; without it Prism falls
-back to a built-in coercer that accepts the same values and reports the same
-fields, though the wording of individual messages differs.
+Validation is built on pydantic v2, which Prism depends on, so
+``pydantic.Field`` metadata, ``BaseModel`` parameters and a JSON Schema in the
+layout metadata are always available.
 
 Async Layouts
 ^^^^^^^^^^^^^
