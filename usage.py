@@ -1067,6 +1067,7 @@ app.layout = html.Div(
                 dash_prism.Action(id="clear", label="Clear", tooltip="Clear all tabs"),
             ],
             searchBarPlaceholder="Search layouts...",
+            showStatusBar=True,
             statusBarPosition="bottom",
             persistence=True,
             persistence_type="local",

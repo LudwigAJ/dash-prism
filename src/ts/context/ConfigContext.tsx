@@ -28,6 +28,8 @@ type ConfigContextValue = {
   persistence: boolean;
   persistenceType: PersistenceType;
   searchBarPlaceholder: string;
+  /** Whether the status bar is rendered at all (default: true) */
+  showStatusBar: boolean;
   statusBarPosition: StatusBarPosition;
   /** Layout ID to load in the first tab on initial load */
   initialLayout?: string;
@@ -58,6 +60,7 @@ type ConfigProviderProps = {
   persistence?: boolean;
   persistenceType?: PersistenceType;
   searchBarPlaceholder?: string;
+  showStatusBar?: boolean;
   statusBarPosition?: StatusBarPosition;
   initialLayout?: string;
   newTabOpensDropdown?: boolean;
@@ -75,6 +78,7 @@ export function ConfigProvider({
   size = 'md',
   maxTabs = 16,
   searchBarPlaceholder = 'Search layouts...',
+  showStatusBar = true,
   statusBarPosition = 'bottom',
   persistence = false,
   persistenceType = 'memory',
@@ -93,6 +97,7 @@ export function ConfigProvider({
       size,
       maxTabs,
       searchBarPlaceholder: searchBarPlaceholder,
+      showStatusBar,
       statusBarPosition: statusBarPosition,
       persistence,
       persistenceType,
@@ -112,6 +117,7 @@ export function ConfigProvider({
       size,
       maxTabs,
       searchBarPlaceholder,
+      showStatusBar,
       statusBarPosition,
       initialLayout,
       newTabOpensDropdown,

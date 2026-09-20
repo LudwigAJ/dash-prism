@@ -73,6 +73,12 @@ class Prism(PrismComponent):
         are not finite positive numbers (including ``None``, ``0`` and negatives) fall
         back to the default on both sides; there is no "unlimited" setting.
     :type layoutTimeout: float
+    :param showStatusBar: Whether to render the status bar at all. When ``False``
+        the reset, help and undo buttons, the mode/panel/tab read-outs and any
+        ``actions`` are not shown; keyboard shortcuts keep working. Passing
+        ``actions`` together with ``showStatusBar=False`` emits a
+        :class:`UserWarning` because they would be unreachable. Defaults to ``True``.
+    :type showStatusBar: bool
     :param statusBarPosition: Position of the status bar relative to the workspace.
         Options: ``'top'`` or ``'bottom'``. Defaults to ``'bottom'``.
     :type statusBarPosition: str
@@ -256,6 +262,7 @@ class Prism(PrismComponent):
         theme: Literal["light", "dark"] = _UNSET,
         size: Literal["sm", "md", "lg"] = _UNSET,
         actions: Sequence[Component] | None = _UNSET,
+        showStatusBar: bool = _UNSET,
         statusBarPosition: Literal["top", "bottom"] = _UNSET,
         # Persistence
         persistence: bool = _UNSET,
@@ -302,6 +309,14 @@ class Prism(PrismComponent):
                 "Prism(emptyTabView='none', newTabOpensDropdown=False): empty tabs will show "
                 "nothing and the layout dropdown will not open automatically. Users must click "
                 "the search bar or press Ctrl+Space to open a layout.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        if explicit.get("showStatusBar") is False and explicit.get("actions"):
+            warnings.warn(
+                "Prism(showStatusBar=False) hides the status bar, so the 'actions' passed to it "
+                "will not be rendered. Drop the actions or keep the status bar visible.",
                 UserWarning,
                 stacklevel=2,
             )

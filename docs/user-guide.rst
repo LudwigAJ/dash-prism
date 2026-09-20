@@ -409,6 +409,7 @@ Configuration
        size='md',               # 'sm', 'md', 'lg'
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
+       showStatusBar=True,      # False hides the bar (and any actions)
        statusBarPosition='bottom',  # or 'top'
        emptyTabView='layouts',  # 'layouts' | 'hint' | 'none'
    )
@@ -422,6 +423,16 @@ the entire workspace. This is a **global** limit, not per-panel.
 - Default: ``16``
 - Set to ``0`` (or any value less than ``1``) for unlimited tabs
 - When the limit is reached, new tab actions are blocked with a console warning
+
+Status Bar
+^^^^^^^^^^
+
+``showStatusBar=False`` removes the status bar entirely: the reset, help and
+undo buttons, the mode/panel/tab read-outs and any ``actions``. Keyboard
+shortcuts keep working, but the status bar is the only way into the help
+dialog and the workspace reset, so both go with it. Passing ``actions`` together with ``showStatusBar=False``
+emits a ``UserWarning`` because the buttons would be unreachable.
+``statusBarPosition`` chooses ``'top'`` or ``'bottom'`` when the bar is shown.
 
 Empty Tabs
 ^^^^^^^^^^

@@ -172,3 +172,27 @@ def test_prism_does_not_warn_for_other_empty_tab_combinations() -> None:
         dash_prism.Prism(id="p", emptyTabView="none", newTabOpensDropdown=True, style={})
         dash_prism.Prism(id="p", emptyTabView="hint", newTabOpensDropdown=False, style={})
         dash_prism.Prism(id="p", emptyTabView="layouts", newTabOpensDropdown=False, style={})
+
+
+def test_prism_component_show_status_bar_prop() -> None:
+    prism = dash_prism.Prism(id="test-prism", showStatusBar=False, style={})
+
+    assert prism.showStatusBar is False
+    assert "showStatusBar" in prism.available_properties
+    assert prism.to_plotly_json()["props"]["showStatusBar"] is False
+    assert "showStatusBar" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
+
+
+def test_prism_warns_when_actions_are_hidden_by_show_status_bar() -> None:
+    action = dash_prism.Action(id="save", label="Save")
+    with pytest.warns(UserWarning, match="showStatusBar=False"):
+        dash_prism.Prism(id="p", showStatusBar=False, actions=[action], style={})
+
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        dash_prism.Prism(id="p", showStatusBar=False, style={})
+        dash_prism.Prism(id="p", showStatusBar=False, actions=[], style={})
+        dash_prism.Prism(id="p", showStatusBar=True, actions=[action], style={})
+        dash_prism.Prism(id="p", actions=[action], style={})

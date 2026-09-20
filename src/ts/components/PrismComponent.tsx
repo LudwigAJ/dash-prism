@@ -117,6 +117,13 @@ export type PrismProps = {
   layoutTimeout?: number;
 
   /**
+   * Whether to render the status bar at all. When false the reset, help and
+   * undo buttons, the mode/panel/tab read-outs and any `actions` are not shown
+   * (keyboard shortcuts keep working). Default true.
+   */
+  showStatusBar?: boolean;
+
+  /**
    * Position of the status bar relative to the workspace.
    */
   statusBarPosition?: StatusBarPosition;
@@ -375,6 +382,7 @@ export function Prism({
   theme = 'light',
   size = 'md',
   maxTabs = 16,
+  showStatusBar = true,
   statusBarPosition = 'bottom',
   searchBarPlaceholder = 'Search layouts...',
   layoutTimeout = 30,
@@ -432,6 +440,7 @@ export function Prism({
           persistence={persistence}
           persistenceType={persistenceType}
           searchBarPlaceholder={searchBarPlaceholder}
+          showStatusBar={showStatusBar}
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}
           newTabOpensDropdown={newTabOpensDropdown}

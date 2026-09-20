@@ -96,7 +96,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
     openHelpModal,
   } = usePrism();
 
-  const { statusBarPosition } = useConfig();
+  const { statusBarPosition, showStatusBar } = useConfig();
 
   return (
     <div className="prism-view-workspace" ref={rootRef}>
@@ -117,7 +117,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
           );
         })}
 
-      {statusBarPosition === 'top' && (
+      {showStatusBar && statusBarPosition === 'top' && (
         <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
       )}
 
@@ -125,7 +125,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         <Panel panel={panel} />
       </div>
 
-      {statusBarPosition === 'bottom' && (
+      {showStatusBar && statusBarPosition === 'bottom' && (
         <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
       )}
       {/* Modals - local state only */}
