@@ -22,6 +22,10 @@ PrismContent
 .. autoclass:: dash_prism.PrismContent
    :members:
 
+.. data:: dash_prism.PrismAction
+
+   Backwards-compatible alias of :class:`dash_prism.Action`.
+
 Registration
 ------------
 
@@ -29,12 +33,27 @@ Registration
 
 .. autofunction:: dash_prism.init
 
+.. autofunction:: dash_prism.get_layout
+
+.. autofunction:: dash_prism.get_registered_layouts_metadata
+
+.. autofunction:: dash_prism.clear_registry
+
+.. autoclass:: dash_prism.LayoutRegistration
+   :members:
+
 .. autoclass:: dash_prism.LayoutParameter
    :members:
 
-.. autofunction:: dash_prism.get_layout
+.. autoclass:: dash_prism.LayoutRegistry
+   :members:
 
-.. autofunction:: dash_prism.clear_registry
+.. data:: dash_prism.registry
+
+   The process-wide :class:`~dash_prism.LayoutRegistry`.
+   :func:`dash_prism.register_layout` writes to it and :func:`dash_prism.init`
+   reads it when injecting layout metadata into the Prism component, so an
+   application uses this instance rather than creating its own.
 
 Icons
 -----

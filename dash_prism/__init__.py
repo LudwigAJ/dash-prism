@@ -101,7 +101,6 @@ Utilities
 
 - :func:`dash_prism.walk_layout`: Traverse component tree
 - :func:`dash_prism.inject_tab_id`: Add tab IDs for isolation
-- :func:`dash_prism.render_layout_for_tab`: Render layout for specific tab
 - :func:`dash_prism.find_component_by_id`: Find component in tree
 - :func:`dash_prism.update_component_props`: Update component properties
 - :func:`dash_prism.validate_workspace`: Validate workspace structure
@@ -223,7 +222,6 @@ from .registry import (
 from .utils import (
     walk_layout,
     inject_tab_id,
-    render_layout_for_tab,
     find_component_by_id,
     update_component_props,
     validate_workspace,
@@ -256,7 +254,6 @@ __all__ = [
     # Utilities
     "walk_layout",
     "inject_tab_id",
-    "render_layout_for_tab",
     "find_component_by_id",
     "update_component_props",
     "validate_workspace",

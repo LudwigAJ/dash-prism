@@ -241,6 +241,12 @@ class LayoutRegistry:
 
 # Global registry instance
 registry = LayoutRegistry()
+"""The process-wide :class:`LayoutRegistry`.
+
+:func:`dash_prism.register_layout` writes to it and :func:`dash_prism.init`
+reads it when injecting layout metadata into the Prism component, so an
+application normally uses this instance rather than creating its own.
+"""
 
 
 # =============================================================================
