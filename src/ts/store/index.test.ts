@@ -1,12 +1,16 @@
 /**
- * End-to-end tests for createPrismStore: redux-persist inside redux-undo, plus
- * the Dash sync and validation middleware, wired exactly as in production.
+ * End-to-end tests for createPrismStore: redux-undo inside redux-persist, plus
+ * the Dash sync and validation middleware, wired exactly as in production. Only
+ * redux-undo's `present` slice is persisted, so the undo history never reaches
+ * storage and `_persist` lives beside it on `state.workspace`.
  *
  * Regression coverage for 02 A-2: redux-persist's PERSIST/REHYDRATE actions used
  * to be recorded in the undo history. Every fresh page load therefore started
  * with Undo enabled, and one undo replaced the restored workspace with the empty
  * pre-persist state, whose `_persist.rehydrated === false` also stopped
- * redux-persist from writing anything for the rest of the session.
+ * redux-persist from writing anything for the rest of the session. The current
+ * wrapping order keeps `_persist` outside the history, so an undo can no longer
+ * reach it; the assertions below record that rehydration completed.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -29,6 +33,7 @@ import type { PanelId, TabId, RegisteredLayouts } from '@types';
 // =============================================================================
 
 type PersistMeta = { version: number; rehydrated: boolean };
+/** A legacy (persist version 1) payload: the flat workspace plus redux-persist's marker. */
 type Persisted = WorkspaceState & { _persist?: PersistMeta };
 
 const COMPONENT_ID = 'test-prism';
@@ -56,6 +61,21 @@ function serialisePersisted(state: Persisted): string {
   return JSON.stringify(
     Object.fromEntries(Object.entries(state).map(([key, value]) => [key, JSON.stringify(value)]))
   );
+}
+
+/** The current on-disk format (persist version 2): only redux-undo's `present`. */
+function serialiseV2(present: WorkspaceState): string {
+  return JSON.stringify({
+    present: JSON.stringify(present),
+    _persist: JSON.stringify({ version: 2, rehydrated: true }),
+  });
+}
+
+/** Tab ids of the workspace currently in storage (current format). */
+function storedTabIds(data: Map<string, string>): string[] {
+  const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
+  const present = JSON.parse(stored.present) as WorkspaceState;
+  return present.tabs.map((t) => t.id);
 }
 
 /** A valid two-tab workspace as a user would have left it on the previous visit. */
@@ -111,8 +131,12 @@ async function settle({ persistor }: Created): Promise<void> {
   });
 }
 
-function present({ store }: Created): Persisted {
-  return store.getState().workspace.present as Persisted;
+function present({ store }: Created): WorkspaceState {
+  return store.getState().workspace.present;
+}
+
+function persistMeta({ store }: Created): PersistMeta | undefined {
+  return store.getState().workspace._persist;
 }
 
 function history({ store }: Created) {
@@ -134,7 +158,7 @@ describe('createPrismStore', () => {
       expect(history(created).future).toHaveLength(0);
       expect(selectCanUndo(created.store.getState())).toBe(false);
       expect(selectCanRedo(created.store.getState())).toBe(false);
-      expect(present(created)._persist?.rehydrated).toBe(true);
+      expect(persistMeta(created)?.rehydrated).toBe(true);
       expect(present(created).tabs).toHaveLength(1);
 
       created.cleanup();
@@ -148,7 +172,7 @@ describe('createPrismStore', () => {
       created.store.dispatch(undo());
 
       expect(created.store.getState().workspace).toBe(before);
-      expect(present(created)._persist?.rehydrated).toBe(true);
+      expect(persistMeta(created)?.rehydrated).toBe(true);
 
       created.cleanup();
     });
@@ -170,14 +194,14 @@ describe('createPrismStore', () => {
       created.store.dispatch(undo());
 
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
-      expect(present(created)._persist?.rehydrated).toBe(true);
+      expect(persistMeta(created)?.rehydrated).toBe(true);
 
       // ...and, because that state had `_persist.rehydrated === false`, redux-persist
       // stopped writing for the rest of the session. Prove writes still land.
       created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Renamed' }));
       await created.persistor.flush();
       const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
-      const storedTabs = JSON.parse(stored.tabs) as Array<{ id: string; name: string }>;
+      const storedTabs = (JSON.parse(stored.present) as WorkspaceState).tabs;
       expect(storedTabs.map((t) => [t.id, t.name])).toEqual([
         ['tab-a', 'Renamed'],
         ['tab-b', 'Beta'],
@@ -202,9 +226,9 @@ describe('createPrismStore', () => {
       expect(present(created).activeTabIds).toEqual(saved.activeTabIds);
       expect(selectCanUndo(created.store.getState())).toBe(false);
       expect(selectCanRedo(created.store.getState())).toBe(true);
-      // The restored present must still carry the rehydrated marker, otherwise
-      // redux-persist stops writing for the rest of the session.
-      expect(present(created)._persist?.rehydrated).toBe(true);
+      // Rehydration completed. `_persist` now sits outside the undo history, so
+      // an undo can no longer clear this marker and stop all further writes.
+      expect(persistMeta(created)?.rehydrated).toBe(true);
 
       created.store.dispatch(redo());
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a']);
@@ -215,7 +239,7 @@ describe('createPrismStore', () => {
       created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Renamed' }));
       await created.persistor.flush();
       const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
-      const storedTabs = JSON.parse(stored.tabs) as Array<{ id: string; name: string }>;
+      const storedTabs = (JSON.parse(stored.present) as WorkspaceState).tabs;
       expect(storedTabs.map((t) => [t.id, t.name])).toEqual([
         ['tab-a', 'Renamed'],
         ['tab-b', 'Beta'],
@@ -289,7 +313,81 @@ describe('createPrismStore', () => {
       expect(selectCanUndo(created.store.getState())).toBe(false);
       created.store.dispatch(undo());
       expect(present(created).tabs).toHaveLength(1);
-      expect(present(created)._persist?.rehydrated).toBe(true);
+      expect(persistMeta(created)?.rehydrated).toBe(true);
+
+      created.cleanup();
+    });
+  });
+
+  describe('persisted format and undo persistence', () => {
+    it('writes the result of an undo to storage immediately', async () => {
+      const saved = savedWorkspace();
+      const { storage, data } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage });
+      await settle(created);
+
+      created.store.dispatch(removeTab({ tabId: 'tab-b' as TabId }));
+      await created.persistor.flush();
+      expect(storedTabIds(data)).toEqual(['tab-a']);
+
+      // Regression: redux-undo skips the wrapped reducer on UNDO, so with
+      // persistReducer on the inside the undone state was never written until
+      // the next ordinary action, and a reload right after an undo lost it.
+      created.store.dispatch(undo());
+      await created.persistor.flush();
+      expect(storedTabIds(data)).toEqual(['tab-a', 'tab-b']);
+
+      created.store.dispatch(redo());
+      await created.persistor.flush();
+      expect(storedTabIds(data)).toEqual(['tab-a']);
+
+      created.cleanup();
+    });
+
+    it('stores only the present workspace, never the undo history', async () => {
+      const { storage, data } = createFakeStorage();
+      const created = createStore({ storage });
+      await settle(created);
+      created.store.dispatch(renameTab({ tabId: present(created).tabs[0].id, name: 'One' }));
+      created.store.dispatch(renameTab({ tabId: present(created).tabs[0].id, name: 'Two' }));
+      await created.persistor.flush();
+
+      const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
+      expect(Object.keys(stored).sort()).toEqual(['_persist', 'present']);
+      expect(JSON.parse(stored._persist)).toMatchObject({ version: 2 });
+      expect((JSON.parse(stored.present) as WorkspaceState).tabs[0].name).toBe('Two');
+
+      created.cleanup();
+    });
+
+    it('migrates a version 1 flat payload written by 0.9.x', async () => {
+      const saved = savedWorkspace(); // flat, _persist.version 1
+      const { storage, data } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(saved) });
+      const created = createStore({ storage });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
+      expect(present(created).favoriteLayouts).toEqual(['home']);
+      expect(persistMeta(created)).toMatchObject({ version: 2, rehydrated: true });
+
+      // The next write uses the new format
+      created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Migrated' }));
+      await created.persistor.flush();
+      const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
+      expect('tabs' in stored).toBe(false);
+      expect((JSON.parse(stored.present) as WorkspaceState).tabs[0].name).toBe('Migrated');
+
+      created.cleanup();
+    });
+
+    it('loads a version 2 payload', async () => {
+      const { _persist: _ignored, ...presentOnly } = savedWorkspace();
+      const { storage } = createFakeStorage({ [STORAGE_KEY]: serialiseV2(presentOnly) });
+      const created = createStore({ storage });
+      await settle(created);
+
+      expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
+      expect(history(created).past).toHaveLength(0);
 
       created.cleanup();
     });

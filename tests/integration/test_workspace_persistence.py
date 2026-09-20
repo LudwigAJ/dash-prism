@@ -208,6 +208,23 @@ def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
     assert check_browser_errors(dash_duo) == []
 
 
+def _stored_tab_count(dash_duo) -> int | None:
+    """Number of tabs in the persisted workspace (current on-disk format), or None."""
+    import json
+
+    raw = dash_duo.driver.execute_script("return localStorage.getItem(arguments[0]);", STORAGE_KEY)
+    if raw is None:
+        return None
+    return len(json.loads(json.loads(raw)["present"])["tabs"])
+
+
+def _wait_for_stored_tab_count(dash_duo, expected: int, timeout: float = 5.0) -> None:
+    WebDriverWait(dash_duo.driver, timeout).until(
+        lambda d: _stored_tab_count(dash_duo) == expected,
+        message=f"expected the persisted workspace to hold {expected} tab(s)",
+    )
+
+
 def test_persistence_true_with_local_type_writes_workspace(dash_duo):
     """The documented combination stores the workspace in localStorage."""
     dash_duo.start_server(_persistence_app(persistence=True, persistence_type="local"))
@@ -216,8 +233,32 @@ def test_persistence_true_with_local_type_writes_workspace(dash_duo):
     dash_duo.find_element(ADD_TAB_BUTTON).click()
     wait_for_tab_count(dash_duo, 2)
 
-    stored = wait_for_storage(dash_duo, STORAGE_KEY, "local", timeout=5.0)
-    assert stored is not None and '"tabs"' in stored
+    # The second tab reaches storage a couple of timer ticks after the reducer
+    # ran, so wait for the count rather than reading it once.
+    _wait_for_stored_tab_count(dash_duo, 2)
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_undo_is_persisted_across_reload(dash_duo):
+    """An undo must reach storage on its own, not only after the next action."""
+    from conftest import get_modifier_key
+
+    dash_duo.start_server(_persistence_app(persistence=True, persistence_type="local"))
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    _wait_for_stored_tab_count(dash_duo, 1)
+
+    dash_duo.find_element(ADD_TAB_BUTTON).click()
+    wait_for_tab_count(dash_duo, 2)
+    _wait_for_stored_tab_count(dash_duo, 2)
+
+    # Undo the tab creation with the keyboard shortcut
+    dash_duo.find_element("body").send_keys(get_modifier_key(), "u")
+    wait_for_tab_count(dash_duo, 1)
+    _wait_for_stored_tab_count(dash_duo, 1)
+
+    dash_duo.driver.refresh()
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    wait_for_tab_count(dash_duo, 1)
     assert check_browser_errors(dash_duo) == []
 
 

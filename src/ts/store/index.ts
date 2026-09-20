@@ -12,6 +12,7 @@ import {
   REGISTER,
   type Storage,
   type MigrationManifest,
+  type PersistState,
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import storageSession from 'redux-persist/lib/storage/session';
@@ -120,8 +121,16 @@ const migrations = {
     };
   },
 
-  // Version 2: Future migrations go here
-  // 2: (state) => { ... },
+  // Version 2: the persisted payload is redux-undo's `present` only, stored
+  // under a single `present` key (persistReducer now wraps undoable(), see
+  // createPrismStore). Wrap the old flat workspace object.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  2: (state: any) => {
+    if (!state || typeof state !== 'object') return state;
+    if ('present' in state) return state;
+    const { _persist: _ignored, ...present } = state;
+    return { present };
+  },
 } as MigrationManifest;
 
 // =============================================================================
@@ -138,12 +147,10 @@ const UNDO_EXCLUDED_ACTIONS = [
   'workspace/setActivePanel', // Panel focus is not undoable
   'workspace/resizePanel', // Resize is continuous, not undoable
   'workspace/reconcileWithServer', // Closing tabs for removed layouts cannot be undone
-  // redux-persist lifecycle actions. persistReducer sits inside undoable(), so
-  // these reach redux-undo and they do change state (the `_persist` marker and
-  // the rehydrated payload). If they were recorded, every fresh page load would
-  // start with Undo enabled, and one undo would replace the restored workspace
-  // with the empty pre-persist state whose `_persist.rehydrated === false`
-  // also silently stops redux-persist from writing for the rest of the session.
+  // redux-persist lifecycle actions. persistReducer forwards them to the
+  // undoable reducer it wraps; they must never become undo steps, otherwise a
+  // fresh page load would start with Undo enabled and one undo could revert
+  // the restored workspace.
   FLUSH,
   REHYDRATE,
   PAUSE,
@@ -180,20 +187,23 @@ export function createPrismStore(config: StoreConfig) {
     storage,
   } = config;
 
-  // Configure persistence for workspace slice only
-  // Important: We persist the workspace reducer BEFORE wrapping with redux-undo
-  // This ensures only the workspace state is persisted, not the undo history.
-  // On page reload, undo history starts fresh.
+  // Configure persistence for the workspace slice only.
+  // persistReducer wraps the undoable reducer and persists just its `present`
+  // (whitelist), so the undo history is never stored and starts fresh on every
+  // page load. Wrapping in this order matters: redux-undo handles UNDO/REDO
+  // itself without calling the reducer it wraps, so with persistReducer on the
+  // inside an undo was never written to storage until the next ordinary action
+  // and a reload right after an undo silently lost it.
   const workspacePersistConfig = {
     key: getWorkspacePersistKey(componentId),
-    version: 1, // Increment this when adding new migrations
+    version: 2, // Increment this when adding new migrations
     storage: storage ?? getStorage(persistenceType),
+    whitelist: ['present'],
     migrate: createMigrate(migrations, { debug: process.env.NODE_ENV !== 'production' }),
   };
 
-  // Persist workspace reducer, then wrap with redux-undo
-  const persistedWorkspaceReducer = persistReducer(workspacePersistConfig, workspaceReducer);
-  const undoablePersistedWorkspaceReducer = undoable(persistedWorkspaceReducer, {
+  // Wrap workspace reducer with redux-undo, then persist its `present`
+  const undoableWorkspaceReducer = undoable(workspaceReducer, {
     limit: 50,
     filter: excludeAction(UNDO_EXCLUDED_ACTIONS),
     groupBy: (action) => {
@@ -207,10 +217,14 @@ export function createPrismStore(config: StoreConfig) {
     ignoreInitialState: false,
     syncFilter: true,
   });
+  const persistedWorkspaceReducer = persistReducer(
+    workspacePersistConfig,
+    undoableWorkspaceReducer
+  );
 
   // Combine reducers
   const rootReducer = combineReducers({
-    workspace: undoablePersistedWorkspaceReducer,
+    workspace: persistedWorkspaceReducer,
     ui: uiReducer,
   });
 
@@ -284,6 +298,8 @@ export type RootState = {
     present: WorkspaceState;
     future: WorkspaceState[];
     _latestUnfiltered?: WorkspaceState;
+    /** redux-persist bookkeeping (version + rehydrated flag); lives beside the history. */
+    _persist?: PersistState;
   };
   ui: UiState;
 };

@@ -96,15 +96,19 @@ def _read_stored(duo) -> str | None:
 
 
 def _stored_session_id(duo) -> str | None:
-    """The persisted serverSessionId.
+    """The persisted serverSessionId, in either on-disk format.
 
-    redux-persist JSON-encodes every key separately, so the stored blob holds a
-    doubly-encoded string; decode both layers instead of matching raw text.
+    redux-persist JSON-encodes each top-level key on its own. The current format
+    persists the undo history's ``present`` slice, so the workspace sits one
+    level down; the 0.9.x format this test seeds was flat.
     """
     raw = _read_stored(duo)
     if raw is None:
         return None
-    value = json.loads(raw).get("serverSessionId")
+    outer = json.loads(raw)
+    if "present" in outer:
+        return json.loads(outer["present"]).get("serverSessionId")
+    value = outer.get("serverSessionId")
     return None if value is None else json.loads(value)
 
 
