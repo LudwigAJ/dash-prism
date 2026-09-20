@@ -371,6 +371,26 @@ def test_unhashable_choices_on_an_optional_parameter_still_register():
     assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
 
 
+# =============================================================================
+# Choice declarations that cannot be satisfied
+# =============================================================================
+
+
+def test_empty_choices_are_rejected_at_registration():
+    """An empty choice list admits no value, and used to disable the layout.
+
+    ``Literal[()]`` defeats pydantic, so the model fell back to one ``Any``
+    field per parameter -- and the sibling annotated ``int`` below then
+    accepted any string at all.
+    """
+
+    def layout(x: Annotated[str, Param(choices=[])], n: int):
+        return html.Div()
+
+    with pytest.raises(ValueError, match=r"parameter 'x' declares Param\(choices=\[\]\)"):
+        P.build_validator("empty-choices", P.introspect_callable(layout))
+
+
 def test_a_parameter_pydantic_cannot_model_does_not_disable_its_siblings():
     """One unschematisable parameter used to take every other one down with it.
 
@@ -390,3 +410,99 @@ def test_a_parameter_pydantic_cannot_model_does_not_disable_its_siblings():
 
     # The parameter it could not model is still passed through untouched.
     assert validator.validate({"cfg": "anything", "n": "7"}) == {"cfg": "anything", "n": 7}
+
+
+def test_body_model_choices_are_enforced_not_just_advertised():
+    """A body model is the app's own, so pydantic never sees our Param.
+
+    The search bar offered the pick list and nothing held the request to it:
+    a value that was never on the list reached the callback.
+    """
+    from pydantic import BaseModel
+
+    class Body(BaseModel):
+        ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])]
+
+    def layout(params: Body):
+        return html.Div()
+
+    spec = P.introspect_callable(layout)
+    assert P.build_layout_parameters(spec)[0].choices == ["BTPS", "FRTR"]
+    validator = P.build_validator("body-choices", spec)
+
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"ticker": "DBR"})
+    assert [(e.field, e.message) for e in exc.value.errors] == [
+        ("ticker", "Input should be 'BTPS' or 'FRTR'")
+    ]
+
+    assert validator.validate({"ticker": "FRTR"})["params"] == Body(ticker="FRTR")
+
+
+def test_a_blank_still_clears_an_optional_body_model_choice():
+    """Guard: enforcing the list must not swallow the nullable blank."""
+    from pydantic import BaseModel
+
+    class Body(BaseModel):
+        ticker: Annotated[Optional[str], Param(choices=["BTPS", "FRTR"])] = None
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-optional-choices", P.introspect_callable(layout))
+
+    assert validator.validate({"ticker": ""})["params"].ticker is None
+
+
+def test_scalar_choices_on_a_collection_parameter_are_rejected():
+    """Every input failed: the string was split into a list, then compared
+    against scalar choices, so no value could ever match."""
+
+    def layout(tags: Annotated[list[str], Param(choices=["a", "b"])]):
+        return html.Div()
+
+    with pytest.raises(ValueError, match="is a collection"):
+        P.build_validator("array-choices", P.introspect_callable(layout))
+
+
+def test_whole_value_choices_on_a_collection_parameter_are_still_allowed():
+    """Guard: the rejection must not catch choices that are whole collections."""
+
+    def layout(rows: Annotated[Optional[list], Param(choices=[[1, 2], [3, 4]])] = None):
+        return html.Div()
+
+    validator = P.build_validator("whole-list-choices", P.introspect_callable(layout))
+
+    assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
+
+
+def test_choices_that_contradict_the_annotation_are_rejected():
+    """The metadata took Param's list and the model kept the Literal, so the
+    search bar offered a value the callback was certain to refuse."""
+
+    def layout(x: Annotated[Optional[Literal["a", "b"]], Param(choices=["a", "b", "c"])] = None):
+        return html.Div()
+
+    with pytest.raises(ValueError, match="declares its choices twice"):
+        P.build_validator("conflicting-choices", P.introspect_callable(layout))
+
+
+def test_choices_that_match_the_annotation_are_allowed():
+    """Guard: saying the same thing twice is redundant, not wrong."""
+
+    def layout(x: Annotated[Literal["a", "b"], Param(choices=["a", "b"])] = "a"):
+        return html.Div()
+
+    validator = P.build_validator("agreeing-choices", P.introspect_callable(layout))
+
+    assert validator.validate({"x": "b"}) == {"x": "b"}
+
+
+def test_a_bad_choice_declaration_fails_the_registration_itself():
+    """The error must name the parameter and reach the decorator, not the request."""
+
+    with pytest.raises(ValueError, match=r"parameter 'tags'"):
+
+        @dash_prism.register_layout(id="bad-choices", name="Bad")
+        def layout(tags: Annotated[list[str], Param(choices=["a", "b"])]):
+            return html.Div()

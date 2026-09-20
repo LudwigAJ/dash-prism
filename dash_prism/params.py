@@ -81,7 +81,11 @@ class Param:
     :ivar min_length: Minimum length for strings and lists.
     :ivar max_length: Maximum length for strings and lists.
     :ivar pattern: Regular expression the (string) value must match.
-    :ivar choices: Allowed values. Alternative to ``Literal[...]``.
+    :ivar choices: Allowed values. Alternative to ``Literal[...]``. Registration
+        fails if the list is empty, if it repeats an annotation that already
+        declares choices but disagrees with it, or if it holds scalars for a
+        collection parameter (restrict the items with ``list[Literal[...]]``
+        instead). On an ``Optional`` parameter a blank still clears the value.
     :ivar examples: Example values shown as hints.
     :ivar placeholder: Placeholder text for the search bar input.
     """
@@ -557,6 +561,69 @@ def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
     return result
 
 
+def _choice_message(choices: Sequence[Any]) -> str:
+    """Render a list of choices the way pydantic renders a ``Literal``."""
+    rendered = [repr(c) if isinstance(c, str) else str(c) for c in choices]
+    if len(rendered) == 1:
+        return f"Input should be {rendered[0]}"
+    return "Input should be " + ", ".join(rendered[:-1]) + f" or {rendered[-1]}"
+
+
+def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: Param) -> None:
+    """Reject a choice declaration no value could satisfy.
+
+    These are mistakes in the layout's own signature, so they are raised at
+    registration: left alone each one produces a parameter the search bar
+    offers and the server then refuses, with no input that can succeed.
+    """
+    if meta.choices is None:
+        return
+    declared = list(meta.choices)
+    if not declared:
+        raise ValueError(
+            f"Layout '{layout_id}': parameter '{name}' declares Param(choices=[]). "
+            "An empty choice list cannot be satisfied by any value; drop the argument "
+            "or list the allowed values."
+        )
+
+    ptype, _, annotated, _ = describe_type(annotation)
+    if ptype == "array" and not all(
+        isinstance(choice, (list, tuple, set, frozenset)) for choice in declared
+    ):
+        raise ValueError(
+            f"Layout '{layout_id}': parameter '{name}' is a collection, but "
+            f"Param(choices={declared!r}) lists scalar values, so every input is "
+            "rejected. Choices for a collection parameter must be whole values for "
+            "that collection (choices=[[1, 2], [3]]); to restrict its items instead, "
+            "annotate the item type -- list[Literal['a', 'b']]."
+        )
+
+    if annotated is not None and _json_safe(annotated) != _json_safe(declared):
+        raise ValueError(
+            f"Layout '{layout_id}': parameter '{name}' declares its choices twice and "
+            f"the two disagree -- the annotation allows {_json_safe(annotated)!r} but "
+            f"Param(choices=...) lists {_json_safe(declared)!r}. The search bar offers "
+            "the second list while the callback enforces the first. Remove one, or "
+            "make them match."
+        )
+
+
+def check_choice_declarations(layout_id: str, spec: CallableSpec) -> None:
+    """Check every parameter's choices, for both declaration styles.
+
+    :raises ValueError: If a choice list is empty, scalar on a collection
+        parameter, or contradicts the choices the annotation already declares.
+    """
+    if spec.body_model is None:
+        for param in spec.params:
+            _check_choice_declaration(layout_id, param.name, param.annotation, param.meta)
+        return
+    for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
+        meta, _ = _collect_metadata([info, *info.metadata])
+        annotation = info.annotation if info.annotation is not None else _EMPTY
+        _check_choice_declaration(layout_id, name, annotation, meta)
+
+
 # =============================================================================
 # BASIC (STDLIB) COERCION
 # =============================================================================
@@ -712,8 +779,15 @@ class PydanticValidator:
             for p in spec.params:
                 if p.meta.choices is not None:
                     choices[p.name] = list(p.meta.choices)
-
-        if spec.body_model is not None:
+        else:
+            # A body model is kept exactly as the app declared it, so pydantic
+            # never sees our Param metadata. Collect the field choices anyway:
+            # they drive both the coercion of the string the browser sends and
+            # the membership check in validate().
+            for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
+                meta, _ = _collect_metadata([info, *info.metadata])
+                if meta.choices is not None:
+                    choices[name] = list(meta.choices)
             return cls(layout_id, spec.body_model, spec.body_param, nullable, arrays, choices)
 
         # pydantic refuses to declare a field whose name starts with an
@@ -790,6 +864,8 @@ class PydanticValidator:
 
         data = prepare_client_params(params, self._nullable, self._arrays, self._choices)
         held_back = {name: data.pop(name) for name in list(data) if name in self._passthrough}
+        if self.body_param is not None:
+            self._reject_unlisted_choices(data)
         try:
             instance = self.model.model_validate(data)
         except ValidationError as exc:
@@ -827,6 +903,24 @@ class PydanticValidator:
         out.update(held_back)
         return out
 
+    def _reject_unlisted_choices(self, data: Mapping[str, Any]) -> None:
+        """Hold a body model's fields to the choices the search bar offered.
+
+        The signature style rewrites a choice-carrying parameter into a
+        ``Literal``, so pydantic enforces the list. A body model is the app's
+        own and is left alone, and pydantic ignores our ``Param`` metadata --
+        so the pick list was advertised and nothing held anyone to it.
+        """
+        errors = [
+            FieldError(name, _choice_message(self._choices[name]), value, "literal_error")
+            for name, value in data.items()
+            if name in self._choices
+            and not (value is None and name in self._nullable)
+            and not any(value == choice for choice in self._choices[name])
+        ]
+        if errors:
+            raise ParamValidationError(self.layout_id, errors)
+
     def json_schema(self) -> dict[str, Any] | None:
         try:
             schema: dict[str, Any] = self.model.model_json_schema()
@@ -837,5 +931,10 @@ class PydanticValidator:
 
 
 def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
-    """Create the validator for a layout."""
+    """Create the validator for a layout.
+
+    :raises ValueError: If a parameter's choice declarations cannot be
+        satisfied; see :func:`check_choice_declarations`.
+    """
+    check_choice_declarations(layout_id, spec)
     return PydanticValidator.from_spec(layout_id, spec)
