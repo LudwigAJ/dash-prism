@@ -15,6 +15,8 @@ export type PersistenceType = 'memory' | 'session' | 'local';
 export type Theme = 'light' | 'dark';
 export type Size = 'sm' | 'md' | 'lg';
 export type StatusBarPosition = 'top' | 'bottom';
+/** What an empty tab (no layout selected) renders in its body. */
+export type EmptyTabView = 'layouts' | 'hint' | 'none';
 
 // =============================================================================
 // Core Types

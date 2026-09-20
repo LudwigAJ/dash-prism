@@ -102,6 +102,14 @@ class Prism(PrismComponent):
         new tabs instantly show the layout dropdown for quick selection. If
         ``False``, users must click the SearchBar to see available layouts.
     :type newTabOpensDropdown: bool
+    :param emptyTabView: What a tab with no layout selected shows in its body.
+        ``'layouts'`` (default) shows a grid of all registered layouts with
+        favorites first. ``'hint'`` shows a single line pointing users to the
+        search bar. ``'none'`` shows an empty pane so users pick layouts through
+        the search bar only. Combine ``'none'`` with ``newTabOpensDropdown=True``
+        so new tabs still surface the layout list; the quiet combination with
+        ``newTabOpensDropdown=False`` emits a :class:`UserWarning`.
+    :type emptyTabView: str
     :param readWorkspace: Current workspace state, written by Prism for Dash.
         Use it as an ``Input`` or ``State`` in callbacks; Prism never reads it
         back. Keys: ``tabs`` (list of dict), ``panel`` (dict), ``panelTabs``
@@ -256,6 +264,7 @@ class Prism(PrismComponent):
         maxTabs: int = _UNSET,
         initialLayout: str | None = _UNSET,
         newTabOpensDropdown: bool = _UNSET,
+        emptyTabView: Literal["layouts", "hint", "none"] = _UNSET,
         searchBarPlaceholder: str = _UNSET,
         layoutTimeout: float = _UNSET,
         # Advanced — typically managed by dash_prism.init()
@@ -284,6 +293,15 @@ class Prism(PrismComponent):
                 "Prism(persistence=True) has no effect while persistence_type is 'memory' "
                 "(the default). Pass persistence_type='local' or 'session' to persist the "
                 "workspace, or drop persistence=True.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        if explicit.get("emptyTabView") == "none" and explicit.get("newTabOpensDropdown") is False:
+            warnings.warn(
+                "Prism(emptyTabView='none', newTabOpensDropdown=False): empty tabs will show "
+                "nothing and the layout dropdown will not open automatically. Users must click "
+                "the search bar or press Ctrl+Space to open a layout.",
                 UserWarning,
                 stacklevel=2,
             )

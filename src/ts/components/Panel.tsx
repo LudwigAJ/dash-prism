@@ -10,7 +10,7 @@ import type { PanelNode, Tab, TabId, PanelId } from '@types';
 import { cn } from '@utils/cn';
 import { isLeafPanel } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
-import { NewLayout } from '@components/layouts';
+import { EmptyTabView } from '@components/layouts';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import {
   useAppDispatch,
@@ -138,7 +138,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                 >
                   <ErrorBoundary>
                     {!tab.layoutId ? (
-                      <NewLayout tabId={tab.id} />
+                      <EmptyTabView tabId={tab.id} />
                     ) : portalNode ? (
                       <OutPortal node={portalNode} />
                     ) : (

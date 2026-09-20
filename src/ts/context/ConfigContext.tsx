@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import type { RegisteredLayouts, Theme, Size, StatusBarPosition, PersistenceType } from '@types';
+import type {
+  RegisteredLayouts,
+  Theme,
+  Size,
+  StatusBarPosition,
+  PersistenceType,
+  EmptyTabView,
+} from '@types';
 
 // =============================================================================
 // Context
@@ -26,6 +33,8 @@ type ConfigContextValue = {
   initialLayout?: string;
   /** Whether new tabs auto-focus SearchBar and open dropdown (default: true) */
   newTabOpensDropdown: boolean;
+  /** What an empty tab renders in its body (default: 'layouts') */
+  emptyTabView: EmptyTabView;
   /** Timeout in seconds for layout loading (default: 30) */
   layoutTimeout: number;
   /** Dash setProps callback for syncing state to Dash */
@@ -52,6 +61,7 @@ type ConfigProviderProps = {
   statusBarPosition?: StatusBarPosition;
   initialLayout?: string;
   newTabOpensDropdown?: boolean;
+  emptyTabView?: EmptyTabView;
   layoutTimeout?: number;
   setProps?: (props: Record<string, unknown>) => void;
 };
@@ -70,6 +80,7 @@ export function ConfigProvider({
   persistenceType = 'memory',
   initialLayout,
   newTabOpensDropdown = true,
+  emptyTabView = 'layouts',
   layoutTimeout = 30,
   setProps,
 }: ConfigProviderProps) {
@@ -87,6 +98,7 @@ export function ConfigProvider({
       persistenceType,
       initialLayout,
       newTabOpensDropdown,
+      emptyTabView,
       layoutTimeout,
       setProps,
     }),
@@ -103,6 +115,7 @@ export function ConfigProvider({
       statusBarPosition,
       initialLayout,
       newTabOpensDropdown,
+      emptyTabView,
       layoutTimeout,
       setProps,
     ]

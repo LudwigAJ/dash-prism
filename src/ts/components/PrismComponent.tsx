@@ -28,6 +28,7 @@ import type {
   Workspace,
   StatusBarPosition,
   PersistenceType,
+  EmptyTabView,
 } from '@types';
 import '../global.css';
 import { DashComponentProps } from 'props';
@@ -172,6 +173,14 @@ export type PrismProps = {
    * dropdown. If false, users must click the SearchBar to see the dropdown.
    */
   newTabOpensDropdown?: boolean;
+
+  /**
+   * What an empty tab (a tab with no layout selected) shows in its body.
+   * 'layouts' (default) shows the grid of registered layouts with favorites first.
+   * 'hint' shows a single line pointing the user to the search bar.
+   * 'none' shows nothing; users select layouts via the search bar only.
+   */
+  emptyTabView?: EmptyTabView;
 
   /**
    * CSS class name(s) to add to the root container.
@@ -374,6 +383,7 @@ export function Prism({
   persistence_type = 'memory',
   initialLayout,
   newTabOpensDropdown = true,
+  emptyTabView = 'layouts',
   updateWorkspace,
   className,
   style,
@@ -425,6 +435,7 @@ export function Prism({
           statusBarPosition={statusBarPosition}
           initialLayout={initialLayout}
           newTabOpensDropdown={newTabOpensDropdown}
+          emptyTabView={emptyTabView}
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >

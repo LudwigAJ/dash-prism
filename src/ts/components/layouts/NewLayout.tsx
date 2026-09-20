@@ -105,7 +105,10 @@ export function NewLayout({ tabId }: NewLayoutProps) {
 
   if (layoutEntries.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
+      <div
+        data-testid="prism-empty-tab-layouts"
+        className="flex h-full items-center justify-center p-6"
+      >
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -122,7 +125,10 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   }
 
   return (
-    <div className="bg-background flex h-full w-full flex-col overflow-auto p-[1.7em]">
+    <div
+      data-testid="prism-empty-tab-layouts"
+      className="bg-background flex h-full w-full flex-col overflow-auto p-[1.7em]"
+    >
       {/* Favorites Section */}
       {favoriteEntries.length > 0 && (
         <section className="mb-[2.3em] last:mb-0">

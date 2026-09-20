@@ -140,3 +140,35 @@ def test_prop_docstrings_match_behaviour() -> None:
     generated = " ".join((PrismComponent.__doc__ or "").split())
     assert "Prism -> Dash" in generated
     assert "Dash -> Prism" in generated
+
+
+def test_prism_component_empty_tab_view_prop() -> None:
+    """emptyTabView is a first-class prop on the wrapper and the generated class."""
+    prism = dash_prism.Prism(id="test-prism", emptyTabView="none", style={})
+
+    assert prism.emptyTabView == "none"
+    assert "emptyTabView" in prism.available_properties
+    assert prism.to_plotly_json()["props"]["emptyTabView"] == "none"
+
+
+def test_prism_component_empty_tab_view_default_unset() -> None:
+    """Unset props are not serialized, so the TS default ('layouts') applies."""
+    prism = dash_prism.Prism(id="test-prism", style={})
+
+    assert "emptyTabView" not in prism.to_plotly_json()["props"]
+
+
+def test_prism_warns_on_quiet_empty_tab_combination() -> None:
+    with pytest.warns(UserWarning, match="emptyTabView='none'"):
+        dash_prism.Prism(id="p", emptyTabView="none", newTabOpensDropdown=False, style={})
+
+
+def test_prism_does_not_warn_for_other_empty_tab_combinations() -> None:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        dash_prism.Prism(id="p", emptyTabView="none", style={})
+        dash_prism.Prism(id="p", emptyTabView="none", newTabOpensDropdown=True, style={})
+        dash_prism.Prism(id="p", emptyTabView="hint", newTabOpensDropdown=False, style={})
+        dash_prism.Prism(id="p", emptyTabView="layouts", newTabOpensDropdown=False, style={})

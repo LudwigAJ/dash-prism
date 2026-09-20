@@ -410,6 +410,7 @@ Configuration
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
        layoutTimeout=30,        # Seconds before timeout
        statusBarPosition='bottom',  # or 'top'
+       emptyTabView='layouts',  # 'layouts' | 'hint' | 'none'
    )
 
 Tab Limits
@@ -421,6 +422,21 @@ the entire workspace. This is a **global** limit, not per-panel.
 - Default: ``16``
 - Set to ``0`` (or any value less than ``1``) for unlimited tabs
 - When the limit is reached, new tab actions are blocked with a console warning
+
+Empty Tabs
+^^^^^^^^^^
+
+A tab without a layout normally shows a grid of all registered layouts, with
+favorites first. ``emptyTabView`` changes that body:
+
+- ``'layouts'`` (default) — the layout grid
+- ``'hint'`` — a single line pointing users to the search bar (and ``Ctrl+Space``)
+- ``'none'`` — an empty pane; users pick layouts through the search bar only
+
+``emptyTabView`` and ``newTabOpensDropdown`` are independent: the first controls
+the tab body, the second whether the search bar dropdown opens for a new tab.
+``emptyTabView='none'`` together with ``newTabOpensDropdown=False`` leaves a new
+tab with no visible cue, so that combination emits a ``UserWarning``.
 
 Layout Timeout
 ^^^^^^^^^^^^^^
