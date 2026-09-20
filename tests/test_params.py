@@ -398,9 +398,9 @@ def test_unhashable_choices_on_an_optional_parameter_stay_nullable():
 def test_empty_choices_are_rejected_at_registration():
     """An empty choice list admits no value, and used to disable the layout.
 
-    ``Literal[()]`` defeats pydantic, so the model fell back to one ``Any``
-    field per parameter -- and the sibling annotated ``int`` below then
-    accepted any string at all.
+    ``Literal[()]`` defeats pydantic, so before the sibling-isolating fallback
+    landed the model fell back to one ``Any`` field per parameter and the
+    ``int`` below accepted any string at all.
     """
 
     def layout(x: Annotated[str, Param(choices=[])], n: int):
@@ -525,3 +525,197 @@ def test_a_bad_choice_declaration_fails_the_registration_itself():
         @dash_prism.register_layout(id="bad-choices", name="Bad")
         def layout(tags: Annotated[list[str], Param(choices=["a", "b"])]):
             return html.Div()
+
+
+# =============================================================================
+# A body model's own machinery runs before its choices are checked
+# =============================================================================
+
+
+def test_body_model_tuple_choices_survive_pydantic_coercion():
+    """A choice written as a tuple comes back from pydantic as a tuple.
+
+    The membership check used to run on the prepared input, where ``'[1,2]'``
+    is still the list it parsed to, so it never matched the declared tuple and
+    a perfectly valid submission was refused.
+    """
+    from pydantic import BaseModel
+
+    class Body(BaseModel):
+        pair: Annotated[tuple[int, int], Param(choices=[(1, 2), (3, 4)])]
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-tuple", P.introspect_callable(layout))
+
+    assert validator.validate({"pair": "[1,2]"})["params"].pair == (1, 2)
+
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"pair": "[9,9]"})
+    assert [e.field for e in exc.value.errors] == ["pair"]
+
+
+def test_a_body_models_own_validator_runs_before_its_choices_are_checked():
+    """The app's validators normalise the value; the check sees the result.
+
+    Checking the raw input first rejected ``' a '`` for a Literal whose own
+    before-validator strips it -- and because ``param_options`` are validated
+    at registration, a layout like this could no longer be imported at all.
+    """
+    from pydantic import BaseModel, field_validator
+
+    class Body(BaseModel):
+        kind: Annotated[Literal["a", "b"], Param(choices=["a", "b"])]
+
+        @field_validator("kind", mode="before")
+        @classmethod
+        def _trim(cls, value):
+            return value.strip() if isinstance(value, str) else value
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-validator", P.introspect_callable(layout))
+
+    assert validator.validate({"kind": " a "})["params"].kind == "a"
+
+
+def test_body_model_enum_choices_accept_the_member_pydantic_builds():
+    """Choices written as Enum members are compared against the member.
+
+    ``prepare_client_params`` cannot map ``'a'`` onto ``Color.RED`` (its text is
+    ``'Color.RED'``), so the check has to compare across representations rather
+    than demand the declaration's own spelling.
+    """
+    from pydantic import BaseModel
+
+    class Body(BaseModel):
+        color: Annotated[Color, Param(choices=[Color.RED, Color.BLUE])]
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-enum", P.introspect_callable(layout))
+
+    assert validator.validate({"color": "red"})["params"].color is Color.RED
+
+
+def test_an_alias_cannot_route_around_a_body_models_choices():
+    """The check reads canonical fields off the validated model.
+
+    Keyed on the incoming names it saw no field called ``ticker`` at all, so an
+    off-list value submitted under the alias reached the callback untouched.
+    """
+    from pydantic import BaseModel, Field
+
+    class Body(BaseModel):
+        ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])] = Field(alias="t")
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-alias", P.introspect_callable(layout))
+
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"t": "DBR"})
+    assert [(e.field, e.input) for e in exc.value.errors] == [("ticker", "DBR")]
+
+    assert validator.validate({"t": "FRTR"})["params"].ticker == "FRTR"
+
+
+def test_an_unset_body_field_keeps_its_default_unchecked():
+    """Guard: the check must not start validating defaults nobody submitted."""
+    from pydantic import BaseModel
+
+    class Body(BaseModel):
+        ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])] = "DBR"
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("body-default", P.introspect_callable(layout))
+
+    assert validator.validate({})["params"].ticker == "DBR"
+
+
+def test_reordered_choices_are_not_a_contradiction():
+    """Order decides what the pick list shows first, nothing more.
+
+    Comparing the two declarations as ordered lists turned a working layout
+    into one that could not be imported.
+    """
+
+    def layout(x: Annotated[Literal["a", "b"], Param(choices=["b", "a"])] = "a"):
+        return html.Div()
+
+    spec = P.introspect_callable(layout)
+    validator = P.build_validator("reordered-choices", spec)
+
+    # The declared order is what the search bar offers.
+    assert P.build_layout_parameters(spec)[0].choices == ["b", "a"]
+    assert validator.validate({"x": "b"}) == {"x": "b"}
+
+
+def test_a_genuinely_different_choice_list_is_still_a_contradiction():
+    """Guard: ignoring order must not start ignoring the values themselves."""
+
+    def layout(x: Annotated[Literal["a", "b"], Param(choices=["b", "c"])] = "a"):
+        return html.Div()
+
+    with pytest.raises(ValueError, match="declares its choices twice"):
+        P.build_validator("still-conflicting", P.introspect_callable(layout))
+
+
+def test_the_warning_names_the_parameters_that_lost_validation():
+    """A log line saying "its parameters" hid which one actually degraded."""
+    import logging
+
+    def layout(cfg: dict[str, _AppType], n: int = 1):
+        return html.Div()
+
+    records: list[str] = []
+    handler = logging.Handler()
+    handler.emit = lambda record: records.append(record.getMessage())  # type: ignore[method-assign]
+    logger = logging.getLogger("dash_prism")
+    logger.addHandler(handler)
+    try:
+        P.build_validator("named-degradation", P.introspect_callable(layout))
+    finally:
+        logger.removeHandler(handler)
+
+    assert any("parameter cfg" in message for message in records)
+    assert not any("parameter cfg, n" in message for message in records)
+
+
+def test_the_last_resort_fallback_gives_up_on_every_field():
+    """A type can misbehave only in combination, and that branch has to work.
+
+    Probing each field alone cannot catch a type whose schema hook succeeds the
+    first time it is asked and fails the next, so the combined rebuild still
+    fails and everything has to be relaxed.
+    """
+    from pydantic import ConfigDict, Field
+    from pydantic_core import core_schema
+
+    class _RefusesToBeSchematisedTwice:
+        calls = 0
+
+        @classmethod
+        def __get_pydantic_core_schema__(cls, source, handler):
+            cls.calls += 1
+            if cls.calls > 1:
+                raise ValueError("this type cannot be schematised again")
+            return core_schema.str_schema()
+
+    fields = {
+        "odd": (_RefusesToBeSchematisedTwice, Field(None)),
+        "n": (int, Field(1)),
+    }
+    model, degraded = P._model_keeping_what_pydantic_accepts(
+        "LastResort", ConfigDict(extra="forbid"), fields
+    )
+
+    assert degraded == ["odd", "n"]
+    # Everything is Any now, so even the sibling stops being checked.
+    assert model.model_validate({"n": "not-an-int"}).n == "not-an-int"

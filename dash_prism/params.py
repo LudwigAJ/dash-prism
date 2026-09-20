@@ -83,9 +83,13 @@ class Param:
     :ivar pattern: Regular expression the (string) value must match.
     :ivar choices: Allowed values. Alternative to ``Literal[...]``. Registration
         fails if the list is empty, if it repeats an annotation that already
-        declares choices but disagrees with it, or if it holds scalars for a
-        collection parameter (restrict the items with ``list[Literal[...]]``
-        instead). On an ``Optional`` parameter a blank still clears the value.
+        declares choices but allows a different set of values (order does not
+        matter), or if it holds scalar values for a collection parameter --
+        restrict the items with ``list[Literal[...]]`` instead. On an
+        ``Optional`` parameter a blank still clears the value. Declared on a
+        pydantic model's field, the value the callback receives must be one of
+        the choices, so the model's own validators run first and an alias
+        cannot route around the list.
     :ivar examples: Example values shown as hints.
     :ivar placeholder: Placeholder text for the search bar input.
     """
@@ -353,6 +357,34 @@ def _nullable_choice_type(choices: Sequence[Any]) -> Any:
         return Literal[tuple([*choices, None])]  # type: ignore[valid-type]
 
 
+def _same_choices(left: Sequence[Any], right: Sequence[Any]) -> bool:
+    """Whether two choice lists allow the same values, whatever their order.
+
+    Order is presentation only -- it decides what the pick list shows first --
+    so it must not make two agreeing declarations look like a contradiction.
+    Choices may be unhashable (a list of lists), so this cannot use sets.
+    """
+    remaining = _json_safe(list(right))
+    for item in _json_safe(list(left)):
+        if item not in remaining:
+            return False
+        remaining.remove(item)
+    return not remaining
+
+
+def _is_listed_choice(value: Any, choices: Sequence[Any]) -> bool:
+    """Whether ``value`` is one of ``choices``, across representations.
+
+    The value has been through pydantic by the time this is asked, so a choice
+    written as a tuple may come back as a tuple where the declaration holds a
+    list, and an ``Enum`` member where the declaration holds its value.
+    """
+    if any(value == choice for choice in choices):
+        return True
+    safe = _json_safe(value)
+    return any(safe == _json_safe(choice) for choice in choices)
+
+
 def _absorb_constraints(obj: Any, merged: dict[str, Any]) -> None:
     """Duck-type ``annotated_types`` constraint objects (Ge, Le, MinLen, ...)."""
     for key in ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern"):
@@ -564,7 +596,12 @@ def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
 
 
 def _choice_message(choices: Sequence[Any]) -> str:
-    """Render a list of choices the way pydantic renders a ``Literal``."""
+    """Render a choice list the way pydantic renders a ``Literal``.
+
+    Matches pydantic's wording for the ordinary cases -- strings, numbers,
+    booleans -- so the two paths read alike; an exotic object's ``repr`` may
+    differ from pydantic's own rendering of it.
+    """
     rendered = [repr(c) if isinstance(c, str) else str(c) for c in choices]
     if len(rendered) == 1:
         return f"Input should be {rendered[0]}"
@@ -572,11 +609,13 @@ def _choice_message(choices: Sequence[Any]) -> str:
 
 
 def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: Param) -> None:
-    """Reject a choice declaration no value could satisfy.
+    """Reject a choice declaration the search bar and the callback cannot both honour.
 
-    These are mistakes in the layout's own signature, so they are raised at
-    registration: left alone each one produces a parameter the search bar
-    offers and the server then refuses, with no input that can succeed.
+    The pick list is rendered from the parameter metadata and the callback is
+    held to the validator's model; each declaration below lets the two disagree,
+    so the user is offered a value the server is certain to refuse. They are
+    mistakes in the layout's own signature, so they are raised at registration
+    rather than surfacing later as a parameter no input satisfies.
     """
     if meta.choices is None:
         return
@@ -600,7 +639,7 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
             "annotate the item type -- list[Literal['a', 'b']]."
         )
 
-    if annotated is not None and _json_safe(annotated) != _json_safe(declared):
+    if annotated is not None and not _same_choices(annotated, declared):
         raise ValueError(
             f"Layout '{layout_id}': parameter '{name}' declares its choices twice and "
             f"the two disagree -- the annotation allows {_json_safe(annotated)!r} but "
@@ -696,12 +735,15 @@ def prepare_client_params(
 
 def _model_keeping_what_pydantic_accepts(
     model_name: str, config: Any, fields: Mapping[str, Any]
-) -> Any:
+) -> tuple[Any, list[str]]:
     """Rebuild a model, degrading only the fields pydantic refused.
 
     A single parameter pydantic cannot schematise -- ``dict[str, SomeAppClass]``,
     say -- used to take every other parameter down with it, so a sibling
     annotated ``int`` silently accepted any string at all.
+
+    Returns the model and the names of the parameters it gave up on, so the
+    caller can say which ones lost their validation.
     """
     from pydantic import Field, create_model
 
@@ -710,18 +752,26 @@ def _model_keeping_what_pydantic_accepts(
             model_name or "LayoutParams", __config__=config, **items
         )
 
+    def relaxed(field: Any) -> Any:
+        return (Any, Field(field[1].default))
+
     kept: dict[str, Any] = {}
+    degraded: list[str] = []
     for name, field in fields.items():
         try:
             build({name: field})
         except Exception:
-            kept[name] = (Any, Field(field[1].default))
+            kept[name] = relaxed(field)
+            degraded.append(name)
         else:
             kept[name] = field
     try:
-        return build(kept)
-    except Exception:  # pragma: no cover - a combination none of the parts showed
-        return build({name: (Any, Field(field[1].default)) for name, field in fields.items()})
+        return build(kept), degraded
+    except Exception:
+        # Reachable when a type only misbehaves in combination -- a custom
+        # __get_pydantic_core_schema__ that fails the second time it is asked,
+        # for instance. Give up on all of them rather than on registration.
+        return build({name: relaxed(field) for name, field in fields.items()}), list(fields)
 
 
 class LayoutValidator(typing.Protocol):
@@ -750,13 +800,19 @@ class PydanticValidator:
         arrays: frozenset[str] = frozenset(),
         choices: Mapping[str, Sequence[Any]] | None = None,
         passthrough: frozenset[str] = frozenset(),
+        declared_choices: Mapping[str, Sequence[Any]] | None = None,
     ) -> None:
         self.layout_id = layout_id
         self.model = model
         self.body_param = body_param
         self._nullable = nullable
         self._arrays = arrays
+        # Every choice we know of, used to turn the browser's string back into
+        # the value it stands for.
         self._choices = dict(choices or {})
+        # Only those a Param(choices=...) declared, which is what nothing else
+        # enforces for a body model.
+        self._declared_choices = dict(declared_choices or {})
         self._passthrough = passthrough
 
     @classmethod
@@ -786,11 +842,21 @@ class PydanticValidator:
             # never sees our Param metadata. Collect the field choices anyway:
             # they drive both the coercion of the string the browser sends and
             # the membership check in validate().
+            declared: dict[str, Sequence[Any]] = {}
             for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
                 meta, _ = _collect_metadata([info, *info.metadata])
                 if meta.choices is not None:
+                    declared[name] = list(meta.choices)
                     choices[name] = list(meta.choices)
-            return cls(layout_id, spec.body_model, spec.body_param, nullable, arrays, choices)
+            return cls(
+                layout_id,
+                spec.body_model,
+                spec.body_param,
+                nullable,
+                arrays,
+                choices,
+                declared_choices=declared,
+            )
 
         # pydantic refuses to declare a field whose name starts with an
         # underscore, but a layout callable may perfectly well have one. Those
@@ -851,16 +917,17 @@ class PydanticValidator:
                 __config__=config,
                 **fields,
             )
-        except Exception as exc:  # pragma: no cover - depends on the app's types
+        except Exception as exc:
             # Registration must not fail because a signature defeats pydantic.
-            # Fall back to a model that accepts every parameter unchanged.
+            # Keep every field it can still model; the rest are passed through.
+            model, degraded = _model_keeping_what_pydantic_accepts(model_name, config, fields)
             logger.warning(
                 "dash_prism: could not build a validation model for layout '%s' (%s); "
-                "the parameters it could not model are passed through without validation.",
+                "%s passed through without validation.",
                 layout_id,
                 exc,
+                ("parameter " + ", ".join(sorted(degraded)) if degraded else "its parameters are"),
             )
-            model = _model_keeping_what_pydantic_accepts(model_name, config, fields)
         return cls(layout_id, model, None, nullable, arrays, choices, passthrough)
 
     def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
@@ -868,8 +935,6 @@ class PydanticValidator:
 
         data = prepare_client_params(params, self._nullable, self._arrays, self._choices)
         held_back = {name: data.pop(name) for name in list(data) if name in self._passthrough}
-        if self.body_param is not None:
-            self._reject_unlisted_choices(data)
         try:
             instance = self.model.model_validate(data)
         except ValidationError as exc:
@@ -898,6 +963,7 @@ class PydanticValidator:
             ) from None
 
         if self.body_param is not None:
+            self._reject_unlisted_choices(instance)
             return {self.body_param: instance, **held_back}
 
         # Only pass what the client actually supplied (plus extras); omitted
@@ -907,20 +973,37 @@ class PydanticValidator:
         out.update(held_back)
         return out
 
-    def _reject_unlisted_choices(self, data: Mapping[str, Any]) -> None:
+    def _reject_unlisted_choices(self, instance: Any) -> None:
         """Hold a body model's fields to the choices the search bar offered.
 
         The signature style rewrites a choice-carrying parameter into a
-        ``Literal``, so pydantic enforces the list. A body model is the app's
-        own and is left alone, and pydantic ignores our ``Param`` metadata --
-        so the pick list was advertised and nothing held anyone to it.
+        ``Literal``, so pydantic enforces the list for us. A body model is the
+        app's own type and reaches pydantic untouched, and pydantic ignores our
+        ``Param`` metadata -- so the pick list was advertised and nothing held
+        anyone to it.
+
+        This runs *after* the model has validated, against the canonical field
+        values, for three reasons: the model's own validators have already
+        normalised whatever they were going to normalise, a field reached by
+        alias cannot route around the list, and ``'[1,2]'`` has become the
+        tuple the field declares rather than the list it parsed to. The
+        declaration therefore describes the value the callback receives.
+
+        Only choices a ``Param`` declared are checked -- pydantic owns the ones
+        that come from a ``Literal`` or ``Enum`` annotation. A field the request
+        did not set keeps its default, checked no more than it was before.
         """
         errors = [
-            FieldError(name, _choice_message(self._choices[name]), value, "literal_error")
-            for name, value in data.items()
-            if name in self._choices
-            and not (value is None and name in self._nullable)
-            and not any(value == choice for choice in self._choices[name])
+            FieldError(
+                name,
+                _choice_message(choices),
+                _json_safe(getattr(instance, name)),
+                "literal_error",
+            )
+            for name, choices in self._declared_choices.items()
+            if name in instance.model_fields_set
+            and not (getattr(instance, name) is None and name in self._nullable)
+            and not _is_listed_choice(getattr(instance, name), choices)
         ]
         if errors:
             raise ParamValidationError(self.layout_id, errors)
