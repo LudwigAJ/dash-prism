@@ -164,7 +164,7 @@ class Prism(PrismComponent):
         dash_prism.init('workspace', app)
 
         if __name__ == '__main__':
-            app.run_server(debug=True)
+            app.run(debug=True)
 
     With status bar actions:
 

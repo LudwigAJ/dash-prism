@@ -69,6 +69,21 @@ Async Layouts
        data = await fetch_data()
        return html.Div(str(data))
 
+Component IDs Inside Tabs
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Prism always rewrites every string component ID inside a tab's layout into a
+pattern-matching dict, ``{'type': <your id>, 'index': <tab id>}``, so that the
+same layout can be rendered in several tabs without ID collisions. This happens
+for every layout, whether or not ``allow_multiple`` is set. Consequently a
+callback that targets a plain string ID (``Output('chat-messages', 'children')``)
+never matches a component rendered inside a tab. Use ``MATCH`` (or ``ALL``)
+pattern-matching callbacks for anything inside a tab, or give a component an
+explicit dict ID yourself (``id={'type': 'settings-theme', 'index': 'global'}``),
+which Prism leaves untouched, when you need a fixed index. Components in
+non-``children`` props (for example a ``label`` holding a component) are not
+rewritten.
+
 Multiple Instances (allow_multiple)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -93,8 +108,9 @@ By default, each layout can only be open in one tab at a time. Set
 
    **Pattern-Matching Callbacks Required**
 
-   When ``allow_multiple=True``, Prism automatically transforms all string
-   component IDs into pattern-matching dicts to isolate each tab instance.
+   As described above, Prism rewrites string component IDs into
+   pattern-matching dicts for every tab, so with several instances of the same
+   layout open each tab gets its own ``index``.
 
    Your ID ``'chat-input'`` becomes ``{'type': 'chat-input', 'index': '<tab-id>'}``
 
@@ -113,15 +129,15 @@ By default, each layout can only be open in one tab at a time. Set
       def send_message(n_clicks, text):
           return f'You said: {text}'
 
-      # WRONG - will not work with allow_multiple=True
+      # WRONG - never fires for components inside a tab
       @app.callback(
           Output('chat-messages', 'children'),  # String ID won't match
           Input('chat-send', 'n_clicks'),
       )
       def send_message(n_clicks): ...
 
-   If your layout uses ``allow_multiple=False`` (default), you can use
-   regular string IDs in callbacks since only one instance exists.
+   This applies with ``allow_multiple=False`` too: the IDs are rewritten either
+   way, the flag only controls how many tabs may show the layout at once.
 
 Actions
 -------
@@ -460,25 +476,23 @@ pattern-matching IDs (dict-style) for those components, you can skip it.
    ``init()`` logs a warning if ``suppress_callback_exceptions`` is
    ``False`` to help catch this early.
 
-ID Transformation (allow_multiple only)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ID Transformation
+^^^^^^^^^^^^^^^^^
 
-When a layout is registered with ``allow_multiple=True``, Prism transforms
-string component IDs into pattern-matching dicts to isolate each tab instance:
+Prism rewrites string component IDs inside a tab's layout into pattern-matching
+dicts so each tab instance stays isolated:
 
 - ``'my-button'`` -> ``{'type': 'my-button', 'index': 'tab-xyz'}``
 
-This transformation happens automatically via ``inject_tab_id()`` and only
-applies to layouts that allow multiple instances. Components that already
-have dict IDs are left unchanged.
+This happens automatically via ``inject_tab_id()`` for **every** layout,
+whatever ``allow_multiple`` is set to. Components that already have dict IDs are
+left unchanged. See `Component IDs Inside Tabs`_ for what that means for your
+callbacks.
 
-**Layouts with ``allow_multiple=False`` (the default) are rendered as-is.**
-You can use regular string IDs in callbacks without any transformation.
+Callback Patterns for Tab Content
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Callback Patterns for allow_multiple
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For layouts with ``allow_multiple=True``, use pattern-matching callbacks:
+For any component rendered inside a tab, use pattern-matching callbacks:
 
 .. code-block:: python
 

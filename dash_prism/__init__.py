@@ -46,7 +46,7 @@ Basic usage with static layouts::
     dash_prism.init('prism', app)
 
     if __name__ == '__main__':
-        app.run_server(debug=True)
+        app.run(debug=True)
 
 Advanced Usage
 --------------
