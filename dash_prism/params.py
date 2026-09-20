@@ -330,6 +330,23 @@ def _strip_optional(tp: Any) -> tuple[Any, bool]:
     return tp, False
 
 
+def _optional(tp: Any) -> Any:
+    """Return ``Optional[tp]``, or ``tp`` unchanged if typing refuses the union.
+
+    Python 3.10 deduplicates a union's members by hashing them, so a ``Literal``
+    synthesised from unhashable choices (a list, a dict) raises ``TypeError``
+    here; 3.11 added a fallback and accepts it. This happens outside pydantic's
+    reach, and registration must not fail because a signature defeats typing, so
+    the non-null type is kept -- which is what such a parameter got anyway
+    before nullability was preserved at all.
+    """
+    try:
+        return typing.Optional[tp]
+    except TypeError:
+        logger.debug("Could not make %r optional; keeping it non-null.", tp)
+        return tp
+
+
 def _absorb_constraints(obj: Any, merged: dict[str, Any]) -> None:
     """Duck-type ``annotated_types`` constraint objects (Ge, Le, MinLen, ...)."""
     for key in ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern"):
@@ -680,8 +697,16 @@ class PydanticValidator:
                 continue
             tp = p.annotation if p.annotation is not _EMPTY else Any
             base, _ = _unwrap_annotated(tp)
-            if p.meta.choices is not None and get_origin(_strip_optional(base)[0]) is not Literal:
+            inner, inner_nullable = _strip_optional(base)
+            if p.meta.choices is not None and get_origin(inner) is not Literal:
                 tp = Literal[tuple(p.meta.choices)]  # type: ignore[valid-type]
+                if inner_nullable:
+                    # describe_type reports such a parameter nullable, so the
+                    # search bar offers a blank and prepare_client_params turns
+                    # it into None. Rebuilding the type from the choices alone
+                    # would drop the Optional and reject that None, leaving the
+                    # user no input that could succeed except picking a choice.
+                    tp = _optional(tp)
             field_kwargs = p.meta.as_field_kwargs()
             if describe_type(tp)[0] == "unknown":
                 # pydantic cannot build a schema for an arbitrary class (a

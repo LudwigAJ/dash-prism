@@ -251,3 +251,121 @@ def test_none_is_accepted_for_an_untyped_parameter():
     validator = P.build_validator("untyped", P.introspect_callable(layout))
 
     assert validator.validate({"anything": None}) == {"anything": None}
+
+
+# =============================================================================
+# Optional parameters carrying Param(choices=...)
+# =============================================================================
+
+
+def _optional_choices(
+    ticker: Annotated[Optional[str], Param(choices=["BTPS", "FRTR"])],
+    window: Annotated[Optional[int], Param(choices=[5, 22])] = None,
+):
+    return html.Div()
+
+
+def test_optional_param_choices_keep_their_nullability():
+    """A blank must reach an Optional ``Param(choices=...)`` parameter as ``None``.
+
+    ``build_layout_parameters`` reports such a parameter nullable, so the search
+    bar offers an empty input as valid and ``prepare_client_params`` turns it
+    into ``None``. Synthesising a bare ``Literal`` from the choices dropped the
+    ``Optional``, so that ``None`` was then rejected and the user was left with
+    no input that could succeed except picking a choice.
+    """
+    spec = P.introspect_callable(_optional_choices)
+    reported = {p.name: p for p in P.build_layout_parameters(spec)}
+    assert reported["ticker"].nullable is True
+    assert reported["ticker"].choices == ["BTPS", "FRTR"]
+    assert reported["window"].nullable is True
+
+    validator = P.build_validator("optional-choices", spec)
+
+    assert validator.validate({"ticker": "", "window": "none"}) == {
+        "ticker": None,
+        "window": None,
+    }
+    # The choices themselves still arrive as their real types.
+    assert validator.validate({"ticker": "FRTR", "window": "22"}) == {
+        "ticker": "FRTR",
+        "window": 22,
+    }
+
+
+@pytest.mark.parametrize("optional_str", [Optional[str], str | None])
+def test_every_optional_spelling_keeps_its_nullability(optional_str):
+    """``typing.Optional[str]`` and ``str | None`` are different runtime objects.
+
+    The first is a ``typing.Union``, the second a ``types.UnionType``; both must
+    survive the rewrite.
+    """
+
+    def layout(ticker=None):
+        return html.Div()
+
+    layout.__annotations__ = {"ticker": Annotated[optional_str, Param(choices=["BTPS", "FRTR"])]}
+    validator = P.build_validator("optional-spelling", P.introspect_callable(layout))
+
+    assert validator.validate({"ticker": ""}) == {"ticker": None}
+
+
+def test_optional_param_choices_still_reject_a_value_outside_the_list():
+    """Restoring the nullability must not widen the parameter to anything."""
+    validator = P.build_validator("optional-choices", P.introspect_callable(_optional_choices))
+
+    with pytest.raises(ParamValidationError) as exc:
+        validator.validate({"ticker": "DBR"})
+
+    assert [(e.field, e.input) for e in exc.value.errors] == [("ticker", "DBR")]
+
+
+def test_required_param_choices_still_reject_a_blank():
+    """Only a parameter the signature declares Optional gains the blank."""
+
+    def layout(ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])]):
+        return html.Div()
+
+    spec = P.introspect_callable(layout)
+    assert P.build_layout_parameters(spec)[0].nullable is False
+
+    with pytest.raises(ParamValidationError) as exc:
+        P.build_validator("required-choices", spec).validate({"ticker": ""})
+
+    assert [e.field for e in exc.value.errors] == ["ticker"]
+
+
+def test_optional_wrap_gives_up_instead_of_raising(monkeypatch):
+    """``typing.Optional[...]`` raises for members it cannot hash.
+
+    A Literal built from unhashable choices is exactly that on Python 3.10,
+    which hashes a union's members to deduplicate them; 3.11 added a fallback,
+    so the refusal has to be injected to test the guard on any version. The
+    wrap happens outside the guard that keeps a signature pydantic cannot model
+    from aborting the import of the whole app, so it needs one of its own.
+    """
+    assert P._optional(Literal["a", "b"]) == Optional[Literal["a", "b"]]
+
+    class _RefusesTheUnion:
+        def __getitem__(self, item):
+            raise TypeError("unhashable type: 'list'")  # what 3.10 raises
+
+    monkeypatch.setattr(P.typing, "Optional", _RefusesTheUnion())
+
+    assert P._optional(Literal["a", "b"]) == Literal["a", "b"]
+
+
+def test_unhashable_choices_on_an_optional_parameter_still_register():
+    """Registration must survive choices that cannot form a union.
+
+    Only discriminating on Python 3.10, which CI covers: 3.11+ builds the union
+    happily. Before the guard this raised TypeError out of register_layout and
+    killed the import of the app.
+    """
+
+    def layout(rows: Annotated[Optional[list], Param(choices=[[1, 2], [3, 4]])] = None):
+        return html.Div()
+
+    validator = P.build_validator("unhashable-choices", P.introspect_callable(layout))
+
+    assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
