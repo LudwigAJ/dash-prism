@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useRef } from 'react';
 import { InPortal } from 'react-reverse-portal';
 import { usePrism } from '@hooks/usePrism';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
@@ -81,9 +81,10 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   const tabs = useAppSelector(selectTabs);
   const panel = useAppSelector(selectPanel);
   const { getPortalNode } = usePortal();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // Hooks that use Redux
-  useKeyboardShortcuts();
+  useKeyboardShortcuts(rootRef);
   const { lastSyncTime } = useDashSync();
   const {
     infoModalTab,
@@ -98,7 +99,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   const { statusBarPosition } = useConfig();
 
   return (
-    <div className="prism-view-workspace">
+    <div className="prism-view-workspace" ref={rootRef}>
       {/* PORTAL HOST: Stable mount point for all tab content with layouts.
           Content rendered here stays mounted even when tabs move between panels.
           Uses mountKey in key to force remount when user triggers refresh. */}

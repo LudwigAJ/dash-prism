@@ -433,6 +433,37 @@ covers ``async`` layout callbacks in every app and synchronous callbacks in
 apps created with ``use_async=True``; a synchronous callback in a synchronous
 app runs to completion regardless.
 
+Keyboard Shortcuts
+^^^^^^^^^^^^^^^^^^
+
+On macOS ``Cmd`` works wherever ``Ctrl`` is listed and ``Option`` is ``Alt``;
+the one exception is ``Ctrl`` + ``Space``, which is Control on every platform
+because ``Cmd`` + ``Space`` belongs to Spotlight. The in-app help dialog lists
+the same bindings and writes them with the ``⌃`` ``⌥`` ``⇧`` glyphs on macOS.
+Shortcuts apply to the Prism workspace the user last interacted with and are
+ignored while typing in an input or while a context menu or dialog is open.
+
+============================  ===========================================
+Shortcut                      Action
+============================  ===========================================
+``Ctrl`` + ``Alt`` + ``N``    New tab
+``Ctrl`` + ``D``              Close tab
+``Ctrl`` + ``B``              Duplicate tab
+``Ctrl`` + ``U``              Undo last change
+``Ctrl`` + ``O``              Lock / unlock tab
+``Ctrl`` + ``R``              Rename tab
+``Ctrl`` + ``Shift`` + ``R``  Refresh tab
+``Ctrl`` + ``I``              Pin / unpin panel
+``Ctrl`` + ``Y``              Toggle search bars
+``Ctrl`` + ``J`` / ``K``      Previous / next tab
+``Ctrl`` + ``Space``          Focus the layout search
+============================  ===========================================
+
+New tab is a three-key chord because Chrome, Edge and Safari keep plain
+``Ctrl``/``Cmd`` + ``N`` for themselves and never deliver it to the page. The
+other bindings replace the browser's own default for the workspace the user
+last clicked in, wherever the keyboard focus happens to be.
+
 Caveats
 -------
 

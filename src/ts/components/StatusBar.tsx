@@ -144,9 +144,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
             <Undo2 className="size-[1em]" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>
-          {canUndo ? 'Undo last closed tab (Ctrl+Z)' : 'No tabs to undo'}
-        </TooltipContent>
+        <TooltipContent>{canUndo ? 'Undo last change (Ctrl+U)' : 'Nothing to undo'}</TooltipContent>
       </Tooltip>
 
       <span className="text-border opacity-60">|</span>

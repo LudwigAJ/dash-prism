@@ -1,7 +1,7 @@
 """
 Integration tests for keyboard shortcuts.
 
-Tests Cmd/Ctrl+N (new tab), Cmd/Ctrl+D (close tab).
+Tests Cmd/Ctrl+Alt+N (new tab), Cmd/Ctrl+D (close tab).
 
 Best Practices Applied:
 - Use explicit waits (wait_for_*) instead of time.sleep()
@@ -12,39 +12,59 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
     TAB_SELECTOR,
     ADD_TAB_BUTTON,
+    CONTEXT_MENU,
     wait_for_tab_count,
     get_tabs,
     get_modifier_key,
+    open_context_menu,
 )
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
 
+def _css(selector: str) -> tuple[str, str]:
+    return (By.CSS_SELECTOR, selector)
+
+
 def test_keyboard_shortcut_new_tab(prism_app_with_layouts):
-    """Test Cmd/Ctrl+N creates new tab."""
+    """Test Cmd/Ctrl+Alt+N creates a new tab (02 G-1).
+
+    Plain Cmd/Ctrl+N is a browser-reserved shortcut that Chrome never delivers
+    to the page, so Prism binds a three-key chord instead.
+    """
     duo = prism_app_with_layouts
 
     # Prism starts with 1 initial tab
     initial_tabs = get_tabs(duo)
     assert len(initial_tabs) == 1, "Should start with 1 initial tab"
 
-    # Press Cmd+N (Mac) or Ctrl+N (Windows/Linux)
     modifier = get_modifier_key()
     body = duo.find_element("body")
+
+    # The old binding must be gone: plain modifier+N does nothing in Prism
     body.send_keys(modifier, "n")
+    with pytest.raises(TimeoutException):
+        wait_for_tab_count(duo, 2, timeout=1.5)
+    assert len(get_tabs(duo)) == 1, "Cmd/Ctrl+N must no longer create a tab"
+
+    # Press the chord: Cmd+Option+N (Mac) or Ctrl+Alt+N (Windows/Linux)
+    body.send_keys(modifier, Keys.ALT, "n")
 
     # Wait for new tab to appear (explicit wait)
     wait_for_tab_count(duo, 2, timeout=5)
 
     # Verify tab created
     tabs = get_tabs(duo)
-    assert len(tabs) == 2, "Cmd/Ctrl+N should create new tab"
+    assert len(tabs) == 2, "Cmd/Ctrl+Alt+N should create new tab"
 
 
 def test_keyboard_shortcut_close_tab(prism_app_with_layouts):
@@ -70,3 +90,31 @@ def test_keyboard_shortcut_close_tab(prism_app_with_layouts):
     # Verify one tab closed
     tabs_after = get_tabs(duo)
     assert len(tabs_after) == 1, "Cmd/Ctrl+D should close active tab"
+
+
+def test_shortcuts_do_not_fire_while_a_context_menu_is_open(prism_app_with_layouts):
+    """An open menu owns the keyboard: Ctrl+D must not close the tab behind it.
+
+    Radix portals the menu to document.body, outside every Prism root, so the
+    window-level shortcut listener used to act on the workspace underneath
+    (02 G-1).
+    """
+    duo = prism_app_with_layouts
+
+    duo.find_element(ADD_TAB_BUTTON).click()
+    wait_for_tab_count(duo, 2)
+
+    open_context_menu(duo, get_tabs(duo)[0])
+
+    modifier = get_modifier_key()
+    duo.find_element(CONTEXT_MENU).send_keys(modifier, "d")
+
+    with pytest.raises(TimeoutException):
+        wait_for_tab_count(duo, 1, timeout=1.5)
+    assert len(get_tabs(duo)) == 2, "Ctrl/Cmd+D must be ignored while a menu is open"
+
+    # Closing the menu hands the keyboard back.
+    duo.find_element("body").send_keys(Keys.ESCAPE)
+    WebDriverWait(duo.driver, 3).until(lambda d: not d.find_elements(*_css(CONTEXT_MENU)))
+    duo.find_element("body").send_keys(modifier, "d")
+    wait_for_tab_count(duo, 1, timeout=5)

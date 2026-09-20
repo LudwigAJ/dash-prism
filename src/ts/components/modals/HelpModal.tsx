@@ -41,6 +41,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
   const modKeys = useMemo(
     () => ({
       ctrl: isMac ? '⌃' : 'Ctrl',
+      alt: isMac ? '⌥' : 'Alt',
       shift: isMac ? '⇧' : 'Shift',
     }),
     [isMac]
@@ -84,6 +85,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
               <span className={shortcutLabelClass}>New tab</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
+                <kbd className={kbdClass}>{modKeys.alt}</kbd>
                 <kbd className={kbdClass}>N</kbd>
               </div>
             </div>
@@ -102,7 +104,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
               </div>
             </div>
             <div className={shortcutRowClass}>
-              <span className={shortcutLabelClass}>Undo close</span>
+              <span className={shortcutLabelClass}>Undo</span>
               <div className="flex items-center gap-1">
                 <kbd className={kbdClass}>{modKeys.ctrl}</kbd>
                 <kbd className={kbdClass}>U</kbd>

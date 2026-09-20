@@ -1,4 +1,10 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, type RefObject } from 'react';
+import {
+  createRootRegistry,
+  isEditableTarget,
+  isNewTabChord,
+  isOverlayOpen,
+} from './keyboardChords';
 import { findPanelById } from '@utils/panels';
 import type { PanelId, TabId } from '@types';
 import {
@@ -24,11 +30,18 @@ import {
   startRenameTab,
 } from '@store';
 
+/** Which Prism workspace owns the shortcuts; see useKeyboardShortcuts. */
+const rootRegistry = createRootRegistry<HTMLElement>();
+
 /**
- * Global keyboard shortcuts for Prism component.
+ * Keyboard shortcuts for one Prism instance.
+ *
+ * The listener lives on `window` so it works wherever focus is, but it only
+ * acts for the instance the user interacted with last (`rootRef`): with two
+ * Prism components on a page a shortcut must not fire in both.
  *
  * Shortcuts (Cmd/Ctrl + key):
- * - N: New tab in active panel
+ * - Alt+N: New tab in active panel (plain Ctrl/Cmd+N is reserved by browsers)
  * - D: Delete (close) active tab (if not locked)
  * - J: Navigate to previous tab
  * - K: Navigate to next tab
@@ -38,9 +51,11 @@ import {
  * - Shift+R: Refresh active tab (force refetch layout from server)
  * - Y: Toggle search bars visibility
  * - B: Duplicate active tab
- * - U: Undo last closed tab
+ * - U: Undo last change
+ *
+ * @param rootRef - The element that contains this Prism instance
  */
-export function useKeyboardShortcuts() {
+export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const panel = useAppSelector(selectPanel);
@@ -168,14 +183,42 @@ export function useKeyboardShortcuts() {
     dispatch(refreshTab({ tabId: tab.id }));
   }, [getActiveTab, dispatch]);
 
+  // ========== Instance scoping ==========
+  // Track which Prism root the user touched last; only that instance handles
+  // shortcuts. The first instance to mount owns them until another is used, and
+  // ownership passes to a surviving instance when the owner unmounts.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const release = rootRegistry.register(root);
+
+    const claim = () => rootRegistry.claim(root);
+    root.addEventListener('mousedown', claim);
+    root.addEventListener('focusin', claim);
+    return () => {
+      root.removeEventListener('mousedown', claim);
+      root.removeEventListener('focusin', claim);
+      release();
+    };
+  }, [rootRef]);
+
   // ========== Keyboard event handler ==========
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Another Prism instance on the page owns the shortcuts right now
+      if (rootRef.current && !rootRegistry.owns(rootRef.current)) return;
+
       // Skip shortcuts when user is typing in editable elements
-      const target = e.target as HTMLElement | null;
-      const isEditable =
-        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
-      if (isEditable) return;
+      if (isEditableTarget(e.target)) return;
+
+      // A context menu or dialog owns the keyboard while it is open
+      if (isOverlayOpen(document)) return;
+
+      if (isNewTabChord(e)) {
+        e.preventDefault();
+        createTab(activePanelId);
+        return;
+      }
 
       const isCtrlSpace =
         e.ctrlKey && (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar');
@@ -195,12 +238,6 @@ export function useKeyboardShortcuts() {
       if (!isMod) return;
 
       switch (e.key.toLowerCase()) {
-        case 'n':
-          // New tab
-          e.preventDefault();
-          createTab(activePanelId);
-          break;
-
         case 'd':
           // Delete (close) tab
           e.preventDefault();
@@ -265,6 +302,7 @@ export function useKeyboardShortcuts() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
+    rootRef,
     activePanelId,
     searchBarsHidden,
     createTab,
