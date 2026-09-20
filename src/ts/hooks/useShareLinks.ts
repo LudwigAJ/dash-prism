@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import type { Tab, ShareData } from '@types';
+import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
 import {
   useAppDispatch,
   useAppSelector,
@@ -195,6 +196,23 @@ export function useShareLinks() {
         }
       }
 
+      // Pre-validate parameters against the layout's schema (the server re-checks)
+      if (layoutParams && layoutInfo.params?.length) {
+        const errors = checkParams(layoutInfo.params, layoutParams);
+        if (errors.length) {
+          toast.error(
+            `Invalid parameters in share link: ${errors[0].field} - ${errors[0].message}`,
+            { cancel: { label: 'Dismiss', onClick: () => {} } }
+          );
+          return false;
+        }
+      }
+
+      // Params travel as strings; a hand-made link may carry other JSON scalars.
+      const stringParams = layoutParams
+        ? stringifyParams(layoutInfo.params ?? [], layoutParams)
+        : undefined;
+
       // Check maxTabs limit
       if (maxTabs && maxTabs > 0 && (tabs?.length ?? 0) >= maxTabs) {
         toast.error(`Max tabs (${maxTabs}) reached`, {
@@ -210,7 +228,7 @@ export function useShareLinks() {
           panelId: activePanelId,
           name: name || layoutInfo.name || 'Shared Tab',
           layoutId,
-          params: layoutParams || undefined,
+          params: stringParams,
           option: layoutOption || undefined,
         })
       );

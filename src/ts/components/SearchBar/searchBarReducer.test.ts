@@ -18,6 +18,7 @@ describe('deriveMode', () => {
     currentParamIndex: 0,
     isUserSearching: false,
     isPendingLayout: null,
+    paramError: null,
   };
 
   const baseContext: ModeContext = {
@@ -184,10 +185,27 @@ describe('searchBarReducer', () => {
     expect(newState.currentParamIndex).toBe(0);
   });
 
-  it('SET_PARAM_VALUE updates paramValues', () => {
+  it('SET_PARAM_VALUES stores the map it is given', () => {
     const state = createInitialState(false);
-    const action: SearchBarAction = { type: 'SET_PARAM_VALUE', paramName: 'type', value: 'bar' };
+    const action: SearchBarAction = { type: 'SET_PARAM_VALUES', values: { type: 'bar' } };
     const newState = searchBarReducer(state, action);
+
+    expect(newState.paramValues).toEqual({ type: 'bar' });
+  });
+
+  it('SET_PARAM_VALUES replaces the map, so an omitted parameter stays omitted', () => {
+    // Callers build the whole map; merging silently resurrected a value the
+    // user had cleared to fall back on the callback's default, and it then
+    // reached the server as an empty string.
+    const state = {
+      ...createInitialState(false),
+      paramValues: { type: 'bar', size: 'large' },
+    };
+
+    const newState = searchBarReducer(state, {
+      type: 'SET_PARAM_VALUES',
+      values: { type: 'bar' },
+    });
 
     expect(newState.paramValues).toEqual({ type: 'bar' });
   });
@@ -302,5 +320,23 @@ describe('DISMISS action', () => {
     const newState = searchBarReducer(state, action);
 
     expect(newState.isPendingLayout).toBeNull();
+  });
+});
+
+describe('paramError (doc 04 §3.7)', () => {
+  it('SET_PARAM_ERROR stores the message and typing/advancing/resetting clears it', () => {
+    let state = createInitialState(false);
+    state = searchBarReducer(state, { type: 'SET_PARAM_ERROR', message: 'Must be a number' });
+    expect(state.paramError).toBe('Must be a number');
+
+    expect(
+      searchBarReducer(state, { type: 'SET_PARAM_VALUES', values: { n: '3' } }).paramError
+    ).toBeNull();
+    expect(searchBarReducer(state, { type: 'ADVANCE_PARAM' }).paramError).toBeNull();
+    expect(searchBarReducer(state, { type: 'RESET_PARAMS' }).paramError).toBeNull();
+    expect(searchBarReducer(state, { type: 'CLEAR_SELECTION' }).paramError).toBeNull();
+    expect(
+      searchBarReducer(state, { type: 'SET_PARAM_ERROR', message: null }).paramError
+    ).toBeNull();
   });
 });

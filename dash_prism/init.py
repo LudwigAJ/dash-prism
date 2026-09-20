@@ -28,14 +28,17 @@ import copy
 import warnings
 import inspect
 import logging
-from collections.abc import Callable, Iterable
-from typing import Any, TYPE_CHECKING
+from collections.abc import Awaitable, Callable, Iterable
+from typing import Any, ParamSpec, TYPE_CHECKING, TypeVar, cast
 from weakref import WeakSet
 
 if TYPE_CHECKING:
     from dash import Dash
 
 logger = logging.getLogger("dash_prism")
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # Track which layout functions we've already wrapped to prevent infinite wrapping
 _wrapped_layouts: WeakSet[Callable] = WeakSet()
@@ -88,13 +91,16 @@ def _execute_and_inject_metadata(
 
 
 def _create_layout_wrapper(
-    original_layout: Callable,
+    original_layout: Callable[P, R],
     prism_id: str,
     layouts_metadata: dict[str, Any],
     session_id: str,
     is_async: bool,
-) -> Callable:
+) -> Callable[P, R]:
     """Factory for creating layout wrappers with metadata injection.
+
+    The wrapper keeps the original layout function's signature (``P``) and
+    return type (``R``); it only injects Prism metadata into the returned tree.
 
     :param original_layout: The original layout function to wrap.
     :type original_layout: Callable
@@ -114,20 +120,21 @@ def _create_layout_wrapper(
     if is_async:
 
         @wraps(original_layout)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             try:
-                layout_tree = await original_layout(*args, **kwargs)
+                # R is the coroutine type for an async layout; mypy cannot see that.
+                layout_tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
             except Exception as e:
                 logger.exception("Error in async layout function", exc_info=e)
                 raise  # Re-raise with original traceback
 
             return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
 
-        return async_wrapper
+        return cast(Callable[P, R], async_wrapper)
     else:
 
         @wraps(original_layout)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             try:
                 layout_tree = original_layout(*args, **kwargs)
             except Exception as e:
@@ -136,7 +143,7 @@ def _create_layout_wrapper(
 
             return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
 
-        return sync_wrapper
+        return cast(Callable[P, R], sync_wrapper)
 
 
 # =============================================================================
@@ -156,6 +163,7 @@ class InitializationError(Exception):
 
 
 # Import the more robust implementation from utils
+from .params import ParamValidationError
 from .utils import find_component_by_id as _find_component_by_id
 
 
@@ -415,6 +423,39 @@ def _create_error_component(message: str) -> Any:
     )
 
 
+def _create_validation_error_component(layout_id: str, error: ParamValidationError) -> Any:
+    """Render field-level parameter validation errors for a tab.
+
+    :param layout_id: The layout whose parameters were invalid.
+    :type layout_id: str
+    :param error: The validation error with one entry per field.
+    :type error: ParamValidationError
+    :returns: Error component listing each failing field.
+    :rtype: Any
+    """
+    from dash import html
+
+    items = []
+    for err in error.errors:
+        suffix = "" if err.input is None else f" (got {err.input!r})"
+        items.append(html.Li([html.Code(err.field), f": {err.message}{suffix}"]))
+
+    attrs: dict[str, Any] = {"data-testid": "prism-validation-error"}
+    return html.Div(
+        [
+            html.H3("Invalid parameters"),
+            html.P(
+                f"Layout '{layout_id}' could not be rendered because some "
+                "parameters are invalid."
+            ),
+            html.Ul(items, className="prism-error-fields"),
+            html.P("Open the search bar to enter them again.", className="prism-error-hint"),
+        ],
+        className="prism-error-tab prism-error-validation",
+        **attrs,
+    )
+
+
 def _render_tab_layout_impl(
     tab_id: str,
     layout_id: str,
@@ -475,11 +516,11 @@ def _render_tab_layout_impl(
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
         )
+    except ParamValidationError as e:
+        logger.info("Parameter validation failed for layout '%s': %s", layout_id, e)
+        return _create_validation_error_component(layout_id, e)
     except TypeError as e:
-        return _create_error_component(
-            f"Error rendering layout '{layout_id}': {e}\n"
-            "Check that all required parameters are provided."
-        )
+        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
     except ValueError as e:
         return _create_error_component(str(e))
     except Exception as e:
@@ -581,11 +622,11 @@ async def _render_tab_layout_async(
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
         )
+    except ParamValidationError as e:
+        logger.info("Parameter validation failed for layout '%s': %s", layout_id, e)
+        return _create_validation_error_component(layout_id, e)
     except TypeError as e:
-        return _create_error_component(
-            f"Error rendering layout '{layout_id}': {e}\n"
-            "Check that all required parameters are provided."
-        )
+        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
     except ValueError as e:
         return _create_error_component(str(e))
     except Exception as e:

@@ -541,3 +541,26 @@
     color: black !important;
   }
 }
+
+/* =============================================================================
+  SERVER-RENDERED ERROR TABS (dash_prism.init error components)
+  ============================================================================= */
+
+.prism-error-tab {
+  @apply text-destructive bg-destructive/5 border-destructive/30 m-4 rounded-md border p-4 text-sm;
+}
+.prism-error-tab h3 {
+  @apply mb-2 text-base font-semibold;
+}
+.prism-error-tab pre {
+  @apply text-foreground bg-muted overflow-x-auto rounded p-2 font-mono text-xs whitespace-pre-wrap;
+}
+.prism-error-fields {
+  @apply my-2 list-disc pl-5;
+}
+.prism-error-fields code {
+  @apply font-mono;
+}
+.prism-error-hint {
+  @apply text-muted-foreground mt-2;
+}

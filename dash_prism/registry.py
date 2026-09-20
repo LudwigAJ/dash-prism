@@ -37,42 +37,30 @@ from dataclasses import dataclass, field
 import inspect
 from typing import Any, overload
 
+from .params import (
+    LayoutParameter,  # moved to params.py; re-exported for backwards compatibility
+    LayoutValidator,
+    ParamValidationError,
+    build_layout_parameters,
+    build_validator,
+    introspect_callable,
+)
+
+__all__ = [
+    "LayoutParameter",
+    "LayoutRegistration",
+    "LayoutRegistry",
+    "registry",
+    "register_layout",
+    "get_layout",
+    "get_registered_layouts_metadata",
+    "resolve_layout_params",
+    "clear_registry",
+]
+
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
-
-
-@dataclass
-class LayoutParameter:
-    """Describes a parameter for a parameterized layout callback.
-
-    :ivar name: The parameter name.
-    :type name: str
-    :ivar has_default: Whether the parameter has a default value.
-    :type has_default: bool
-    :ivar default: The default value, if any.
-    :type default: Any
-    :ivar annotation: The type annotation as a string.
-    :type annotation: str | None
-    """
-
-    name: str
-    has_default: bool = False
-    default: Any = None
-    annotation: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary for JSON serialization.
-
-        :returns: Dictionary with camelCase keys for frontend consumption.
-        :rtype: dict[str, Any]
-        """
-        return {
-            "name": self.name,
-            "hasDefault": self.has_default,
-            "default": self.default,
-            "annotation": self.annotation,
-        }
 
 
 @dataclass
@@ -99,6 +87,12 @@ class LayoutRegistration:
     :type parameters: list[LayoutParameter]
     :ivar param_options: Pre-defined parameter configurations for quick access.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
+    :ivar validator: Validates and coerces incoming parameters (built at registration).
+    :type validator: LayoutValidator | None
+    :ivar schema: JSON Schema of the parameters (pydantic only), else ``None``.
+    :type schema: dict[str, Any] | None
+    :ivar body_param: Name of the single pydantic ``BaseModel`` parameter, if any.
+    :type body_param: str | None
     """
 
     id: str
@@ -111,6 +105,9 @@ class LayoutRegistration:
     is_async: bool = False
     parameters: list[LayoutParameter] = field(default_factory=list)
     param_options: dict[str, tuple[str, dict[str, Any]]] | None = None
+    validator: LayoutValidator | None = field(default=None, repr=False, compare=False)
+    schema: dict[str, Any] | None = field(default=None, repr=False, compare=False)
+    body_param: str | None = None
 
     @property
     def is_callable(self) -> bool:
@@ -135,13 +132,14 @@ class LayoutRegistration:
             "description": self.description,
             "keywords": self.keywords,
             "allowMultiple": self.allow_multiple,
-            "params": params,  # Changed from 'parameters'
-            "paramOptions": None,  # Changed from 'parameterOptions'
+            "params": params,
+            "paramOptions": None,
+            "schema": self.schema,  # JSON Schema (pydantic) or None
         }
 
         if self.param_options:
             result["paramOptions"] = {
-                key: {"description": label, "params": params}  # Changed 'label' to 'description'
+                key: {"description": label, "params": params}
                 for key, (label, params) in self.param_options.items()
             }
 
@@ -254,48 +252,6 @@ application normally uses this instance rather than creating its own.
 # =============================================================================
 
 
-def _extract_parameters(func: Callable[..., Any]) -> list[LayoutParameter]:
-    """Extract parameter information from a function signature.
-
-    :param func: The function to inspect.
-    :type func: Callable[..., Any]
-    :returns: Parameter metadata for each function parameter.
-    :rtype: list[LayoutParameter]
-    """
-    sig = inspect.signature(func)
-    parameters: list[LayoutParameter] = []
-
-    for param_name, param in sig.parameters.items():
-        # Skip *args and **kwargs
-        if param.kind in (
-            inspect.Parameter.VAR_POSITIONAL,
-            inspect.Parameter.VAR_KEYWORD,
-        ):
-            continue
-
-        has_default = param.default is not inspect.Parameter.empty
-        default = param.default if has_default else None
-
-        # Get type annotation as string
-        annotation: str | None = None
-        if param.annotation is not inspect.Parameter.empty:
-            if isinstance(param.annotation, type):
-                annotation = param.annotation.__name__
-            else:
-                annotation = str(param.annotation)
-
-        parameters.append(
-            LayoutParameter(
-                name=param_name,
-                has_default=has_default,
-                default=default,
-                annotation=annotation,
-            )
-        )
-
-    return parameters
-
-
 def _is_async_function(func: Callable[..., Any]) -> bool:
     """Check if a function is an async coroutine function.
 
@@ -383,14 +339,18 @@ def _validate_registration(
 def _validate_param_options(
     param_options: dict[str, tuple[str, dict[str, Any]]],
     parameters: list[LayoutParameter],
+    validator: LayoutValidator | None = None,
 ) -> None:
-    """Validate that param_options reference valid function parameters.
+    """Validate that param_options reference valid parameters with valid values.
 
     :param param_options: The parameter options to validate.
     :type param_options: dict[str, tuple[str, dict[str, Any]]]
     :param parameters: The function's actual parameters.
     :type parameters: list[LayoutParameter]
-    :raises ValueError: If param_options reference unknown parameters.
+    :param validator: When given, every preset is validated (and coerced) at
+        registration so a bad preset fails at import time, not at render time.
+    :type validator: LayoutValidator | None
+    :raises ValueError: If param_options reference unknown parameters or fail validation.
     """
     param_names = {p.name for p in parameters}
     for option_key, (_, params) in param_options.items():
@@ -400,6 +360,14 @@ def _validate_param_options(
                     f"param_options['{option_key}'] references unknown parameter "
                     f"'{param_name}'. Valid parameters: {param_names}"
                 )
+        if validator is not None:
+            try:
+                validator.validate(params)
+            except ParamValidationError as exc:
+                details = "; ".join(f"{e.field}: {e.message}" for e in exc.errors)
+                raise ValueError(
+                    f"param_options['{option_key}'] failed validation: {details}"
+                ) from None
 
 
 # =============================================================================
@@ -544,11 +512,13 @@ def register_layout(
             callback=func,
         )
 
-        parameters = _extract_parameters(func)
+        spec = introspect_callable(func)  # may raise ValueError (mixed body model)
+        parameters = build_layout_parameters(spec)
+        validator = build_validator(id, spec)
         is_async = _is_async_function(func)
 
         if param_options:
-            _validate_param_options(param_options, parameters)
+            _validate_param_options(param_options, parameters, validator)
 
         registry.register(
             LayoutRegistration(
@@ -562,6 +532,9 @@ def register_layout(
                 is_async=is_async,
                 parameters=parameters,
                 param_options=param_options,
+                validator=validator,
+                schema=validator.json_schema(),
+                body_param=spec.body_param,
             )
         )
 
@@ -600,6 +573,8 @@ def resolve_layout_params(
     layout_id: str,
     layout_params: dict[str, Any] | None,
     layout_option: str | None,
+    *,
+    validate: bool = True,
 ) -> dict[str, Any]:
     """Resolve effective layout parameters.
 
@@ -617,9 +592,14 @@ def resolve_layout_params(
     :type layout_params: dict[str, Any] | None
     :param layout_option: Selected option key from ``param_options``.
     :type layout_option: str | None
+    :param validate: Run the layout's parameter validator on the result (default).
+        Coerces typed parameters and raises :class:`ParamValidationError` for
+        invalid input.
+    :type validate: bool
     :returns: Resolved parameters to pass to the layout callback.
     :rtype: dict[str, Any]
     :raises ValueError: If the layout option is invalid or unsupported.
+    :raises ParamValidationError: If ``validate`` is on and the parameters are invalid.
     """
     # Validate layout_params input
     if layout_params is None:
@@ -667,7 +647,7 @@ def resolve_layout_params(
                 f"param_options for layout '{layout_id}' must map to a dict of params."
             )
 
-        return dict(option_params)
+        return _validated(registration, dict(option_params), validate)
 
     # If layout_option provided but no param_options defined, that's an error
     if layout_option is not None:
@@ -675,7 +655,16 @@ def resolve_layout_params(
             f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
         )
 
-    return resolved_params
+    return _validated(registration, resolved_params, validate)
+
+
+def _validated(
+    registration: LayoutRegistration, params: dict[str, Any], validate: bool
+) -> dict[str, Any]:
+    """Run the registration's validator on ``params`` when requested."""
+    if not validate or registration.validator is None:
+        return params
+    return registration.validator.validate(params)  # raises ParamValidationError
 
 
 def clear_registry() -> None:

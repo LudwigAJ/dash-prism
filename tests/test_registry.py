@@ -128,6 +128,7 @@ def test_layout_metadata_contract_with_frontend() -> None:
 
     metadata = dash_prism.get_registered_layouts_metadata()
     layout_meta = metadata["contract-test"]
+    assert "schema" in layout_meta  # JSON Schema (pydantic) or None
 
     # Verify exact field names (not 'parameters', 'parameterOptions', etc.)
     assert "name" in layout_meta
@@ -167,10 +168,20 @@ def test_layout_parameter_to_dict_contract() -> None:
 
     result = param.to_dict()
 
-    # Verify exact field names for frontend
+    # Verify exact field names for frontend (doc 04 §3.6 LayoutParam)
     assert result == {
         "name": "test_param",
         "hasDefault": True,  # camelCase
         "default": "default_value",
         "annotation": "str",
+        "type": "unknown",
+        "required": False,
+        "nullable": False,
+        "choices": None,
+        "items": None,
+        "constraints": {},
+        "description": None,
+        "title": None,
+        "examples": None,
+        "placeholder": None,
     }

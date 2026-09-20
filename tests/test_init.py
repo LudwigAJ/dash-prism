@@ -1069,3 +1069,50 @@ def test_per_process_server_session_id_constant_is_gone() -> None:
     """The per-process UUID could never match across gunicorn workers or restarts."""
     assert "SERVER_SESSION_ID" not in dash_prism.__all__
     assert not hasattr(dash_prism, "SERVER_SESSION_ID")
+
+
+# =============================================================================
+# Parameter validation in the render paths (doc 04 §3.3)
+# =============================================================================
+
+
+def test_render_invalid_params_returns_validation_component(prism_app: Dash) -> None:
+    @dash_prism.register_layout(id="typed", name="Typed")
+    def layout(n: int = 1):
+        return html.Div(f"n={n}")
+
+    dash_prism.init("test-prism", prism_app)
+    from dash_prism.init import _render_tab_layout
+
+    result = _render_tab_layout("tab-1", "typed", {"n": "abc"})
+    assert "prism-error-validation" in result.className
+    assert "n" in str(result.children[2].children[0].children[0].children)
+
+
+def test_render_coerces_params_before_callback(prism_app: Dash) -> None:
+    received: dict[str, object] = {}
+
+    @dash_prism.register_layout(id="typed", name="Typed")
+    def layout(n: int = 1, flag: bool = False):
+        received.update(n=n, flag=flag)
+        return html.Div()
+
+    dash_prism.init("test-prism", prism_app)
+    from dash_prism.init import _render_tab_layout
+
+    _render_tab_layout("tab-1", "typed", {"n": "5", "flag": "false"})
+    assert received == {"n": 5, "flag": False}
+
+
+def test_async_render_validation_error(prism_app: Dash) -> None:
+    import asyncio
+
+    @dash_prism.register_layout(id="typed-async", name="Typed async")
+    async def layout(n: int = 1):
+        return html.Div()
+
+    dash_prism.init("test-prism", prism_app)
+    from dash_prism.init import _render_tab_layout_async
+
+    result = asyncio.run(_render_tab_layout_async("tab-1", "typed-async", {"n": "x"}))
+    assert "prism-error-validation" in result.className

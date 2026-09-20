@@ -55,6 +55,20 @@ Registration
    reads it when injecting layout metadata into the Prism component, so an
    application uses this instance rather than creating its own.
 
+Parameter Validation
+--------------------
+
+.. autoclass:: dash_prism.Param
+   :members:
+
+.. autoclass:: dash_prism.ParamValidationError
+   :members:
+
+.. autoclass:: dash_prism.FieldError
+   :members:
+
+.. autofunction:: dash_prism.has_pydantic
+
 Icons
 -----
 

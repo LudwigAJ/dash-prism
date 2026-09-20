@@ -53,11 +53,52 @@ For pre-defined parameter options, use ``param_options``:
    def chart_layout(chart_type: str = 'bar'):
        return dcc.Graph(...)
 
-.. note::
+Typed Parameters
+^^^^^^^^^^^^^^^^
 
-   Parameters passed from the Prism UI are serialized as strings. If your
-   layout expects richer types (e.g., numbers or booleans), convert them
-   inside the layout callback.
+Parameters typed in the search bar (and in share links) travel as strings, but
+Prism validates and coerces them **before** your callback runs, using the
+callback's type hints. Three styles are supported:
+
+.. code-block:: python
+
+   from typing import Annotated, Literal
+   from dash_prism import Param
+
+   # 1. Plain type hints with defaults: str, int, float, bool, Optional[...],
+   #    list[...], Literal[...] and Enum are coerced; untyped params stay strings.
+   @dash_prism.register_layout(id='country', name='Country', allow_multiple=True)
+   def country_layout(country: str, n: int = 10, log_scale: bool = False):
+       ...
+
+   # 2. Annotated metadata: dash_prism.Param (no dependency) or pydantic.Field
+   @dash_prism.register_layout(id='chart', name='Chart')
+   def chart_layout(
+       chart_type: Literal['bar', 'line'] = 'bar',
+       n: Annotated[int, Param(ge=1, le=100, description='Rows to plot')] = 20,
+   ):
+       ...
+
+   # 3. A single pydantic BaseModel parameter (requires pydantic v2)
+   class ChartParams(BaseModel):
+       chart_type: Literal['bar', 'line'] = 'bar'
+       n: int = Field(20, ge=1, le=100)
+
+   @dash_prism.register_layout(id='chart-model', name='Chart (model)')
+   def chart_model_layout(params: ChartParams):
+       ...
+
+Invalid input is flagged inline in the search bar before the tab is created and,
+if it still reaches the server (for example through a share link), the tab shows
+an "Invalid parameters" panel listing each failing field instead of a
+traceback. ``param_options`` presets are validated when the layout is
+registered, so a bad preset fails at import time.
+
+Install ``pip install "dash-prism[pydantic]"`` for pydantic-backed validation
+(``pydantic.Field`` metadata, ``BaseModel`` parameters and a JSON Schema in the
+layout metadata). Dash ≥ 4.3 already depends on pydantic; without it Prism falls
+back to a built-in coercer that accepts the same values and reports the same
+fields, though the wording of individual messages differs.
 
 Async Layouts
 ^^^^^^^^^^^^^

@@ -90,6 +90,14 @@ Registration API
 - :func:`dash_prism.clear_registry`: Clear all registered layouts
 - :data:`dash_prism.registry`: Global layout registry instance
 
+Parameter Validation
+~~~~~~~~~~~~~~~~~~~~
+
+- :class:`dash_prism.Param`: ``Annotated`` metadata for layout parameters
+- :exc:`dash_prism.ParamValidationError`: Raised when parameters fail validation
+- :class:`dash_prism.FieldError`: One failing field inside a ``ParamValidationError``
+- :func:`dash_prism.has_pydantic`: Whether pydantic v2 is available
+
 Initialization
 ~~~~~~~~~~~~~~
 
@@ -228,6 +236,14 @@ from .utils import (
     InvalidWorkspace,
 )
 
+# Parameter validation
+from .params import (
+    Param,
+    FieldError,
+    ParamValidationError,
+    has_pydantic,
+)
+
 # Initialization
 from .init import init, InitializationError
 
@@ -258,6 +274,11 @@ __all__ = [
     "update_component_props",
     "validate_workspace",
     "InvalidWorkspace",
+    # Parameter validation
+    "Param",
+    "FieldError",
+    "ParamValidationError",
+    "has_pydantic",
     # Initialization
     "init",
     "InitializationError",

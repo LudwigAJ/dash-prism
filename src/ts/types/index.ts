@@ -57,10 +57,38 @@ export type PanelNode = {
 // Layout Types
 // =============================================================================
 
+export type ParamType =
+  'string' | 'integer' | 'number' | 'boolean' | 'enum' | 'array' | 'object' | 'unknown';
+
+export type ParamConstraints = {
+  minimum?: number;
+  exclusiveMinimum?: number;
+  maximum?: number;
+  exclusiveMaximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+};
+
+export type ParamScalar = string | number | boolean | null;
+
+/** Mirrors dash_prism.params.LayoutParameter.to_dict() */
 export type LayoutParam = {
   name: string;
   hasDefault: boolean;
-  default?: string;
+  /** JSON-safe default (was typed `string` before 1.0, but was always `Any`). */
+  default?: ParamScalar | ParamScalar[];
+  annotation?: string | null;
+  type?: ParamType;
+  required?: boolean;
+  nullable?: boolean;
+  choices?: ParamScalar[] | null;
+  items?: ParamType | null;
+  constraints?: ParamConstraints;
+  description?: string | null;
+  title?: string | null;
+  examples?: ParamScalar[] | null;
+  placeholder?: string | null;
 };
 
 export type LayoutOption = {
@@ -75,6 +103,8 @@ export type LayoutMeta = {
   allowMultiple?: boolean;
   params?: LayoutParam[];
   paramOptions?: Record<string, LayoutOption>;
+  /** JSON Schema for the params (pydantic only), otherwise null/undefined. */
+  schema?: Record<string, unknown> | null;
 };
 
 export type RegisteredLayouts = Record<string, LayoutMeta>;

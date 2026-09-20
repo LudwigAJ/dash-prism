@@ -15,6 +15,8 @@ export type SearchBarState = {
   currentParamIndex: number;
   isUserSearching: boolean;
   isPendingLayout: string | null;
+  /** Inline validation message for the current parameter input, if any */
+  paramError: string | null;
 };
 
 export type SearchBarAction =
@@ -24,10 +26,10 @@ export type SearchBarAction =
   | { type: 'ENTER_SEARCH_MODE'; initialQuery?: string }
   | { type: 'SELECT_LAYOUT'; layoutId: string }
   | { type: 'CLEAR_SELECTION' }
-  | { type: 'SET_PARAM_VALUE'; paramName: string; value: string }
   | { type: 'SET_PARAM_VALUES'; values: Record<string, string> }
   | { type: 'ADVANCE_PARAM' }
   | { type: 'RESET_PARAMS' }
+  | { type: 'SET_PARAM_ERROR'; message: string | null }
   | { type: 'SET_PENDING_LAYOUT'; layoutId: string | null }
   | { type: 'RETURN_TO_IDLE'; showDropdown: boolean }
   | { type: 'DISMISS'; clearSelection: boolean };
@@ -78,6 +80,7 @@ export function createInitialState(_hasCurrentLayout: boolean): SearchBarState {
     currentParamIndex: 0,
     isUserSearching: false,
     isPendingLayout: null,
+    paramError: null,
   };
 }
 
@@ -89,6 +92,7 @@ function clearSelection(draft: SearchBarState) {
   draft.selectedLayoutId = null;
   draft.paramValues = {};
   draft.currentParamIndex = 0;
+  draft.paramError = null;
 }
 
 export const searchBarReducer = produce((draft: SearchBarState, action: SearchBarAction) => {
@@ -116,18 +120,26 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
     case 'CLEAR_SELECTION':
       clearSelection(draft);
       break;
-    case 'SET_PARAM_VALUE':
-      draft.paramValues[action.paramName] = action.value;
-      break;
     case 'SET_PARAM_VALUES':
-      draft.paramValues = { ...draft.paramValues, ...action.values };
+      // Replace rather than merge: callers build the whole map, and a merge
+      // silently undid the removal of a parameter the user chose to leave at
+      // its default, which then reached the server as an empty string.
+      draft.paramValues = { ...action.values };
+      // The user is editing, so any inline error from the previous attempt is
+      // stale.
+      draft.paramError = null;
       break;
     case 'ADVANCE_PARAM':
       draft.currentParamIndex += 1;
+      draft.paramError = null;
       break;
     case 'RESET_PARAMS':
       draft.paramValues = {};
       draft.currentParamIndex = 0;
+      draft.paramError = null;
+      break;
+    case 'SET_PARAM_ERROR':
+      draft.paramError = action.message;
       break;
     case 'SET_PENDING_LAYOUT':
       draft.isPendingLayout = action.layoutId;

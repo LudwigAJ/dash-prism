@@ -1,4 +1,5 @@
 import { useReducer, useRef, useMemo, useCallback, useEffect } from 'react';
+import { checkParamInput, resolveEnumInput, type ParamCheck } from './paramValidation';
 import { toast } from 'sonner';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
@@ -196,32 +197,61 @@ export function useSearchBarState(panelId: PanelId) {
     focusInput();
   }, [focusInput]);
 
+  /**
+   * Record a validated value for the current parameter and move on: to the next
+   * parameter, or apply the layout when this was the last one. An omitted value
+   * (empty input on a parameter with a default) is left out of the request so
+   * the server applies the callback's own default.
+   */
+  const commitParamValue = useCallback(
+    (check: Exclude<ParamCheck, { ok: false }>) => {
+      if (!currentParam || !state.selectedLayoutId) return;
+
+      const newParamValues = { ...state.paramValues };
+      if ('omit' in check) {
+        delete newParamValues[currentParam.name];
+      } else {
+        newParamValues[currentParam.name] = check.value;
+      }
+      dispatch({ type: 'SET_PARAM_VALUES', values: newParamValues });
+
+      if (state.currentParamIndex < allParams.length - 1) {
+        dispatch({ type: 'ADVANCE_PARAM' });
+      } else {
+        const layout = registeredLayouts[state.selectedLayoutId];
+        applyLayout(state.selectedLayoutId, layout?.name ?? state.selectedLayoutId, newParamValues);
+      }
+    },
+    [
+      currentParam,
+      state.selectedLayoutId,
+      state.paramValues,
+      state.currentParamIndex,
+      allParams.length,
+      registeredLayouts,
+      applyLayout,
+    ]
+  );
+
   const handleParamSubmit = useCallback(() => {
     if (!currentParam || !state.selectedLayoutId) return;
 
-    const inputValue = state.paramValues[currentParam.name]?.trim();
-    const value = inputValue || currentParam.default || '';
-
-    if (!value) return;
-
-    const newParamValues = { ...state.paramValues, [currentParam.name]: value };
-    dispatch({ type: 'SET_PARAM_VALUE', paramName: currentParam.name, value });
-
-    if (state.currentParamIndex < allParams.length - 1) {
-      dispatch({ type: 'ADVANCE_PARAM' });
-    } else {
-      const layout = registeredLayouts[state.selectedLayoutId];
-      applyLayout(state.selectedLayoutId, layout?.name ?? state.selectedLayoutId, newParamValues);
+    const typed = state.paramValues[currentParam.name] ?? '';
+    const check = checkParamInput(currentParam, resolveEnumInput(currentParam, typed));
+    if (check.ok === false) {
+      dispatch({ type: 'SET_PARAM_ERROR', message: check.message });
+      return;
     }
-  }, [
-    currentParam,
-    state.selectedLayoutId,
-    state.paramValues,
-    state.currentParamIndex,
-    allParams.length,
-    registeredLayouts,
-    applyLayout,
-  ]);
+    commitParamValue(check);
+  }, [currentParam, state.selectedLayoutId, state.paramValues, commitParamValue]);
+
+  /** A choice picked from the enum list: no further validation needed. */
+  const handleChoiceSelect = useCallback(
+    (value: string) => {
+      commitParamValue({ ok: true, value });
+    },
+    [commitParamValue]
+  );
 
   const handleDisplayClick = useCallback(() => {
     dispatch({ type: 'ENTER_SEARCH_MODE' });
@@ -433,6 +463,7 @@ export function useSearchBarState(panelId: PanelId) {
     showDropdown: state.showDropdown,
     dropdownHeight,
     paramValues: state.paramValues,
+    paramError: state.paramError,
     currentParamIndex: state.currentParamIndex,
     selectedLayoutId: state.selectedLayoutId,
 
@@ -450,6 +481,7 @@ export function useSearchBarState(panelId: PanelId) {
     handleOptionSelect,
     handleBackToLayouts,
     handleParamSubmit,
+    handleChoiceSelect,
     handleDisplayClick,
     handleDisplayKeyDown,
     handleFocus,
