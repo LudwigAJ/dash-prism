@@ -1,7 +1,10 @@
 """Action Component Wrapper.
 
-User-facing wrapper for the Action component with comprehensive documentation.
-This file provides a clean Python API that wraps the auto-generated PrismActionComponent.
+This module holds the user-facing ``Action`` class. ``Action`` wraps the
+auto-generated :class:`dash_prism.PrismActionComponent`, documents each prop,
+and sets the component type that the JavaScript bundle registers. The wrapper
+sends only the props that you give. The React component keeps its own defaults
+for every prop that you omit.
 """
 
 from __future__ import annotations
@@ -10,44 +13,53 @@ from typing import Any
 
 from .PrismActionComponent import PrismActionComponent
 
-# Sentinel to distinguish "not provided" from an explicit None
+# Sentinel that shows the difference between a prop you do not give and a prop
+# you set to an explicit None.
 _UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
 
 
 class Action(PrismActionComponent):
     """A clickable action button for the Prism status bar.
 
-    Action components are displayed in the status bar and provide
-    interactive buttons that users can click to trigger callbacks. Each action
-    is an independent Dash component with its own ``n_clicks`` property,
-    allowing for individual callback handling per button.
+    Prism shows each action as a button in the status bar, at the right end and
+    in the order that you give. An action is a full Dash component with its own
+    ``n_clicks`` property, thus one callback can listen to one button. Prism
+    increases ``n_clicks`` by one for each click. A click on a disabled button,
+    or on a button in the loading state, does not change ``n_clicks``.
 
-    :param id: Unique identifier for this action in Dash callbacks.
-        Use this ID to create callbacks responding to button clicks.
-    :type id: str or None
-    :param label: Button label text displayed in the status bar.
-        This is the visible text users will see on the button. **Required**.
+    :param label: Button label text that the status bar shows. This text is
+        what the user reads on the button. **Required**.
     :type label: str
-    :param tooltip: Tooltip text shown on hover.
-        If not provided, defaults to ``"Click to trigger {label}"``.
+    :param id: Unique identifier for this action in Dash callbacks. Use this ID
+        to make the callbacks that respond to clicks on this button.
+    :type id: str or None
+    :param tooltip: Tooltip text that the button shows when the pointer is on
+        it. If you do not give a tooltip, the button shows
+        ``Click to trigger "{label}"``.
     :type tooltip: str or None
-    :param variant: Button style variant or custom hex color.
-        Preset variants: ``'default'``, ``'primary'``, ``'secondary'``,
-        ``'success'``, ``'warning'``, ``'danger'``.
-        Custom color: Any valid hex color (e.g., ``'#FF5500'``).
+    :param variant: Button style name, or a hex color for the button
+        background. The style names are ``'default'``, ``'primary'``,
+        ``'secondary'``, ``'success'``, ``'warning'`` and ``'danger'``. A hex
+        color must have the form ``#RGB`` or ``#RRGGBB``, for example
+        ``'#FF5500'``. For a hex color, Prism sets the label to black or to
+        white, the color that is easier to read on that background. A value
+        that is neither a style name nor a hex color gives the ``'default'``
+        style. Defaults to ``'default'``.
     :type variant: str or None
-    :param disabled: Whether the button is disabled. Disabled buttons cannot
-        be clicked and appear grayed out. Can be controlled via Dash callbacks
-        for dynamic enabling/disabling. Defaults to ``False``.
+    :param disabled: Whether the button is disabled. The user cannot click a
+        disabled button, and Prism shows the button at half opacity. Set this
+        prop from a Dash callback to disable or enable the button while the app
+        runs. Defaults to ``False``.
     :type disabled: bool
-    :param loading: Whether to show a loading spinner. When ``True``, replaces
-        the icon with a spinner and disables the button. Useful for indicating
-        async operations are in progress. Defaults to ``False``.
+    :param loading: Whether the button shows a loading spinner. When this prop
+        is ``True``, Prism puts a spinner before the label and disables the
+        button. Use the loading state to show that a slow callback is not
+        complete. Defaults to ``False``.
     :type loading: bool
-    :param n_clicks: Number of times the button has been clicked. Use as an
-        ``Input`` in Dash callbacks to respond to clicks. Automatically
-        incremented each time the button is clicked. Defaults to ``0``.
+    :param n_clicks: Number of clicks on this button. Use it as an ``Input`` in
+        Dash callbacks to respond to a click. Defaults to ``0``.
     :type n_clicks: int
+    :raises TypeError: If you do not give ``label``.
 
     .. rubric:: Examples
 
@@ -79,12 +91,12 @@ class Action(PrismActionComponent):
             prevent_initial_call=True
         )
         def handle_save(n_clicks):
-            # Perform save operation
+            # Save the data here
             import time
             time.sleep(1)  # Simulate async operation
             return False  # Stop loading spinner
 
-    Multiple actions with different styles:
+    Some actions with different styles:
 
     .. code-block:: python
 
@@ -111,7 +123,7 @@ class Action(PrismActionComponent):
             dash_prism.Prism(id='workspace', actions=actions)
         ])
 
-    Dynamic enabling/disabling:
+    Disable and enable an action from a callback:
 
     .. code-block:: python
 
@@ -127,7 +139,7 @@ class Action(PrismActionComponent):
                 return True  # Disabled
             return False  # Enabled
 
-    Custom color action:
+    An action with a hex color:
 
     .. code-block:: python
 
@@ -138,7 +150,7 @@ class Action(PrismActionComponent):
             tooltip='Custom colored action'
         )
 
-    Loading state management:
+    Control of the loading state:
 
     .. code-block:: python
 
@@ -156,20 +168,27 @@ class Action(PrismActionComponent):
     .. seealso::
 
         :class:`dash_prism.Prism`
-            Main workspace component
+            The main workspace component that holds the actions.
 
         :func:`dash_prism.init`
-            Initialize Prism with Dash app
+            Connects Prism to a Dash app and registers its callbacks.
 
     .. note::
 
-        - Actions must be passed to the Prism component's ``actions`` parameter
-        - Each action has an independent ``n_clicks`` counter
-        - The ``loading`` state automatically disables the button
-        - Custom hex colors must be valid CSS hex colors (e.g., ``#RGB`` or ``#RRGGBB``)
+        - Prism shows an action only if you pass it to the ``actions``
+          parameter of :class:`dash_prism.Prism`.
+        - Each action keeps its own ``n_clicks`` counter.
+        - The ``loading`` state also disables the button.
+        - Prism accepts a hex color in the form ``#RGB`` or ``#RRGGBB`` only.
+          For any other color format, Prism uses the ``'default'`` style.
+        - ``Prism(showStatusBar=False)`` hides the status bar, thus the actions
+          do not appear. Prism gives a :class:`UserWarning` for that
+          combination.
     """
 
-    # Override _type to match what init.py expects (internal wire protocol)
+    # The JavaScript bundle exports this component as "PrismAction". Dash finds
+    # a React component by the type name, so the generated name
+    # "PrismActionComponent" does not work here.
     _type = "PrismAction"
 
     def __init__(
@@ -183,6 +202,17 @@ class Action(PrismActionComponent):
         n_clicks: int = _UNSET,
         **kwargs: Any,
     ):
+        """Make an action button and send only the arguments that you give.
+
+        The wrapper drops each argument that keeps the ``_UNSET`` sentinel.
+        Thus the React component applies its own default to that prop, and a
+        prop that you set to ``None`` stays ``None``.
+
+        :param kwargs: More props for the generated component. The wrapper adds
+            them to the explicit arguments.
+        :type kwargs: Any
+        :raises TypeError: If you do not give ``label``.
+        """
         _locals = locals()
         explicit = {
             k: v
@@ -193,5 +223,5 @@ class Action(PrismActionComponent):
         super().__init__(**explicit)
 
 
-# Backwards compatibility alias
+# Alias kept for code that imports the older name.
 PrismAction = Action

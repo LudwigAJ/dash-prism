@@ -2,13 +2,25 @@
 Layout Registry for Prism
 =========================
 
-This module handles registration of layouts that can be opened in Prism tabs.
-Layouts can be static (pre-built) or dynamic (generated on-demand via callbacks).
+This module keeps the layouts that Prism can open in a tab. A registration
+holds the metadata that the search bar shows, and either a Dash component tree
+or a callback that makes one.
+
+A layout is one of two kinds. A static layout is a component tree that you
+build one time. Prism renders the same tree in every tab that opens the layout.
+A callback layout is a function. Prism calls the function each time Prism
+renders a tab, and the function receives the parameters that the user selected.
+
+:func:`register_layout` puts a registration into the process-wide
+:data:`registry`. :func:`dash_prism.init` reads the registry one time and sends
+the metadata to the frontend as the ``registeredLayouts`` prop of the Prism
+component. An application thus registers every layout before it calls
+:func:`dash_prism.init`.
 
 Usage Examples
 --------------
 
-Static layout registration::
+The example that follows registers a static layout::
 
     register_layout(
         id='home',
@@ -16,7 +28,8 @@ Static layout registration::
         layout=html.Div('Welcome!')
     )
 
-Decorator for callback-based layouts::
+The example that follows registers a callback layout, and gives the two
+parameter options that the search bar shows::
 
     @register_layout(
         id='chart',
@@ -38,7 +51,7 @@ import inspect
 from typing import Any, overload
 
 from .params import (
-    LayoutParameter,  # moved to params.py; re-exported for backwards compatibility
+    LayoutParameter,  # params.py holds this class. registry.py re-exports it.
     LayoutValidator,
     ParamValidationError,
     build_layout_parameters,
@@ -65,33 +78,55 @@ __all__ = [
 
 @dataclass
 class LayoutRegistration:
-    """Represents a registered layout in the Prism system.
+    """One layout that is registered with Prism.
 
-    :ivar id: Unique identifier for this layout.
+    :func:`register_layout` makes a registration and puts it into the
+    :data:`registry`. A registration holds either ``layout``, which is a static
+    Dash component tree, or ``callback``, which is a function that makes such a
+    tree. A registration does not hold the two together.
+
+    :ivar id: The identifier of this layout. No two registrations in one
+        registry can have the same identifier.
     :type id: str
-    :ivar name: Human-readable display name.
+    :ivar name: The name that Prism shows in the search bar and on the tab.
     :type name: str
-    :ivar description: Description shown in the layout picker.
+    :ivar description: The text that the search bar shows next to the name.
     :type description: str
-    :ivar keywords: Searchable keywords for finding this layout.
+    :ivar keywords: More words that the search bar examines when the user types
+        a query. The search bar also examines the identifier, the name, and the
+        description.
     :type keywords: list[str]
-    :ivar allow_multiple: Whether multiple instances can be open simultaneously.
+    :ivar allow_multiple: If this is ``False``, Prism prevents a new tab of this
+        layout while a tab of this layout is open. This applies both when the
+        user opens a layout and when the user duplicates a tab.
     :type allow_multiple: bool
-    :ivar layout: Static layout component (mutually exclusive with callback).
+    :ivar layout: The static Dash component tree. It is ``None`` for a callback
+        layout.
     :type layout: Any
-    :ivar callback: Function to generate layout (mutually exclusive with layout).
+    :ivar callback: The function that makes the component tree. It is ``None``
+        for a static layout.
     :type callback: Callable[..., Any] | None
-    :ivar is_async: Whether the callback is an async function.
+    :ivar is_async: ``True`` if the callback is a coroutine function.
+        :func:`dash_prism.init` reads this field to know if it must await the
+        callback.
     :type is_async: bool
-    :ivar parameters: Parameters the callback accepts.
+    :ivar parameters: One ``LayoutParameter`` for each parameter of the
+        callback. The list is empty for a static layout.
     :type parameters: list[LayoutParameter]
-    :ivar param_options: Pre-defined parameter configurations for quick access.
+    :ivar param_options: Named sets of parameter values that the search bar
+        offers as a list. Only a callback layout can have parameter options.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
-    :ivar validator: Validates and coerces incoming parameters (built at registration).
+    :ivar validator: The validator that registration builds from the signature
+        of the callback. The validator changes each string that the browser
+        sends into the type that the callback declares. It is ``None`` for a
+        static layout.
     :type validator: LayoutValidator | None
-    :ivar schema: JSON Schema of the parameters (pydantic only), else ``None``.
+    :ivar schema: The JSON Schema of the parameters. It is ``None`` for a static
+        layout, and also for a callback layout whose types pydantic cannot put
+        into a schema.
     :type schema: dict[str, Any] | None
-    :ivar body_param: Name of the single pydantic ``BaseModel`` parameter, if any.
+    :ivar body_param: The name of the one pydantic ``BaseModel`` parameter, if
+        the callback declares such a parameter. If not, it is ``None``.
     :type body_param: str | None
     """
 
@@ -111,19 +146,35 @@ class LayoutRegistration:
 
     @property
     def is_callable(self) -> bool:
-        """Check if this layout is generated via callback.
+        """Tell if a callback makes this layout.
 
-        :returns: True if layout uses a callback, False if static.
+        :returns: ``True`` if the registration holds a callback, ``False`` if
+            the registration holds a static component tree.
         :rtype: bool
         """
         return self.callback is not None
 
     def to_metadata(self) -> dict[str, Any]:
-        """Convert to metadata dict for frontend consumption.
+        """Make the metadata dictionary that the frontend receives.
 
-        Does **not** include the actual layout component or callback function.
+        The dictionary does **not** hold the layout component or the callback
+        function, because Prism cannot serialize them into JSON.
 
-        :returns: Metadata dictionary with camelCase keys.
+        The ``"params"`` key has two possible contents. If the registration has
+        parameter options, ``"params"`` is an empty list and ``"paramOptions"``
+        holds one entry for each option. The search bar then shows the list of
+        options in place of the parameter fields, and
+        :func:`resolve_layout_params` accepts values only through an option. If
+        the registration has no parameter options, ``"params"`` holds one
+        dictionary for each parameter of the callback, and ``"paramOptions"``
+        is ``None``.
+
+        Each entry in ``"paramOptions"`` holds two keys. The ``"description"``
+        key holds the label of the option, which the search bar shows next to
+        the key of the option. The ``"params"`` key holds the parameter values
+        of the option.
+
+        :returns: The metadata dictionary, with camelCase keys.
         :rtype: dict[str, Any]
         """
         params = [] if self.param_options else [p.to_dict() for p in self.parameters]
@@ -134,7 +185,7 @@ class LayoutRegistration:
             "allowMultiple": self.allow_multiple,
             "params": params,
             "paramOptions": None,
-            "schema": self.schema,  # JSON Schema (pydantic) or None
+            "schema": self.schema,  # JSON Schema of the parameters, or None
         }
 
         if self.param_options:
@@ -152,10 +203,15 @@ class LayoutRegistration:
 
 
 class LayoutRegistry:
-    """Global registry of all layouts available in Prism.
+    """A collection of the layouts that Prism can open.
 
-    Provides methods to register, retrieve, and manage layouts.
-    Supports iteration and membership testing.
+    The registry maps each layout identifier to its ``LayoutRegistration``.
+    ``len(registry)`` gives the number of layouts, ``'home' in registry`` tells
+    you if an identifier is registered, and a ``for`` loop over the registry
+    gives each identifier.
+
+    An application uses the process-wide :data:`registry` object that this
+    module makes, because :func:`register_layout` writes only to that object.
 
     **Example**::
 
@@ -171,15 +227,20 @@ class LayoutRegistry:
 
     @property
     def layouts(self) -> dict[str, LayoutRegistration]:
-        """Get a copy of all registered layouts.
+        """Get a copy of the dictionary of registered layouts.
 
-        :returns: Dictionary mapping layout IDs to registrations.
+        The caller receives a new dictionary, thus a change to the result does
+        not change the registry. The registrations in the result are the same
+        objects that the registry holds.
+
+        :returns: A dictionary that maps each layout identifier to its
+            registration.
         :rtype: dict[str, LayoutRegistration]
         """
         return self._layouts.copy()
 
     def __contains__(self, layout_id: str) -> bool:
-        """Check if a layout ID is registered."""
+        """Tell if a layout identifier is registered."""
         return layout_id in self._layouts
 
     def __len__(self) -> int:
@@ -187,36 +248,42 @@ class LayoutRegistry:
         return len(self._layouts)
 
     def __iter__(self):
-        """Iterate over layout IDs."""
+        """Return an iterator over the registered layout identifiers."""
         return iter(self._layouts)
 
     def get(self, layout_id: str) -> LayoutRegistration | None:
-        """Get a registered layout by ID.
+        """Get the registration of one layout.
 
-        :param layout_id: The unique identifier of the layout.
+        :param layout_id: The identifier of the layout.
         :type layout_id: str
-        :returns: The registration if found, None otherwise.
+        :returns: The registration, or ``None`` if no layout has that
+            identifier.
         :rtype: LayoutRegistration | None
         """
         return self._layouts.get(layout_id)
 
     def register(self, registration: LayoutRegistration) -> None:
-        """Register a layout.
+        """Add a registration to the registry.
 
-        :param registration: The layout registration to add.
+        The identifier of the registration becomes its key. The registry does
+        not replace a layout that is already registered.
+
+        :param registration: The registration to add.
         :type registration: LayoutRegistration
-        :raises ValueError: If the layout ID is already registered.
+        :raises ValueError: If a layout with the same identifier is already
+            registered.
         """
         if registration.id in self._layouts:
             raise ValueError(f"Layout '{registration.id}' is already registered")
         self._layouts[registration.id] = registration
 
     def unregister(self, layout_id: str) -> bool:
-        """Remove a layout from the registry.
+        """Remove one layout from the registry.
 
-        :param layout_id: The ID of the layout to remove.
+        :param layout_id: The identifier of the layout to remove.
         :type layout_id: str
-        :returns: True if removed, False if not found.
+        :returns: ``True`` if the registry removed the layout, ``False`` if no
+            layout has that identifier.
         :rtype: bool
         """
         if layout_id in self._layouts:
@@ -225,25 +292,33 @@ class LayoutRegistry:
         return False
 
     def clear(self) -> None:
-        """Clear all registered layouts. Useful for testing."""
+        """Remove all layouts from the registry.
+
+        Tests call this method to reset the registry before the next test.
+        """
         self._layouts.clear()
 
     def get_metadata(self) -> dict[str, dict[str, Any]]:
-        """Get metadata for all registered layouts.
+        """Make the metadata for every layout in this registry.
 
-        :returns: Dictionary mapping layout IDs to metadata dicts. This is what gets sent to the frontend.
+        :func:`dash_prism.init` gets this metadata one time and puts it into
+        the ``registeredLayouts`` prop of the Prism component.
+
+        :returns: A dictionary that maps each layout identifier to the result
+            of :meth:`LayoutRegistration.to_metadata`.
         :rtype: dict[str, dict[str, Any]]
         """
         return {layout_id: reg.to_metadata() for layout_id, reg in self._layouts.items()}
 
 
-# Global registry instance
+# The one registry that this process shares.
 registry = LayoutRegistry()
 """The process-wide :class:`LayoutRegistry`.
 
-:func:`dash_prism.register_layout` writes to it and :func:`dash_prism.init`
-reads it when injecting layout metadata into the Prism component, so an
-application normally uses this instance rather than creating its own.
+:func:`dash_prism.register_layout` writes each new registration into this
+registry. :func:`dash_prism.init` reads the registry one time, and puts the
+layout metadata into the Prism component. An application thus uses this
+registry and does not make its own.
 """
 
 
@@ -253,11 +328,14 @@ application normally uses this instance rather than creating its own.
 
 
 def _is_async_function(func: Callable[..., Any]) -> bool:
-    """Check if a function is an async coroutine function.
+    """Tell if a function is a coroutine function.
 
-    :param func: The function to check.
+    The registration keeps the result as ``is_async``. :func:`dash_prism.init`
+    reads that field to know if it must await the callback.
+
+    :param func: The function to examine.
     :type func: Callable[..., Any]
-    :returns: ``True`` if async, ``False`` otherwise.
+    :returns: ``True`` if ``func`` is a coroutine function, ``False`` if not.
     :rtype: bool
     """
     return inspect.iscoroutinefunction(func)
@@ -274,25 +352,40 @@ def _validate_registration(
     layout: Any,
     callback: Callable[..., Any] | None,
 ) -> None:
-    """Validate registration parameters.
+    """Validate the arguments that :func:`register_layout` received.
 
-    :param layout_id: Unique identifier for the layout.
+    The function makes the checks that follow:
+
+    - ``layout_id`` is not empty, is a string, and is not already a key of the
+      process-wide :data:`registry`.
+    - One of ``layout`` and ``callback`` is given, and not the two together.
+    - ``param_options`` is absent for a static layout.
+    - Each key of ``param_options`` is a string, and each value is a tuple of
+      a string label and a dictionary of parameter values.
+
+    The function accepts ``name``, ``description``, ``keywords`` and
+    ``allow_multiple`` so that the two registration methods can give it one set
+    of arguments. The function does not examine those four arguments.
+
+    :param layout_id: The identifier for the layout.
     :type layout_id: str
-    :param name: Display name.
+    :param name: The name to show, or ``None`` to use the identifier.
     :type name: str | None
-    :param description: Layout description.
+    :param description: The description of the layout.
     :type description: str
-    :param keywords: Search keywords.
+    :param keywords: The keywords for the search bar.
     :type keywords: list[str] | None
-    :param allow_multiple: Whether multiple instances are allowed.
+    :param allow_multiple: ``True`` if more than one tab of this layout can be
+        open at the same time.
     :type allow_multiple: bool
-    :param param_options: Parameter presets.
+    :param param_options: The named sets of parameter values, or ``None``.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
-    :param layout: Static layout component.
+    :param layout: The static Dash component tree, or ``None``.
     :type layout: Any
-    :param callback: Layout generator function.
+    :param callback: The function that makes the layout, or ``None``.
     :type callback: Callable[..., Any] | None
-    :raises ValueError: If validation fails.
+    :raises ValueError: If one of the checks above fails. The message tells
+        which check failed.
     """
     if not layout_id:
         raise ValueError("Layout 'id' is required")
@@ -341,16 +434,28 @@ def _validate_param_options(
     parameters: list[LayoutParameter],
     validator: LayoutValidator | None = None,
 ) -> None:
-    """Validate that param_options reference valid parameters with valid values.
+    """Validate the parameter options of a callback layout.
+
+    Each option maps a key to a label and to a dictionary of parameter values.
+    Every parameter name in that dictionary must be the name of a parameter of
+    the callback.
+
+    When ``validator`` is given, the validator also validates the values of
+    each option. A bad option thus raises ``ValueError`` at registration, and
+    not when Prism renders a tab. The function does not keep the values that
+    the validator returns. The registration keeps the values that the option
+    declares, and :func:`resolve_layout_params` validates them again each time
+    Prism renders a tab.
 
     :param param_options: The parameter options to validate.
     :type param_options: dict[str, tuple[str, dict[str, Any]]]
-    :param parameters: The function's actual parameters.
+    :param parameters: The parameters that the callback declares.
     :type parameters: list[LayoutParameter]
-    :param validator: When given, every preset is validated (and coerced) at
-        registration so a bad preset fails at import time, not at render time.
+    :param validator: The validator of the layout, or ``None`` to check only
+        the parameter names.
     :type validator: LayoutValidator | None
-    :raises ValueError: If param_options reference unknown parameters or fail validation.
+    :raises ValueError: If an option names a parameter that the callback does
+        not declare, or if the validator rejects the values of an option.
     """
     param_names = {p.name for p in parameters}
     for option_key, (_, params) in param_options.items():
@@ -412,7 +517,10 @@ def register_layout(
 ) -> None | Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Register a layout with Prism.
 
-    Can be used in two ways:
+    There are two ways to call this function. If you give the ``layout``
+    argument, the function registers a static component tree and returns
+    ``None``. If you do not give ``layout``, the function returns a decorator,
+    and that decorator registers the function below it as a callback layout.
 
     **Method A: Static Layout**::
 
@@ -436,23 +544,46 @@ def register_layout(
         def chart_layout(chart_type: str = 'bar'):
             return dcc.Graph(...)
 
-    :param id: Unique identifier for this layout (required).
+    For a callback layout the function reads the signature of the callback.
+    From that signature the function makes the parameter metadata that the
+    search bar shows, a validator for the values that the browser sends back,
+    and the JSON Schema of the parameters. The function registers the layout immediately,
+    thus your application must register every layout before it calls
+    :func:`dash_prism.init`.
+
+    :param id: The identifier for this layout. You must give this argument,
+        and no other registered layout can have the same identifier.
     :type id: str
-    :param name: Human-readable display name. Defaults to ``id``.
+    :param name: The name that Prism shows in the search bar and on the tab.
+        The default is the value of ``id``.
     :type name: str | None
-    :param description: Description shown in the layout picker.
+    :param description: The text that the search bar shows next to the name.
     :type description: str
-    :param keywords: Searchable keywords for finding this layout.
+    :param keywords: More words that the search bar examines when the user
+        types a query.
     :type keywords: list[str] | None
-    :param allow_multiple: Whether multiple instances can be open simultaneously. Defaults to False.
+    :param allow_multiple: If this is ``False`` (the default), Prism prevents a
+        new tab of this layout while a tab of this layout is open.
     :type allow_multiple: bool
-    :param param_options: Pre-defined parameter configurations. Format: ``{'key': ('Display Label', {'param': 'value'})}``.
+    :param param_options: Named sets of parameter values, for a callback layout
+        only. Format: ``{'key': ('Display Label', {'param': 'value'})}``. The
+        search bar shows the key of each option, and shows the label next to
+        the key. A layout that has parameter options accepts values only
+        through an option.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
-    :param layout: Static Dash component tree (Method A only).
+    :param layout: A static Dash component tree. Give this argument for Method
+        A only.
     :type layout: Any | None
-    :returns: None if registering a static layout, decorator function otherwise.
+    :returns: ``None`` for a static layout, or the decorator for a callback
+        layout.
     :rtype: None | Callable[[Callable[..., Any]], Callable[..., Any]]
-    :raises ValueError: If validation fails or layout is already registered.
+    :raises ValueError: If ``id`` is empty, is not a string, or is already
+        registered. Also if you give ``layout`` and ``param_options`` together,
+        if ``param_options`` has a bad shape or a bad value, if the callback
+        mixes a pydantic ``BaseModel`` parameter with other parameters, or if
+        a parameter declares a list of choices that is empty, that holds scalar
+        values for a collection parameter, or that contradicts the choices of
+        its own annotation.
 
     **Examples**
 
@@ -470,7 +601,7 @@ def register_layout(
         ... def home_layout():
         ...     return html.Div('Welcome!')
     """
-    # Method A: Static layout provided
+    # Method A: the caller gave a static component tree.
     if layout is not None:
         _validate_registration(
             layout_id=id,
@@ -499,7 +630,7 @@ def register_layout(
         )
         return None
 
-    # Method B: Decorator mode
+    # Method B: the caller wants the decorator.
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         _validate_registration(
             layout_id=id,
@@ -512,7 +643,7 @@ def register_layout(
             callback=func,
         )
 
-        spec = introspect_callable(func)  # may raise ValueError (mixed body model)
+        spec = introspect_callable(func)  # raises ValueError for a mixed body model
         parameters = build_layout_parameters(spec)
         validator = build_validator(id, spec)
         is_async = _is_async_function(func)
@@ -549,20 +680,24 @@ def register_layout(
 
 
 def get_layout(layout_id: str) -> LayoutRegistration | None:
-    """Get a registered layout by ID.
+    """Get the registration of one layout from the process-wide registry.
 
-    :param layout_id: The ID of the layout to retrieve.
+    :param layout_id: The identifier of the layout.
     :type layout_id: str
-    :returns: The registration if found, None otherwise.
+    :returns: The registration, or ``None`` if no layout has that identifier.
     :rtype: LayoutRegistration | None
     """
     return registry.get(layout_id)
 
 
 def get_registered_layouts_metadata() -> dict[str, dict[str, Any]]:
-    """Get metadata for all registered layouts.
+    """Make the metadata for every layout in the process-wide registry.
 
-    :returns: Dictionary mapping layout IDs to metadata dicts. Excludes actual components and callbacks.
+    :func:`dash_prism.init` calls this function one time, and puts the result
+    into the ``registeredLayouts`` prop of the Prism component. The result
+    holds no layout component and no callback function.
+
+    :returns: A dictionary that maps each layout identifier to its metadata.
     :rtype: dict[str, dict[str, Any]]
     """
     return registry.get_metadata()
@@ -576,32 +711,51 @@ def resolve_layout_params(
     *,
     validate: bool = True,
 ) -> dict[str, Any]:
-    """Resolve effective layout parameters.
+    """Resolve the parameters for one tab of a layout.
 
-    Single source of truth for parameter resolution across the codebase.
-    Validates param_options and layout_option, returns resolved parameters.
+    This function is the one place that resolves parameters.
+    :func:`dash_prism.init` calls this function before Prism renders a tab,
+    both on the sync path and on the async path. The function decides which
+    parameters the layout callback receives, and it rejects a request that does
+    not agree with the registration.
 
-    If ``layout_option`` is provided, it will be mapped to parameters via
-    ``registration.param_options``.
+    A layout that declares ``param_options`` accepts values only through an
+    option. For such a layout the caller must give ``layout_option`` and must
+    not give ``layout_params``. The function then resolves to a copy of the
+    values of that option.
 
-    :param registration: Layout registration metadata.
+    A layout that does not declare ``param_options`` accepts ``layout_params``,
+    and the caller must not give a ``layout_option``.
+
+    :param registration: The registration of the layout.
     :type registration: LayoutRegistration
-    :param layout_id: The registered layout ID.
+    :param layout_id: The identifier of the layout. The function puts this
+        identifier into its error messages.
     :type layout_id: str
-    :param layout_params: Parameters supplied from the client.
+    :param layout_params: The parameters that the client sent, or ``None`` for
+        no parameters.
     :type layout_params: dict[str, Any] | None
-    :param layout_option: Selected option key from ``param_options``.
+    :param layout_option: The key of the selected option in
+        ``registration.param_options``, or ``None``.
     :type layout_option: str | None
-    :param validate: Run the layout's parameter validator on the result (default).
-        Coerces typed parameters and raises :class:`ParamValidationError` for
-        invalid input.
+    :param validate: If this is ``True`` (the default), the function gives the
+        resolved parameters to the validator of the layout. The validator
+        changes each string into the type that the callback declares. A static
+        layout has no validator, thus the function returns the parameters
+        unchanged.
     :type validate: bool
-    :returns: Resolved parameters to pass to the layout callback.
+    :returns: The keyword arguments for the layout callback.
     :rtype: dict[str, Any]
-    :raises ValueError: If the layout option is invalid or unsupported.
-    :raises ParamValidationError: If ``validate`` is on and the parameters are invalid.
+    :raises ValueError: If ``layout_params`` is not a dictionary, if the layout
+        declares ``param_options`` but ``layout_option`` is absent or is not a
+        string, if ``layout_params`` and ``param_options`` are given together,
+        if ``layout_option`` is not a key of ``param_options``, or if a
+        ``layout_option`` is given for a layout that declares no
+        ``param_options``.
+    :raises ParamValidationError: If ``validate`` is ``True`` and a parameter
+        value is not valid.
     """
-    # Validate layout_params input
+    # Examine the layout_params input.
     if layout_params is None:
         resolved_params: dict[str, Any] = {}
     elif not isinstance(layout_params, dict):
@@ -612,7 +766,8 @@ def resolve_layout_params(
     else:
         resolved_params = layout_params
 
-    # Handle param_options (mutually exclusive with layout_params)
+    # A layout with param_options resolves through an option, not through
+    # layout_params.
     if registration.param_options:
         if layout_option is None:
             raise ValueError(
@@ -621,7 +776,7 @@ def resolve_layout_params(
 
         if resolved_params:
             raise ValueError(
-                f"Layout '{layout_id}' only accepts parameters via param_options; "
+                f"Layout '{layout_id}' accepts parameters only through param_options. "
                 "layoutParams are not supported."
             )
 
@@ -649,7 +804,7 @@ def resolve_layout_params(
 
         return _validated(registration, dict(option_params), validate)
 
-    # If layout_option provided but no param_options defined, that's an error
+    # A layout_option without param_options is an error.
     if layout_option is not None:
         raise ValueError(
             f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
@@ -661,15 +816,28 @@ def resolve_layout_params(
 def _validated(
     registration: LayoutRegistration, params: dict[str, Any], validate: bool
 ) -> dict[str, Any]:
-    """Run the registration's validator on ``params`` when requested."""
+    """Give ``params`` to the validator of the registration, if there is one.
+
+    :param registration: The registration whose validator to use.
+    :type registration: LayoutRegistration
+    :param params: The parameters to validate.
+    :type params: dict[str, Any]
+    :param validate: If this is ``False``, the function returns ``params``
+        unchanged.
+    :type validate: bool
+    :returns: The validated parameters, or ``params`` unchanged when
+        ``validate`` is ``False`` or the registration has no validator.
+    :rtype: dict[str, Any]
+    :raises ParamValidationError: If a parameter value is not valid.
+    """
     if not validate or registration.validator is None:
         return params
     return registration.validator.validate(params)  # raises ParamValidationError
 
 
 def clear_registry() -> None:
-    """Clear all registered layouts.
+    """Remove every layout from the process-wide registry.
 
-    Useful for testing to reset state between test cases.
+    Tests call this function to reset the registry before the next test.
     """
     registry.clear()

@@ -2,24 +2,28 @@
 Layout Parameters
 =================
 
-Parameter metadata, signature introspection, and validation for
-parameterized layouts.
+This module reads the signature of a layout callback. From that signature it
+makes three things:
 
-Three declaration styles are supported::
+- The parameter metadata that the search bar shows to the user.
+- A pydantic model that validates the values the browser sends back.
+- A JSON Schema of that model, which the frontend receives as ``meta.schema``.
+
+A layout declares its parameters in one of three styles::
 
     # 1. Plain type hints with defaults
     def layout(country: str, n: int = 10): ...
 
-    # 2. Annotated metadata (dash_prism.Param, or pydantic.Field when installed)
+    # 2. Annotated metadata (dash_prism.Param, or pydantic.Field)
     def layout(n: Annotated[int, Param(ge=1, le=100, description="Rows")] = 10): ...
 
-    # 3. A single pydantic BaseModel ("body model" style, requires pydantic)
+    # 3. One pydantic BaseModel ("body model" style)
     def layout(params: ChartParams): ...
 
-When pydantic v2 is installed (``pip install dash-prism[pydantic]``) a model is
-built per layout and used for validation, coercion and JSON-schema export.
-Without pydantic a stdlib-only coercer handles ``str``, ``int``, ``float``,
-``bool``, ``Literal``, ``Enum``, ``Optional``/``X | None`` and ``list[T]``.
+Every value arrives from the browser as a string. The validator changes each
+string into the type that the callback declares, and reports the parameters
+that are not correct. pydantic v2 is a dependency of this package, so a model
+is always available.
 """
 
 from __future__ import annotations
@@ -59,10 +63,10 @@ def _is_base_model(tp: Any) -> bool:
 
 @dataclass(frozen=True)
 class Param:
-    """Metadata for a layout parameter, used inside :data:`typing.Annotated`.
+    """Describes one layout parameter, inside a :data:`typing.Annotated`.
 
-    Works with or without pydantic. When pydantic is installed the metadata
-    is translated to :func:`pydantic.Field` constraints.
+    Each field becomes a :func:`pydantic.Field` constraint for the validator,
+    and part of the metadata that the search bar shows.
 
     **Example**::
 
@@ -72,8 +76,8 @@ class Param:
         def layout(n: Annotated[int, Param(ge=1, le=100, description="Rows")] = 10):
             ...
 
-    :ivar description: Help text shown in the search bar.
-    :ivar title: Human-readable label (defaults to the parameter name).
+    :ivar description: The help text that the search bar shows.
+    :ivar title: The label to show. The default is the parameter name.
     :ivar ge: Value must be ``>= ge`` (numbers only).
     :ivar gt: Value must be ``> gt``.
     :ivar le: Value must be ``<= le``.
@@ -160,12 +164,12 @@ class Param:
 
 @dataclass(frozen=True)
 class FieldError:
-    """A single validation failure for one parameter.
+    """Reports one parameter that is not valid.
 
-    :ivar field: Dotted path to the parameter (e.g. ``"n"`` or ``"filters.0"``).
-    :ivar message: Human-readable message.
-    :ivar input: The offending input value (JSON-safe).
-    :ivar code: Machine-readable error code (pydantic error type or a basic code).
+    :ivar field: The path to the parameter, for example ``"n"`` or ``"filters.0"``.
+    :ivar message: The message to show to the user.
+    :ivar input: The value that caused the error. It is always JSON-safe.
+    :ivar code: The pydantic error type, which identifies the kind of error.
     """
 
     field: str
@@ -183,14 +187,14 @@ class FieldError:
 
 
 class ParamValidationError(ValueError):
-    """Raised when incoming layout parameters fail validation.
+    """Occurs when the parameters that come in for a layout are not valid.
 
-    Subclasses :class:`ValueError` so existing ``except ValueError`` paths keep
-    working; :func:`dash_prism.init` catches it explicitly to render a
-    field-level error component.
+    This error is a subclass of :class:`ValueError`, so an ``except ValueError``
+    that an application already has continues to catch it. :func:`dash_prism.init`
+    catches this class specifically, and shows the error for each parameter.
 
-    :ivar layout_id: The layout whose parameters were invalid.
-    :ivar errors: One :class:`FieldError` per failing parameter.
+    :ivar layout_id: The identifier of the layout that received the parameters.
+    :ivar errors: One :class:`FieldError` for each parameter that is not valid.
     """
 
     def __init__(self, layout_id: str, errors: Sequence[FieldError]) -> None:
@@ -283,33 +287,41 @@ _EMPTY = inspect.Parameter.empty
 
 @dataclass
 class ParamSpec:
-    """Internal: one resolved callback parameter."""
+    """Holds one resolved parameter of a layout callback.
+
+    This class is internal to the package.
+    """
 
     name: str
-    annotation: Any  # resolved type, or inspect.Parameter.empty
+    annotation: Any  # the resolved type, or inspect.Parameter.empty
     has_default: bool
     default: Any
     meta: Param
-    extra_metadata: list[Any]  # unrecognised Annotated metadata (kept for pydantic)
+    extra_metadata: list[Any]  # Annotated metadata we do not read, kept for pydantic
 
 
 @dataclass
 class CallableSpec:
-    """Internal: resolved signature of a layout callback."""
+    """Holds the resolved signature of one layout callback.
+
+    This class is internal to the package.
+    """
 
     params: list[ParamSpec]
     accepts_var_kwargs: bool = False
-    body_param: str | None = None  # name of the single BaseModel parameter
+    body_param: str | None = None  # the name of the one BaseModel parameter
     body_model: type | None = None
 
 
 def _resolve_hints(func: Callable[..., Any]) -> dict[str, Any]:
-    """Resolve annotations, including stringified ones from
-    ``from __future__ import annotations``.
+    """Resolve the annotations of ``func``, strings included.
 
-    Uses :func:`typing.get_type_hints`, which evaluates strings in the
-    function's own module namespace (never in ours). Unresolvable forward
-    references are skipped with a debug log; they are treated as unannotated.
+    ``from __future__ import annotations`` turns every annotation into a
+    string. :func:`typing.get_type_hints` evaluates those strings in the
+    module of ``func``, never in this one.
+
+    A forward reference that does not resolve is written to the debug log and
+    then left out. The parameter is treated as if it carried no annotation.
     """
     try:
         return get_type_hints(func, include_extras=True)
@@ -341,18 +353,24 @@ def _strip_optional(tp: Any) -> tuple[Any, bool]:
 def _nullable_choice_type(choices: Sequence[Any]) -> Any:
     """Build ``Optional[Literal[*choices]]`` by whichever route typing allows.
 
-    Python 3.10 deduplicates a union's members by hashing them, so a ``Literal``
-    of unhashable choices (a list, a dict) cannot go inside ``Optional`` there
-    at all; 3.11 added a fallback and takes it. ``Literal`` itself tolerates
-    unhashable members on every supported version, so express the blank as a
-    ``None`` member instead and the parameter stays nullable everywhere.
+    Python 3.10 removes the duplicates from a union by a hash of its members.
+    Thus a ``Literal`` of unhashable choices, such as a list or a dictionary,
+    cannot go into an ``Optional`` on that version. Python 3.11 added a
+    fallback and accepts it.
+
+    ``Literal`` itself accepts unhashable members on all supported versions.
+    Thus the blank becomes a ``None`` member of the ``Literal``, and the
+    parameter stays nullable on every version.
+
+    :param choices: The values the parameter accepts.
+    :returns: A type that accepts those values and ``None``.
     """
     literal = Literal[tuple(choices)]  # type: ignore[valid-type]
     try:
         return typing.Optional[literal]
     except TypeError:
         logger.debug(
-            "typing refused Optional[%r]; expressing the blank as a Literal member.", literal
+            "typing refused Optional[%r]. The blank becomes a Literal member instead.", literal
         )
         return Literal[tuple([*choices, None])]  # type: ignore[valid-type]
 
@@ -362,7 +380,10 @@ def _same_choices(left: Sequence[Any], right: Sequence[Any]) -> bool:
 
     Order is presentation only -- it decides what the pick list shows first --
     so it must not make two agreeing declarations look like a contradiction.
-    Choices may be unhashable (a list of lists), so this cannot use sets.
+    A choice can be unhashable, a list of lists for example, so this function
+    cannot use sets.
+
+    :returns: True if the two lists allow the same values.
     """
     remaining = _json_safe(list(right))
     for item in _json_safe(list(left)):
@@ -373,11 +394,14 @@ def _same_choices(left: Sequence[Any], right: Sequence[Any]) -> bool:
 
 
 def _is_listed_choice(value: Any, choices: Sequence[Any]) -> bool:
-    """Whether ``value`` is one of ``choices``, across representations.
+    """Find ``value`` in ``choices``, in any of the forms it can take.
 
-    The value has been through pydantic by the time this is asked, so a choice
-    written as a tuple may come back as a tuple where the declaration holds a
-    list, and an ``Enum`` member where the declaration holds its value.
+    pydantic converts the value before this function receives it. A choice
+    written as a tuple thus comes back as a tuple, where the declaration holds
+    a list. An ``Enum`` field comes back as a member, where the declaration
+    holds the value of that member.
+
+    :returns: True if the value is one of the choices.
     """
     if any(value == choice for choice in choices):
         return True
@@ -394,7 +418,7 @@ def _absorb_constraints(obj: Any, merged: dict[str, Any]) -> None:
 
 
 def _collect_metadata(metadata: Sequence[Any]) -> tuple[Param, list[Any]]:
-    """Merge recognised ``Annotated`` metadata into one :class:`Param`.
+    """Merge the ``Annotated`` metadata this package knows into one :class:`Param`.
 
     Returns the merged ``Param`` and the metadata items we did not consume
     (pydantic ``FieldInfo``, ``annotated_types`` objects, arbitrary objects),
@@ -430,9 +454,16 @@ def _collect_metadata(metadata: Sequence[Any]) -> tuple[Param, list[Any]]:
 
 
 def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
-    """Resolve a layout callback's parameters.
+    """Resolve the parameters of a layout callback into a :class:`CallableSpec`.
 
-    :raises ValueError: If a ``BaseModel`` parameter is mixed with other parameters.
+    A callback declares its parameters as plain type hints, as
+    :data:`typing.Annotated` metadata, or as one pydantic ``BaseModel``. The
+    model style is the only one that cannot be mixed with the others.
+
+    :param func: The layout callback to read.
+    :returns: The resolved signature.
+    :raises ValueError: If a ``BaseModel`` parameter occurs together with other
+        parameters.
     """
     sig = inspect.signature(func)
     hints = _resolve_hints(func)
@@ -471,7 +502,7 @@ def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
     if body is not None and len(params) != 1:
         raise ValueError(
             f"Layout callback '{getattr(func, '__name__', func)}' declares a pydantic model "
-            f"parameter '{body[0]}'; a model parameter must be the only parameter."
+            f"parameter '{body[0]}'. A model parameter must be the only parameter."
         )
 
     return CallableSpec(
@@ -565,10 +596,14 @@ def _layout_parameter_from_spec(spec: ParamSpec) -> LayoutParameter:
 
 
 def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
-    """Build the frontend-facing parameter list.
+    """Build the parameter list that the frontend receives.
 
-    For the body-model style the model's fields are flattened so the search
-    bar prompts for each field individually.
+    For the body-model style this function reads the fields of the model
+    instead of the signature, so the search bar asks for each field one at a
+    time.
+
+    :param spec: The resolved signature of the layout callback.
+    :returns: One :class:`LayoutParameter` for each parameter or model field.
     """
     if spec.body_model is None:
         return [_layout_parameter_from_spec(p) for p in spec.params]
@@ -598,9 +633,10 @@ def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
 def _choice_message(choices: Sequence[Any]) -> str:
     """Render a choice list the way pydantic renders a ``Literal``.
 
-    Matches pydantic's wording for the ordinary cases -- strings, numbers,
-    booleans -- so the two paths read alike; an exotic object's ``repr`` may
-    differ from pydantic's own rendering of it.
+    The wording is the same as pydantic's for the ordinary cases, which are
+    strings, numbers and booleans. Thus the message reads the same whichever
+    path reports it. The ``repr`` of an unusual object can differ from the
+    form pydantic gives it.
     """
     rendered = [repr(c) if isinstance(c, str) else str(c) for c in choices]
     if len(rendered) == 1:
@@ -611,11 +647,16 @@ def _choice_message(choices: Sequence[Any]) -> str:
 def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: Param) -> None:
     """Reject a choice declaration the search bar and the callback cannot both honour.
 
-    The pick list is rendered from the parameter metadata and the callback is
-    held to the validator's model; each declaration below lets the two disagree,
-    so the user is offered a value the server is certain to refuse. They are
-    mistakes in the layout's own signature, so they are raised at registration
-    rather than surfacing later as a parameter no input satisfies.
+    The search bar builds the pick list from the parameter metadata, and the
+    validator holds the callback to its model. Each declaration below lets the
+    two disagree, so the search bar offers a value that the server then
+    refuses.
+
+    These are mistakes in the signature of the layout. This function thus
+    raises them at registration, where the author can see them, and not later
+    as a parameter that no input satisfies.
+
+    :raises ValueError: If the declaration is one of the three below.
     """
     if meta.choices is None:
         return
@@ -623,8 +664,8 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
     if not declared:
         raise ValueError(
             f"Layout '{layout_id}': parameter '{name}' declares Param(choices=[]). "
-            "An empty choice list cannot be satisfied by any value; drop the argument "
-            "or list the allowed values."
+            "No value can satisfy an empty choice list. Remove the argument, "
+            "or list the values the parameter accepts."
         )
 
     ptype, _, annotated, _ = describe_type(annotation)
@@ -635,8 +676,8 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
             f"Layout '{layout_id}': parameter '{name}' is a collection, but "
             f"Param(choices={declared!r}) lists scalar values, so every input is "
             "rejected. Choices for a collection parameter must be whole values for "
-            "that collection (choices=[[1, 2], [3]]); to restrict its items instead, "
-            "annotate the item type -- list[Literal['a', 'b']]."
+            "that collection, such as choices=[[1, 2], [3]]. To restrict the items "
+            "instead, annotate the item type: list[Literal['a', 'b']]."
         )
 
     if annotated is not None and not _same_choices(annotated, declared):
@@ -714,7 +755,7 @@ def prepare_client_params(
     arrays: frozenset[str],
     choices: Mapping[str, Sequence[Any]] | None = None,
 ) -> dict[str, Any]:
-    """Normalise string-only client input before validation.
+    """Normalize the strings that come from the browser, before validation.
 
     * ``""``/``"none"``/``"null"`` become ``None`` for Optional parameters.
     * A string for a list-typed parameter is split (JSON array or comma-separated).
@@ -738,7 +779,7 @@ def _model_keeping_what_pydantic_accepts(
 ) -> tuple[Any, list[str]]:
     """Rebuild a model, degrading only the fields pydantic refused.
 
-    A single parameter pydantic cannot schematise -- ``dict[str, SomeAppClass]``,
+    A single parameter that pydantic cannot make a schema for -- ``dict[str, SomeAppClass]``,
     say -- used to take every other parameter down with it, so a sibling
     annotated ``int`` silently accepted any string at all.
 
@@ -828,8 +869,8 @@ class PydanticValidator:
             described = {p.name: describe_type(p.annotation) for p in spec.params}
         nullable = frozenset(name for name, d in described.items() if d[1])
         arrays = frozenset(name for name, d in described.items() if d[0] == "array")
-        # Every value arrives as a string; remember what each choice really is so
-        # "2" can become 2 for Literal[1, 2] (see _match_choice).
+        # Every value arrives as a string. Remember what each choice really
+        # is, so that "2" can become 2 for Literal[1, 2]. See _match_choice.
         choices: dict[str, Sequence[Any]] = {
             name: d[2] for name, d in described.items() if d[2] is not None
         }
@@ -883,13 +924,13 @@ class PydanticValidator:
                 )
             field_kwargs = p.meta.as_field_kwargs()
             if describe_type(tp)[0] == "unknown":
-                # pydantic cannot build a schema for an arbitrary class (a
-                # DataFrame, a Figure, an app's own type), and an unhandled
-                # PydanticSchemaGenerationError here would abort the import of
-                # any app that annotates one. Such a parameter is passed through
-                # untouched instead, which is what an unannotated one already
-                # does; its constraints would be meaningless on Any, so only the
-                # descriptive metadata is kept.
+                # pydantic cannot make a schema for an arbitrary class, such
+                # as a DataFrame, a Figure, or a type of the application. An
+                # unhandled PydanticSchemaGenerationError here stops the import
+                # of every application that annotates one. Such a parameter
+                # goes through untouched instead, which is what a parameter
+                # with no annotation already does. Its constraints have no
+                # meaning on Any, so only the descriptive metadata stays.
                 tp = Any
                 field_kwargs = {
                     key: value
@@ -907,8 +948,8 @@ class PydanticValidator:
         config = ConfigDict(
             extra="allow" if spec.accepts_var_kwargs else "forbid",
             coerce_numbers_to_str=True,
-            # A parameter may legitimately be named "model_id" or start with an
-            # underscore; neither is pydantic's business here.
+            # A parameter can correctly be named "model_id", or start with an
+            # underscore. Neither is the business of pydantic here.
             protected_namespaces=(),
         )
         try:
@@ -919,7 +960,8 @@ class PydanticValidator:
             )
         except Exception as exc:
             # Registration must not fail because a signature defeats pydantic.
-            # Keep every field it can still model; the rest are passed through.
+            # Keep every field it can still model. The rest go through
+            # without validation.
             model, degraded = _model_keeping_what_pydantic_accepts(model_name, config, fields)
             logger.warning(
                 "dash_prism: could not build a validation model for layout '%s' (%s); "
@@ -949,8 +991,9 @@ class PydanticValidator:
             ]
             raise ParamValidationError(self.layout_id, errors) from None
         except Exception as exc:  # a custom validator or type raising on its own
-            # Callers handle ParamValidationError and render the invalid-parameter
-            # panel; anything else would surface as a generic server error.
+            # Callers catch ParamValidationError and render the panel for
+            # invalid parameters. Any other error becomes a server error,
+            # which tells the user nothing.
             logger.warning(
                 "dash_prism: validating parameters for layout '%s' raised %s: %s",
                 self.layout_id,
@@ -966,8 +1009,8 @@ class PydanticValidator:
             self._reject_unlisted_choices(instance)
             return {self.body_param: instance, **held_back}
 
-        # Only pass what the client actually supplied (plus extras); omitted
-        # parameters fall back to the callback's own defaults, as before.
+        # Pass only what the client supplied, and the extras. A parameter the
+        # client left out keeps the default of the callback.
         out = {name: getattr(instance, name) for name in instance.model_fields_set}
         out.update(instance.model_extra or {})
         out.update(held_back)
@@ -983,11 +1026,11 @@ class PydanticValidator:
         anyone to it.
 
         This runs *after* the model has validated, against the canonical field
-        values, for three reasons: the model's own validators have already
-        normalised whatever they were going to normalise, a field reached by
-        alias cannot route around the list, and ``'[1,2]'`` has become the
-        tuple the field declares rather than the list it parsed to. The
-        declaration therefore describes the value the callback receives.
+        values, for three reasons. The validators of the model run first, so
+        the value is already in its final form. A field that the request set
+        through an alias cannot go around the list. And ``'[1,2]'`` is now the
+        tuple that the field declares, not the list that it first parsed to.
+        Thus the declaration describes the value that the callback receives.
 
         Only choices a ``Param`` declared are checked -- pydantic owns the ones
         that come from a ``Literal`` or ``Enum`` annotation. A field the request
@@ -1018,10 +1061,13 @@ class PydanticValidator:
 
 
 def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
-    """Create the validator for a layout.
+    """Make the validator for one layout.
 
-    :raises ValueError: If a parameter's choice declarations cannot be
-        satisfied; see :func:`check_choice_declarations`.
+    :param layout_id: The identifier of the layout, which the error messages use.
+    :param spec: The resolved signature of the layout callback.
+    :returns: A validator that coerces and checks the parameters of the layout.
+    :raises ValueError: If a choice declaration is not correct. See
+        :func:`check_choice_declarations` for the three kinds.
     """
     check_choice_declarations(layout_id, spec)
     return PydanticValidator.from_spec(layout_id, spec)

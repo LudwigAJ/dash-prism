@@ -1,7 +1,13 @@
-"""Prism Component Wrapper.
+"""Hand-written wrapper for the Prism component.
 
-User-facing wrapper for the Prism component with comprehensive documentation.
-This file provides a clean Python API that wraps the auto-generated PrismComponent.
+This module holds the public Python API of the Prism component. The class
+:class:`Prism` is a subclass of the auto-generated :class:`PrismComponent`, and
+adds three things: the documentation of every prop, Python type hints, and a
+warning for each prop combination that does nothing.
+
+The build step ``dash-generate-components`` writes ``PrismComponent.py`` again
+from the TypeScript source. Thus do not edit that file. Edit this wrapper
+instead.
 """
 
 from __future__ import annotations
@@ -14,170 +20,223 @@ from dash.development.base_component import Component
 
 from .PrismComponent import PrismComponent
 
-# Sentinel to distinguish "not provided" from an explicit None
+# Sentinel default for every keyword argument. Dash must know which props the
+# caller gave. An explicit ``None`` reaches the browser as ``null`` and clears
+# the prop, but an omitted argument keeps the default of the React component.
 _UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
 
 
 class Prism(PrismComponent):
-    """Advanced multi-panel workspace manager for Plotly Dash.
+    """Multi-panel workspace manager for Plotly Dash.
 
-    Prism provides a powerful tabbed workspace with drag-and-drop functionality,
-    allowing users to create, organize, and manage multiple layouts in a single
-    application. It supports multi-panel splits, persistent state, and dynamic
-    layout loading with full async support.
+    Prism gives a Dash application a tabbed workspace. A user opens a tab for
+    each registered layout, drags a tab into a different panel, and splits the
+    workspace into more panels. Prism renders the content of each tab through a
+    Dash callback that :func:`dash_prism.init` registers. Prism can also store
+    the workspace in the browser, thus the user finds the same tabs after a
+    page reload.
 
     **Features:**
 
-    - **Dynamic Tab Management**: Create, close, rename, and reorder tabs
-    - **Multi-Panel Layouts**: Split workspace into multiple panels via drag-and-drop
-    - **Persistent State**: Save workspace configuration across browser sessions
-    - **Layout Registry**: Register static or dynamic layouts with parameters
-    - **Async Support**: Full support for async layout callbacks
-    - **Type-Safe**: Complete type hints for Python 3.10+
+    - **Tab management**: The user can open, close, rename, reorder, lock and
+      duplicate a tab.
+    - **Multi-panel layouts**: A drag to the edge of a panel, or a click on the
+      split button, divides the workspace into more panels.
+    - **Persistent state**: Prism can store the workspace in ``localStorage``
+      or in ``sessionStorage``.
+    - **Layout registry**: :func:`dash_prism.register_layout` registers a
+      layout with its parameters and its keywords.
+    - **Async support**: A layout callback can be synchronous or ``async``.
+    - **Type-safe**: This wrapper has complete type hints for Python 3.10 and
+      later versions.
 
-    :param id: Unique identifier for this component in Dash callbacks.
-        Use this ID to read workspace state or update component properties. It
-        also scopes the persisted workspace (storage key), so it is read when the
-        component mounts; changing it afterwards remounts the workspace and
-        starts a fresh undo history.
+    :param id: The unique identifier of this component in Dash callbacks. A
+        callback reads the workspace state, or updates a prop, through this ID.
+        The ID also scopes the persisted workspace, which Prism stores under the
+        key ``persist:prism-workspace-<id>``. Prism reads the ID one time, when
+        the component mounts. A later change of the ID remounts the workspace
+        and starts a new undo history.
     :type id: str or None
-    :param serverSessionId: Fingerprint of the server-side layout registry, stored
-        with the persisted workspace. On load, tabs whose layout is no longer in
-        ``registeredLayouts`` are closed instead of showing an error; the rest of
-        the workspace is kept and the stored fingerprint is updated so the registry
-        change is recorded. :func:`dash_prism.init` derives it from the registered
-        layout IDs (stable across workers and restarts). Which tabs are closed
-        depends only on ``registeredLayouts`` (nothing is closed while no layout
-        is registered at all); setting this by hand merely changes the recorded
-        fingerprint.
+    :param serverSessionId: The fingerprint of the server-side layout registry,
+        stored with the persisted workspace. When the workspace loads, Prism
+        closes each tab whose layout is not in ``registeredLayouts`` any more.
+        Prism keeps the rest of the workspace and records the new fingerprint. A
+        closed tab shows no "Layout not found" error, but a toast tells the user
+        how many tabs Prism closed. :func:`dash_prism.init` computes the
+        fingerprint from the registered layout IDs, thus the value is the same
+        on every worker and after each restart. The tabs that Prism closes
+        depend only on ``registeredLayouts``, and Prism closes no tab while that
+        registry is empty. If you set this prop yourself,
+        :func:`dash_prism.init` keeps your value, and only the recorded
+        fingerprint changes.
     :type serverSessionId: str or None
-    :param theme: Visual theme for the workspace. Controls colors, backgrounds,
-        and overall appearance. Defaults to ``'light'``.
+    :param theme: The visual theme of the workspace, ``'light'`` (the default)
+        or ``'dark'``. Prism writes the theme to the ``data-prism-theme``
+        attribute of the page root. Thus the theme also applies to the menus and
+        the dialogs that Prism renders outside the workspace element.
     :type theme: str
-    :param size: Size variant affecting spacing, typography, and UI element sizing.
-        Options: ``'sm'`` (small), ``'md'`` (medium, default), ``'lg'`` (large).
-        Defaults to ``'md'``.
+    :param size: The size variant of the workspace. Prism sets a root font size
+        of 12 px for ``'sm'``, 14 px for ``'md'`` (the default) and 16 px for
+        ``'lg'``. The tab bar, the status bar and the search bar use ``em``
+        units, thus each of them scales with this font size.
     :type size: str
-    :param maxTabs: Maximum number of tabs allowed in the whole workspace,
-        counting every panel together (not per panel). Prevents users
-        from creating too many tabs which could impact performance. Values less than
-        ``1`` (e.g., ``0`` or ``-1``) mean unlimited tabs. Defaults to ``16``. Can be
-        changed from a callback at any time: existing tabs and the undo history are
-        kept and the new limit applies to the next tab action.
+    :param maxTabs: The maximum number of tabs in the whole workspace, ``16`` by
+        default. The limit counts every panel together and not one panel at a
+        time. At the limit, Prism refuses a new tab, a duplicate of a tab
+        and a tab from a share link. A value less than ``1``, for example ``0``
+        or ``-1``, means that Prism applies no limit. A callback can change the
+        limit at any time. Prism keeps the existing tabs and the undo history,
+        and applies the new limit to the next tab action.
     :type maxTabs: int
-    :param maxPanels: Maximum number of leaf panels the workspace can be split
-        into. Once reached, the split button and the edge drop zones disappear;
-        ``1`` disables splitting entirely. Values less than ``1``, and an
-        explicit ``None``, mean unlimited. Defaults to ``20``.
+    :param maxPanels: The maximum number of leaf panels in the workspace, ``20``
+        by default. At the limit, Prism hides the split button and disables the
+        edge drop zones, thus the user cannot split a panel again. A value of
+        ``1`` disables the split function completely. A value less than ``1``,
+        and an explicit ``None``, mean that Prism applies no limit.
     :type maxPanels: int or None
-    :param searchBarPlaceholder: Placeholder text shown in the layout search bar.
-        Defaults to ``'Search layouts...'``.
+    :param searchBarPlaceholder: The placeholder text of the layout search bar
+        of each panel. The default is ``'Search layouts...'``.
     :type searchBarPlaceholder: str
-    :param layoutTimeout: Timeout in seconds for layout loading. Defaults to ``30``.
-        Enforced in two places: the browser shows a timeout card if a tab's content
-        has not arrived within this time, and the render callback gives up on layout
-        callbacks that run longer than this and renders an error tab instead. The
-        server-side limit applies to ``async`` layout callbacks in every app, and to
-        synchronous layout callbacks only when the app runs with ``use_async=True``;
-        a synchronous callback in a synchronous app cannot be interrupted. Values that
-        are not finite positive numbers (including ``None``, ``0`` and negatives) fall
-        back to the default on both sides; there is no "unlimited" setting.
+    :param layoutTimeout: The time limit in seconds for the load of a layout,
+        ``30`` by default. In the browser, a tab shows a timeout card when its
+        content does not arrive within this time. On the server, the render
+        callback stops a layout callback that runs longer, and renders an error
+        tab. The server limit applies to each ``async`` layout callback in every
+        application. The server limit applies to a synchronous layout callback
+        only when you make the Dash application with ``use_async=True``. Prism
+        cannot stop a synchronous callback in a synchronous application.
+        ``None``, ``0``, a negative number and any other value that is not a
+        finite positive number fall back to ``30``. This fallback applies in the
+        browser and on the server, and you cannot disable the limit.
     :type layoutTimeout: float
-    :param showStatusBar: Whether to render the status bar at all. When ``False``
-        the reset, help and undo buttons, the mode/panel/tab read-outs and any
-        ``actions`` are not shown; keyboard shortcuts keep working. Passing
-        ``actions`` together with ``showStatusBar=False`` emits a
-        :class:`UserWarning` because they would be unreachable. Defaults to ``True``.
+    :param showStatusBar: Prism renders the status bar when this prop is
+        ``True``, which is the default. When the prop is ``False``, Prism hides
+        the reset, help and undo buttons, the mode, panel and tab read-outs, and
+        every component in ``actions``. The keyboard shortcuts continue to
+        operate. The wrapper gives a :class:`UserWarning` when you pass
+        ``actions`` together with ``showStatusBar=False``, because the user
+        cannot reach those actions.
     :type showStatusBar: bool
-    :param statusBarPosition: Position of the status bar relative to the workspace.
-        Options: ``'top'`` or ``'bottom'``. Defaults to ``'bottom'``.
+    :param statusBarPosition: The position of the status bar. ``'bottom'`` (the
+        default) puts the bar below the panels, and ``'top'`` puts the bar above
+        the panels.
     :type statusBarPosition: str
-    :param statusBarItems: Which built-in status bar segments to show, in order.
-        Any of ``'reset'``, ``'help'``, ``'undo'``, ``'mode'``, ``'panels'``,
-        ``'tab'``, ``'count'``, ``'updated'``. ``'updated'`` is always placed at
-        the far right, after any ``actions``; unknown names are ignored and an
-        empty list leaves only the actions (``showStatusBar=False`` hides the bar
-        altogether). Defaults to all segments.
+    :param statusBarItems: The built-in status bar segments to show, in the
+        order that you give them. The default shows all eight segments in this
+        order: ``'reset'``, ``'help'``, ``'undo'``, ``'mode'``, ``'panels'``,
+        ``'tab'``, ``'count'``, ``'updated'``. Prism always puts ``'updated'``
+        at the far right of the bar, after every component in ``actions``. Prism
+        ignores an unknown name, and keeps only the first of a name that you
+        give two times. An empty list leaves only the actions in the bar, and
+        ``showStatusBar=False`` hides the whole bar.
     :type statusBarItems: list[str]
-    :param actions: Array of :class:`dash_prism.Action` components to display in the status bar.
-        Each action is a clickable button with its own ``n_clicks`` for callbacks.
+    :param actions: The :class:`dash_prism.Action` components that Prism shows
+        in the status bar, between the built-in segments and the ``'updated'``
+        segment. Each action is a button with its own ``n_clicks`` prop, thus
+        one callback can listen to one button.
     :type actions: list or None
-    :param persistence: If ``True``, workspace state is persisted in the browser
-        using the storage selected by ``persistence_type``. If ``False`` (default),
-        nothing is written to storage and ``persistence_type`` is ignored. Read
-        when the component mounts; changing it afterwards remounts the workspace
-        and starts a fresh undo history.
+    :param persistence: Prism stores the workspace in the browser when this prop
+        is ``True``. The default is ``False``. Prism then writes nothing to
+        storage and ignores ``persistence_type``. Prism reads this prop one
+        time, when the component mounts. A later change of the storage that
+        Prism uses remounts the workspace and starts a new undo history.
     :type persistence: bool
-    :param persistence_type: Where to persist workspace state when ``persistence``
-        is ``True``. Options: ``'local'`` (localStorage, persists across browser
-        sessions), ``'session'`` (sessionStorage, persists only for the current
-        browser tab), ``'memory'`` (no storage, state is lost on page refresh).
-        Defaults to ``'memory'``, so ``persistence=True`` on its own persists
-        nothing: set ``persistence_type='local'`` or ``'session'`` as well. A
-        :class:`UserWarning` is emitted for that no-op combination. Read when the
-        component mounts; changing it afterwards remounts the workspace and
-        starts a fresh undo history.
+    :param persistence_type: The storage that Prism uses while ``persistence``
+        is ``True``. ``'local'`` uses ``localStorage``, which keeps the
+        workspace after the user closes the browser. ``'session'`` uses
+        ``sessionStorage``, which keeps the workspace only for the current
+        browser tab. ``'memory'`` (the default) uses no storage, thus a page
+        refresh loses the workspace. Because the default is ``'memory'``,
+        ``persistence=True`` alone stores nothing, and the wrapper gives a
+        :class:`UserWarning` for that combination. Prism reads this prop one
+        time, when the component mounts. A later change of the storage that
+        Prism uses remounts the workspace and starts a new undo history.
     :type persistence_type: str
-    :param initialLayout: Layout ID to automatically load in the first tab on
-        initial page load. Must match a layout registered via
-        :func:`dash_prism.register_layout` before calling :func:`dash_prism.init`.
-        Only applies on the very first load; if ``persistence`` is enabled and a
-        saved workspace exists, the persisted state takes precedence.
+    :param initialLayout: The ID of the layout that Prism opens in the first
+        tab. The ID must belong to a layout that you register with
+        :func:`dash_prism.register_layout` before you call
+        :func:`dash_prism.init`. Prism applies the prop one time for each mount
+        of the workspace, and only while the workspace holds one tab that has no
+        layout. Thus a workspace that comes back from storage, and a workspace
+        with more than one tab, keep their own content.
     :type initialLayout: str or None
-    :param newTabOpensDropdown: Whether opening a new tab should automatically
-        focus the SearchBar and open the layout dropdown. If ``True`` (default),
-        new tabs instantly show the layout dropdown for quick selection. If
-        ``False``, users must click the SearchBar to see available layouts.
+    :param newTabOpensDropdown: Prism focuses the search bar of the panel and
+        opens the layout dropdown for each new tab when this prop is ``True``,
+        which is the default. When the prop is ``False``, the user must click
+        the search bar, or press Ctrl+Space, to see the layouts.
     :type newTabOpensDropdown: bool
-    :param emptyTabView: What a tab with no layout selected shows in its body.
-        ``'layouts'`` (default) shows a grid of all registered layouts with
-        favorites first. ``'hint'`` shows a single line pointing users to the
-        search bar. ``'none'`` shows an empty pane so users pick layouts through
-        the search bar only. Combine ``'none'`` with ``newTabOpensDropdown=True``
-        so new tabs still surface the layout list; the quiet combination with
-        ``newTabOpensDropdown=False`` emits a :class:`UserWarning`.
+    :param emptyTabView: The content of a tab that has no layout. ``'layouts'``
+        (the default) shows a grid of every registered layout, with the favorite
+        layouts first. ``'hint'`` shows one line that points the user to the
+        search bar. ``'none'`` shows an empty pane, thus the user opens a layout
+        from the search bar only. Prism falls back to ``'layouts'`` for an
+        unknown value. The combination of ``'none'`` with
+        ``newTabOpensDropdown=False`` leaves the user no visible way to open a
+        layout, and the wrapper gives a :class:`UserWarning` for that
+        combination.
     :type emptyTabView: str
-    :param enableKeyboardShortcuts: Whether Prism installs its keyboard shortcuts
-        (Ctrl/Cmd+Alt+N, Ctrl/Cmd+D, J, K, O, I, R, Shift+R, Y, B, U and
-        Ctrl+Space). Set to ``False`` if they conflict with your application's own
-        shortcuts; the shortcut hints in the context menu, the empty-tab hint and
-        the help dialog are hidden too. Defaults to ``True``.
+    :param enableKeyboardShortcuts: Prism installs its keyboard shortcuts when
+        this prop is ``True``, which is the default. Ctrl/Cmd+Alt+N opens a new
+        tab and Ctrl+Space opens the search bar. Ctrl/Cmd with D, J, K, O, I, R,
+        Shift+R, Y, B or U gives the tab and panel commands. A value of
+        ``False`` prevents a conflict with the shortcuts of your own
+        application. Prism then also hides the shortcut hints in the tab context
+        menu and in an empty tab, and the help dialog shows no keyboard
+        section.
     :type enableKeyboardShortcuts: bool
-    :param enableShareLinks: Whether users can copy a share link for a tab from its
-        context menu and whether Prism opens tabs from ``#p:`` share hashes in the
-        page URL on load. Set to ``False`` for apps that must not expose deep links
-        or that use the URL hash themselves. Defaults to ``True``.
+    :param enableShareLinks: Prism adds a "Share" command to the context menu of
+        each tab that has a layout when this prop is ``True``, which is the
+        default. The command copies a link that carries the tab in a ``#p:``
+        hash. Prism also opens a tab from such a hash in the page URL. An
+        application that must not give deep links to its users, or that uses the
+        URL hash itself, sets this prop to ``False``. Prism then removes the
+        command and does not read the hash.
     :type enableShareLinks: bool
-    :param readWorkspace: Current workspace state, written by Prism for Dash.
-        Use it as an ``Input`` or ``State`` in callbacks; Prism never reads it
-        back. Keys: ``tabs`` (list of dict), ``panel`` (dict), ``panelTabs``
-        (dict, tab order per panel), ``activeTabIds`` (dict), ``activePanelId``
-        (str), ``favoriteLayouts`` (list of str), ``searchBarsHidden`` (bool).
-        Updated at most every 500 ms after the first sync.
+    :param readWorkspace: The current workspace state, which Prism writes for
+        Dash (Prism -> Dash). A callback reads it as an ``Input`` or a ``State``, and Prism
+        never reads the prop back. The keys are ``tabs`` (a list of dict),
+        ``panel`` (the dict with the panel tree), ``panelTabs`` (the dict with
+        the tab order of each panel), ``activeTabIds`` (a dict),
+        ``activePanelId`` (a str), ``favoriteLayouts`` (a list of str) and
+        ``searchBarsHidden`` (a bool). Prism writes the first state
+        immediately. After that, Prism waits until 500 ms after the last
+        change, and then writes the state one time.
     :type readWorkspace: dict or None
-    :param updateWorkspace: Workspace state pushed from Dash into Prism. Use it as
-        an ``Output`` in callbacks. Partial updates are merged into the current
-        workspace and healed: each tab's ``panelId`` decides which panel it belongs
-        to and the order in ``panelTabs`` is kept. Feeding ``readWorkspace`` straight
-        back in is a wasted round trip (Prism skips a sync whose workspace is
-        unchanged), but a callback that returns a different workspace every time
-        ping-pongs with Prism every 500 ms.
+    :param updateWorkspace: The workspace state that Dash pushes into Prism
+        (Dash -> Prism). A callback sets it as an ``Output``. Prism merges a partial update into
+        the current workspace and then heals the result. The ``panelId`` of a
+        tab decides the panel of that tab, and Prism removes a tab that points
+        to a panel that does not exist. Prism keeps the tab order in
+        ``panelTabs``, and repairs ``activeTabIds`` and ``activePanelId`` that
+        point to a tab or a panel that is gone. A callback that returns
+        ``readWorkspace`` without a change costs one round trip and nothing
+        more, because Prism skips a sync of an unchanged workspace. But a
+        callback that returns a different workspace each time makes Prism and
+        the callback send updates to each other without end.
     :type updateWorkspace: dict or None
-    :param children: Child components (typically :class:`dash_prism.PrismContent` instances).
-        **Advanced** - Usually managed automatically by :func:`dash_prism.init`.
+    :param children: More Dash components for Prism to render at the end of the
+        workspace, after the panels and the status bar. **Advanced** — the tab
+        content does not come through this prop. Prism's frontend makes one
+        :class:`dash_prism.PrismContent` host for each tab with a layout, and
+        the callback that :func:`dash_prism.init` registers fills each host.
     :type children: list or None
-    :param registeredLayouts: Registry of available layouts that can be rendered in tabs.
-        **Advanced** - Automatically populated by :func:`dash_prism.init`.
+    :param registeredLayouts: The registry of the layouts that a tab can render.
+        **Advanced** — :func:`dash_prism.init` fills this prop from the layouts
+        that :func:`dash_prism.register_layout` registered. A callback can also
+        write a new registry while the application runs.
     :type registeredLayouts: dict or None
-    :param className: CSS class name(s) to add to the root container.
-        Appended to Prism's internal classes. Useful for custom sizing or layout.
+    :param className: One or more CSS class names for the root container. Prism
+        adds them after its own classes, thus a rule of yours can control the
+        size or the position of the workspace.
     :type className: str or None
-    :param style: Inline CSS styles for the root container.
+    :param style: Inline CSS styles for the root container. Prism gives the
+        container no height of its own, thus a height in this prop, or in a rule
+        for ``className``, is normally necessary.
     :type style: dict or None
 
     .. rubric:: Examples
 
-    Basic usage with registered layouts:
+    A basic application with two registered layouts:
 
     .. code-block:: python
 
@@ -212,7 +271,7 @@ class Prism(PrismComponent):
         if __name__ == '__main__':
             app.run(debug=True)
 
-    With status bar actions:
+    Two action buttons in the status bar:
 
     .. code-block:: python
 
@@ -242,10 +301,10 @@ class Prism(PrismComponent):
             prevent_initial_call=True
         )
         def handle_save(n_clicks):
-            # Perform save operation
+            # Save the data here
             return False  # Stop loading spinner
 
-    Reading workspace state:
+    A callback that reads the workspace state:
 
     .. code-block:: python
 
@@ -265,23 +324,30 @@ class Prism(PrismComponent):
     .. seealso::
 
         :class:`dash_prism.Action`
-            Action button component for the status bar
+            The action button component for the status bar.
 
         :func:`dash_prism.register_layout`
-            Decorator/function to register layouts
+            The decorator, or plain function, that registers a layout.
 
         :func:`dash_prism.init`
-            Initialize Prism with Dash app
+            The function that connects Prism to the Dash application.
 
     .. note::
 
-        - This component requires initialization via :func:`dash_prism.init`
-        - Layouts must be registered before calling ``init()``
-        - The workspace state is managed internally and synced with Dash via callbacks
-        - For best performance, limit ``maxTabs`` to a reasonable number (8-12)
+        - Prism does no work until you call :func:`dash_prism.init`, which
+          injects the layout registry and registers the render callback.
+        - You must register every layout before you call ``init()``.
+        - Prism holds the workspace state in the browser and copies it to Dash
+          through the ``readWorkspace`` prop.
+        - Prism keeps each tab that has a layout mounted, even while the tab is
+          not visible. Thus a large number of open tabs uses more memory in the
+          browser.
     """
 
-    # Override _type to match what init.py expects
+    # The generated base class sets ``_type`` to "PrismComponent". The React
+    # bundle exports the component as ``Prism``, and :func:`dash_prism.init`
+    # refuses a component whose ``_type`` is not "Prism", thus the override is
+    # necessary for both the renderer and init().
     _type = "Prism"
 
     def __init__(
@@ -312,7 +378,7 @@ class Prism(PrismComponent):
         enableShareLinks: bool = _UNSET,
         searchBarPlaceholder: str = _UNSET,
         layoutTimeout: float = _UNSET,
-        # Advanced — typically managed by dash_prism.init()
+        # Advanced props that init(), the frontend or a callback normally sets
         children: list[Component] | None = _UNSET,
         serverSessionId: str | None = _UNSET,
         registeredLayouts: dict[str, Any] | None = _UNSET,
@@ -320,8 +386,10 @@ class Prism(PrismComponent):
         updateWorkspace: dict[str, Any] | None = _UNSET,
         **kwargs: Any,
     ):
-        # Only forward args the caller actually provided so that
-        # _explicitize_args on the base class sees the correct set.
+        # Forward only the arguments that the caller gave. The sentinel keeps
+        # an omitted argument out of the dict, thus ``_explicitize_args`` on
+        # the base class sees the same set of props as a direct call to
+        # ``PrismComponent``, and the React defaults stay in control.
         _locals = locals()
         explicit = {
             k: v

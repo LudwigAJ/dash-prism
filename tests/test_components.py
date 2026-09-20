@@ -126,16 +126,22 @@ def test_prop_docstrings_match_behaviour() -> None:
     from dash_prism.PrismComponent import PrismComponent
 
     claims = (
-        "counting every panel together",  # maxTabs is global, not per panel
-        "500 ms",  # readWorkspace sync cadence
-        "ping-pongs with Prism",  # what an echoing callback really does
+        "counts every panel together",  # maxTabs is global, not per panel
+        "500 ms after the last change",  # readWorkspace debounces, not throttles
+        "send updates to each other",  # what an echoing callback really does
+    )
+    # Claims that were wrong before and must not come back.
+    wrong = (
+        "allowed per panel",  # maxTabs is global
+        "at most every 500 ms",  # implies a periodic refresh; it is a debounce
     )
     # The generator wraps lines, so compare whitespace-normalised text.
     for cls in (dash_prism.Prism, PrismComponent):
         doc = " ".join((cls.__doc__ or "").split())
-        assert "allowed per panel" not in doc, cls.__name__
         for claim in claims:
             assert claim in doc, f"{cls.__name__} docstring is missing {claim!r}"
+        for bad in wrong:
+            assert bad not in doc, f"{cls.__name__} docstring still claims {bad!r}"
 
     generated = " ".join((PrismComponent.__doc__ or "").split())
     assert "Prism -> Dash" in generated

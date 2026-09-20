@@ -101,10 +101,11 @@ export type PrismProps = {
   size?: Size;
 
   /**
-   * Maximum number of tabs allowed in the whole workspace, counting every
-   * panel together (not per panel). Values below 1 mean unlimited. Default 16.
-   * Can be changed from a callback at any time; existing tabs and the undo
-   * history are kept, and the new limit applies to the next tab action.
+   * The maximum number of tabs in the whole workspace, which counts every
+   * panel together and not one panel at a time. A value less than 1 means
+   * that Prism applies no limit. The default is 16. A callback can change the
+   * limit at any time. Prism keeps the existing tabs and the undo history,
+   * and applies the new limit to the next tab action.
    */
   maxTabs?: number;
 
@@ -151,21 +152,25 @@ export type PrismProps = {
   statusBarItems?: ('reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated')[];
 
   /**
-   * Current workspace state, written by Prism for Dash (Prism -> Dash).
-   * Use it as an Input or State in callbacks; Prism never reads it back.
-   * Keys: tabs, panel, panelTabs (tab order per panel), activeTabIds,
-   * activePanelId, favoriteLayouts, searchBarsHidden. It is updated at most
-   * every 500 ms after the first sync.
+   * The current workspace state, which Prism writes for Dash (Prism -> Dash).
+   * A callback
+   * reads it as an Input or a State, and Prism never reads the prop back.
+   * The keys are tabs, panel, panelTabs (the tab order of each panel),
+   * activeTabIds, activePanelId, favoriteLayouts and searchBarsHidden.
+   * Prism writes the first state immediately. After that, Prism waits until
+   * 500 ms after the last change, and then writes the state one time.
    */
   readWorkspace?: Workspace;
 
   /**
-   * Workspace state pushed from Dash into Prism (Dash -> Prism). Set it from a
-   * callback Output. Partial updates are merged into the current workspace and
-   * healed: tab.panelId decides which panel a tab belongs to and the order in
-   * panelTabs is kept. Feeding readWorkspace straight back in is a wasted round
-   * trip (Prism skips a sync whose workspace is unchanged), but a callback that
-   * returns a different workspace every time ping-pongs with Prism every 500 ms.
+   * The workspace state that Dash pushes into Prism (Dash -> Prism). A callback
+   * sets it as an Output. Prism merges a partial update into the current workspace and then
+   * heals the result: tab.panelId decides the panel of a tab, and Prism keeps
+   * the tab order in panelTabs. A callback that returns readWorkspace without
+   * a change costs one round trip and nothing more, because Prism skips a sync
+   * of an unchanged workspace. But a callback that returns a different
+   * workspace each time makes Prism and the callback send updates to each
+   * other without end.
    */
   updateWorkspace?: Partial<Workspace>;
 

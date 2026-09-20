@@ -2,8 +2,21 @@
 Utility Functions for Prism
 ===========================
 
-Provides helpers for layout manipulation, ID injection, component traversal,
-and workspace validation.
+This module gives the helper functions that Prism uses on Dash component trees
+and on workspace data.
+
+:func:`walk_layout` walks a component tree and calls a function on each
+component. :func:`inject_tab_id` uses that walk. It changes the string
+component IDs of a tab layout into pattern-matching IDs. Two tabs that show the
+same layout thus keep different component IDs.
+:func:`find_component_by_id` and :func:`update_component_props` read or change
+one component in a tree.
+
+:func:`validate_workspace` works on workspace data, and not on a component
+tree. It examines the workspace dictionary that the browser sends back, and it
+reports the parts that do not agree with each other. Your code can call it
+before it writes a workspace to a database. :exc:`InvalidWorkspace` holds the
+messages from that check.
 """
 
 from __future__ import annotations
@@ -22,16 +35,28 @@ logger = logging.getLogger(__name__)
 
 
 class InvalidWorkspace(Exception):
-    """Exception raised when workspace validation fails.
+    """The exception that :func:`validate_workspace` raises for an incorrect workspace.
 
-    :ivar errors: list of validation error messages describing what failed.
+    :func:`validate_workspace` raises this exception when the caller keeps the
+    default ``errors='raise'`` and one or more checks fail. The exception
+    message starts with ``Invalid workspace:`` and then puts all the error
+    messages into one string.
+
+    The :attr:`errors` attribute keeps each message as its own string, thus
+    your code can show the messages in a list or a table.
+
+    :ivar errors: The error messages from one call to
+        :func:`validate_workspace`. Each message names the key, the tab, or
+        the panel that is not correct.
     :type errors: list[str]
     """
 
     def __init__(self, errors: list[str]) -> None:
-        """Initialize the exception with validation errors.
+        """Make the exception from a list of error messages.
 
-        :param errors: list of validation error messages.
+        :param errors: The error messages. The method keeps this list in
+            :attr:`errors` and also puts the messages into the exception
+            message.
         :type errors: list[str]
         """
         self.errors = errors
@@ -45,15 +70,27 @@ class InvalidWorkspace(Exception):
 
 
 def _get_leaf_panel_ids(panel: dict[str, Any], leaves: list[str] | None = None) -> list[str]:
-    """Recursively collect all leaf panel IDs from a panel tree.
+    """Collect the IDs of all the leaf panels in a panel tree.
 
-    A leaf panel is one with no children or an empty children list.
+    A leaf panel has no ``children`` key, or it has an empty ``children``
+    list. Only a leaf panel holds tabs. A container panel holds other panels
+    and divides the space between those panels.
 
-    :param panel: Panel node to search.
+    The function calls itself for each child of a container panel. As a
+    result, it finds the leaf panels at any depth. It ignores a node that is
+    not a dictionary. It also ignores a leaf panel with no ``id``, or with an
+    ``id`` that is not a string with one or more characters.
+
+    :param panel: The panel node to start from. This is usually the value of
+        the ``panel`` key of a workspace.
     :type panel: dict[str, Any]
-    :param leaves: Accumulator list for leaf IDs. Created if ``None``.
+    :param leaves: The list that collects the IDs. The function makes a new
+        list if this parameter is ``None``, and it gives the same list to each
+        call that it makes for a child panel.
     :type leaves: list[str] | None
-    :returns: list of leaf panel IDs found in the tree.
+    :returns: The leaf panel IDs, in the sequence that the walk finds them.
+        This is the same list object as ``leaves`` when the caller supplies
+        one.
     :rtype: list[str]
     """
     if leaves is None:
@@ -64,12 +101,12 @@ def _get_leaf_panel_ids(panel: dict[str, Any], leaves: list[str] | None = None) 
 
     children = panel.get("children", [])
     if not children:
-        # This is a leaf panel
+        # The panel has no children, thus it is a leaf panel.
         panel_id = panel.get("id")
         if isinstance(panel_id, str) and panel_id:
             leaves.append(panel_id)
     else:
-        # Recurse into children
+        # The panel is a container. Do the same for each child panel.
         for child in children:
             if isinstance(child, dict):
                 _get_leaf_panel_ids(child, leaves)
@@ -82,16 +119,31 @@ def _validate_panel_structure(
     errors: list[str],
     path: str = "panel",
 ) -> None:
-    """Recursively validate panel tree structure.
+    """Validate the structure of a panel tree and collect the error messages.
 
-    Leaf panels require: ``id``.
-    Container panels require: ``id``, ``direction``, ``children``.
+    The function applies these rules to each node:
 
-    :param panel: Panel node to validate.
+    - The node must be a dictionary.
+    - The node must have an ``id`` that is a string with one or more
+      characters.
+    - A node that has children must also have a ``direction`` of
+      ``'horizontal'`` or ``'vertical'``, and its ``children`` must be a list.
+
+    A node with an empty ``children`` list, or with no ``children`` key, is a
+    leaf panel. The function applies no ``direction`` rule to a leaf panel.
+
+    The function calls itself for each child, thus it checks the full tree. It
+    does not stop at the first problem. It adds each message to ``errors`` and
+    continues.
+
+    :param panel: The panel node to validate.
     :type panel: dict[str, Any]
-    :param errors: Accumulator list for error messages (mutated in place).
+    :param errors: The list of error messages. The function adds each new
+        message to this list. The function returns nothing.
     :type errors: list[str]
-    :param path: Current path in the tree for error reporting.
+    :param path: The position of this node in the tree, for the error
+        messages. The function makes the path of a child from this value, for
+        example ``panel.children[0]``.
     :type path: str
     """
     if not isinstance(panel, dict):
@@ -105,7 +157,7 @@ def _validate_panel_structure(
     children = panel.get("children", [])
 
     if children:
-        # Container panel - validate required fields
+        # The panel has children. Check the fields that a container needs.
         direction = panel.get("direction")
         if direction not in ("horizontal", "vertical"):
             errors.append(
@@ -116,7 +168,7 @@ def _validate_panel_structure(
         if not isinstance(children, list):
             errors.append(f"{path} (id={panel_id}): 'children' must be a list")
         else:
-            # Validate each child recursively
+            # Validate each child panel in the same way.
             for i, child in enumerate(children):
                 _validate_panel_structure(child, errors, path=f"{path}.children[{i}]")
 
@@ -125,21 +177,57 @@ def validate_workspace(
     workspace: dict[str, Any],
     errors: Literal["raise", "ignore"] = "raise",
 ) -> dict[str, Any]:
-    """Validate that a dictionary is a valid Prism Workspace.
+    """Validate that a dictionary is a correct Prism workspace.
 
-    Checks cross-key consistency between ``tabs``, ``panel``, ``panelTabs``,
-    ``activeTabIds``, and ``activePanelId`` to ensure the workspace state
-    is coherent.
+    A Prism workspace has five top-level keys. ``tabs`` is the list of all the
+    tabs. ``panel`` is the root of the panel tree. ``panelTabs`` gives the list
+    of tab IDs for each leaf panel ID. ``activeTabIds`` gives the ID of the tab
+    that each panel shows, or ``None``. ``activePanelId`` is the ID of the leaf
+    panel that is active.
 
-    :param workspace: Dictionary to be validated as a Prism workspace.
+    The function does the checks in this sequence. First it makes sure that
+    ``workspace`` is a dictionary and has the five keys. Then it makes sure
+    that each of the five values has the correct type. Then it validates the panel tree with the
+    rules of :func:`_validate_panel_structure`. Last, it compares the five
+    values against each other.
+
+    The function applies these cross-key rules:
+
+    - Each tab in ``tabs`` is in the tab list of one panel only.
+    - Each tab ID in ``panelTabs`` has a tab in ``tabs``.
+    - Each key of ``panelTabs`` is a leaf panel of the panel tree.
+    - Each leaf panel of the panel tree has an entry in ``panelTabs``.
+    - ``activePanelId`` is a leaf panel of the panel tree.
+    - Each key of ``activeTabIds`` is also a key of ``panelTabs``.
+    - Each value of ``activeTabIds`` is ``None``, or it is a tab ID in the tab
+      list of the same panel.
+
+    The function collects all the problems that it finds, and it does not stop
+    at the first one. But it returns immediately if one of the five keys is
+    missing. It also returns immediately if ``tabs``, ``panel``, ``panelTabs``,
+    or ``activeTabIds`` has the incorrect type. The checks that follow cannot
+    use a value of the incorrect type.
+
+    The function does not examine the other fields of a tab, for example
+    ``name``, ``panelId``, or ``createdAt``. It also does not examine the
+    ``order`` field of a panel.
+
+    :param workspace: The dictionary to validate. The function accepts a value
+        of any type and reports an incorrect type as an error.
     :type workspace: dict[str, Any]
-    :param errors: Error handling mode. ``'raise'`` raises
-        :exc:`dash_prism.InvalidWorkspace`
-        on failure, ``'ignore'`` logs errors and returns anyway. Defaults to ``'raise'``.
+    :param errors: What the function does when a check fails. ``'raise'``
+        raises :exc:`dash_prism.InvalidWorkspace` with all the messages.
+        ``'ignore'`` records each message with the ``dash_prism.utils`` logger
+        at the error level, and then returns the workspace. The default is
+        ``'raise'``.
     :type errors: Literal['raise', 'ignore']
-    :returns: The validated workspace dictionary (unchanged).
+    :returns: The same ``workspace`` object that the caller supplied. The
+        function does not copy the workspace, and it does not change the
+        workspace.
     :rtype: dict[str, Any]
-    :raises: :class:`dash_prism.InvalidWorkspace` if ``errors='raise'`` and validation failed.
+    :raises dash_prism.InvalidWorkspace: If ``errors='raise'`` and one or more
+        checks fail. The :attr:`~dash_prism.InvalidWorkspace.errors` attribute
+        holds all the messages.
 
     **Example**::
 
@@ -163,14 +251,14 @@ def validate_workspace(
         return workspace
 
     # -------------------------------------------------------------------------
-    # 1. Check required top-level keys exist
+    # 1. Make sure that the workspace has the five top-level keys.
     # -------------------------------------------------------------------------
     required_keys = ["tabs", "panel", "panelTabs", "activeTabIds", "activePanelId"]
     for key in required_keys:
         if key not in workspace:
             validation_errors.append(f"Missing required key: '{key}'")
 
-    # If missing critical keys, return early
+    # The checks that follow need these keys. Return now if one is missing.
     if validation_errors:
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
@@ -210,12 +298,12 @@ def validate_workspace(
         return workspace
 
     # -------------------------------------------------------------------------
-    # 2. Validate panel tree structure
+    # 2. Validate the structure of the panel tree.
     # -------------------------------------------------------------------------
     _validate_panel_structure(panel, validation_errors)
 
     # -------------------------------------------------------------------------
-    # 3. Collect leaf panel IDs and tab IDs
+    # 3. Collect the leaf panel IDs and the tab IDs.
     # -------------------------------------------------------------------------
     leaf_panel_ids = set(_get_leaf_panel_ids(panel))
     tab_ids_in_tabs = {
@@ -224,7 +312,8 @@ def validate_workspace(
         if isinstance(tab, dict) and isinstance((tab_id := tab.get("id")), str) and tab_id
     }
 
-    # Build mapping of tab_id -> list of panels it appears in (for duplicate check)
+    # Record the panels that hold each tab ID. A tab must be in one panel only,
+    # thus more than one panel for a tab ID is an error.
     tab_to_panels: dict[str, list[str]] = {}
     for panel_id, tab_list in panel_tabs.items():
         if not isinstance(panel_id, str) or not panel_id:
@@ -246,7 +335,7 @@ def validate_workspace(
             tab_to_panels[tab_id].append(panel_id)
 
     # -------------------------------------------------------------------------
-    # 4. Every tab in `tabs` appears in exactly one panelTabs list
+    # 4. Each tab in `tabs` is in one panelTabs list only.
     # -------------------------------------------------------------------------
     for tab in tabs:
         if not isinstance(tab, dict):
@@ -266,13 +355,13 @@ def validate_workspace(
             )
 
     # -------------------------------------------------------------------------
-    # 5. Every tab in panelTabs exists in tabs
+    # 5. Each tab ID in panelTabs has a tab in `tabs`.
     # -------------------------------------------------------------------------
     for panel_id, tab_list in panel_tabs.items():
         if not isinstance(panel_id, str) or not panel_id:
             continue
         if not isinstance(tab_list, list):
-            continue  # Already reported above
+            continue  # The loop above already recorded this problem.
         for tab_id in tab_list:
             if not isinstance(tab_id, str) or not tab_id:
                 continue
@@ -282,7 +371,7 @@ def validate_workspace(
                 )
 
     # -------------------------------------------------------------------------
-    # 6. Every panelTabs key is a leaf panel in panel tree
+    # 6. Each panelTabs key is a leaf panel of the panel tree.
     # -------------------------------------------------------------------------
     for panel_id in panel_tabs.keys():
         if not isinstance(panel_id, str) or not panel_id:
@@ -293,21 +382,22 @@ def validate_workspace(
             )
 
     # -------------------------------------------------------------------------
-    # 7. Every leaf panel has a panelTabs entry
+    # 7. Each leaf panel has an entry in panelTabs.
     # -------------------------------------------------------------------------
     for leaf_id in leaf_panel_ids:
         if leaf_id not in panel_tabs:
             validation_errors.append(f"Leaf panel '{leaf_id}' missing from panelTabs")
 
     # -------------------------------------------------------------------------
-    # 8. activePanelId is a valid leaf panel
+    # 8. activePanelId is a leaf panel of the panel tree.
     # -------------------------------------------------------------------------
     if isinstance(active_panel_id, str) and active_panel_id:
         if active_panel_id not in leaf_panel_ids:
             validation_errors.append(f"activePanelId '{active_panel_id}' is not a valid leaf panel")
 
     # -------------------------------------------------------------------------
-    # 9. Each activeTabIds entry references valid panel and tab
+    # 9. Each activeTabIds entry refers to a panel in panelTabs, and to a tab
+    #    that the same panel holds.
     # -------------------------------------------------------------------------
     for panel_id, tab_id in active_tab_ids.items():
         if not isinstance(panel_id, str) or not panel_id:
@@ -327,7 +417,7 @@ def validate_workspace(
             )
 
     # -------------------------------------------------------------------------
-    # Handle errors
+    # Raise or record the problems that the checks found.
     # -------------------------------------------------------------------------
     if validation_errors:
         if errors == "raise":
@@ -348,14 +438,43 @@ def walk_layout(
     transform: Callable[[Any], Any],
     _visited: set[int] | None = None,
 ) -> Any:
-    """Recursively walk and transform a Dash component tree.
+    """Walk a Dash component tree and call ``transform`` on each component.
 
-    :param layout: The root component to transform.
+    The function goes into lists, tuples, dictionaries, and the ``children``
+    attribute of each component. It calls ``transform`` on a component before
+    it goes into the children of that component.
+
+    The function calls ``transform`` on components only. It returns ``None``,
+    a string, a number, and a boolean with no change. It goes into the items
+    of a list, a tuple, or a dictionary. But it does not call ``transform`` on
+    the list, the tuple, or the dictionary. A pattern-matching ID is a
+    dictionary, thus ``transform`` never receives one.
+
+    The function changes the component objects, and it does not copy them.
+    :func:`inject_tab_id` and :func:`update_component_props` make a deep copy
+    before they call this function.
+
+    The function keeps the ``id()`` value of each component that it walked
+    into. If it finds the same component object again, it returns that
+    component and does not go into it. This prevents a loop that does not end
+    when the tree has a circular reference. It also means that ``transform``
+    runs one time only for a component object that is in the tree two times.
+
+    :param layout: The root of the tree to walk. This can be a component, a
+        list, a tuple, a dictionary, a string, a number, a boolean, or
+        ``None``.
     :type layout: Any
-    :param transform: Function called on each component. Receives a component
-        and returns the transformed component.
+    :param transform: The function to call on each component. It receives the
+        component, and it returns the component to put in the tree. It can
+        return the same object or a different object.
     :type transform: Callable[[Any], Any]
-    :returns: The transformed layout.
+    :param _visited: For internal use only. The set of ``id()`` values of the
+        components that the walk already changed. Callers must not supply this
+        parameter.
+    :type _visited: set[int] | None
+    :returns: The root of the tree after the walk. For a list or a tuple, the
+        function returns a new object of the same type. For a component, it
+        returns the result of ``transform``.
     :rtype: Any
 
     **Example**::
@@ -371,33 +490,35 @@ def walk_layout(
     if _visited is None:
         _visited = set()
 
-    # Handle None
+    # A None value has no children and needs no change.
     if layout is None:
         return None
 
-    # Handle primitive types
+    # A string, a number, or a boolean is a leaf value. Return it with no change.
     if isinstance(layout, (str, int, float, bool)):
         return layout
 
-    # Handle lists/tuples
+    # Walk each item of a list or a tuple, and keep the type of the container.
     if isinstance(layout, (list, tuple)):
         result = [walk_layout(child, transform, _visited) for child in layout]
         return type(layout)(result)
 
-    # Handle dicts (but not Dash components)
+    # Walk the values of a dictionary, for example a style dictionary or a
+    # pattern-matching ID. The transform function does not receive it.
     if isinstance(layout, dict) and not hasattr(layout, "_type"):
         return {k: walk_layout(v, transform, _visited) for k, v in layout.items()}
 
-    # Check for circular references
+    # Stop at a component that the walk already changed. This prevents a loop
+    # that does not end when the tree has a circular reference.
     layout_id = id(layout)
     if layout_id in _visited:
         return layout
     _visited.add(layout_id)
 
-    # Transform the component
+    # Change the component before the walk goes into its children.
     layout = transform(layout)
 
-    # Recursively transform children
+    # Walk the children of the component in the same way.
     if hasattr(layout, "children"):
         children = getattr(layout, "children", None)
         if children is not None:
@@ -412,20 +533,31 @@ def walk_layout(
 
 
 def inject_tab_id(layout: Any, tab_id: str) -> Any:
-    """Convert component IDs to pattern-matching format for tab isolation.
+    """Change the string component IDs of one tab into pattern-matching IDs.
 
-    Transforms string IDs like ``'my-input'`` into pattern-matching dicts::
+    Prism can show the same registered layout in more than one tab. Dash finds
+    a component by its ID. If two tabs use the same string IDs, Dash cannot
+    find the correct component. This function prevents that problem. It
+    changes a string ID, for example ``'my-input'``, into a pattern-matching
+    dictionary::
 
         {'type': 'my-input', 'index': tab_id}
 
-    Components that already have pattern-matching IDs (dicts) are left unchanged.
-    Components without an ID are also left unchanged.
+    A callback can then use ``MATCH`` on the ``index`` key to address the
+    components of one tab. It can use ``ALL`` to address the same component of
+    all the tabs.
 
-    :param layout: The component tree to transform.
+    The function makes no change to a component that has no ``id``. It also
+    makes no change to an ID that is already a dictionary. It works on a deep
+    copy, thus the layout that the caller supplies stays as it is.
+
+    :param layout: The component tree to change. This is the layout of one
+        tab.
     :type layout: Any
-    :param tab_id: The tab ID to inject as the ``'index'`` value.
+    :param tab_id: The ID of the tab. The function puts this value in the
+        ``'index'`` key of each new pattern-matching ID.
     :type tab_id: str
-    :returns: Layout with transformed IDs (deep copy).
+    :returns: A deep copy of ``layout``, with the new IDs.
     :rtype: Any
 
     **Example**::
@@ -445,7 +577,8 @@ def inject_tab_id(layout: Any, tab_id: str) -> Any:
         if hasattr(component, "id"):
             component_id = getattr(component, "id", None)
 
-            # Only transform string IDs (skip None and dict IDs)
+            # Change a string ID only. Ignore a dictionary ID, because it is
+            # already a pattern-matching ID.
             if isinstance(component_id, str):
                 component.id = {
                     "type": component_id,
@@ -462,13 +595,23 @@ def inject_tab_id(layout: Any, tab_id: str) -> Any:
 
 
 def find_component_by_id(layout: Any, component_id: str) -> Any | None:
-    """Find a component by its ID in a layout tree.
+    """Find one component in a layout tree by its ID.
 
-    :param layout: The root component to search.
+    The function walks the full tree. It compares the ``id`` attribute of each
+    component against ``component_id`` with the ``==`` operator. A
+    pattern-matching ID is a dictionary, thus it never agrees with a string.
+
+    The function returns the component object from the tree, and not a copy. A
+    change to that object is also a change to the tree that the caller
+    supplied.
+
+    :param layout: The root of the tree to examine.
     :type layout: Any
     :param component_id: The ID to find.
     :type component_id: str
-    :returns: The component with matching ID, or ``None`` if not found.
+    :returns: The component that has this ID, or ``None`` if the tree holds no
+        component with this ID. If more than one component has the ID, the
+        function returns the last one that the walk finds.
     :rtype: Any | None
     """
     result: Any | None = None
@@ -488,15 +631,28 @@ def update_component_props(
     component_id: str,
     **props: Any,
 ) -> Any:
-    """Update properties of a component by ID.
+    """Set properties on each component in a tree that has a given ID.
 
-    :param layout: The root component tree.
+    The function walks a deep copy of ``layout``. It finds each component
+    that has the ID, and it sets each keyword argument as an attribute of that
+    component. If more than one component has the ID, the function changes all
+    of them.
+
+    The function does not check that a property name is correct for the
+    component type. It sets the attribute in all cases. But Dash ignores an
+    unknown property name when it renders the layout. Thus an incorrect name
+    makes no change to the page.
+
+    :param layout: The root of the tree to change.
     :type layout: Any
-    :param component_id: The ID of the component to update.
+    :param component_id: The ID of the component or components to change.
     :type component_id: str
-    :param props: Properties to set on the component.
+    :param props: The properties to set, as keyword arguments. The name of
+        each keyword argument becomes the name of an attribute on the
+        component.
     :type props: Any
-    :returns: The updated layout (deep copy).
+    :returns: A deep copy of ``layout``, with the new property values. The
+        tree that the caller supplies stays as it is.
     :rtype: Any
 
     **Example**::

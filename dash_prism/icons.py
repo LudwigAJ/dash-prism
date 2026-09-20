@@ -1,10 +1,19 @@
-"""Icon utilities for dash_prism.
+"""Icon names for Prism tabs.
 
-This module provides access to the available icon names that can be used
-for tab icons in :class:`dash_prism.Prism`.
+A tab in :class:`dash_prism.Prism` can show a small icon adjacent to its
+name. The icon names come from a small group of the `lucide-react
+<https://lucide.dev/icons>`_ icons. This module gives two ways to read the
+names. :func:`get_available_icons` returns a sorted list, and
+:data:`AVAILABLE_ICONS` lets you do a membership test.
 
-The icon list is defined in ``src/icons.json`` (single source of truth)
-and copied to the package during build.
+The file ``src/icons.json`` holds the names. It is the one source of truth for
+the TypeScript frontend and for this module. The webpack build copies the file
+into the package directory of ``dash_prism``. This module reads the file one
+time only, at the first call, and then keeps the names in a cache.
+
+An icon name is case-sensitive and starts with an uppercase letter. For
+example, ``'Rocket'`` is correct, but ``'rocket'`` is not. The frontend shows
+no icon for a name that ``icons.json`` does not hold.
 """
 
 from __future__ import annotations
@@ -16,14 +25,27 @@ from pathlib import Path
 
 @lru_cache(maxsize=1)
 def _load_icons() -> frozenset[str]:
-    """Load available icons from icons.json.
+    """Read the icon names from ``icons.json``.
 
-    :returns: Frozen set of available icon names.
+    The function reads one of two paths. The first path is ``icons.json`` in
+    the package directory that holds this module. The webpack build copies the
+    file to that path. If that file is not available, the function uses
+    ``src/icons.json`` in the parent directory. The second path helps when you
+    work in a source checkout that has no build output.
+
+    The :func:`functools.lru_cache` decorator keeps the frozen set in a cache.
+    Thus the function reads the file one time only in each Python process.
+
+    :returns: A frozen set of the icon names that ``icons.json`` holds.
     :rtype: frozenset[str]
+    :raises FileNotFoundError: If the two paths have no ``icons.json`` file.
+        The message names the second path and tells you to run
+        ``pnpm run build``.
+    :raises KeyError: If ``icons.json`` has no ``icons`` key.
     """
     icons_path = Path(__file__).parent / "icons.json"
     if not icons_path.exists():
-        # Fallback for development when icons.json hasn't been copied
+        # The build did not copy the file. Use the source file.
         icons_path = Path(__file__).parent.parent / "src" / "icons.json"
 
     if not icons_path.exists():
@@ -39,21 +61,31 @@ def _load_icons() -> frozenset[str]:
 
 
 def _get_available_icons_set() -> frozenset[str]:
-    """Get the frozen set of available icons (lazy-loaded).
+    """Return the frozen set of icon names.
 
-    :returns: Frozen set of available icon names.
+    The function calls :func:`_load_icons`. The first call reads
+    ``icons.json``. Each call after the first one returns the cached set and
+    reads no file.
+
+    :returns: A frozen set of the icon names.
     :rtype: frozenset[str]
     """
     return _load_icons()
 
 
 def get_available_icons() -> list[str]:
-    """Get a sorted list of available icon names.
+    """Return a sorted list of the icon names.
 
-    These icons can be used for tab icons in :class:`dash_prism.Prism`. Icons are from
-    a curated subset of `lucide-react <https://lucide.dev/icons>`_.
+    A tab in :class:`dash_prism.Prism` can show one of these icons adjacent
+    to its name. The names come from a small group of the `lucide-react
+    <https://lucide.dev/icons>`_ icons. Each name is case-sensitive, and it
+    starts with an uppercase letter.
 
-    :returns: Sorted list of available icon names.
+    The first call reads ``icons.json``. Each call after the first one uses
+    the cached names, but it makes a new list each time.
+
+    :returns: A new list of the icon names, sorted with the Python
+        :func:`sorted` function.
     :rtype: list[str]
 
     .. rubric:: Example
@@ -62,29 +94,38 @@ def get_available_icons() -> list[str]:
 
         import dash_prism
 
-        # Print all available icons
+        # Print each available icon name
         for icon in dash_prism.get_available_icons():
             print(icon)
 
-        # Check if an icon is available
+        # Find out whether one icon is available
         if 'Rocket' in dash_prism.AVAILABLE_ICONS:
             print('Rocket icon is available!')
 
     .. seealso::
 
         :data:`dash_prism.AVAILABLE_ICONS`
-            Frozen set for membership testing.
+            The same names, for a membership test.
 
         :class:`dash_prism.Prism`
-            Workspace component whose tabs can use icons.
+            The workspace component. Each of its tabs can show an icon.
     """
     return sorted(_get_available_icons_set())
 
 
-# Module-level constant for convenient access
-# Note: This is loaded lazily on first access to avoid import-time file I/O
+# The module makes one instance of this class below, with the name
+# AVAILABLE_ICONS. The instance reads no file until the first use, thus an
+# import of dash_prism reads no file.
 class _AvailableIconsProxy:
-    """Lazy proxy for AVAILABLE_ICONS to defer file loading until first use."""
+    """A proxy that gives the icon names and reads ``icons.json`` at first use.
+
+    The proxy gives a membership test, iteration, ``len()``, and ``repr()``.
+    It is not an instance of :class:`frozenset`, thus it has no set
+    operations, for example union or intersection.
+
+    :ivar _icons: The icon names, or ``None`` before the first use.
+    :type _icons: frozenset[str] | None
+    """
 
     _icons: frozenset[str] | None = None
 
@@ -106,10 +147,17 @@ class _AvailableIconsProxy:
         return f"frozenset({sorted(self._load())!r})"
 
 
-#: Frozen set of all available icon names.
-#: Icons are from a curated subset of `lucide-react <https://lucide.dev/icons>`_.
+#: The icon names that a :class:`dash_prism.Prism` tab can show. The names
+#: come from a small group of the `lucide-react <https://lucide.dev/icons>`_
+#: icons.
 #:
-#: Use for membership testing::
+#: This object is a proxy. It is not an instance of :class:`frozenset`. The
+#: proxy reads ``icons.json`` at the first use, thus an import of
+#: ``dash_prism`` reads no file. The proxy gives a membership test, iteration,
+#: ``len()``, and ``repr()``. It does not give the set operations of a frozen
+#: set, for example union or intersection.
+#:
+#: Use it for a membership test::
 #:
 #:     if 'Rocket' in dash_prism.AVAILABLE_ICONS:
 #:         print('Available!')
