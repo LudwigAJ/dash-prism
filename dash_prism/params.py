@@ -85,15 +85,20 @@ class Param:
     :ivar min_length: Minimum length for strings and lists.
     :ivar max_length: Maximum length for strings and lists.
     :ivar pattern: Regular expression the (string) value must match.
-    :ivar choices: Allowed values. Alternative to ``Literal[...]``. Registration
-        fails if the list is empty, if it repeats an annotation that already
-        declares choices but allows a different set of values (order does not
-        matter), or if it holds scalar values for a collection parameter --
-        restrict the items with ``list[Literal[...]]`` instead. On an
-        ``Optional`` parameter a blank still clears the value. Declared on a
-        pydantic model's field, the value the callback receives must be one of
-        the choices, so the model's own validators run first and an alias
-        cannot route around the list.
+    :ivar choices: The values that the parameter accepts. This is an
+        alternative to ``Literal[...]``. Registration fails in three
+        conditions:
+
+        - The list is empty.
+        - The annotation declares choices, and this list allows a different
+          set of values. The sequence of the values does not matter.
+        - The list holds scalar values for a collection parameter. To restrict
+          the items, annotate the item type with ``list[Literal[...]]``.
+
+        A blank still clears an ``Optional`` parameter. On a field of a
+        pydantic model, the value that the callback receives must be one of
+        the choices. Thus the validators of the model run first, and a field
+        that an alias sets cannot go around the list.
     :ivar examples: Example values shown as hints.
     :ivar placeholder: Placeholder text for the search bar input.
     """
@@ -645,7 +650,7 @@ def _choice_message(choices: Sequence[Any]) -> str:
 
 
 def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: Param) -> None:
-    """Reject a choice declaration the search bar and the callback cannot both honour.
+    """Reject a choice declaration the search bar and the callback cannot both obey.
 
     The search bar builds the pick list from the parameter metadata, and the
     validator holds the callback to its model. Each declaration below lets the
@@ -900,8 +905,8 @@ class PydanticValidator:
             )
 
         # pydantic refuses to declare a field whose name starts with an
-        # underscore, but a layout callable may perfectly well have one. Those
-        # parameters skip the model and are passed through unchanged.
+        # underscore, but a layout callable can correctly have one. Those
+        # parameters skip the model, and go to the callback unchanged.
         passthrough = frozenset(p.name for p in spec.params if p.name.startswith("_"))
 
         fields: dict[str, Any] = {}
@@ -914,9 +919,9 @@ class PydanticValidator:
             if p.meta.choices is not None and get_origin(inner) is not Literal:
                 # describe_type reports such a parameter nullable, so the search
                 # bar offers a blank and prepare_client_params turns it into
-                # None. Rebuilding the type from the choices alone would drop
-                # the Optional and reject that None, leaving the user no input
-                # that could succeed except picking a choice.
+                # None. A type rebuilt from the choices alone drops the
+                # Optional and rejects that None. The user then has no input
+                # that can succeed, except a choice from the list.
                 tp = (
                     _nullable_choice_type(p.meta.choices)
                     if inner_nullable
@@ -1025,8 +1030,8 @@ class PydanticValidator:
         ``Param`` metadata -- so the pick list was advertised and nothing held
         anyone to it.
 
-        This runs *after* the model has validated, against the canonical field
-        values, for three reasons. The validators of the model run first, so
+        This runs *after* the model validates the request, against the
+        canonical field values, for three reasons. The validators of the model run first, so
         the value is already in its final form. A field that the request set
         through an alias cannot go around the list. And ``'[1,2]'`` is now the
         tuple that the field declares, not the list that it first parsed to.

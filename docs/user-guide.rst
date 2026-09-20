@@ -88,7 +88,7 @@ function tell Prism what to do. Prism supports three styles:
    from dash_prism import Param
 
    # 1. Plain type hints with defaults: str, int, float, bool, Optional[...],
-   #    list[...], Literal[...] and Enum are coerced; untyped params stay strings.
+   #    list[...], Literal[...] and Enum are coerced. Untyped params stay strings.
    @dash_prism.register_layout(id='country', name='Country', allow_multiple=True)
    def country_layout(country: str, n: int = 10, log_scale: bool = False):
        ...
@@ -207,7 +207,7 @@ By default, each layout can be open in one tab only. Set
 
       # WRONG - never fires for components inside a tab
       @app.callback(
-          Output('chat-messages', 'children'),  # String ID won't match
+          Output('chat-messages', 'children'),  # A string ID does not match
           Input('chat-send', 'n_clicks'),
       )
       def send_message(n_clicks): ...
@@ -542,7 +542,7 @@ Configuration
        theme='light',           # or 'dark'
        size='md',               # 'sm', 'md', 'lg'
        maxTabs=16,              # Max tabs globally (< 1 = unlimited)
-       maxPanels=20,            # Max leaf panels; 1 disables splitting (< 1 = unlimited)
+       maxPanels=20,            # Max leaf panels. 1 disables splitting, < 1 = unlimited
        layoutTimeout=30,        # Seconds before timeout
        showStatusBar=True,      # False hides the bar (and any actions)
        statusBarPosition='bottom',  # or 'top'
@@ -698,7 +698,7 @@ components raises an exception.
        ])
 
    # This callback will FAIL at startup without suppress_callback_exceptions
-   # because 'metric' and 'chart' don't exist in app.layout yet.
+   # because 'metric' and 'chart' do not exist in app.layout yet.
    @app.callback(Output('chart', 'figure'), Input('metric', 'value'))
    def update_chart(metric):
        return px.line(df, y=metric)

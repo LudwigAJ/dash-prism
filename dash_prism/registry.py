@@ -577,13 +577,16 @@ def register_layout(
     :returns: ``None`` for a static layout, or the decorator for a callback
         layout.
     :rtype: None | Callable[[Callable[..., Any]], Callable[..., Any]]
-    :raises ValueError: If ``id`` is empty, is not a string, or is already
-        registered. Also if you give ``layout`` and ``param_options`` together,
-        if ``param_options`` has a bad shape or a bad value, if the callback
-        mixes a pydantic ``BaseModel`` parameter with other parameters, or if
-        a parameter declares a list of choices that is empty, that holds scalar
-        values for a collection parameter, or that contradicts the choices of
-        its own annotation.
+    :raises ValueError: If one of these conditions is true:
+
+        - The ``id`` is empty, is not a string, or is already registered.
+        - You give ``layout`` and ``param_options`` together.
+        - The ``param_options`` argument has a bad shape or a bad value.
+        - The callback mixes a pydantic ``BaseModel`` parameter with other
+          parameters.
+        - A parameter declares a choice list that is empty, that holds scalar
+          values for a collection parameter, or that allows a different set of
+          values than its own annotation.
 
     **Examples**
 
