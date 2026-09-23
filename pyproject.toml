@@ -60,8 +60,8 @@ mypy = "==1.20.2"
 pyyaml = "^6.0.0"
 # setuptools 82+ removed pkg_resources. Dash <3.4's component generator imports it,
 # but the locked Dash (used by dash-generate-components at build time) no longer does.
-setuptools = ">=83.0.0,<84"
-wheel = ">=0.45.0"
+setuptools = ">=84.0.0,<85"
+wheel = ">=0.48.0"
 dash = {version = ">=3.1.1,<4.5", extras = ["dev", "async"]}
 
 [tool.poetry.group.test.dependencies]
