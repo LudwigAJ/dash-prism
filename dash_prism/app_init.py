@@ -107,7 +107,8 @@ def _inject_metadata_into_layout(
     layout tree object. If the tree holds no component with the ID ``prism_id``,
     the function changes nothing. The function writes ``serverSessionId`` only
     when that prop is ``None`` or is not set, so a value that you gave by hand
-    stays.
+    stays. If a layout function returned ``None``, the function writes a warning
+    to the log and returns ``None``.
 
     :param layout_tree: The layout component tree to search.
     :type layout_tree: Any
@@ -119,41 +120,9 @@ def _inject_metadata_into_layout(
     :param session_id: The fingerprint of the layout registry. The function
         writes it to the ``serverSessionId`` prop.
     :type session_id: str
-    :returns: The same layout tree that you supplied.
-    :rtype: Any
-    """
-    prism = utils.find_component_by_id(layout_tree, prism_id)
-    if prism is not None:
-        prism.registeredLayouts = layouts_metadata
-        if getattr(prism, "serverSessionId", None) is None:
-            prism.serverSessionId = session_id
-    return layout_tree
-
-
-def _execute_and_inject_metadata(
-    layout_tree: Any,
-    prism_id: str,
-    layouts_metadata: dict[str, Any],
-    session_id: str,
-) -> Any:
-    """Inject the Prism metadata into the layout tree that a wrapper got.
-
-    The sync wrapper and the async wrapper call this function, so the two paths
-    behave in the same way. If the layout function returned ``None``, this
-    function writes a warning to the log and returns ``None``.
-
-    :param layout_tree: The layout tree that the original layout function
-        returned.
-    :type layout_tree: Any
-    :param prism_id: The ID of the Prism component to write the metadata to.
-    :type prism_id: str
-    :param layouts_metadata: The metadata of the registered layouts.
-    :type layouts_metadata: dict[str, Any]
-    :param session_id: The fingerprint of the layout registry.
-    :type session_id: str
-    :returns: The layout tree with the metadata injected, or ``None`` if
+    :returns: The same layout tree that you supplied, or ``None`` if
         ``layout_tree`` was ``None``.
-    :rtype: Any | None
+    :rtype: Any
     """
     if layout_tree is None:
         logger.warning(
@@ -161,7 +130,12 @@ def _execute_and_inject_metadata(
         )
         return None
 
-    return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
+    prism = utils.find_component_by_id(layout_tree, prism_id)
+    if prism is not None:
+        prism.registeredLayouts = layouts_metadata
+        if getattr(prism, "serverSessionId", None) is None:
+            prism.serverSessionId = session_id
+    return layout_tree
 
 
 def _create_layout_wrapper(
@@ -209,7 +183,7 @@ def _create_layout_wrapper(
                 logger.exception("Error in async layout function")
                 raise
 
-            return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
+            return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
 
         return cast(Callable[_P, _R], async_wrapper)
     else:
@@ -222,7 +196,7 @@ def _create_layout_wrapper(
                 logger.exception("Error in sync layout function")
                 raise
 
-            return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
+            return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
 
         return cast(Callable[_P, _R], sync_wrapper)
 
@@ -422,12 +396,7 @@ def _attach_metadata(app: Dash, prism_id: str) -> None:
     original_layout = app.layout
 
     if not callable(original_layout):
-        prism = utils.find_component_by_id(original_layout, prism_id)
-        if prism is not None:
-            prism.registeredLayouts = layouts_metadata
-            if getattr(prism, "serverSessionId", None) is None:
-                prism.serverSessionId = session_id
-            logger.info("Injected metadata into static layout")
+        _inject_metadata_into_layout(original_layout, prism_id, layouts_metadata, session_id)
         return
 
     if original_layout in _wrapped_layouts:

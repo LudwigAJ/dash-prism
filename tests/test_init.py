@@ -1362,3 +1362,45 @@ def test_log_keeps_a_line_break_in_a_layout_id_out_of_the_log(
 
     [record] = _prism_records(caplog, logging.WARNING)
     assert "\n" not in record.getMessage()
+
+
+# =============================================================================
+# Metadata injection into app.layout
+# =============================================================================
+
+
+def test_inject_metadata_into_none_returns_none_and_warns(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="dash_prism"):
+        result = app_init._inject_metadata_into_layout(None, "test-prism", {}, "fingerprint")
+
+    assert result is None
+    assert "Prism component 'test-prism' may not be available" in caplog.text
+
+
+@pytest.mark.parametrize("is_async", [False, True], ids=["sync", "async"])
+def test_callable_layout_returning_none_stays_none(
+    dash_app: Dash, caplog: pytest.LogCaptureFixture, is_async: bool
+) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+
+    if is_async:
+
+        async def layout():
+            return None
+
+    else:
+
+        def layout():
+            return None
+
+    dash_app.layout = layout
+    with pytest.warns(UserWarning, match="Could not find Prism component"):
+        dash_prism.init("test-prism", dash_app)
+
+    with caplog.at_level(logging.WARNING, logger="dash_prism"):
+        result = asyncio.run(dash_app.layout()) if is_async else dash_app.layout()
+
+    assert result is None
+    assert "Layout function returned None" in caplog.text
