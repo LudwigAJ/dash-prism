@@ -377,7 +377,7 @@ def _nullable_choice_type(choices: Sequence[Any]) -> Any:
         logger.debug(
             "typing refused Optional[%r]. The blank becomes a Literal member instead.", literal
         )
-        return Literal[tuple([*choices, None])]  # type: ignore[valid-type]
+        return Literal[tuple([*choices, None])]
 
 
 def _same_choices(left: Sequence[Any], right: Sequence[Any]) -> bool:
@@ -794,9 +794,7 @@ def _model_keeping_what_pydantic_accepts(
     from pydantic import Field, create_model
 
     def build(items: Mapping[str, Any]) -> Any:
-        return create_model(  # type: ignore[call-overload]
-            model_name or "LayoutParams", __config__=config, **items
-        )
+        return create_model(model_name or "LayoutParams", __config__=config, **items)
 
     def relaxed(field: Any) -> Any:
         return (Any, Field(field[1].default))
@@ -925,7 +923,7 @@ class PydanticValidator:
                 tp = (
                     _nullable_choice_type(p.meta.choices)
                     if inner_nullable
-                    else Literal[tuple(p.meta.choices)]  # type: ignore[valid-type]
+                    else Literal[tuple(p.meta.choices)]
                 )
             field_kwargs = p.meta.as_field_kwargs()
             if describe_type(tp)[0] == "unknown":
@@ -943,7 +941,7 @@ class PydanticValidator:
                     if key in ("description", "title", "examples", "json_schema_extra")
                 }
             elif p.extra_metadata:
-                tp = typing.Annotated[(tp, *p.extra_metadata)]  # type: ignore[misc]
+                tp = typing.Annotated[(tp, *p.extra_metadata)]
             default = p.default if p.has_default else ...
             fields[p.name] = (tp, Field(default, **field_kwargs))
 
@@ -958,7 +956,7 @@ class PydanticValidator:
             protected_namespaces=(),
         )
         try:
-            model = create_model(  # type: ignore[call-overload]
+            model = create_model(
                 model_name or "LayoutParams",
                 __config__=config,
                 **fields,
