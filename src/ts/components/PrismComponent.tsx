@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { ConfigProvider, useConfig } from '@context/ConfigContext';
 import { PortalProvider } from '@context/PortalContext';
+import { PortalContainerProvider } from '@context/PortalContainerContext';
 import { DndProvider } from '@context/DndProvider';
 import { WorkspaceView } from '@components/WorkspaceView';
 import { ErrorBoundary } from '@components/ErrorBoundary';
@@ -19,6 +20,7 @@ import {
   getWorkspaceStorageKey,
   resolvePersistenceType,
 } from '@store';
+import { cn } from '@utils/cn';
 import { subscribeToToasts } from '@utils/toastEmitter';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import { toast } from 'sonner';
@@ -459,29 +461,26 @@ export function Prism({
   // Resolve once here so every consumer (store, error boundary) sees the same answer.
   const persistenceType = resolvePersistenceType(persistence, persistence_type);
 
+  // Radix portals render into the root element, so they get the theme of this instance.
+  // State, not a ref: the provider must re-render once the element exists.
+  const [rootElement, setRootElement] = useState<HTMLDivElement | null>(null);
+
   // Create stable callback for clearing storage from error boundary
   const handleClearStorage = useCallback(() => {
     clearWorkspaceStorage(persistenceType, id);
   }, [persistenceType, id]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const previousTheme = root.getAttribute('data-prism-theme');
-    root.setAttribute('data-prism-theme', theme);
-
-    return () => {
-      if (previousTheme === null) {
-        root.removeAttribute('data-prism-theme');
-      } else {
-        root.setAttribute('data-prism-theme', previousTheme);
-      }
-    };
-  }, [theme]);
-
   return (
     <div
       id={id}
-      className={`prism-root prism-container ${theme === 'dark' ? 'dark' : ''} prism-size-${size} text-foreground${className ? ` ${className}` : ''}`}
+      ref={setRootElement}
+      className={cn(
+        'prism-root',
+        theme === 'dark' && 'dark',
+        `prism-size-${size}`,
+        'text-foreground',
+        className
+      )}
       style={style}
     >
       <ErrorBoundary
@@ -510,13 +509,15 @@ export function Prism({
           layoutTimeout={layoutTimeout}
           setProps={setProps}
         >
-          <PrismInner
-            key={`${id ?? ''}|${persistenceType}`}
-            actions={actions}
-            updateWorkspace={updateWorkspace}
-          >
-            {children}
-          </PrismInner>
+          <PortalContainerProvider value={rootElement}>
+            <PrismInner
+              key={`${id ?? ''}|${persistenceType}`}
+              actions={actions}
+              updateWorkspace={updateWorkspace}
+            >
+              {children}
+            </PrismInner>
+          </PortalContainerProvider>
         </ConfigProvider>
       </ErrorBoundary>
     </div>

@@ -265,7 +265,7 @@ const TabItem = memo(function TabItem({
               <input
                 ref={inputRef}
                 data-testid={`prism-tab-rename-${tab.id}`}
-                className="prism-tab-rename-input absolute inset-0"
+                className="prism-tab-rename-input"
                 value={editingName}
                 onChange={(e) => onEditingNameChange(e.target.value)}
                 onBlur={onCommitRename}
@@ -286,7 +286,6 @@ const TabItem = memo(function TabItem({
       {/* ===== CONTEXT MENU ===== */}
       <ContextMenuContent
         className="min-w-36"
-        theme={theme}
         data-testid="prism-context-menu"
         onCloseAutoFocus={(e) => {
           if (preventFocusRestoreRef.current) {
@@ -351,7 +350,7 @@ const TabItem = memo(function TabItem({
         {/* Style submenu */}
         <ContextMenuSub>
           <ContextMenuSubTrigger>Style</ContextMenuSubTrigger>
-          <ContextMenuSubContent theme={theme}>
+          <ContextMenuSubContent>
             <ContextMenuRadioGroup value={styleColor}>
               {Object.entries(TAB_STYLE_LABELS).map(([styleKey, label]) => (
                 <ContextMenuRadioItem
@@ -677,7 +676,7 @@ export const TabBar = memo(function TabBar({
             <TooltipTrigger asChild>
               <button
                 data-testid="prism-tabbar-add-button"
-                className="prism-tabbar-add hover:bg-muted flex h-full shrink-0 items-center justify-center transition-colors"
+                className="prism-tabbar-add"
                 onClick={handleAddTab}
                 disabled={isMaxTabsReached}
               >
@@ -700,7 +699,7 @@ export const TabBar = memo(function TabBar({
           <TooltipTrigger asChild>
             <button
               data-testid="prism-tabbar-split-button"
-              className="prism-tabbar-split flex h-full shrink-0 items-center justify-center transition-colors"
+              className="prism-tabbar-split"
               onClick={handleSplitPanel}
               disabled={isMaxTabsReached}
             >

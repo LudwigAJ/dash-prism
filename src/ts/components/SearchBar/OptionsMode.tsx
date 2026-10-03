@@ -42,7 +42,7 @@ export const OptionsMode = ({
 }: OptionsModeProps) => {
   return (
     <div className={cn('prism-searchbar')} ref={commandRef}>
-      <Command shouldFilter={false} className="prism-command flex-1 overflow-visible">
+      <Command shouldFilter={false} className="flex-1 overflow-visible">
         <CommandInput
           ref={inputRef}
           value=""

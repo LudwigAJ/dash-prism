@@ -71,9 +71,9 @@ class Prism(PrismComponent):
         fingerprint changes.
     :type serverSessionId: str or None
     :param theme: The visual theme of the workspace, ``'light'`` (the default)
-        or ``'dark'``. Prism writes the theme to the ``data-prism-theme``
-        attribute of the page root. Thus the theme also applies to the menus and
-        the dialogs that Prism renders outside the workspace element.
+        or ``'dark'``. The theme applies to the Prism root element and to the menus
+        and the dialogs that Prism renders inside it. Each Prism component on a
+        page has its own theme.
     :type theme: str
     :param size: The size variant of the workspace. Prism sets a root font size
         of 12 px for ``'sm'``, 14 px for ``'md'`` (the default) and 16 px for

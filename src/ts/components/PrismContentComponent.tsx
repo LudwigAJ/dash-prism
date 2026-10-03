@@ -112,7 +112,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
   // ===== STATE 2: Loading (callback is processing) =====
   if (loadingState) {
     return (
-      <div className="prism-content-loading flex h-full w-full items-center justify-center">
+      <div className="flex h-full w-full items-center justify-center">
         <span className="text-muted-foreground ml-2">Loading layout...</span>
       </div>
     );
@@ -120,7 +120,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
 
   // ===== STATE 3: Render content (children received) =====
   if (children) {
-    return <div className="prism-content-loaded h-full w-full">{children}</div>;
+    return <div className="h-full w-full">{children}</div>;
   }
 
   // ===== STATE 4: No layout selected (empty tab) =====

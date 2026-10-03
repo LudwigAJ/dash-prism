@@ -45,10 +45,11 @@ export function isEditableTarget(target: EventTarget | null): boolean {
 
 /**
  * Selector for the overlays that take over the keyboard while they are open.
- * Radix renders their content into a portal on `document.body`, i.e. outside
- * every Prism root, so an event target inside one is neither editable nor
- * contained in the workspace and would otherwise reach the global shortcuts
- * (right-click a tab, press Ctrl+D, and the tab behind the menu closed).
+ * Radix renders their content into a portal in the Prism root. The portal is
+ * next to the workspace element and not inside it. An event target in an overlay
+ * is neither editable nor inside the workspace. Without this check it would reach
+ * the global shortcuts (right-click a tab, press Ctrl+D, and the tab behind the
+ * menu closed).
  */
 const OVERLAY_SELECTOR =
   '[data-slot="context-menu-content"],[data-slot="context-menu-sub-content"],[data-slot="dialog-content"]';

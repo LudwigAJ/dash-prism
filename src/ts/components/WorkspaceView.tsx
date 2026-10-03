@@ -51,7 +51,7 @@ const DashContentRenderer = memo(
     const { ExternalWrapper } = api;
 
     return (
-      <div className="prism-content-container h-full">
+      <div className="h-full">
         <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
       </div>
     );

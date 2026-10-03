@@ -2,20 +2,47 @@
  * Prism Global Styles - shadcn/ui base + semantic tab colors
  */
 
-@import 'tailwindcss';
+/*
+ * Prism shares the page with the host Dash app, so the sheet does not style an element outside
+ * .prism-root. The sheet imports only the theme layer of Tailwind. It does not import the
+ * Tailwind preflight layer, because that layer resets every element of the page. The file
+ * preflight.css has the same rules, nested in .prism-root. The utilities are nested in
+ * .prism-root too, so each utility selector starts with .prism-root. The @property and
+ * @keyframes rules stay global, and they style no element.
+ * The theme import has the inline option, so Tailwind does not put its theme variables on :root.
+ * The utilities have no automatic source detection. Tailwind emits a theme variable when any
+ * scanned file contains its name, so only the @source paths below are scanned.
+ * The tokens below belong to .prism-root, so each instance has its own theme. A Radix portal
+ * renders inside .prism-root and uses the tokens of its instance.
+ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme) theme(inline);
+@import './preflight.css' layer(base);
+
+@layer utilities {
+  .prism-root {
+    @tailwind utilities source(none);
+  }
+}
 
 /* Source paths for Tailwind to scan for class usage */
 @source '../**/*.{ts,tsx}';
 @source './**/*.{ts,tsx,css}';
 
 /* Dark mode variant */
-@custom-variant dark (&:is(.dark *, [data-prism-theme='dark'] *));
+@custom-variant dark (&:is(.prism-root.dark *));
 
 /* =============================================================================
-  THEME VARIABLES - Light Mode (shadcn base + semantic tab colors)
+  PRISM ROOT - layout and light mode theme variables (shadcn base + semantic tab colors)
   ============================================================================= */
 
-:root {
+.prism-root {
+  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
+
+  background: var(--background);
+
   /* Base colors (shadcn) */
   --background: oklch(96% 0 0deg);
   --foreground: oklch(14.5% 0 0deg);
@@ -40,11 +67,6 @@
   --success-foreground: oklch(100% 0 0deg);
   --warning: oklch(78.8% 0.171 74.59deg);
   --warning-foreground: oklch(15% 0 0deg);
-  --chart-1: oklch(64.6% 0.222 41.116deg);
-  --chart-2: oklch(60% 0.118 184.704deg);
-  --chart-3: oklch(39.8% 0.07 227.392deg);
-  --chart-4: oklch(82.8% 0.189 84.429deg);
-  --chart-5: oklch(76.9% 0.188 70.08deg);
   --radius: 0.625rem;
 
   /* Tab colors (light mode - saturated for visibility) */
@@ -61,8 +83,7 @@
   THEME VARIABLES - Dark Mode (shadcn base + semantic tab colors)
   ============================================================================= */
 
-.dark,
-[data-prism-theme='dark'] {
+.prism-root.dark {
   /* Base colors (shadcn) */
   --background: oklch(22% 0 0deg);
   --foreground: oklch(87% 0 0deg);
@@ -83,11 +104,6 @@
   --border: oklch(33% 0 0deg);
   --input: oklch(33% 0 0deg);
   --ring: oklch(44% 0 0deg);
-  --chart-1: oklch(48.8% 0.243 264.376deg);
-  --chart-2: oklch(69.6% 0.17 162.48deg);
-  --chart-3: oklch(76.9% 0.188 70.08deg);
-  --chart-4: oklch(62.7% 0.265 303.9deg);
-  --chart-5: oklch(64.5% 0.246 16.439deg);
   --success: oklch(58.7% 0.158 149.57deg);
   --success-foreground: oklch(100% 0 0deg);
   --warning: oklch(78.8% 0.171 74.59deg);
@@ -138,11 +154,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
 
   /* Border radius */
   --radius-sm: calc(var(--radius) - 4px);
@@ -155,13 +166,16 @@
    BASE LAYER
    ============================================================================= */
 
+/*
+ * The preflight rules reset the border width to 0 with the color currentcolor. These rules set the
+ * Prism border color and the outline color for each element in the root, as shadcn does.
+ */
 @layer base {
-  * {
+  .prism-root,
+  .prism-root *,
+  .prism-root ::before,
+  .prism-root ::after {
     @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }
 
@@ -183,14 +197,8 @@
 }
 
 /* =============================================================================
-   PRISM ROOT LAYOUT
+   PRISM WORKSPACE LAYOUT
    ============================================================================= */
-
-.prism-root {
-  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
-
-  background: var(--background);
-}
 
 .prism-view-workspace {
   @apply flex min-h-0 flex-1 flex-col overflow-hidden;
@@ -235,42 +243,12 @@
   background-color: var(--muted-foreground);
 }
 
-.scrollbar-none {
+.prism-root .scrollbar-none {
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.scrollbar-none::-webkit-scrollbar {
+.prism-root .scrollbar-none::-webkit-scrollbar {
   display: none;
-}
-
-/* =============================================================================
-   REACT SPLIT PANE
-   ============================================================================= */
-
-.SplitPane {
-  position: relative !important;
-}
-
-.Resizer {
-  z-index: 1;
-  box-sizing: border-box;
-}
-
-.Resizer.horizontal {
-  height: 4px;
-  cursor: row-resize;
-  margin: -2px 0;
-  border-top: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-}
-
-.Resizer.vertical {
-  width: 4px;
-  cursor: col-resize;
-  margin: 0 -2px;
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
 }
 
 /* =============================================================================
@@ -284,32 +262,28 @@
   max-height: 2.3em;
 }
 
-.prism-container [data-slot='tabs-list'] {
+.prism-root [data-slot='tabs-list'] {
   height: 2.3em;
   min-height: 2.3em;
   font-size: 1em;
 }
 
-.prism-container [data-slot='tabs-trigger'] {
+.prism-root [data-slot='tabs-trigger'] {
   font-size: 0.85em;
   padding: 0.3em 0.85em;
 }
 
 /* Default SVG size — explicit size-* classes on icons override this */
-.prism-container [data-slot='tabs-trigger'] svg:not([class*='size-']) {
+.prism-root [data-slot='tabs-trigger'] svg:not([class*='size-']) {
   width: 1em;
   height: 1em;
 }
 
-.prism-container [data-slot='tabs-trigger'] button {
+.prism-root [data-slot='tabs-trigger'] button {
   padding: 0.15em;
 }
 
-.prism-container [data-slot='tabs-trigger'].prism-tab-default {
-  border-color: var(--border);
-}
-
-.prism-container [data-slot='tabs-trigger'].prism-tab-default[data-state='active'] {
+.prism-root [data-slot='tabs-trigger'].prism-tab-default {
   border-color: var(--border);
 }
 
@@ -376,7 +350,6 @@
   position: relative;
   z-index: 40;
   overflow: visible;
-  box-shadow: none;
   background: var(--background);
 }
 
@@ -397,8 +370,7 @@
 .prism-searchbar [data-slot='command-input'] {
   height: 100%;
   font-size: 1em;
-  padding-top: 0.3em;
-  padding-bottom: 0.3em;
+  padding-block: 0.3em;
 }
 
 .prism-searchbar-display {
@@ -441,18 +413,6 @@
   background: var(--background);
 }
 
-.prism-panel-container {
-  @apply flex h-full w-full;
-
-  background: var(--background);
-}
-
-.prism-panel-child {
-  @apply min-h-0 min-w-0 overflow-hidden;
-
-  background: var(--background);
-}
-
 /* =============================================================================
    TAB RENAME INPUT (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
@@ -484,7 +444,7 @@
    ============================================================================= */
 
 .prism-tabbar-add {
-  @apply flex items-center justify-center;
+  @apply flex shrink-0 items-center justify-center transition-colors;
 
   min-width: 2em;
   min-height: 100%;
@@ -512,7 +472,7 @@
    ============================================================================= */
 
 .prism-tabbar-split {
-  @apply flex items-center justify-center;
+  @apply flex shrink-0 items-center justify-center transition-colors;
 
   min-width: 2em;
   min-height: 100%;
@@ -541,15 +501,17 @@
    ============================================================================= */
 
 @media print {
-  .prism-status-bar,
-  .prism-searchbar,
-  [data-slot='tabs-list'] {
-    display: none !important;
+  .prism-root .prism-status-bar,
+  .prism-root .prism-searchbar,
+  .prism-root [data-slot='tabs-list'] {
+    display: none;
   }
 
-  .prism-container {
-    background: white !important;
-    color: black !important;
+  /* Each panel paints var(--background), so these tokens print the workspace black on white. */
+  .prism-root,
+  .prism-root.dark {
+    --background: #fff;
+    --foreground: #000;
   }
 }
 

@@ -9,6 +9,39 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 - **Python 3.10 is no longer supported.** It reaches end of life in October
   2026. The minimum is now Python 3.11.
+- **Prism no longer styles the host page outside its root element.** The
+  stylesheet imports the Tailwind theme layer only and no longer ships the
+  preflight reset to the whole document. The reset, the theme tokens, the
+  utility classes and the print rules apply inside the Prism root element. A host
+  page keeps its own headings, lists, buttons, fonts and body background, and
+  two instances on one page can have different themes. A host that relied on the
+  old reset must style those elements itself. A `dark` class on a host element
+  no longer switches Prism to the dark theme. Set the `theme` prop.
+- **Prism no longer sets `data-prism-theme` on `<html>` or defines the theme
+  tokens on `:root`.** The tokens are custom properties of the Prism root
+  element, and the dark theme adds the `dark` class to that element.
+- **The `prism-container` class is removed.** The root element has the class
+  `prism-root`. Replace `prism-container` with `prism-root` in host CSS that
+  used the old name. Nine other `prism-*` class names that no rule used are
+  removed too (`prism-content-loading`, `prism-content-loaded`,
+  `prism-content-container`, `prism-panel-active`,
+  `prism-panel-drop-zone-left`, `-right`, `-top`, `-bottom` and
+  `prism-command`).
+
+### Changed
+
+- Context menus, dialogs, popovers and tooltips render inside the Prism root
+  element and use the theme of their own instance. A host ancestor of the Prism
+  component that has a `transform`, `filter` or `contain` property, or its own
+  stacking context, can now confine or cover them.
+- Inactive tabs keep their real size, so a Plotly graph in a background tab lays
+  out correctly when the tab becomes active. Before, Prism hid inactive tabs
+  with `display: none`.
+
+### Fixed
+
+- The tab rename input keeps its natural height instead of stretching to the
+  bottom of the tab.
 
 ## 1.0.0
 

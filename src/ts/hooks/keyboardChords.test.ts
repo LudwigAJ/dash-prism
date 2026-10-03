@@ -68,7 +68,7 @@ describe('isOverlayOpen', () => {
     expect(isOverlayOpen(fakeDoc(false))).toBe(false);
   });
 
-  it('asks for the overlay content elements Radix portals to the body', () => {
+  it('asks for the overlay content elements Radix portals into the Prism root', () => {
     const selectors: string[] = [];
     isOverlayOpen({
       querySelector: (selector: string) => {

@@ -67,9 +67,7 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
             data-testid={`prism-drop-zone-left-${panelId}`}
             className="absolute top-0 bottom-0 left-0 z-50 w-1/2"
           >
-            {leftZone.isOver && (
-              <div className="prism-panel-drop-zone-left bg-primary/15 absolute inset-0" />
-            )}
+            {leftZone.isOver && <div className="bg-primary/15 absolute inset-0" />}
           </div>
 
           {/* Right */}
@@ -78,9 +76,7 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
             data-testid={`prism-drop-zone-right-${panelId}`}
             className="absolute top-0 right-0 bottom-0 z-50 w-1/2"
           >
-            {rightZone.isOver && (
-              <div className="prism-panel-drop-zone-right bg-primary/15 absolute inset-0" />
-            )}
+            {rightZone.isOver && <div className="bg-primary/15 absolute inset-0" />}
           </div>
 
           {/* Top */}
@@ -89,9 +85,7 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
             data-testid={`prism-drop-zone-top-${panelId}`}
             className="absolute top-0 right-0 left-0 z-50 h-1/2"
           >
-            {topZone.isOver && (
-              <div className="prism-panel-drop-zone-top bg-primary/15 absolute inset-0" />
-            )}
+            {topZone.isOver && <div className="bg-primary/15 absolute inset-0" />}
           </div>
 
           {/* Bottom */}
@@ -100,9 +94,7 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
             data-testid={`prism-drop-zone-bottom-${panelId}`}
             className="absolute right-0 bottom-0 left-0 z-50 h-1/2"
           >
-            {bottomZone.isOver && (
-              <div className="prism-panel-drop-zone-bottom bg-primary/15 absolute inset-0" />
-            )}
+            {bottomZone.isOver && <div className="bg-primary/15 absolute inset-0" />}
           </div>
         </>
       )}
