@@ -1,5 +1,11 @@
 import { useReducer, useRef, useMemo, useCallback, useEffect } from 'react';
-import { checkParamInput, resolveEnumInput, type ParamCheck } from './paramValidation';
+import {
+  checkParamInput,
+  filterChoices,
+  resolveEnumInput,
+  stepActiveChoice,
+  type ParamCheck,
+} from './paramValidation';
 import { toast } from 'sonner';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
@@ -96,6 +102,11 @@ export function useSearchBarState(panelId: PanelId) {
   const paramOptions = selectedLayout?.paramOptions;
   const allParams = selectedLayout?.params ?? [];
   const currentParam = allParams[state.currentParamIndex];
+  const currentParamValue = currentParam ? (state.paramValues[currentParam.name] ?? '') : '';
+  const paramChoices = useMemo(
+    () => (currentParam ? filterChoices(currentParam, currentParamValue) : []),
+    [currentParam, currentParamValue]
+  );
 
   // ===== FOCUS HELPER =====
   const focusInput = useCallback(() => {
@@ -249,6 +260,13 @@ export function useSearchBarState(panelId: PanelId) {
     [commitParamValue]
   );
 
+  const handleChoiceHover = useCallback(
+    (value: string) => {
+      if (value !== state.activeChoice) dispatch({ type: 'SET_ACTIVE_CHOICE', choice: value });
+    },
+    [state.activeChoice]
+  );
+
   const handleDisplayClick = useCallback(() => {
     dispatch({ type: 'ENTER_SEARCH_MODE' });
     focusInput();
@@ -310,11 +328,30 @@ export function useSearchBarState(panelId: PanelId) {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (mode === 'params') {
-        if (e.key === 'Enter') {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          // Without a choice list the arrow keys keep moving the caret.
+          if (paramChoices.length > 0) {
+            e.preventDefault();
+            const step = e.key === 'ArrowDown' ? 1 : -1;
+            dispatch({
+              type: 'SET_ACTIVE_CHOICE',
+              choice: stepActiveChoice(paramChoices, state.activeChoice, step),
+            });
+          }
+        } else if (e.key === 'Enter') {
           e.preventDefault();
-          handleParamSubmit();
+          if (state.activeChoice === null) {
+            handleParamSubmit();
+          } else {
+            handleChoiceSelect(state.activeChoice);
+          }
         } else if (e.key === 'Escape') {
-          handleBackToLayouts();
+          // The first Escape only clears the marked choice, as in a combobox popup.
+          if (state.activeChoice !== null) {
+            dispatch({ type: 'SET_ACTIVE_CHOICE', choice: null });
+          } else {
+            handleBackToLayouts();
+          }
         }
       } else if (mode === 'options' && e.key === 'Escape') {
         handleBackToLayouts();
@@ -323,7 +360,15 @@ export function useSearchBarState(panelId: PanelId) {
         inputRef.current?.blur();
       }
     },
-    [mode, handleParamSubmit, handleBackToLayouts, handleDismiss]
+    [
+      mode,
+      paramChoices,
+      state.activeChoice,
+      handleParamSubmit,
+      handleChoiceSelect,
+      handleBackToLayouts,
+      handleDismiss,
+    ]
   );
 
   // ===== EFFECTS =====
@@ -460,6 +505,8 @@ export function useSearchBarState(panelId: PanelId) {
     dropdownHeight,
     paramValues: state.paramValues,
     paramError: state.paramError,
+    paramChoices,
+    activeChoice: state.activeChoice,
     currentParamIndex: state.currentParamIndex,
     selectedLayoutId: state.selectedLayoutId,
 
@@ -480,6 +527,7 @@ export function useSearchBarState(panelId: PanelId) {
     handleBackToLayouts,
     handleParamSubmit,
     handleChoiceSelect,
+    handleChoiceHover,
     handleDisplayClick,
     handleDisplayKeyDown,
     handleFocus,

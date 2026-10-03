@@ -169,12 +169,32 @@ export function resolveEnumInput(param: LayoutParam, rawInput: string): string {
   return prefixed.length === 1 ? prefixed[0] : raw;
 }
 
-/** Choices to offer for an enum param, narrowed by what the user typed so far. */
+/**
+ * Choices to offer for an enum param, narrowed by what the user typed so far.
+ * A param of any other type has no choice list.
+ */
 export function filterChoices(param: LayoutParam, rawInput: string): string[] {
+  if (param.type !== 'enum') return [];
   const choices = (param.choices ?? []).map(String);
   const lowered = rawInput.trim().toLowerCase();
   if (!lowered) return choices;
   return choices.filter((c) => c.toLowerCase().includes(lowered));
+}
+
+/**
+ * Moves the active choice one step through the list and wraps at both ends.
+ * With no active choice, the first step down gives the first choice and the first step up
+ * gives the last one. An empty list has no active choice.
+ */
+export function stepActiveChoice(
+  choices: string[],
+  active: string | null,
+  step: 1 | -1
+): string | null {
+  if (choices.length === 0) return null;
+  const index = active === null ? -1 : choices.indexOf(active);
+  if (index === -1) return step === 1 ? choices[0] : choices[choices.length - 1];
+  return choices[(index + step + choices.length) % choices.length];
 }
 
 /**

@@ -44,7 +44,10 @@ export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {
     handleResizeStart,
     handleToggleFavorite,
     handleChoiceSelect,
+    handleChoiceHover,
     paramError,
+    paramChoices,
+    activeChoice,
   } = useSearchBarState(panelId);
 
   // Hidden mode
@@ -74,10 +77,13 @@ export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {
         totalParams={allParams.length}
         paramValue={paramValues[currentParam.name] ?? ''}
         paramError={paramError}
+        choices={paramChoices}
+        activeChoice={activeChoice}
         onParamValueChange={(value) =>
           setParamValues((v) => ({ ...v, [currentParam.name]: value }))
         }
         onChoiceSelect={handleChoiceSelect}
+        onChoiceHover={handleChoiceHover}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         onCancel={handleBackToLayouts}

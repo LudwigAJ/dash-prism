@@ -18,6 +18,8 @@ export type SearchBarState = {
   isPendingLayout: string | null;
   /** Inline validation message for the current parameter input, if any */
   paramError: string | null;
+  /** The choice that the arrow keys marked in the list of an enum parameter, if any */
+  activeChoice: string | null;
 };
 
 export type SearchBarAction =
@@ -31,6 +33,7 @@ export type SearchBarAction =
   | { type: 'ADVANCE_PARAM' }
   | { type: 'RESET_PARAMS' }
   | { type: 'SET_PARAM_ERROR'; message: string | null }
+  | { type: 'SET_ACTIVE_CHOICE'; choice: string | null }
   | { type: 'SET_PENDING_LAYOUT'; layoutId: string | null }
   | { type: 'RETURN_TO_IDLE'; showDropdown: boolean }
   | { type: 'DISMISS'; clearSelection: boolean };
@@ -82,6 +85,7 @@ export function createInitialState(): SearchBarState {
     isUserSearching: false,
     isPendingLayout: null,
     paramError: null,
+    activeChoice: null,
   };
 }
 
@@ -94,6 +98,7 @@ function clearSelection(draft: SearchBarState) {
   draft.paramValues = {};
   draft.currentParamIndex = 0;
   draft.paramError = null;
+  draft.activeChoice = null;
 }
 
 export const searchBarReducer = produce((draft: SearchBarState, action: SearchBarAction) => {
@@ -127,20 +132,26 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       // its default, which then reached the server as an empty string.
       draft.paramValues = { ...action.values };
       // The user is editing, so any inline error from the previous attempt is
-      // stale.
+      // stale. So is the marked choice, because the list is filtered again.
       draft.paramError = null;
+      draft.activeChoice = null;
       break;
     case 'ADVANCE_PARAM':
       draft.currentParamIndex += 1;
       draft.paramError = null;
+      draft.activeChoice = null;
       break;
     case 'RESET_PARAMS':
       draft.paramValues = {};
       draft.currentParamIndex = 0;
       draft.paramError = null;
+      draft.activeChoice = null;
       break;
     case 'SET_PARAM_ERROR':
       draft.paramError = action.message;
+      break;
+    case 'SET_ACTIVE_CHOICE':
+      draft.activeChoice = action.choice;
       break;
     case 'SET_PENDING_LAYOUT':
       draft.isPendingLayout = action.layoutId;
