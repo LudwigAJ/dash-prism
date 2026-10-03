@@ -77,8 +77,12 @@ export const OptionsMode = ({
                 </CommandItem>
               ))}
             </CommandGroup>
-            {/* Resize handle */}
-            <div className="prism-searchbar-resize-handle" onMouseDown={onResizeStart} />
+            {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
+            <div
+              className="prism-searchbar-resize-handle"
+              aria-hidden="true"
+              onMouseDown={onResizeStart}
+            />
           </CommandList>
         )}
       </Command>

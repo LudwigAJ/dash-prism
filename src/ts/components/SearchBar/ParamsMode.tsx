@@ -139,6 +139,8 @@ export const ParamsMode = ({
             className="tw:absolute tw:top-full tw:left-0 tw:z-[100] tw:mt-1 tw:max-h-60 tw:min-w-40 tw:overflow-y-auto tw:rounded-sm tw:border tw:border-border tw:bg-popover tw:py-1 tw:text-sm tw:shadow-md"
           >
             {choices.map((choice, index) => (
+              // The input handles the keys of the combobox, so an option needs no key handler.
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events
               <li
                 key={choice}
                 id={optionId(index)}

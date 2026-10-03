@@ -49,9 +49,11 @@ export const SearchMode = ({
   commandRef,
 }: SearchModeProps) => {
   return (
+    // The input opens the dropdown on focus, so a keyboard user needs no key handler here.
     <div
       className={cn('prism-searchbar')}
       ref={commandRef}
+      role="presentation"
       data-testid="prism-searchbar"
       onClick={onClick}
     >
@@ -142,8 +144,12 @@ export const SearchMode = ({
                 })}
               </CommandGroup>
             )}
-            {/* Resize handle */}
-            <div className="prism-searchbar-resize-handle" onMouseDown={onResizeStart} />
+            {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
+            <div
+              className="prism-searchbar-resize-handle"
+              aria-hidden="true"
+              onMouseDown={onResizeStart}
+            />
           </CommandList>
         )}
       </Command>

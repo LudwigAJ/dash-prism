@@ -3,6 +3,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import react from 'eslint-plugin-react';
 import ts from 'typescript-eslint';
 import prettier from 'eslint-plugin-prettier';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default [
   {
@@ -110,6 +111,27 @@ export default [
     },
   },
   {
+    // Accessible markup: a native control or a role with a label and key handlers.
+    ...jsxA11y.flatConfigs.recommended,
+    files: ['src/ts/**/*.tsx'],
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      // The preset does not enable this rule. It reports a control with no text and no label.
+      'jsx-a11y/control-has-associated-label': 'error',
+    },
+  },
+  {
+    // The search bar of an empty tab takes focus when it mounts, also at page load, by design:
+    // the search is the way into a new tab. The rename input and the parameter input take
+    // focus after a user action. In all three files the move of focus is intended.
+    files: [
+      'src/ts/components/TabBar.tsx',
+      'src/ts/components/SearchBar/SearchMode.tsx',
+      'src/ts/components/SearchBar/ParamsMode.tsx',
+    ],
+    rules: { 'jsx-a11y/no-autofocus': 'off' },
+  },
+  {
     // The logger is the one place that may call the console.
     files: ['src/ts/utils/logger.ts'],
     rules: { 'no-console': 'off' },
@@ -117,8 +139,6 @@ export default [
   // Rules that wait for later work, so that this config reports zero findings:
   // - Enable `@typescript-eslint/consistent-type-definitions` with 'interface' when the object
   //   shapes are interfaces.
-  // - Enable `eslint-plugin-jsx-a11y` (the recommended preset) when every interactive element is
-  //   a native control, or has a role, a label and a key handler.
   // - Enable `jsdoc/require-jsdoc` with `publicOnly` when every exported symbol has a doc comment.
   // - Enable `import/no-unused-modules` with `unusedExports` when no export is unused.
 ];
