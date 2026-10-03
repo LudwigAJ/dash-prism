@@ -373,7 +373,7 @@ def validate_workspace(
     # -------------------------------------------------------------------------
     # 6. Each panelTabs key is a leaf panel of the panel tree.
     # -------------------------------------------------------------------------
-    for panel_id in panel_tabs.keys():
+    for panel_id in panel_tabs:
         if not isinstance(panel_id, str) or not panel_id:
             continue
         if panel_id not in leaf_panel_ids:

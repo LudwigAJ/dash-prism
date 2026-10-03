@@ -16,6 +16,7 @@ from __future__ import annotations
 import time
 
 import pytest
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
@@ -213,7 +214,7 @@ def test_searchbar_rapid_interactions(prism_app_with_layouts):
             search_input = duo.find_element(SEARCHBAR_INPUT)
             search_input.send_keys("abc")
             search_input.send_keys(Keys.ESCAPE)
-        except Exception:
+        except WebDriverException:
             # Input may not appear if searchbar is in a transitional mode
             pass
 
@@ -249,7 +250,7 @@ def test_searchbar_handles_multiple_open_close_cycles(prism_app_with_layouts):
             duo.wait_for_element(SEARCHBAR_INPUT, timeout=1)
             search_input = duo.find_element(SEARCHBAR_INPUT)
             search_input.send_keys(Keys.ESCAPE)
-        except Exception:
+        except WebDriverException:
             # Input may not appear in every cycle if mode transitions are fast
             pass
 

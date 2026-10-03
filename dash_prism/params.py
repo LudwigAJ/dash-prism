@@ -330,7 +330,7 @@ def _resolve_hints(func: Callable[..., Any]) -> dict[str, Any]:
     """
     try:
         return get_type_hints(func, include_extras=True)
-    except Exception as exc:  # NameError, TypeError for odd callables, ...
+    except Exception as exc:  # noqa: BLE001 - NameError, TypeError for odd callables, ...
         logger.debug("Could not resolve type hints for %r: %s", func, exc)
         raw = getattr(func, "__annotations__", {}) or {}
         return {k: v for k, v in raw.items() if not isinstance(v, str)}
@@ -803,17 +803,17 @@ def _model_keeping_what_pydantic_accepts(
 
     kept: dict[str, Any] = {}
     degraded: list[str] = []
-    for name, field in fields.items():
+    for name, spec in fields.items():
         try:
-            build({name: field})
-        except Exception:
-            kept[name] = relaxed(field)
+            build({name: spec})
+        except Exception:  # noqa: BLE001 - a type that pydantic cannot model
+            kept[name] = relaxed(spec)
             degraded.append(name)
         else:
-            kept[name] = field
+            kept[name] = spec
     try:
         return build(kept), degraded
-    except Exception:
+    except Exception:  # noqa: BLE001 - a combination of types that pydantic cannot model
         # Reachable when a type only misbehaves in combination -- a custom
         # __get_pydantic_core_schema__ that fails the second time it is asked,
         # for instance. Give up on all of them rather than on registration.
@@ -963,7 +963,7 @@ class PydanticValidator:
                 __config__=config,
                 **fields,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - a signature that defeats pydantic
             # Registration must not fail because a signature defeats pydantic.
             # Keep every field it can still model. The rest go through
             # without validation.
@@ -995,7 +995,7 @@ class PydanticValidator:
                 for err in exc.errors(include_url=False)
             ]
             raise ParamValidationError(self.layout_id, errors) from None
-        except Exception as exc:  # a custom validator or type raising on its own
+        except Exception as exc:  # noqa: BLE001 - a custom validator or type raising on its own
             # Callers catch ParamValidationError and render the panel for
             # invalid parameters. Any other error becomes a server error,
             # which tells the user nothing.
@@ -1060,7 +1060,7 @@ class PydanticValidator:
         try:
             schema: dict[str, Any] = self.model.model_json_schema()
             return schema
-        except Exception as exc:  # unschematizable custom types
+        except Exception as exc:  # noqa: BLE001 - unschematizable custom types
             logger.debug("No JSON schema for layout '%s': %s", self.layout_id, exc)
             return None
 

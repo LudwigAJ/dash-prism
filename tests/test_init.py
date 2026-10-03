@@ -251,7 +251,8 @@ def test_init_with_async_app() -> None:
     """Test initialization with async Dash app."""
     try:
         app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
-    except Exception as exc:
+    # Dash can raise any exception type when the async extra is missing.
+    except Exception as exc:  # noqa: BLE001
         pytest.fail(f"Dash app does not support use_async: {exc}")
 
     app.layout = html.Div([dash_prism.Prism(id="async-prism", style={})])

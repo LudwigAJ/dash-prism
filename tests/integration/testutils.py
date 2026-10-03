@@ -11,6 +11,7 @@ in integration tests. These utilities follow Dash testing best practices:
 
 from __future__ import annotations
 
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -75,7 +76,7 @@ def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> bool:
             panels_have_size, message="Panels do not have non-zero dimensions"
         )
         return True
-    except Exception:
+    except WebDriverException:
         return False
 
 
@@ -197,7 +198,7 @@ def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> bool:
             EC.presence_of_element_located((By.CSS_SELECTOR, DROP_ZONE_LEFT))
         )
         return True
-    except Exception:
+    except WebDriverException:
         return False
 
 
@@ -715,7 +716,7 @@ def drag_tab_to_panel_edge(
         WebDriverWait(dash_duo.driver, 5.0).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, drop_zone_selector))
         )
-    except Exception:
+    except WebDriverException:
         ActionChains(dash_duo.driver).release().perform()
         return False
 

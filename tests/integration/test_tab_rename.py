@@ -59,7 +59,7 @@ def _click_context_menu_rename(duo, tab_id: str) -> str:
     rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
     WebDriverWait(duo.driver, 5).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
-        message=f"Rename input should appear after clicking Rename in context menu",
+        message="Rename input should appear after clicking Rename in context menu",
     )
     return rename_input_selector
 
@@ -167,9 +167,7 @@ def test_rename_cancel_with_escape(prism_app_with_layouts):
 
     # Verify original name is preserved
     tab_text = get_tabs(duo)[0].text
-    assert (
-        "This should not stick" not in tab_text
-    ), f"Escape should cancel rename, but tab text is '{tab_text}'"
+    assert tab_text == original_name, f"Escape should keep '{original_name}', got '{tab_text}'"
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"

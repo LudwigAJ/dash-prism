@@ -628,7 +628,7 @@ def _render_tab_layout_impl(
 
         return inject_tab_id(layout, tab_id)
 
-    except TimeoutError as e:
+    except TimeoutError:
         return _create_error_component(
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
@@ -750,7 +750,7 @@ async def _render_tab_layout_async(
 
         return inject_tab_id(layout, tab_id)
 
-    except TimeoutError as e:
+    except TimeoutError:
         return _create_error_component(
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
