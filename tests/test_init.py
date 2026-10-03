@@ -4,11 +4,13 @@ Tests for dash_prism initialization functionality.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from dash import Dash, html
 
 import dash_prism
-from dash_prism import utils
+from dash_prism import app_init, utils
 
 
 def test_init_basic(prism_app: Dash) -> None:
@@ -914,9 +916,8 @@ def test_async_callback_honours_client_timeout() -> None:
     def slow_sync_layout():
         import time
 
-        # The executor branch is asyncio.wait_for(run_in_executor(...)); on Python
-        # 3.11 a finished executor future wins over an expired timer, so keep
-        # a wide margin between this sleep and the 0.05 s timeout below.
+        # The executor branch awaits run_in_executor(...) inside asyncio.timeout().
+        # Keep a wide margin between this sleep and the 0.05 s timeout below.
         time.sleep(1.0)
         return html.Div("done", id="slow-sync-done")
 
@@ -1103,3 +1104,73 @@ def test_async_render_validation_error(prism_app: Dash) -> None:
 
     result = asyncio.run(_render_tab_layout_async("tab-1", "typed-async", {"n": "x"}))
     assert "prism-error-validation" in result.className
+
+
+# =============================================================================
+# Error components for a failed layout (sync and async path)
+# =============================================================================
+
+
+def _render_on_path(path: str, layout_id: str, timeout: float = 5.0) -> object:
+    """Render a tab through the sync path or the async path."""
+    if path == "sync":
+        return app_init._render_tab_layout("tab-1", layout_id, None, timeout=timeout)
+    return asyncio.run(app_init._render_tab_layout_async("tab-1", layout_id, None, timeout=timeout))
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (TimeoutError("slow backend"), "Layout 'failing' timed out after 5s."),
+        (TypeError("bad type"), "Error rendering layout 'failing': bad type"),
+        (ValueError("bad value"), "bad value"),
+        (RuntimeError("boom"), "Error rendering layout 'failing': boom"),
+    ],
+    ids=["timeout", "type-error", "value-error", "other"],
+)
+def test_failed_layout_shows_error_component(
+    prism_app: Dash, path: str, error: Exception, expected: str
+) -> None:
+    @dash_prism.register_layout(id="failing", name="Failing")
+    def failing():
+        raise error
+
+    dash_prism.init("test-prism", prism_app)
+
+    result = _render_on_path(path, "failing")
+
+    assert result.className == "prism-error-tab"
+    assert expected in _error_message(result)
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_missing_layout_shows_error_component(prism_app: Dash, path: str) -> None:
+    dash_prism.register_layout(id="other", name="Other", layout=html.Div("o"))
+    dash_prism.init("test-prism", prism_app)
+
+    result = _render_on_path(path, "missing")
+
+    assert result.className == "prism-error-tab"
+    assert _error_message(result) == "Layout 'missing' not found"
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_invalid_parameters_show_validation_component(prism_app: Dash, path: str) -> None:
+    @dash_prism.register_layout(id="typed", name="Typed")
+    def typed(n: int = 1):
+        return html.Div(f"n={n}")
+
+    dash_prism.init("test-prism", prism_app)
+
+    if path == "sync":
+        result = app_init._render_tab_layout("tab-1", "typed", {"n": "abc"})
+    else:
+        result = asyncio.run(app_init._render_tab_layout_async("tab-1", "typed", {"n": "abc"}))
+
+    assert "prism-error-validation" in result.className
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_empty_layout_id_renders_nothing(path: str) -> None:
+    assert _render_on_path(path, "") is None

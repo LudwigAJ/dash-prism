@@ -553,30 +553,18 @@ def _run_callback(
         async callback in a new event loop through ``asyncio.run()``, and
         ``timeout`` does apply to that callback.
     """
-    if is_async:
-        # An async callback runs in a new event loop, with the timeout.
-        async def _run_with_timeout():
-            try:
-                return await asyncio.wait_for(callback(**kwargs), timeout=timeout)
-            except asyncio.TimeoutError:
-                raise TimeoutError(
-                    f"Async layout callback timed out after {timeout:g}s. "
-                    "Consider optimizing the callback or increasing layoutTimeout."
-                )
+    if not is_async:
+        return callback(**kwargs)
 
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(_run_with_timeout())  # No loop is in operation, thus safe
-        else:
-            raise RuntimeError(
-                "Cannot run async layout callback from within an existing event loop "
-                "(for example Jupyter or uvicorn). Either set use_async=True on your Dash app, "
-                "or make the layout callback synchronous."
-            )
-    # A sync callback runs directly. A separate thread is necessary to apply a
-    # timeout to it, and this function does not start one.
-    return callback(**kwargs)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_run_callback_async(callback, is_async, kwargs, timeout))
+    raise RuntimeError(
+        "Cannot run async layout callback from within an existing event loop "
+        "(for example Jupyter or uvicorn). Either set use_async=True on your Dash app, "
+        "or make the layout callback synchronous."
+    )
 
 
 async def _run_callback_async(
@@ -611,28 +599,11 @@ async def _run_callback_async(
         runs it does not stop. But the caller gets a :exc:`TimeoutError`, and
         Prism discards the result.
     """
-    if is_async:
-        # Await an async callback directly, with the timeout.
-        try:
-            return await asyncio.wait_for(callback(**kwargs), timeout=timeout)
-        except asyncio.TimeoutError:
-            raise TimeoutError(
-                f"Async layout callback timed out after {timeout:g}s. "
-                "Consider optimizing the callback or increasing layoutTimeout."
-            )
-    else:
-        # Run a sync callback in the default executor, with the timeout.
+    async with asyncio.timeout(timeout):
+        if is_async:
+            return await callback(**kwargs)
         loop = asyncio.get_running_loop()
-        try:
-            return await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: callback(**kwargs)),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
-            raise TimeoutError(
-                f"Layout callback timed out after {timeout:g}s. "
-                "Consider optimizing the callback or increasing layoutTimeout."
-            )
+        return await loop.run_in_executor(None, lambda: callback(**kwargs))
 
 
 def _create_error_component(message: str) -> Any:
@@ -693,29 +664,51 @@ def _create_validation_error_component(layout_id: str, error: params.ParamValida
     )
 
 
-def _render_tab_layout_impl(
-    tab_id: str,
-    layout_id: str,
-    layout_params: dict[str, Any] | None,
-    layout_option: str | None,
-    timeout: float,
-    callback_runner: Callable,
-) -> Any:
-    """Render the layout of one tab in a SYNC context.
+def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
+    """Make the component that a tab shows when its layout failed.
 
-    The function does four steps. It reads the registration of the layout from
-    the registry. It resolves the parameters, which validates them. It calls the
-    layout callback, or makes a deep copy of a static layout. Last, it injects
-    the tab ID into the component IDs of the tree. Thus the components of one
-    tab do not collide with the components of another tab.
+    The function selects the component from the class of the exception. There
+    is one component for a timeout, one for parameters that are not valid, and
+    one for every other exception. The function writes an unexpected exception
+    to the log with its traceback, so call it from an ``except`` block.
 
-    The function catches the exceptions of the layout and returns an error
-    component instead. Thus a layout that fails cannot break the render callback
-    of Dash. There is one error component for a timeout, one for parameters that
-    are not valid, and one for every other exception.
+    :param exc: The exception that the render of the layout raised.
+    :type exc: Exception
+    :param layout_id: The ID of the layout that failed.
+    :type layout_id: str
+    :param timeout: The count of seconds that the layout callback could take.
+        The error message for a timeout includes this value.
+    :type timeout: float
+    :returns: The error component for the tab.
+    :rtype: Any
+    """
+    if isinstance(exc, TimeoutError):
+        return _create_error_component(
+            f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
+            "The callback took too long to respond. Try refreshing the tab."
+        )
+    # ParamValidationError is a subclass of ValueError, so it must come first.
+    if isinstance(exc, params.ParamValidationError):
+        logger.info("Parameter validation failed for layout '%s': %s", layout_id, exc)
+        return _create_validation_error_component(layout_id, exc)
+    if isinstance(exc, TypeError):
+        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    if isinstance(exc, ValueError):
+        # resolve_layout_params writes its ValueError messages for the user, so
+        # the tab shows them as they are.
+        return _create_error_component(str(exc))
+    logger.exception("Unexpected error rendering layout '%s'", layout_id)
+    return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
 
-    :param tab_id: The unique identifier of the tab.
-    :type tab_id: str
+
+def _lookup_and_resolve(
+    layout_id: str, layout_params: dict[str, Any] | None, layout_option: str | None
+) -> tuple[registry.LayoutRegistration, dict[str, Any]]:
+    """Read the registration of a layout, and resolve the parameters of a tab.
+
+    The sync render path and the async render path use this function, so they
+    reject the same requests.
+
     :param layout_id: The ID of the registered layout.
     :type layout_id: str
     :param layout_params: The parameters from the browser, or ``None``.
@@ -723,60 +716,20 @@ def _render_tab_layout_impl(
     :param layout_option: The selected option key from ``param_options``, or
         ``None``.
     :type layout_option: str | None
-    :param timeout: The maximum count of seconds for the callback.
-    :type timeout: float
-    :param callback_runner: The function that calls the layout callback. It must
-        be sync, because this function cannot await a coroutine.
-        :func:`_run_callback` is the only runner that Prism supplies. The async
-        path has its own implementation in :func:`_render_tab_layout_async`.
-    :type callback_runner: Callable
-    :returns: The Dash component tree of the tab. The function returns ``None``
-        if ``layout_id`` is empty. It returns an error component if the layout
-        is not in the registry, or if the render failed.
-    :rtype: Any
+    :returns: The registration, and the keyword arguments for the layout
+        callback.
+    :rtype: tuple[LayoutRegistration, dict[str, Any]]
+    :raises ValueError: If the layout is not registered, or if the request does
+        not agree with the registration.
+    :raises ParamValidationError: If a parameter value is not valid.
     """
-    if not layout_id:
-        return None
-
     registration = registry.get_layout(layout_id)
-    if not registration:
-        return _create_error_component(f"Layout '{layout_id}' not found")
-
-    try:
-        resolved_params = registry.resolve_layout_params(
-            registration,
-            layout_id,
-            layout_params,
-            layout_option,
-        )
-
-        if registration.is_callable and registration.callback is not None:
-            layout = callback_runner(
-                registration.callback,
-                registration.is_async,
-                resolved_params,
-                timeout,
-            )
-        else:
-            layout = copy.deepcopy(registration.layout)
-
-        return utils.inject_tab_id(layout, tab_id)
-
-    except TimeoutError:
-        return _create_error_component(
-            f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
-            "The callback took too long to respond. Try refreshing the tab."
-        )
-    except params.ParamValidationError as e:
-        logger.info("Parameter validation failed for layout '%s': %s", layout_id, e)
-        return _create_validation_error_component(layout_id, e)
-    except TypeError as e:
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
-    except ValueError as e:
-        return _create_error_component(str(e))
-    except Exception as e:
-        logger.exception("Unexpected error rendering layout '%s'", layout_id)
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
+    if registration is None:
+        raise ValueError(f"Layout '{layout_id}' not found")
+    resolved_params = registry.resolve_layout_params(
+        registration, layout_id, layout_params, layout_option
+    )
+    return registration, resolved_params
 
 
 def _render_tab_layout(
@@ -788,9 +741,15 @@ def _render_tab_layout(
 ) -> Any:
     """Render the layout of a tab (SYNC version).
 
-    This function is the sync entry point of the render path. It gives
-    :func:`_run_callback` to :func:`_render_tab_layout_impl` as the callback
-    runner.
+    The function does four steps. It reads the registration of the layout from
+    the registry. It resolves the parameters, which validates them. It calls the
+    layout callback, or makes a deep copy of a static layout. Last, it injects
+    the tab ID into the component IDs of the tree. Thus the components of one
+    tab do not collide with the components of another tab.
+
+    The function catches the exceptions of the layout and returns an error
+    component instead. Thus a layout that fails cannot break the render callback
+    of Dash. :func:`_error_component_for` makes that component.
 
     :param tab_id: The unique identifier of the tab.
     :type tab_id: str
@@ -804,18 +763,25 @@ def _render_tab_layout(
     :param timeout: The maximum count of seconds for an async layout callback.
         A sync layout callback has no timeout on this path.
     :type timeout: float
-    :returns: The Dash component tree of the tab, an error component, or
-        ``None``.
+    :returns: The Dash component tree of the tab. The function returns ``None``
+        if ``layout_id`` is empty. It returns an error component if the layout
+        is not in the registry, or if the render failed.
     :rtype: Any
     """
-    return _render_tab_layout_impl(
-        tab_id,
-        layout_id,
-        layout_params,
-        layout_option,
-        timeout,
-        callback_runner=_run_callback,
-    )
+    if not layout_id:
+        return None
+
+    try:
+        registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
+        if registration.is_callable and registration.callback is not None:
+            layout = _run_callback(
+                registration.callback, registration.is_async, resolved_params, timeout
+            )
+        else:
+            layout = copy.deepcopy(registration.layout)
+        return utils.inject_tab_id(layout, tab_id)
+    except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
+        return _error_component_for(exc, layout_id, timeout)
 
 
 async def _render_tab_layout_async(
@@ -827,15 +793,9 @@ async def _render_tab_layout_async(
 ) -> Any:
     """Render the layout of a tab (ASYNC version).
 
-    This function repeats the steps of :func:`_render_tab_layout_impl` instead
-    of a call to it. ``_render_tab_layout_impl`` is sync, and it cannot await
-    the coroutine that :func:`_run_callback_async` returns. A call to it from
-    this path gives the browser a coroutine in place of a component tree.
-
-    The steps are the same as the steps of the sync path. The function reads the
-    registration and resolves the parameters. It then awaits the layout callback,
-    or makes a deep copy of a static layout. Last, it injects the tab ID. It
-    catches the exceptions of the layout and returns an error component instead.
+    The steps and the result are the same as the steps and the result of
+    :func:`_render_tab_layout`. The difference is that this function awaits the
+    layout callback. A sync layout callback runs in the default executor.
 
     :param tab_id: The unique identifier of the tab.
     :type tab_id: str
@@ -857,45 +817,17 @@ async def _render_tab_layout_async(
     if not layout_id:
         return None
 
-    registration = registry.get_layout(layout_id)
-    if not registration:
-        return _create_error_component(f"Layout '{layout_id}' not found")
-
     try:
-        resolved_params = registry.resolve_layout_params(
-            registration,
-            layout_id,
-            layout_params,
-            layout_option,
-        )
-
+        registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
         if registration.is_callable and registration.callback is not None:
             layout = await _run_callback_async(
-                registration.callback,
-                registration.is_async,
-                resolved_params,
-                timeout,
+                registration.callback, registration.is_async, resolved_params, timeout
             )
         else:
             layout = copy.deepcopy(registration.layout)
-
         return utils.inject_tab_id(layout, tab_id)
-
-    except TimeoutError:
-        return _create_error_component(
-            f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
-            "The callback took too long to respond. Try refreshing the tab."
-        )
-    except params.ParamValidationError as e:
-        logger.info("Parameter validation failed for layout '%s': %s", layout_id, e)
-        return _create_validation_error_component(layout_id, e)
-    except TypeError as e:
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
-    except ValueError as e:
-        return _create_error_component(str(e))
-    except Exception as e:
-        logger.exception("Unexpected error rendering layout '%s'", layout_id)
-        return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
+    except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
+        return _error_component_for(exc, layout_id, timeout)
 
 
 def _render_content_request(content_id: Any, data: Any) -> Any:
