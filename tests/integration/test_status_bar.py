@@ -100,6 +100,21 @@ def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, ke
     assert check_browser_errors(dash_duo) == []
 
 
+def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
+    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+
+    dash_duo.find_element(HELP_BUTTON).click()
+    dash_duo.wait_for_element("[role='dialog']", timeout=5)
+
+    dialog = dash_duo.find_element("[role='dialog']")
+    assert [h.text for h in dialog.find_elements("css selector", "h2")] == ["Prism"]
+    # The stylesheet upper-cases the section headings.
+    h3_texts = [h.text.lower() for h in dialog.find_elements("css selector", "h3")]
+    assert "tab management" in h3_texts
+    assert dialog.find_elements("css selector", "h4") == []
+
+
 def test_status_bar_dividers_are_decoration_not_text(dash_duo):
     dash_duo.start_server(_app(True), port=get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
