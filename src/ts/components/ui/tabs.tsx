@@ -11,7 +11,7 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn('flex flex-col gap-2', className)}
+      className={cn('tw:flex tw:flex-col tw:gap-2', className)}
       {...props}
     />
   );
@@ -30,7 +30,7 @@ const TabsList = React.forwardRef<
     ref={ref}
     data-slot="tabs-list"
     className={cn(
-      'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-none p-[3px]',
+      'tw:inline-flex tw:h-9 tw:w-fit tw:items-center tw:justify-center tw:rounded-none tw:bg-muted tw:p-[3px] tw:text-muted-foreground',
       className
     )}
     {...props}
@@ -60,8 +60,8 @@ const TabsTrigger = React.forwardRef<
     data-locked={isLocked || undefined}
     data-loading={isLoading || undefined}
     className={cn(
-      'bg-secondary text-secondary-foreground data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-none border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow,opacity] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:opacity-100 data-[state=active]:shadow-sm data-[state=inactive]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
-      'data-[loading=true]:opacity-80 data-[locked=true]:opacity-80',
+      'tw:inline-flex tw:h-[calc(100%-1px)] tw:flex-1 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-none tw:border tw:border-transparent tw:bg-secondary tw:px-2 tw:py-1 tw:text-sm tw:font-medium tw:whitespace-nowrap tw:text-secondary-foreground tw:transition-[color,box-shadow,opacity] tw:focus-visible:border-ring tw:focus-visible:ring-[3px] tw:focus-visible:ring-ring/50 tw:focus-visible:outline-1 tw:focus-visible:outline-ring tw:disabled:pointer-events-none tw:disabled:opacity-50 tw:data-[state=active]:bg-secondary tw:data-[state=active]:text-secondary-foreground tw:data-[state=active]:opacity-100 tw:data-[state=active]:shadow-sm tw:data-[state=inactive]:opacity-50 tw:dark:data-[state=active]:border-input tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
+      'tw:data-[loading=true]:opacity-80 tw:data-[locked=true]:opacity-80',
       className
     )}
     {...props}
@@ -83,11 +83,11 @@ const TabsContent = React.forwardRef<
     ref={ref}
     data-slot="tabs-content"
     className={cn(
-      'flex-1 outline-none',
+      'tw:flex-1 tw:outline-none',
       // Hide inactive tabs with visibility, not with display:none, to keep Dash components mounted.
       // Plotly graphs need a real size to lay out correctly when the tab becomes active.
       // The overflow clip keeps the content of a hidden tab out of the scroll area of the panel.
-      'data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=inactive]:absolute data-[state=inactive]:inset-0 data-[state=inactive]:overflow-hidden',
+      'tw:data-[state=inactive]:pointer-events-none tw:data-[state=inactive]:invisible tw:data-[state=inactive]:absolute tw:data-[state=inactive]:inset-0 tw:data-[state=inactive]:overflow-hidden',
       className
     )}
     {...props}

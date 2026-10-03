@@ -51,9 +51,9 @@ export const ParamsMode = ({
   const errorId = `prism-param-error-${currentParam.name}`;
 
   return (
-    <div className={cn('prism-searchbar prism-searchbar-params pl-3')}>
+    <div className={cn('prism-searchbar prism-searchbar-params tw:pl-3')}>
       {/* Counter */}
-      <span className="text-muted-foreground text-sm whitespace-nowrap">
+      <span className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground">
         ({currentParamIndex + 1}/{totalParams})
       </span>
 
@@ -61,22 +61,22 @@ export const ParamsMode = ({
       <span className="prism-searchbar-layout-name">{selectedLayoutName}</span>
 
       {/* Chevron separator */}
-      <ChevronRight className="text-muted-foreground mx-1 size-[1em] flex-shrink-0" />
+      <ChevronRight className="tw:mx-1 tw:size-[1em] tw:flex-shrink-0 tw:text-muted-foreground" />
 
       {/* Param label + type hint */}
-      <span className="text-muted-foreground text-sm whitespace-nowrap">
+      <span className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground">
         {currentParam.title ?? currentParam.name}:
-        {hint && <span className="text-muted-foreground/70 ml-1 text-xs">{hint}</span>}
+        {hint && <span className="tw:ml-1 tw:text-xs tw:text-muted-foreground/70">{hint}</span>}
       </span>
 
       {/* Input field with inline default hint */}
-      <div className="relative ml-2 flex min-w-0 flex-1 items-center">
+      <div className="tw:relative tw:ml-2 tw:flex tw:min-w-0 tw:flex-1 tw:items-center">
         <input
           ref={inputRef}
           data-testid="prism-searchbar-param-input"
           className={cn(
-            'w-full border-none bg-transparent text-sm outline-none',
-            paramError && 'text-destructive'
+            'tw:w-full tw:border-none tw:bg-transparent tw:text-sm tw:outline-none',
+            paramError && 'tw:text-destructive'
           )}
           value={paramValue}
           placeholder={
@@ -91,7 +91,7 @@ export const ParamsMode = ({
           autoFocus
         />
         {showDefaultHint && (
-          <span className="text-muted-foreground/60 pointer-events-none absolute left-0 text-sm">
+          <span className="tw:pointer-events-none tw:absolute tw:left-0 tw:text-sm tw:text-muted-foreground/60">
             {formatDefault(currentParam.default)}
           </span>
         )}
@@ -101,14 +101,14 @@ export const ParamsMode = ({
           <ul
             role="listbox"
             data-testid="prism-searchbar-param-choices"
-            className="bg-popover border-border absolute top-full left-0 z-[100] mt-1 max-h-60 min-w-40 overflow-y-auto rounded-sm border py-1 text-sm shadow-md"
+            className="tw:absolute tw:top-full tw:left-0 tw:z-[100] tw:mt-1 tw:max-h-60 tw:min-w-40 tw:overflow-y-auto tw:rounded-sm tw:border tw:border-border tw:bg-popover tw:py-1 tw:text-sm tw:shadow-md"
           >
             {choices.map((choice) => (
               <li key={choice} role="option" aria-selected={choice === paramValue}>
                 <button
                   type="button"
                   data-testid={`prism-searchbar-param-choice-${choice}`}
-                  className="hover:bg-muted w-full px-3 py-1 text-left"
+                  className="tw:w-full tw:px-3 tw:py-1 tw:text-left tw:hover:bg-muted"
                   // Keep focus in the input so the search bar does not dismiss on blur
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => onChoiceSelect(choice)}
@@ -127,7 +127,7 @@ export const ParamsMode = ({
           id={errorId}
           role="alert"
           data-testid="prism-searchbar-param-error"
-          className="text-destructive ml-2 text-xs whitespace-nowrap"
+          className="tw:ml-2 tw:text-xs tw:whitespace-nowrap tw:text-destructive"
         >
           {paramError}
         </span>
@@ -135,11 +135,11 @@ export const ParamsMode = ({
 
       {/* Cancel X button */}
       <button
-        className="text-muted-foreground hover:text-destructive ml-2 flex-shrink-0 p-1 transition-colors"
+        className="tw:ml-2 tw:flex-shrink-0 tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:text-destructive"
         onClick={onCancel}
         title="Cancel"
       >
-        <X className="size-[1em]" />
+        <X className="tw:size-[1em]" />
       </button>
     </div>
   );

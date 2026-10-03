@@ -208,13 +208,13 @@ function DraggedTabPreview({ tab }: { tab: Tab }) {
   return (
     <div
       className={cn(
-        'bg-card border-border flex cursor-grabbing items-center gap-2 rounded-sm border px-3 py-1.5 shadow-lg',
-        'opacity-80',
+        'tw:flex tw:cursor-grabbing tw:items-center tw:gap-2 tw:rounded-sm tw:border tw:border-border tw:bg-card tw:px-3 tw:py-1.5 tw:shadow-lg',
+        'tw:opacity-80',
         styleClasses
       )}
     >
-      {IconComponent && <IconComponent className="h-3.5 w-3.5" />}
-      <span className="text-sm font-medium">{tab.name}</span>
+      {IconComponent && <IconComponent className="tw:h-3.5 tw:w-3.5" />}
+      <span className="tw:text-sm tw:font-medium">{tab.name}</span>
     </div>
   );
 }

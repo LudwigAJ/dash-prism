@@ -10,6 +10,10 @@
  * .prism-root too, so each utility selector starts with .prism-root. The @property and
  * @keyframes rules stay global, and they style no element.
  * The theme import has the inline option, so Tailwind does not put its theme variables on :root.
+ * The theme import has the prefix option too. Each utility class name starts with tw:, for
+ * example tw:flex. A Dash layout in a tab is inside .prism-root, and its classes (Bootstrap
+ * collapse, container, border) would meet the Prism utilities without the prefix. The prefix
+ * option of the cn helper in utils/cn.ts must have the same value.
  * The utilities have no automatic source detection. Tailwind emits a theme variable when any
  * scanned file contains its name, so only the @source paths below are scanned.
  * The tokens below belong to .prism-root, so each instance has its own theme. A Radix portal
@@ -18,7 +22,7 @@
 
 @layer theme, base, components, utilities;
 
-@import 'tailwindcss/theme.css' layer(theme) theme(inline);
+@import 'tailwindcss/theme.css' layer(theme) theme(inline) prefix(tw);
 @import './preflight.css' layer(base);
 
 @layer utilities {
@@ -39,7 +43,7 @@
   ============================================================================= */
 
 .prism-root {
-  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
+  @apply tw:flex tw:min-h-0 tw:w-full tw:flex-col tw:overflow-hidden tw:text-foreground;
 
   background: var(--background);
 
@@ -175,7 +179,7 @@
   .prism-root *,
   .prism-root ::before,
   .prism-root ::after {
-    @apply border-border outline-ring/50;
+    @apply tw:border-border tw:outline-ring/50;
   }
 }
 
@@ -201,13 +205,13 @@
    ============================================================================= */
 
 .prism-view-workspace {
-  @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  @apply tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden;
 
   background: var(--background);
 }
 
 .prism-view-panels {
-  @apply flex min-h-0 w-full flex-1;
+  @apply tw:flex tw:min-h-0 tw:w-full tw:flex-1;
 
   background: var(--background);
 }
@@ -243,11 +247,11 @@
   background-color: var(--muted-foreground);
 }
 
-.prism-root .scrollbar-none {
+.prism-root .prism-scrollbar-none {
   scrollbar-width: none;
 }
 
-.prism-root .scrollbar-none::-webkit-scrollbar {
+.prism-root .prism-scrollbar-none::-webkit-scrollbar {
   display: none;
 }
 
@@ -343,7 +347,7 @@
    ============================================================================= */
 
 .prism-searchbar {
-  @apply border-border flex w-full items-center border-b;
+  @apply tw:flex tw:w-full tw:items-center tw:border-b tw:border-border;
 
   height: 2.6em;
   min-height: 2.6em;
@@ -374,7 +378,7 @@
 }
 
 .prism-searchbar-display {
-  @apply cursor-pointer transition-colors;
+  @apply tw:cursor-pointer tw:transition-colors;
 
   background-color: var(--popover);
   padding-left: 2px;
@@ -385,11 +389,11 @@
 }
 
 .prism-searchbar-display:focus {
-  @apply ring-primary ring-1 outline-none ring-inset;
+  @apply tw:ring-1 tw:ring-primary tw:outline-none tw:ring-inset;
 }
 
 .prism-searchbar-layout-name {
-  @apply truncate font-medium;
+  @apply tw:truncate tw:font-medium;
 
   font-size: 1em;
   color: var(--foreground);
@@ -408,7 +412,7 @@
    ============================================================================= */
 
 .prism-panel {
-  @apply flex h-full w-full flex-col;
+  @apply tw:flex tw:h-full tw:w-full tw:flex-col;
 
   background: var(--background);
 }
@@ -444,7 +448,7 @@
    ============================================================================= */
 
 .prism-tabbar-add {
-  @apply flex shrink-0 items-center justify-center transition-colors;
+  @apply tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:transition-colors;
 
   min-width: 2em;
   min-height: 100%;
@@ -472,7 +476,7 @@
    ============================================================================= */
 
 .prism-tabbar-split {
-  @apply flex shrink-0 items-center justify-center transition-colors;
+  @apply tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:transition-colors;
 
   min-width: 2em;
   min-height: 100%;
@@ -520,25 +524,25 @@
   ============================================================================= */
 
 .prism-error-tab {
-  @apply text-destructive bg-destructive/5 border-destructive/30 m-4 rounded-md border p-4 text-sm;
+  @apply tw:m-4 tw:rounded-md tw:border tw:border-destructive/30 tw:bg-destructive/5 tw:p-4 tw:text-sm tw:text-destructive;
 }
 
 .prism-error-tab h3 {
-  @apply mb-2 text-base font-semibold;
+  @apply tw:mb-2 tw:text-base tw:font-semibold;
 }
 
 .prism-error-tab pre {
-  @apply text-foreground bg-muted overflow-x-auto rounded p-2 font-mono text-xs whitespace-pre-wrap;
+  @apply tw:overflow-x-auto tw:rounded tw:bg-muted tw:p-2 tw:font-mono tw:text-xs tw:whitespace-pre-wrap tw:text-foreground;
 }
 
 .prism-error-fields {
-  @apply my-2 list-disc pl-5;
+  @apply tw:my-2 tw:list-disc tw:pl-5;
 }
 
 .prism-error-fields code {
-  @apply font-mono;
+  @apply tw:font-mono;
 }
 
 .prism-error-hint {
-  @apply text-muted-foreground mt-2;
+  @apply tw:mt-2 tw:text-muted-foreground;
 }

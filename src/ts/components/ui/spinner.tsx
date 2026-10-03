@@ -3,12 +3,12 @@ import { Loader2 as Loader2Icon } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../utils/cn';
 
-const spinnerVariants = cva('animate-spin stroke-[2.5]', {
+const spinnerVariants = cva('tw:animate-spin tw:stroke-[2.5]', {
   variants: {
     size: {
-      sm: 'size-[1.2em]',
-      md: 'size-[1.5em]',
-      lg: 'size-[1.75em]',
+      sm: 'tw:size-[1.2em]',
+      md: 'tw:size-[1.5em]',
+      lg: 'tw:size-[1.75em]',
     },
   },
   defaultVariants: {

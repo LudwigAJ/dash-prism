@@ -110,7 +110,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
         value={activeTabId ?? ''}
         onValueChange={handleTabChange}
         activationMode="manual"
-        className="flex h-full flex-col gap-0 overflow-hidden"
+        className="tw:flex tw:h-full tw:flex-col tw:gap-0 tw:overflow-hidden"
       >
         <TabBar
           panelId={panel.id}
@@ -123,7 +123,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
         <SearchBar panelId={panel.id} isPinned={isPinned} />
 
         <PanelDropzone panelId={panel.id} isPinned={isPinned}>
-          <div className="relative flex h-full w-full flex-col overflow-auto">
+          <div className="tw:relative tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto">
             {tabs.map((tab) => {
               // Get portal node for tabs with layouts (content rendered via InPortal in WorkspaceView)
               const portalNode = tab.layoutId ? getPortalNode(tab.id) : null;
@@ -133,7 +133,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                   key={tab.id}
                   value={tab.id}
                   forceMount={true}
-                  className="h-full min-h-full w-full"
+                  className="tw:h-full tw:min-h-full tw:w-full"
                 >
                   <ErrorBoundary>
                     {!tab.layoutId ? (
@@ -141,7 +141,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                     ) : portalNode ? (
                       <OutPortal node={portalNode} />
                     ) : (
-                      <div className="text-muted-foreground flex h-full items-center justify-center">
+                      <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-muted-foreground">
                         <p>Loading...</p>
                       </div>
                     )}
@@ -204,7 +204,7 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
           defaultSize={storedSize}
           minSize="10%"
           maxSize="100%"
-          className="h-full w-full overflow-hidden"
+          className="tw:h-full tw:w-full tw:overflow-hidden"
         >
           <ErrorBoundary>
             <LeafPanel panel={child} />
@@ -224,8 +224,8 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
   return (
     <SplitPane
       direction={panel.direction}
-      className="h-full w-full"
-      dividerClassName="bg-border hover:bg-primary/50 transition-colors"
+      className="tw:h-full tw:w-full"
+      dividerClassName="tw:bg-border tw:hover:bg-primary/50 tw:transition-colors"
       onResizeEnd={handleResizeEnd}
     >
       {renderedChildren}

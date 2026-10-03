@@ -30,33 +30,33 @@ export type InfoModalProps = {
  */
 export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
   const rowClass = cn(
-    'flex items-center justify-between gap-4 py-2.5',
-    'border-b border-border/50 last:border-0'
+    'tw:flex tw:items-center tw:justify-between tw:gap-4 tw:py-2.5',
+    'tw:border-b tw:border-border/50 tw:last:border-0'
   );
 
-  const labelClass = 'text-sm text-muted-foreground';
-  const valueClass = 'text-sm font-medium text-foreground';
+  const labelClass = 'tw:text-sm tw:text-muted-foreground';
+  const valueClass = 'tw:text-sm tw:font-medium tw:text-foreground';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="tw:max-w-md">
         <DialogHeader>
           <DialogTitle>Tab Information</DialogTitle>
         </DialogHeader>
 
         {tab && (
-          <div className="border-border bg-card mt-4 rounded-lg border p-4">
+          <div className="tw:mt-4 tw:rounded-lg tw:border tw:border-border tw:bg-card tw:p-4">
             <div className={rowClass}>
               <span className={labelClass}>Name</span>
               <span className={valueClass}>{tab.name}</span>
             </div>
             <div className={rowClass}>
               <span className={labelClass}>ID</span>
-              <span className="text-muted-foreground font-mono text-xs">{tab.id}</span>
+              <span className="tw:font-mono tw:text-xs tw:text-muted-foreground">{tab.id}</span>
             </div>
             <div className={rowClass}>
               <span className={labelClass}>Panel ID</span>
-              <span className="text-muted-foreground font-mono text-xs">
+              <span className="tw:font-mono tw:text-xs tw:text-muted-foreground">
                 {tab.panelId || 'None'}
               </span>
             </div>
@@ -85,9 +85,9 @@ export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
               </div>
             )}
             {tab.layoutParams && Object.keys(tab.layoutParams).length > 0 && (
-              <div className={cn(rowClass, 'flex-col items-start gap-2 border-b-0')}>
+              <div className={cn(rowClass, 'tw:flex-col tw:items-start tw:gap-2 tw:border-b-0')}>
                 <span className={labelClass}>Parameters</span>
-                <pre className="text-muted-foreground bg-muted w-full overflow-x-auto rounded-md p-2 font-mono text-xs">
+                <pre className="tw:w-full tw:overflow-x-auto tw:rounded-md tw:bg-muted tw:p-2 tw:font-mono tw:text-xs tw:text-muted-foreground">
                   {JSON.stringify(tab.layoutParams, null, 2)}
                 </pre>
               </div>

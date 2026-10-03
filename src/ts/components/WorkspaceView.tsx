@@ -42,7 +42,7 @@ const DashContentRenderer = memo(
 
     if (!api?.ExternalWrapper) {
       return (
-        <div className="text-muted-foreground flex h-full items-center justify-center">
+        <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-muted-foreground">
           <p>Dash API not available. Ensure you&apos;re using Dash 3.1.1+.</p>
         </div>
       );
@@ -51,7 +51,7 @@ const DashContentRenderer = memo(
     const { ExternalWrapper } = api;
 
     return (
-      <div className="h-full">
+      <div className="tw:h-full">
         <ExternalWrapper component={spec} componentPath={componentPath} temp={false} />
       </div>
     );

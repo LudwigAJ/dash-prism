@@ -164,9 +164,9 @@ const TabItem = memo(function TabItem({
           style={style}
           data-testid={`prism-tab-${tab.id}`}
           className={cn(
-            'group/tab relative cursor-default self-stretch',
-            isDragging && 'z-50 opacity-50',
-            isPinned && 'flex flex-1'
+            'tw:group/tab tw:relative tw:cursor-default tw:self-stretch',
+            isDragging && 'tw:z-50 tw:opacity-50',
+            isPinned && 'tw:flex tw:flex-1'
           )}
           {...listeners}
           {...attributes}
@@ -182,24 +182,29 @@ const TabItem = memo(function TabItem({
               if (!isLocked && !isPinned) onStartRename(tab);
             }}
             className={cn(
-              'h-full border-none shadow-none data-[state=active]:shadow-none',
+              'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none',
               styleClasses,
-              isPinned && 'flex-1',
+              isPinned && 'tw:flex-1',
               isDefaultStyle && 'prism-tab-default'
             )}
             data-default-style={isDefaultStyle || undefined}
             data-tab-style={styleColor}
           >
             {/* Content wrapper — dims text/icons in inactive panels without affecting tab background */}
-            <span className={cn('flex items-center gap-1.5', !isPanelActive && 'opacity-65')}>
+            <span
+              className={cn(
+                'tw:flex tw:items-center tw:gap-1.5',
+                !isPanelActive && 'tw:opacity-65'
+              )}
+            >
               {/* Tab name (hidden when editing) */}
               <span
                 className={cn(
-                  'flex items-center gap-1.5 whitespace-nowrap',
-                  isEditing && 'invisible'
+                  'tw:flex tw:items-center tw:gap-1.5 tw:whitespace-nowrap',
+                  isEditing && 'tw:invisible'
                 )}
               >
-                {TabIcon ? <TabIcon className="size-[1.1em] shrink-0" /> : null}
+                {TabIcon ? <TabIcon className="tw:size-[1.1em] tw:shrink-0" /> : null}
                 {tab.name.length > MAX_TAB_NAME_LENGTH
                   ? `${tab.name.slice(0, MAX_TAB_NAME_LENGTH)}…`
                   : tab.name}
@@ -209,8 +214,8 @@ const TabItem = memo(function TabItem({
               {isLocked ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-muted-foreground flex items-center">
-                      <Lock className="size-[0.85em]" />
+                    <span className="tw:flex tw:items-center tw:text-muted-foreground">
+                      <Lock className="tw:size-[0.85em]" />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>Tab is locked</TooltipContent>
@@ -224,11 +229,11 @@ const TabItem = memo(function TabItem({
                       aria-label={`Close ${tab.name} tab`}
                       data-testid={`prism-tab-close-${tab.id}`}
                       className={cn(
-                        'group/close text-muted-foreground flex cursor-pointer items-center rounded-sm p-0.5 transition-all',
-                        'hover:text-foreground hover:bg-muted/70',
+                        'tw:group/close tw:flex tw:cursor-pointer tw:items-center tw:rounded-sm tw:p-0.5 tw:text-muted-foreground tw:transition-all',
+                        'tw:hover:bg-muted/70 tw:hover:text-foreground',
                         isLoading || isActiveTab
-                          ? 'opacity-100'
-                          : 'opacity-0 group-hover/tab:opacity-100'
+                          ? 'tw:opacity-100'
+                          : 'tw:opacity-0 tw:group-hover/tab:opacity-100'
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -245,18 +250,18 @@ const TabItem = memo(function TabItem({
                       {/* Show spinner when loading, but X on hover to allow cancellation */}
                       {isLoading ? (
                         <>
-                          <Spinner size="sm" className="shrink-0 group-hover/close:hidden" />
-                          <X className="hidden size-[1.2em] stroke-[2.5] group-hover/close:block" />
+                          <Spinner size="sm" className="tw:shrink-0 tw:group-hover/close:hidden" />
+                          <X className="tw:hidden tw:size-[1.2em] tw:stroke-[2.5] tw:group-hover/close:block" />
                         </>
                       ) : (
-                        <X className="size-[1.2em] stroke-[2.5]" />
+                        <X className="tw:size-[1.2em] tw:stroke-[2.5]" />
                       )}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
                 </Tooltip>
               ) : isLoading ? (
-                <Spinner size="sm" className="text-muted-foreground" />
+                <Spinner size="sm" className="tw:text-muted-foreground" />
               ) : null}
             </span>
 
@@ -285,7 +290,7 @@ const TabItem = memo(function TabItem({
 
       {/* ===== CONTEXT MENU ===== */}
       <ContextMenuContent
-        className="min-w-36"
+        className="tw:min-w-36"
         data-testid="prism-context-menu"
         onCloseAutoFocus={(e) => {
           if (preventFocusRestoreRef.current) {
@@ -621,14 +626,16 @@ export const TabBar = memo(function TabBar({
   return (
     <div
       ref={setNodeRef}
-      className="prism-tabbar border-border relative flex w-full shrink-0 items-stretch"
+      className="prism-tabbar tw:relative tw:flex tw:w-full tw:shrink-0 tw:items-stretch tw:border-border"
     >
       {/* Drop zone highlight overlay */}
-      {isOver && <div className="bg-primary/15 pointer-events-none absolute inset-0 z-10" />}
+      {isOver && (
+        <div className="tw:pointer-events-none tw:absolute tw:inset-0 tw:z-10 tw:bg-primary/15" />
+      )}
       {/* Scrollable tab container with + button inside, hidden scrollbar */}
       <div
         ref={scrollContainerRef}
-        className="prism-tabbar-scroll flex min-w-0 flex-1 scrollbar-none items-stretch overflow-x-scroll overflow-y-hidden"
+        className="prism-tabbar-scroll prism-scrollbar-none tw:flex tw:min-w-0 tw:flex-1 tw:items-stretch tw:overflow-x-scroll tw:overflow-y-hidden"
         data-can-scroll-left={canScrollLeft || undefined}
         data-can-scroll-right={canScrollRight || undefined}
       >
@@ -636,8 +643,8 @@ export const TabBar = memo(function TabBar({
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
           <TabsList
             className={cn(
-              'flex-nowrap gap-0 rounded-none bg-transparent p-0',
-              isPinned && 'flex-1'
+              'tw:flex-nowrap tw:gap-0 tw:rounded-none tw:bg-transparent tw:p-0',
+              isPinned && 'tw:flex-1'
             )}
           >
             {tabs.map((tab) => (
@@ -688,7 +695,7 @@ export const TabBar = memo(function TabBar({
         )}
         {!isPinned && (
           <div
-            className="h-full min-w-8 flex-1 cursor-pointer"
+            className="tw:h-full tw:min-w-8 tw:flex-1 tw:cursor-pointer"
             onDoubleClick={handleAddTab}
             title="Double-click to add new tab"
           />
