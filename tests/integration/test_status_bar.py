@@ -6,6 +6,8 @@ import warnings
 
 import pytest
 from dash import Dash, html
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
 
@@ -14,6 +16,8 @@ from conftest import (
     PRISM_ROOT,
     check_browser_errors,
     get_free_port,
+    press_key,
+    tab_to,
     wait_for_tab_count,
 )
 
@@ -22,6 +26,8 @@ pytestmark = pytest.mark.integration
 HELP_BUTTON = "[data-testid='prism-statusbar-help']"
 RESET_BUTTON = "[data-testid='prism-statusbar-reset']"
 UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
+TAB_SEGMENT = "[data-testid='prism-statusbar-tab']"
+POPOVER = "[data-slot='popover-content']"
 ACTION_BUTTON = "[data-testid='prism-action-save']"
 
 
@@ -69,6 +75,40 @@ def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
     assert dash_duo.find_element(RESET_BUTTON).accessible_name == "Reset workspace"
     assert dash_duo.find_element(HELP_BUTTON).accessible_name == "Help"
     assert dash_duo.find_element(UNDO_BUTTON).accessible_name == "Undo last change"
+
+
+@pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "space"])
+def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, key):
+    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.wait_for_element(TAB_SEGMENT, timeout=10)
+
+    segment = dash_duo.find_element(TAB_SEGMENT)
+    assert segment.tag_name == "button"
+    assert segment.get_attribute("aria-expanded") == "false"
+
+    tab_to(dash_duo, TAB_SEGMENT)
+    press_key(dash_duo, key)
+
+    WebDriverWait(dash_duo.driver, 5).until(
+        lambda driver: driver.find_element("css selector", TAB_SEGMENT).get_attribute(
+            "aria-expanded"
+        )
+        == "true",
+        message="The popover should open when Enter or Space presses the segment",
+    )
+    assert "Tab ID" in dash_duo.find_element(POPOVER).text
+    assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_dividers_are_decoration_not_text(dash_duo):
+    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+
+    # A literal "|" in the text would be read aloud between every pair of segments.
+    assert "|" not in dash_duo.find_element(".prism-status-bar").text
+    dividers = dash_duo.find_elements(".prism-status-bar [data-orientation='vertical']")
+    assert dividers, "The status bar should still draw dividers"
+    assert all(divider.get_attribute("role") == "none" for divider in dividers)
 
 
 def _segment_order(dash_duo) -> list[str]:
