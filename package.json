@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "packageManager": "pnpm@11.0.9",
   "description": "Prism: Powerful multi-panel workspace manager for Plotly Dash",
-  "main": "index.ts",
   "repository": {
     "type": "git",
     "url": "git://github.com/LudwigAJ/dash-prism.git"
@@ -13,7 +12,6 @@
   },
   "homepage": "https://github.com/LudwigAJ/dash-prism",
   "scripts": {
-    "venv": "source ./.venv/bin/activate",
     "build:js::dev": "webpack --mode development",
     "build:js": "webpack",
     "build:backends": "poetry run dash-generate-components ./src/ts/components dash_prism -p package-info.json --ignore '^(?!.*Prism).*$'",
@@ -40,6 +38,7 @@
     "@types/react-dom": "18.2.25",
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.64.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.5.3",
     "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^6.10.0",
@@ -95,13 +94,5 @@
     "redux-undo": "^1.1.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
-  },
-  "overrides": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "minimatch": ">=3.1.3",
-    "serialize-javascript": "^7.0.0",
-    "flatted": ">=3.3.4",
-    "rollup": ">=4.55.2"
   }
 }
