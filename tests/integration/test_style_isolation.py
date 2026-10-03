@@ -344,3 +344,92 @@ def test_inactive_tab_keeps_the_size_of_its_graph(dash_duo):
         """)
 
     assert width > 0, "The graph of the background tab has no width"
+
+
+# Class names of Bootstrap, and of any other CSS framework, that are also Tailwind utility names.
+# The host styles them. The Prism stylesheet must not.
+FRAMEWORK_CLASS_NAMES = [
+    "collapse",
+    "container",
+    "border",
+    "hidden",
+    "invisible",
+    "rounded",
+    "flex",
+    "grid",
+    "text-center",
+    "p-4",
+    "mt-1",
+    "fixed",
+    "absolute",
+    "relative",
+    "truncate",
+    "sr-only",
+]
+
+
+def _probe_attributes(name: str) -> dict[str, str]:
+    return {"data-testid": f"utility-probe-{name}"}
+
+
+def test_bootstrap_collapse_in_a_tab_stays_visible(dash_duo):
+    """An open Bootstrap collapse in a tab is not hidden by a Prism utility."""
+    _start_app(
+        dash_duo,
+        html.Div(_prism("prism-first", initial_layout="collapse")),
+        layouts={
+            "collapse": html.Div(
+                "Open collapse",
+                id="open-collapse",
+                className="collapse show",
+                style={"height": "40px"},
+            )
+        },
+    )
+    dash_duo.wait_for_element("#prism-first [id*='open-collapse']", timeout=10)
+
+    state = dash_duo.driver.execute_script("""
+        const element = document.querySelector('#prism-first [id*=open-collapse]');
+        return {
+          visibility: getComputedStyle(element).visibility,
+          height: element.getBoundingClientRect().height,
+        };
+        """)
+
+    assert state["visibility"] == "visible", "A Prism utility hid an open collapse in a tab"
+    assert state["height"] > 0
+
+
+def test_framework_class_names_in_a_tab_keep_the_style_of_a_plain_element(dash_duo):
+    """An element with the class name of a Tailwind utility looks like an element without it."""
+    probes = [
+        html.Div("Probe", className=name, **_probe_attributes(name))
+        for name in FRAMEWORK_CLASS_NAMES
+    ]
+    reference = html.Div("Probe", **_probe_attributes("reference"))
+    _start_app(
+        dash_duo,
+        html.Div(_prism("prism-first", initial_layout="probes")),
+        layouts={"probes": html.Div([reference, *probes])},
+    )
+    dash_duo.wait_for_element("#prism-first [data-testid='utility-probe-reference']", timeout=10)
+
+    changed = dash_duo.driver.execute_script("""
+        const probes = document.querySelectorAll("#prism-first [data-testid^='utility-probe-']");
+        const reference = getComputedStyle(
+          document.querySelector("#prism-first [data-testid='utility-probe-reference']")
+        );
+        const changed = {};
+        for (const probe of probes) {
+          const style = getComputedStyle(probe);
+          const names = Array.from(style).filter(
+            (name) => style.getPropertyValue(name) !== reference.getPropertyValue(name)
+          );
+          if (names.length > 0) {
+            changed[probe.dataset.testid] = names.slice(0, 5);
+          }
+        }
+        return changed;
+        """)
+
+    assert changed == {}, f"A Prism utility styled a class name of the host: {changed}"
