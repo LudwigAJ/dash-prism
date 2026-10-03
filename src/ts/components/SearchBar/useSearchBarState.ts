@@ -256,7 +256,8 @@ export function useSearchBarState(panelId: PanelId) {
 
   const handleDisplayKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Space activates the button, as Enter does. It does not start a search.
+      if (e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         dispatch({ type: 'ENTER_SEARCH_MODE', initialQuery: e.key });
         focusInput();
         e.preventDefault();

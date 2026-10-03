@@ -96,53 +96,40 @@ export class ErrorBoundary extends Component<Props, State> {
                   {this.state.error?.message}
                 </p>
 
-                {/* Worded actions instead of buttons */}
                 <div className="tw:text-sm tw:text-secondary">
                   {level === 'workspace' ? (
                     <>
-                      <span
-                        role="button"
-                        tabIndex={0}
+                      <button
+                        type="button"
                         className="tw:cursor-pointer tw:text-primary tw:hover:underline"
                         onClick={this.handleRefreshPage}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') this.handleRefreshPage();
-                        }}
-                        data-testid="error-action-refresh"
+                        data-testid="prism-error-action-refresh"
                       >
                         Refresh page
-                      </span>
+                      </button>
                       {this.props.onClearStorage && (
                         <>
                           <span className="tw:mx-2">or</span>
-                          <span
-                            role="button"
-                            tabIndex={0}
+                          <button
+                            type="button"
                             className="tw:cursor-pointer tw:text-destructive tw:hover:underline"
                             onClick={this.handleClearStorageAndRefresh}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') this.handleClearStorageAndRefresh();
-                            }}
-                            data-testid="error-action-clear-storage"
+                            data-testid="prism-error-action-clear-storage"
                           >
                             clear storage & refresh
-                          </span>
+                          </button>
                         </>
                       )}
                     </>
                   ) : (
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       className="tw:cursor-pointer tw:text-primary tw:hover:underline"
                       onClick={this.handleRetry}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') this.handleRetry();
-                      }}
-                      data-testid="error-action-retry"
+                      data-testid="prism-error-action-retry"
                     >
                       Try again
-                    </span>
+                    </button>
                   )}
                 </div>
               </CardContent>

@@ -22,12 +22,12 @@ export const DisplayMode = ({
   const hasOption = Boolean(option);
 
   return (
-    <div
-      className={cn('prism-searchbar prism-searchbar-display')}
+    <button
+      type="button"
+      data-testid="prism-searchbar-display"
+      className={cn('prism-searchbar prism-searchbar-display tw:text-left')}
       onClick={onDisplayClick}
       onKeyDown={onKeyDown}
-      tabIndex={0}
-      role="button"
     >
       <span className="prism-searchbar-layout-name">{currentLayoutName}</span>
       {hasOption && (
@@ -43,7 +43,7 @@ export const DisplayMode = ({
             <span className="tw:text-sm tw:text-primary">{value}</span>
           </React.Fragment>
         ))}
-    </div>
+    </button>
   );
 };
 
