@@ -47,7 +47,7 @@ class Prism(PrismComponent):
     - **Layout registry**: :func:`dash_prism.register_layout` registers a
       layout with its parameters and its keywords.
     - **Async support**: A layout callback can be synchronous or ``async``.
-    - **Type-safe**: This wrapper has complete type hints for Python 3.10 and
+    - **Type-safe**: This wrapper has complete type hints for Python 3.11 and
       later versions.
 
     :param id: The unique identifier of this component in Dash callbacks. A

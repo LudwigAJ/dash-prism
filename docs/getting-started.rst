@@ -8,7 +8,7 @@ Installation
 
    pip install dash-prism
 
-Dash Prism needs Python 3.10 or later. It also needs Dash 3.1.1 or later but
+Dash Prism needs Python 3.11 or later. It also needs Dash 3.1.1 or later but
 less than 4.5, and pydantic 2.10 or later but less than 3. ``pip`` installs
 Dash and pydantic for you.
 

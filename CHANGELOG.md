@@ -3,6 +3,13 @@
 All notable changes to Dash Prism are recorded here. The project follows
 [Semantic Versioning](https://semver.org/) from 1.0.0 on.
 
+## Unreleased
+
+### Breaking changes
+
+- **Python 3.10 is no longer supported.** It reaches end of life in October
+  2026. The minimum is now Python 3.11.
+
 ## 1.0.0
 
 First stable release. Supports Python 3.10+ and Dash 3.1.1 – 4.4.x.
