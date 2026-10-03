@@ -31,6 +31,8 @@ application needs.
 If `just <https://github.com/casey/just>`_ is installed, ``just install &&
 just build`` does the same work as the last three commands.
 
+The ``.nvmrc`` file names the Node.js version that CI uses.
+
 Tests
 -----
 
@@ -58,12 +60,26 @@ Or with ``just``:
 .. code-block:: bash
 
    just test-ts            # TypeScript only
-   just test-py            # Python unit only
+   just test-unit          # Python unit only
    just test-integration   # Selenium integration
    just test               # All of the above
 
 ``pnpm run test`` runs the Python tests only. ``just test`` is the one recipe
 that runs the TypeScript tests and the Python tests together.
+
+The scripts in ``package.json`` hold the one definition of each test command.
+The ``just`` recipes and the CI workflow call the same scripts. Thus a local run
+and a CI run use the same options. ``pnpm run test`` and ``pnpm run
+test:integration`` run the tests in parallel with pytest-xdist and keep the
+tests of one file in one worker. They run a failed test again, two times at
+most, because a Selenium drag-and-drop test can fail when the code has no
+defect.
+
+Each pytest run writes a coverage report to ``htmlcov/``. The ``addopts`` key in
+the ``[tool.pytest.ini_options]`` table of ``pyproject.toml`` sets the coverage
+options. ``pnpm run test:ts:coverage`` writes the Vitest coverage report. That
+report includes the ``.tsx`` files, but the Vitest tests do not render
+components. Thus the figure for the components is low.
 
 Code Style
 ----------
@@ -73,19 +89,39 @@ Code Style
 
 .. code-block:: bash
 
-   # Python
-   black dash_prism tests
-   mypy
-
-   # TypeScript
+   # All checks: Black, mypy, ESLint and the TypeScript type check
    pnpm run lint
+
+   # Format
+   pnpm run format:py
    pnpm run format
+
+``pnpm run lint`` is the command that CI runs. ``pnpm run lint:py`` and ``pnpm
+run lint:js`` run the Python checks and ESLint alone. ``just lint`` calls ``pnpm
+run lint``.
 
 ``mypy`` needs no path on the command line. The ``files`` key in the
 ``[tool.mypy]`` table of ``pyproject.toml`` names the modules that mypy checks.
-Both that list and the Black configuration leave out the generated component
-files, because those files change on every build. ``just lint`` does the
-TypeScript type check, the Black check, and mypy in one command.
+
+Generated files
+---------------
+
+The build writes four Python files: ``PrismComponent.py``,
+``PrismActionComponent.py``, ``PrismContentComponent.py`` and ``_imports_.py``.
+Each tool must know these files. Each tool reads its own configuration. Thus the
+list of these files is in more than one place:
+
+- ``.gitignore``
+- The ``extend-exclude`` key of the ``[tool.black]`` table in ``pyproject.toml``
+- The ``omit`` key of the ``[tool.coverage.run]`` table
+- ``GENERATED_FILES`` in ``scripts/check_wheel.py``, which CI and the release
+  workflow use to check the wheel
+
+The ``files`` key of the ``[tool.mypy]`` table names only the hand-written
+modules. Thus mypy does not check the generated files.
+
+If you add a component file whose name contains ``Prism``, the build writes one
+more Python file. Add that file to each place in the list.
 
 Documentation
 -------------

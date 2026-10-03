@@ -9,6 +9,7 @@ export default [
     // Generated/vendored output, virtualenvs and docs are not linted. The webpack
     // config is CommonJS with browser globals and its own formatting, so it is
     // skipped too; vitest.config.ts is ordinary ESM TypeScript and stays linted.
+    // .claude/ is local tool state (gitignored) and can hold whole worktrees.
     ignores: [
       'dash_prism/**',
       'docs/**',
@@ -18,6 +19,7 @@ export default [
       '**/htmlcov/**',
       '**/coverage/**',
       'internal_docs/**',
+      '.claude/**',
       'webpack.config.js',
     ],
   },

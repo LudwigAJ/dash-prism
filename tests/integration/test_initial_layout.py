@@ -27,6 +27,7 @@ from conftest import (
     wait_for_tab_count,
     get_tabs,
     check_browser_errors,
+    get_free_port,
 )
 
 # Mark all tests in this module as integration tests
@@ -68,7 +69,7 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # The first tab should have the "Home Dashboard" layout loaded,
@@ -128,7 +129,7 @@ def test_initial_layout_ignored_with_persistence(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # With memory persistence (fresh workspace), initialLayout should apply
@@ -168,7 +169,7 @@ def test_initial_layout_without_prop_shows_new_tab(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # The first tab should be "New Tab" (no layout loaded)
@@ -208,7 +209,7 @@ def test_initial_layout_new_tabs_still_empty(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Wait for first tab to get the initial layout

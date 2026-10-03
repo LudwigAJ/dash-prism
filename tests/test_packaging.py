@@ -4,9 +4,12 @@ Regression tests for packaging and documentation claims (01 §4, §6).
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -103,3 +106,61 @@ def test_docs_do_not_hardcode_the_version() -> None:
     conf = (ROOT / "docs" / "conf.py").read_text(encoding="utf-8")
     assert not re.search(r'^release\s*=\s*"', conf, re.MULTILINE)
     assert "_read_release()" in conf
+
+
+def _workflows() -> dict[str, str]:
+    return {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    }
+
+
+def test_nvmrc_matches_the_node_version_of_every_workflow() -> None:
+    """A local shell that reads .nvmrc gets the Node.js version that CI uses."""
+    nvmrc = (ROOT / ".nvmrc").read_text(encoding="utf-8").strip()
+    for name, text in _workflows().items():
+        for version in re.findall(r'node-version:\s*"?([0-9.]+)"?', text):
+            assert version == nvmrc, f"{name} uses Node.js {version}, .nvmrc says {nvmrc}"
+
+
+def test_ci_runs_on_pull_requests() -> None:
+    """The checks must report on a pull request before the merge, not after it."""
+    workflows = _workflows()
+    for name in ("ci.yml", "codeql.yml"):
+        assert re.search(r"^  pull_request:", workflows[name], re.MULTILINE), name
+
+
+def _workflow_commands(text: str) -> list[str]:
+    jobs = yaml.safe_load(text)["jobs"].values()
+    return [step["run"] for job in jobs for step in job.get("steps", []) if "run" in step]
+
+
+def _recipe_commands(text: str) -> list[str]:
+    return [line for line in text.splitlines() if line.startswith((" ", "\t"))]
+
+
+def test_package_json_holds_the_only_test_commands() -> None:
+    """CI and the justfile call the package.json scripts, so that all three run the same suite."""
+    commands = {name: _workflow_commands(text) for name, text in _workflows().items()}
+    commands["justfile"] = _recipe_commands((ROOT / "justfile").read_text(encoding="utf-8"))
+    # A plugin name such as pytest-xdist is not a call of the tool.
+    tool_call = re.compile(r"(?<![\w-])(pytest|vitest|eslint)(?![\w-])")
+    for name, runs in commands.items():
+        offenders = [run for run in runs if tool_call.search(run)]
+        assert offenders == [], f"{name} calls a tool instead of a pnpm script: {offenders}"
+
+    for script in ("test:ts", "test", "lint"):
+        assert f"pnpm run {script}" in commands["ci.yml"], script
+
+
+def test_every_integration_server_gets_a_free_port() -> None:
+    """Without a port, every xdist worker gives Dash the same first port, and the servers clash."""
+    for path in sorted((ROOT / "tests" / "integration").glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "start_server"
+            ):
+                ports = [keyword for keyword in node.keywords if keyword.arg == "port"]
+                assert ports, f"{path.name}:{node.lineno} starts a server without a port"

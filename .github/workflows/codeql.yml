@@ -3,8 +3,14 @@ name: CodeQL
 on:
   push:
     branches: [main, dev]
+  # No branch filter, as in ci.yml.
+  pull_request:
   schedule:
     - cron: '21 9 * * 4'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

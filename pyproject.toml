@@ -74,6 +74,7 @@ pytest = "^9.1.0"
 pytest-cov = "^7.0.0"
 pytest-xdist = "^3.8.0"
 pytest-rerunfailures = "^16.3"
+pyyaml = "^6.0.0"
 selenium = "^4.0.0"
 webdriver-manager = "^4.1.2"
 dash = {version = ">=3.1.1,<4.5", extras = ["testing"]}
@@ -103,7 +104,6 @@ addopts = [
     "--headless",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
 ]
 
@@ -144,6 +144,7 @@ files = [
     "dash_prism/PrismContent.py",
     "dash_prism/registry.py",
     "dash_prism/utils.py",
+    "scripts/check_wheel.py",
 ]
 
 [tool.coverage.run]
