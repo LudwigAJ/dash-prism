@@ -117,7 +117,8 @@ export type RegisteredLayouts = Record<string, LayoutMeta>;
 // Workspace Types (Persistence)
 // =============================================================================
 
-export type Workspace = {
+/** The workspace as Dash sees it: the shape of the `readWorkspace` and `updateWorkspace` props. */
+export interface Workspace {
   tabs: Tab[];
   panel: PanelNode;
   panelTabs: Record<PanelId, TabId[]>; // Order per panel
@@ -125,7 +126,7 @@ export type Workspace = {
   activePanelId: PanelId;
   favoriteLayouts?: string[];
   searchBarsHidden?: boolean;
-};
+}
 
 // =============================================================================
 // Actions Prop Types (Developer-defined buttons in StatusBar)
@@ -203,12 +204,15 @@ export function isDashComponent(value: unknown): value is DashComponent {
   );
 }
 
+/** The keys and indexes that lead to one component in the Dash layout tree. */
+export type DashPath = Array<string | number>;
+
 /**
  * Props for ExternalWrapper component
  */
 export type ExternalWrapperProps = {
   component: DashComponent;
-  componentPath: Array<string | number>;
+  componentPath: DashPath;
   temp?: boolean;
 };
 
@@ -216,10 +220,10 @@ export type ExternalWrapperProps = {
  * Dash context type returned by useDashContext
  */
 export type DashContextType = {
-  componentPath: Array<string | number>;
+  componentPath: DashPath;
   useLoading: (options?: {
-    extraPath?: Array<string | number>;
-    rawPath?: Array<string | number>; // fix a bug in Dash
+    extraPath?: DashPath;
+    rawPath?: DashPath; // fix a bug in Dash
     filterFunc?: (loading: unknown) => boolean;
   }) => boolean;
   useStore: () => unknown;
@@ -233,7 +237,7 @@ export type DashComponentApi = {
   ExternalWrapper: React.ComponentType<ExternalWrapperProps>;
   useDashContext: () => DashContextType;
   DashContext: React.Context<DashContextType | undefined>;
-  getLayout: (path: Array<string | number> | string) => Record<string, unknown> | null;
+  getLayout: (path: DashPath | string) => Record<string, unknown> | null;
   stringifyId: (id: string | Record<string, unknown>) => string;
 };
 

@@ -5,6 +5,7 @@ import type { Workspace } from '@types';
 import { pruneSearchBarModes } from '../uiSlice';
 import { getLeafPanelIds } from '@utils/panels';
 import { resetWorkspace } from '../workspaceSlice';
+import { selectWorkspaceSnapshot } from '../selectors';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
 
@@ -36,10 +37,10 @@ export function createDashSyncMiddleware(
   let lastSyncRef = '';
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let isFirstSync = true;
-  let pendingWorkspace: Partial<Workspace> | null = null;
+  let pendingWorkspace: Workspace | null = null;
   let flushPendingSync: (() => void) | null = null;
 
-  const doSync = (workspace: Partial<Workspace>) => {
+  const doSync = (workspace: Workspace) => {
     if (!setProps) return;
     const serialized = JSON.stringify(workspace);
     if (serialized === lastSyncRef) return;
@@ -97,17 +98,7 @@ export function createDashSyncMiddleware(
 
     if (isWorkspaceAction) {
       const state = store.getState();
-      // Access .present because workspace is wrapped with redux-undo
-      const present = state.workspace.present;
-      const workspace: Partial<Workspace> = {
-        tabs: present.tabs,
-        panel: present.panel,
-        panelTabs: present.panelTabs,
-        activeTabIds: present.activeTabIds,
-        activePanelId: present.activePanelId,
-        favoriteLayouts: present.favoriteLayouts,
-        searchBarsHidden: present.searchBarsHidden,
-      };
+      const workspace = selectWorkspaceSnapshot(state);
 
       if (timeoutId) clearTimeout(timeoutId);
 
@@ -124,7 +115,7 @@ export function createDashSyncMiddleware(
       // Drop search-bar modes of panels that disappeared in this change, whatever
       // removed them (collapsePanel, removeTab/moveTab/splitPanel collapsing an
       // empty panel, reconciliation, rehydration).
-      const leafPanelIds = getLeafPanelIds(present.panel);
+      const leafPanelIds = getLeafPanelIds(workspace.panel);
       const leafSet = new Set<string>(leafPanelIds);
       const stale = Object.keys(state.ui.searchBarModes).some((id) => !leafSet.has(id));
       if (stale) {

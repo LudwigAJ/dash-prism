@@ -787,8 +787,7 @@ four tasks:
    with a clear message
 2. **Injects the layout metadata** into the Prism component, so the user
    interface knows which layouts are available
-3. **Injects a server session fingerprint** (``serverSessionId``) into the same
-   component
+3. **Injects the** ``serverSessionId`` **prop** into the same component
 4. **Creates the callback** that renders the contents of each tab
 
 .. code-block:: python
@@ -798,11 +797,9 @@ four tasks:
 ``init()`` raises :exc:`dash_prism.InitializationError` when ``app.layout`` is
 not set, or when ``initialLayout`` names a layout that you did not register.
 ``init()`` emits a ``UserWarning`` when it cannot find the Prism component in
-the layout. ``init()`` derives ``serverSessionId`` from the registered layout
-IDs, and Prism stores that value with a persisted workspace. On the next load,
-Prism closes each tab whose layout is not in the registry, and shows no error.
-The render callback is async when the app has ``use_async=True``, and sync in
-every other case.
+the layout. The ``serverSessionId`` prop of :class:`dash_prism.Prism` says what
+Prism does with the value that ``init()`` sets. The render callback is async
+when the app has ``use_async=True``, and sync in every other case.
 
 .. versionchanged:: 1.0.0
    The module-level ``dash_prism.SERVER_SESSION_ID`` constant (a new random

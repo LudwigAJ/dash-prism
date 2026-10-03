@@ -62,15 +62,18 @@ export type PrismProps = {
   id?: string;
 
   /**
-   * Fingerprint of the server-side layout registry, stored with the persisted
-   * workspace. On load, tabs whose layout is no longer in registeredLayouts are
-   * closed instead of showing an error; the rest of the workspace is kept and
-   * the stored fingerprint is updated so the registry change is recorded.
-   * dash_prism.init() derives it from the registered layout IDs (stable across
-   * workers and restarts). Which tabs are closed depends only on
-   * registeredLayouts (nothing is closed while no layout is registered at
-   * all); setting this by hand merely changes the recorded fingerprint. Read
-   * once when the component mounts.
+   * The fingerprint of the registered layout IDs. It is a hash of the sorted
+   * IDs, thus it is the same on every worker and after each restart for the same
+   * set of layouts. Prism stores it with the persisted workspace. When the
+   * workspace loads, Prism closes each tab whose layout is not in
+   * registeredLayouts any more. Prism keeps the rest of the workspace and
+   * records the new fingerprint. A closed tab shows no "Layout not found" error,
+   * but a toast tells the user how many tabs Prism closed. The tabs that Prism
+   * closes depend only on registeredLayouts, and Prism closes no tab while that
+   * registry is empty. dash_prism.init() sets this prop unless you set it
+   * yourself. If you set it yourself, init() keeps your value, and only the
+   * recorded fingerprint changes. Prism reads the prop one time, when the
+   * component mounts.
    */
   serverSessionId?: string;
 
