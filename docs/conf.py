@@ -1,6 +1,6 @@
 import os
-import re
 import sys
+import tomllib
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 
@@ -19,10 +19,8 @@ def _read_release() -> str:
     """
     pyproject = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
     if os.path.exists(pyproject):
-        with open(pyproject, encoding="utf-8") as fh:
-            match = re.search(r'^version\s*=\s*"([^"]+)"', fh.read(), re.MULTILINE)
-        if match:
-            return match.group(1)
+        with open(pyproject, "rb") as fh:
+            return tomllib.load(fh)["project"]["version"]
     try:
         return _pkg_version("dash_prism")
     except PackageNotFoundError:
