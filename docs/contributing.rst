@@ -22,8 +22,8 @@ The last command is not optional. ``pnpm run build`` writes the JavaScript
 bundle and the generated Python component classes into the ``dash_prism``
 package. You cannot import ``dash_prism`` until those files exist.
 
-Each Poetry group has one purpose. The ``dev`` group holds Black, mypy, and the
-packages that the component generator needs. The ``test`` group holds pytest,
+Each Poetry group has one purpose. The ``dev`` group holds Black, Ruff, mypy, and
+the packages that the component generator needs. The ``test`` group holds pytest,
 its plugins, and Selenium. The ``docs`` group holds Furo, which pulls in
 Sphinx. The ``demo`` group holds numpy and pandas, which the ``usage.py`` demo
 application needs.
@@ -84,12 +84,13 @@ components. Thus the figure for the components is low.
 Code Style
 ----------
 
-- Python: `Black <https://black.readthedocs.io/>`_ with a line length of 100
+- Python: `Black <https://black.readthedocs.io/>`_ with a line length of 100 and
+  `Ruff <https://docs.astral.sh/ruff/>`_ for the lint rules
 - TypeScript: ESLint and Prettier
 
 .. code-block:: bash
 
-   # All checks: Black, mypy, ESLint and the TypeScript type check
+   # All checks: Black, Ruff, mypy, ESLint and the TypeScript type check
    pnpm run lint
 
    # Format
@@ -99,6 +100,14 @@ Code Style
 ``pnpm run lint`` is the command that CI runs. ``pnpm run lint:py`` and ``pnpm
 run lint:js`` run the Python checks and ESLint alone. ``just lint`` calls ``pnpm
 run lint``.
+
+Ruff and Black check each Python file in the repository, except the files that
+``.gitignore`` lists. ``pnpm run format:py`` sorts the imports with Ruff and then
+formats the code with Black.
+
+The ``[tool.ruff.lint]`` table in ``pyproject.toml`` selects the Ruff rules.
+A comment in that table names each rule that is not yet selected. The comment
+states when to select the rule.
 
 ``mypy`` needs no path on the command line. The ``files`` key in the
 ``[tool.mypy]`` table of ``pyproject.toml`` names the modules that mypy checks.
@@ -113,6 +122,7 @@ list of these files is in more than one place:
 
 - ``.gitignore``
 - The ``extend-exclude`` key of the ``[tool.black]`` table in ``pyproject.toml``
+- The ``extend-exclude`` key of the ``[tool.ruff]`` table
 - The ``omit`` key of the ``[tool.coverage.run]`` table
 - ``GENERATED_FILES`` in ``scripts/check_wheel.py``, which CI and the release
   workflow use to check the wheel
