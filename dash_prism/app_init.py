@@ -36,9 +36,9 @@ import logging
 import math
 import traceback
 import warnings
+import weakref
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, ParamSpec, TypeVar, cast
-from weakref import WeakSet
 
 from dash import MATCH, Dash, Input, Output, html
 from dash.exceptions import PreventUpdate
@@ -57,9 +57,23 @@ DEFAULT_LAYOUT_TIMEOUT: float = 30.0
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
-# Holds the layout wrappers that init() made. A second call to init() finds its
-# own wrapper in app.layout and does not wrap that wrapper again.
-_wrapped_layouts: WeakSet[Callable] = WeakSet()
+# Holds the apps that already have the render callback. A second call to init()
+# for one app must not register a second callback, because Dash then has two
+# callbacks for one output. The set marks the app from outside, so the Dash app
+# gets no new attribute, and it does not keep a discarded app alive.
+_apps_with_render_callback: weakref.WeakSet[Dash] = weakref.WeakSet()
+
+# Holds the Prism components of a static layout that init() filled. The set
+# holds the component object, so a value that the application gave to the
+# registeredLayouts prop is not taken for a connection.
+_filled_prism_components: weakref.WeakSet[Any] = weakref.WeakSet()
+
+# Maps each layout wrapper that init() made to the ID of the Prism component that
+# it fills. A wrapper made for another ID can be inside or outside of this one,
+# so init() looks at the whole chain. A dictionary holds the ID because
+# functools.wraps copies the __dict__ of a function to its wrapper, so an
+# attribute would pass to the next wrapper.
+_wrapper_prism_ids: weakref.WeakKeyDictionary[Callable, str] = weakref.WeakKeyDictionary()
 
 
 class InitializationError(Exception):
@@ -375,6 +389,33 @@ def _check_registry(prism_component: Any | None) -> None:
     logger.info("Initial layout '%s' validated successfully", initial_layout)
 
 
+def _is_connected(app: Dash, prism_id: str) -> bool:
+    """Find out whether ``app.layout`` already fills the Prism component.
+
+    A static layout is connected if :func:`init` already filled its Prism
+    component. A callable layout is connected if it is a wrapper that
+    :func:`init` made for ``prism_id``, or if such a wrapper is inside it. A
+    layout that you set again is not connected, so :func:`init` fills it.
+
+    :param app: The Dash application.
+    :type app: Dash
+    :param prism_id: The ID of the Prism component.
+    :type prism_id: str
+    :returns: ``True`` if a call to :func:`init` has no work to do for the layout.
+    :rtype: bool
+    """
+    layout = app.layout
+    if not callable(layout):
+        return utils.find_component_by_id(layout, prism_id) in _filled_prism_components
+
+    while layout is not None:
+        # "in" gives False for a callable that cannot have a weak reference.
+        if layout in _wrapper_prism_ids and _wrapper_prism_ids[layout] == prism_id:
+            return True
+        layout = getattr(layout, "__wrapped__", None)
+    return False
+
+
 def _attach_metadata(app: Dash, prism_id: str) -> None:
     """Make the Prism component receive the metadata of the registered layouts.
 
@@ -397,17 +438,16 @@ def _attach_metadata(app: Dash, prism_id: str) -> None:
 
     if not callable(original_layout):
         _inject_metadata_into_layout(original_layout, prism_id, layouts_metadata, session_id)
-        return
-
-    if original_layout in _wrapped_layouts:
-        logger.info("Layout already wrapped, skipping re-wrap")
+        prism = utils.find_component_by_id(original_layout, prism_id)
+        if prism is not None:
+            _filled_prism_components.add(prism)
         return
 
     is_async = inspect.iscoroutinefunction(original_layout)
     wrapped_layout = _create_layout_wrapper(
         original_layout, prism_id, layouts_metadata, session_id, is_async
     )
-    _wrapped_layouts.add(wrapped_layout)
+    _wrapper_prism_ids[wrapped_layout] = prism_id
     app.layout = wrapped_layout
     mode = "async" if is_async else "sync"
     logger.info("Wrapped %s callable layout for Prism metadata injection", mode)
@@ -958,6 +998,15 @@ def init(prism_id: str, app: Dash, background: bool = False) -> None:
     ``app.layout``. ``init`` reads the registry one time, so a layout that you
     register after the call is not part of the injected metadata.
 
+    You can call ``init`` more than one time for one app:
+
+    - A second call with the same ``prism_id`` does not fill the layout again,
+      if ``app.layout`` is still the layout that the first call filled.
+    - A call with another ``prism_id`` fills that Prism component too.
+    - A call after you set ``app.layout`` again fills the new layout.
+    - ``init`` registers the render callback for the first call only. The
+      ``background`` argument of a later call has no effect.
+
     ``init`` sends a :class:`UserWarning` and continues in these conditions:
 
     - No layout is registered.
@@ -1028,7 +1077,13 @@ def init(prism_id: str, app: Dash, background: bool = False) -> None:
             "Prism initialization failed:\n" + "\n".join(f"  - {e}" for e in errors)
         )
 
-    prism_component = _validate_prism_component(app, prism_id)
-    _check_registry(prism_component)
-    _attach_metadata(app, prism_id)
-    _register_render_callback(app, background)
+    if _is_connected(app, prism_id):
+        logger.info("Prism component %r is already connected", prism_id)
+    else:
+        prism_component = _validate_prism_component(app, prism_id)
+        _check_registry(prism_component)
+        _attach_metadata(app, prism_id)
+
+    if app not in _apps_with_render_callback:
+        _register_render_callback(app, background)
+        _apps_with_render_callback.add(app)

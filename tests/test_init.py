@@ -629,15 +629,19 @@ def test_callable_layout_multiple_init_no_infinite_wrapping(dash_app: Dash) -> N
 
     dash_app.layout = layout
 
-    # Call init multiple times
+    # Call init multiple times. callback_map is keyed by output, so it hides a
+    # duplicate. _callback_list does not.
     dash_prism.init("prism-multi-init", dash_app)
     first_wrapper = dash_app.layout
+    assert len(dash_app._callback_list) == 1
 
     dash_prism.init("prism-multi-init", dash_app)
     second_wrapper = dash_app.layout
+    assert len(dash_app._callback_list) == 1
 
     dash_prism.init("prism-multi-init", dash_app)
     third_wrapper = dash_app.layout
+    assert len(dash_app._callback_list) == 1
 
     # Verify it's the same wrapper (not re-wrapped)
     assert first_wrapper is second_wrapper
@@ -1404,3 +1408,155 @@ def test_callable_layout_returning_none_stays_none(
 
     assert result is None
     assert "Layout function returned None" in caplog.text
+
+
+# =============================================================================
+# A second init() call for the same app
+# =============================================================================
+
+
+def test_second_init_for_static_layout_registers_no_second_callback(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture
+) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+
+    dash_prism.init("test-prism", prism_app)
+    with caplog.at_level(logging.INFO, logger="dash_prism"):
+        dash_prism.init("test-prism", prism_app)
+
+    assert len(prism_app._callback_list) == 1
+    assert "already connected" in caplog.text
+
+
+def test_second_init_still_rejects_invalid_arguments(prism_app: Dash) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_prism.init("test-prism", prism_app)
+
+    with pytest.raises(dash_prism.InitializationError, match="prism_id"):
+        dash_prism.init("", prism_app)
+
+
+def test_init_for_another_app_registers_its_own_callback() -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    apps = [Dash(__name__, suppress_callback_exceptions=True) for _ in range(2)]
+    for app in apps:
+        app.layout = html.Div([dash_prism.Prism(id="test-prism", style={})])
+        dash_prism.init("test-prism", app)
+
+    assert [len(app._callback_list) for app in apps] == [1, 1]
+
+
+def _two_prisms() -> html.Div:
+    return html.Div([dash_prism.Prism(id="left", style={}), dash_prism.Prism(id="right", style={})])
+
+
+def test_init_for_each_prism_id_fills_its_component_and_registers_one_callback(
+    dash_app: Dash,
+) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_app.layout = _two_prisms()
+
+    dash_prism.init("left", dash_app)
+    dash_prism.init("right", dash_app)
+    dash_prism.init("left", dash_app)
+
+    for prism_id in ("left", "right"):
+        prism = utils.find_component_by_id(dash_app.layout, prism_id)
+        assert "home" in prism.registeredLayouts
+    assert len(dash_app._callback_list) == 1
+
+
+def test_init_for_each_prism_id_wraps_a_callable_layout_for_each_id(dash_app: Dash) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_app.layout = _two_prisms
+
+    dash_prism.init("left", dash_app)
+    left_wrapper = dash_app.layout
+    dash_prism.init("right", dash_app)
+    both_wrapper = dash_app.layout
+    dash_prism.init("left", dash_app)
+    dash_prism.init("right", dash_app)
+
+    assert both_wrapper is not left_wrapper
+    assert dash_app.layout is both_wrapper
+    layout = dash_app.layout()
+    for prism_id in ("left", "right"):
+        assert "home" in utils.find_component_by_id(layout, prism_id).registeredLayouts
+    assert len(dash_app._callback_list) == 1
+
+
+def test_init_after_setting_a_static_layout_again_fills_the_new_layout(dash_app: Dash) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_app.layout = html.Div([dash_prism.Prism(id="test-prism", style={})])
+    dash_prism.init("test-prism", dash_app)
+
+    new_layout = html.Div([dash_prism.Prism(id="test-prism", style={})])
+    dash_app.layout = new_layout
+    dash_prism.init("test-prism", dash_app)
+
+    assert "home" in utils.find_component_by_id(new_layout, "test-prism").registeredLayouts
+    assert len(dash_app._callback_list) == 1
+
+
+def test_init_after_setting_a_callable_layout_again_wraps_the_new_layout(dash_app: Dash) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+
+    def first_layout():
+        return html.Div([dash_prism.Prism(id="test-prism", style={})])
+
+    def second_layout():
+        return html.Div([dash_prism.Prism(id="test-prism", style={})])
+
+    dash_app.layout = first_layout
+    dash_prism.init("test-prism", dash_app)
+    dash_app.layout = second_layout
+    dash_prism.init("test-prism", dash_app)
+
+    prism = utils.find_component_by_id(dash_app.layout(), "test-prism")
+    assert "home" in prism.registeredLayouts
+    assert len(dash_app._callback_list) == 1
+
+
+def test_init_replaces_a_registered_layouts_value_that_the_application_set(
+    dash_app: Dash,
+) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_app.layout = html.Div([dash_prism.Prism(id="test-prism", registeredLayouts={}, style={})])
+
+    dash_prism.init("test-prism", dash_app)
+
+    prism = utils.find_component_by_id(dash_app.layout, "test-prism")
+    assert "home" in prism.registeredLayouts
+    assert len(dash_app._callback_list) == 1
+
+
+def test_init_registers_a_callback_for_each_app_that_shares_a_prism_component() -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    prism = dash_prism.Prism(id="test-prism", style={})
+    apps = [Dash(__name__, suppress_callback_exceptions=True) for _ in range(2)]
+    for app in apps:
+        app.layout = html.Div([prism])
+        dash_prism.init("test-prism", app)
+
+    assert "home" in prism.registeredLayouts
+    assert [len(app._callback_list) for app in apps] == [1, 1]
+
+
+def test_init_accepts_a_callable_layout_that_has_no_weak_reference(dash_app: Dash) -> None:
+    class SlottedLayout:
+        __slots__ = ()
+
+        def __call__(self) -> html.Div:
+            return html.Div([dash_prism.Prism(id="test-prism", style={})])
+
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_app.layout = SlottedLayout()
+
+    dash_prism.init("test-prism", dash_app)
+    wrapper = dash_app.layout
+    dash_prism.init("test-prism", dash_app)
+
+    assert dash_app.layout is wrapper
+    prism = utils.find_component_by_id(dash_app.layout(), "test-prism")
+    assert "home" in prism.registeredLayouts
+    assert len(dash_app._callback_list) == 1
