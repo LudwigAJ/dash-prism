@@ -87,19 +87,20 @@ Code Style
 - Python: `Black <https://black.readthedocs.io/>`_ with a line length of 100 and
   `Ruff <https://docs.astral.sh/ruff/>`_ for the lint rules
 - TypeScript: ESLint and Prettier
+- CSS: `Stylelint <https://stylelint.io/>`_ with the standard configuration
 
 .. code-block:: bash
 
-   # All checks: Black, Ruff, mypy, ESLint and the TypeScript type check
+   # All checks: Black, Ruff, mypy, ESLint, Stylelint and the TypeScript type check
    pnpm run lint
 
    # Format
    pnpm run format:py
    pnpm run format
 
-``pnpm run lint`` is the command that CI runs. ``pnpm run lint:py`` and ``pnpm
-run lint:js`` run the Python checks and ESLint alone. ``just lint`` calls ``pnpm
-run lint``.
+``pnpm run lint`` is the command that CI runs. ``pnpm run lint:py``, ``pnpm run
+lint:js`` and ``pnpm run lint:css`` run the Python checks, ESLint and Stylelint
+alone. ``just lint`` calls ``pnpm run lint``.
 
 Ruff and Black check each Python file in the repository, except the files that
 ``.gitignore`` lists. ``pnpm run format:py`` sorts the imports with Ruff and then
@@ -107,7 +108,8 @@ formats the code with Black.
 
 The ``[tool.ruff.lint]`` table in ``pyproject.toml`` selects the Ruff rules.
 A comment in that table names each rule that is not yet selected. The comment
-states when to select the rule.
+states when to select the rule. ``stylelint.config.mjs`` and
+``eslint.config.mjs`` use the same kind of comment for their rules.
 
 ``mypy`` needs no path on the command line. The ``files`` key in the
 ``[tool.mypy]`` table of ``pyproject.toml`` names the modules that mypy checks.

@@ -44,7 +44,7 @@ check:
 check-py:
     poetry run mypy
 
-# Run all linters (Python + TypeScript)
+# Run all linters (Python, TypeScript and CSS)
 lint:
     pnpm run lint
 
