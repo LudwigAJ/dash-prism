@@ -13,14 +13,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { configureStore, combineReducers, isAction, type Middleware } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, {
+import {
+  workspaceReducer,
   activateTab,
   addTab,
   removeTab,
   splitPanel,
   collapsePanel,
 } from '../workspaceSlice';
-import uiReducer, { setSearchBarMode, openHelpModal } from '../uiSlice';
+import { uiReducer, setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
 import type { PanelId, TabId } from '@types';

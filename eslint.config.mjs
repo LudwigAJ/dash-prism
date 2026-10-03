@@ -58,4 +58,17 @@ export default [
       react: { version: 'detect' },
     },
   },
+  {
+    // The config files outside src/ts need a default export, because their tools read it.
+    files: ['src/ts/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportDefaultDeclaration',
+          message: 'Use a named export (typescript-style, Modules).',
+        },
+      ],
+    },
+  },
 ];

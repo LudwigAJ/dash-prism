@@ -932,4 +932,4 @@ export const {
   syncWorkspace,
 } = workspaceSlice.actions;
 
-export default workspaceSlice.reducer;
+export const workspaceReducer = workspaceSlice.reducer;

@@ -247,5 +247,3 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
     </Dialog>
   );
 }
-
-export default HelpModal;

@@ -18,8 +18,8 @@ import storage from 'redux-persist/lib/storage';
 import storageSession from 'redux-persist/lib/storage/session';
 import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'redux-undo';
 
-import workspaceReducer, { createInitialWorkspaceState } from './workspaceSlice';
-import uiReducer, { initialUiState } from './uiSlice';
+import { workspaceReducer, createInitialWorkspaceState } from './workspaceSlice';
+import { uiReducer, initialUiState } from './uiSlice';
 import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
 import { createReconcileMiddleware } from './middleware/reconcileMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';

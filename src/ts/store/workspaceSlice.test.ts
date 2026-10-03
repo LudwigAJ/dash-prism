@@ -12,7 +12,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, {
+import {
+  workspaceReducer,
   createInitialWorkspaceState,
   addTab,
   removeTab,

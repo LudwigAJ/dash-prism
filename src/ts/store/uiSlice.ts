@@ -107,4 +107,4 @@ export const {
   clearLoadNotice,
 } = uiSlice.actions;
 
-export default uiSlice.reducer;
+export const uiReducer = uiSlice.reducer;

@@ -9,7 +9,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import uiReducer, {
+import {
+  uiReducer,
   initialUiState,
   setSearchBarMode,
   clearSearchBarMode,
@@ -25,7 +26,7 @@ import uiReducer, {
   setLoadNotice,
   clearLoadNotice,
 } from './uiSlice';
-import workspaceReducer, { removeTab } from './workspaceSlice';
+import { workspaceReducer, removeTab } from './workspaceSlice';
 import type { UiState, WorkspaceState } from './types';
 import type { PanelId, TabId } from '@types';
 

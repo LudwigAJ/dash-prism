@@ -104,5 +104,3 @@ export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
     </Dialog>
   );
 }
-
-export default InfoModal;

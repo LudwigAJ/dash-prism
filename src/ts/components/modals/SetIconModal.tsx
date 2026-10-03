@@ -98,5 +98,3 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
     </Dialog>
   );
 }
-
-export default SetIconModal;
