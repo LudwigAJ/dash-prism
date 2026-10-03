@@ -8,6 +8,7 @@ import json
 import pytest
 from dash import Dash, html
 from selenium.common.exceptions import TimeoutException
+
 import dash_prism
 
 from conftest import (

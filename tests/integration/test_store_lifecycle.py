@@ -11,6 +11,7 @@ import time
 
 import pytest
 from dash import Dash, Input, Output, ctx, html
+
 import dash_prism
 
 from conftest import (

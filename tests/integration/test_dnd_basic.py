@@ -17,19 +17,19 @@ from __future__ import annotations
 import pytest
 
 from conftest import (
-    get_tabs,
-    get_panels,
+    ADD_TAB_BUTTON,
+    DROP_ZONE_LEFT,
+    are_drop_zones_present,
+    cancel_drag_with_escape,
     check_browser_errors,
     create_tabs_for_dnd_test,
-    start_drag_without_drop,
-    cancel_drag_with_escape,
-    wait_for_drop_zones_visible,
-    are_drop_zones_present,
+    get_panels,
     get_tab_order_in_panel,
-    ADD_TAB_BUTTON,
-    wait_for_tab_count,
+    get_tabs,
+    start_drag_without_drop,
+    wait_for_drop_zones_visible,
     wait_for_element_invisible,
-    DROP_ZONE_LEFT,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration

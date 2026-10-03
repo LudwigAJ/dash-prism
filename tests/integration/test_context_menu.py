@@ -18,13 +18,13 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 
 from conftest import (
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
     CONTEXT_MENU,
+    TAB_SELECTOR,
     get_tabs,
-    wait_for_tab_count,
-    wait_for_element_invisible,
     open_context_menu,
+    wait_for_element_invisible,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests

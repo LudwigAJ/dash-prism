@@ -14,10 +14,45 @@ Utility functions are defined in testutils.py.
 from __future__ import annotations
 
 import socket
+
 import pytest
-from dash import Dash, html, Input, Output
+from dash import Dash, Input, Output, html
 from selenium.webdriver.chrome.options import Options
+
 import dash_prism
+
+# The test modules import these helpers from this module.
+from testutils import (
+    ADD_TAB_BUTTON,
+    CONTEXT_MENU,
+    DROP_ZONE_LEFT,
+    PRISM_ROOT,
+    SEARCHBAR_INPUT,
+    SPLIT_PANEL_BUTTON,
+    TAB_SELECTOR,
+    are_drop_zones_present,
+    cancel_drag_with_escape,
+    check_browser_errors,
+    create_tabs_for_dnd_test,
+    drag_tab_to_panel_edge,
+    drag_tab_to_position,
+    get_modifier_key,
+    get_panel_id,
+    get_panels,
+    get_tab_id,
+    get_tab_order_in_panel,
+    get_tabs,
+    open_context_menu,
+    press_enter_on_element,
+    set_input_value_react,
+    start_drag_without_drop,
+    trigger_rename_mode,
+    wait_for_drop_zones_visible,
+    wait_for_element_invisible,
+    wait_for_panel_count,
+    wait_for_panel_layout_stable,
+    wait_for_tab_count,
+)
 
 
 def get_free_port() -> int:
@@ -31,54 +66,6 @@ def get_free_port() -> int:
         s.listen(1)
         port = s.getsockname()[1]
     return port
-
-
-# Import all test utilities from testutils module
-from testutils import (
-    # Selectors
-    TAB_SELECTOR,
-    PANEL_SELECTOR,
-    ADD_TAB_BUTTON,
-    SPLIT_PANEL_BUTTON,
-    SEARCHBAR_INPUT,
-    CONTEXT_MENU,
-    PRISM_ROOT,
-    DROP_ZONE_LEFT,
-    DROP_ZONE_RIGHT,
-    DROP_ZONE_TOP,
-    DROP_ZONE_BOTTOM,
-    # Wait helpers
-    wait_for_tab_count,
-    wait_for_panel_count,
-    wait_for_element_invisible,
-    wait_for_drop_zones_visible,
-    wait_for_panel_layout_stable,
-    # Element getters
-    get_tabs,
-    get_panels,
-    get_tab_id,
-    get_panel_id,
-    get_tab_order_in_panel,
-    verify_tab_in_panel,
-    are_drop_zones_present,
-    check_browser_errors,
-    # React interaction helpers
-    trigger_rename_mode,
-    set_input_value_react,
-    press_enter_on_element,
-    # Tab management
-    create_tabs_for_dnd_test,
-    # Drag-and-drop helpers
-    perform_drag_and_drop,
-    drag_tab_to_position,
-    drag_tab_to_panel_edge,
-    drag_tab_to_other_panel,
-    start_drag_without_drop,
-    cancel_drag_with_escape,
-    # Common interaction helpers
-    get_modifier_key,
-    open_context_menu,
-)
 
 
 # =============================================================================

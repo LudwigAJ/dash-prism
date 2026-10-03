@@ -18,11 +18,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
-    TAB_SELECTOR,
     SEARCHBAR_INPUT,
-    wait_for_tab_count,
-    get_tabs,
+    TAB_SELECTOR,
     check_browser_errors,
+    get_tabs,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration

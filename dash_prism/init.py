@@ -28,15 +28,18 @@ Async Handling
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import math
 import copy
-import warnings
+import hashlib
 import inspect
 import logging
+import math
+import warnings
 from collections.abc import Awaitable, Callable, Iterable
-from typing import Any, ParamSpec, TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 from weakref import WeakSet
+
+from .params import ParamValidationError
+from .utils import find_component_by_id as _find_component_by_id
 
 if TYPE_CHECKING:
     from dash import Dash
@@ -193,13 +196,6 @@ class InitializationError(Exception):
 # =============================================================================
 # INTERNAL HELPERS
 # =============================================================================
-
-
-# These two names come from sibling modules of this package.
-# ParamValidationError is the error that the parameter validator raises.
-# find_component_by_id searches a Dash component tree for one component ID.
-from .params import ParamValidationError
-from .utils import find_component_by_id as _find_component_by_id
 
 
 def _inject_metadata_into_layout(
@@ -1007,9 +1003,9 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
 
         dash_prism.init('prism', app, background=True)
     """
-    from dash import Input, Output, MATCH
+    from dash import MATCH, Input, Output
 
-    from .registry import registry, get_registered_layouts_metadata
+    from .registry import get_registered_layouts_metadata, registry
 
     # Do the checks that must pass before init() can continue.
     errors = _validate_init(app, prism_id)

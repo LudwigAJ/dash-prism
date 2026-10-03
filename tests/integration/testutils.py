@@ -11,11 +11,11 @@ in integration tests. These utilities follow Dash testing best practices:
 
 from __future__ import annotations
 
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 # =============================================================================
 # CSS Selectors - use data-testid for stability across React re-renders

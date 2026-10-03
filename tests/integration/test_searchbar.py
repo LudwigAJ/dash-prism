@@ -16,20 +16,17 @@ from __future__ import annotations
 import time
 
 import pytest
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
 
 # Import helpers from conftest
 from conftest import (
-    SEARCHBAR_INPUT,
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
-    PRISM_ROOT,
-    wait_for_tab_count,
-    get_tabs,
+    SEARCHBAR_INPUT,
     check_browser_errors,
+    get_tabs,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests

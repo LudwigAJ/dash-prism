@@ -14,6 +14,7 @@ import time
 import pytest
 from dash import Dash, html
 from selenium.webdriver.support.wait import WebDriverWait
+
 import dash_prism
 from dash_prism.init import _compute_server_session_id
 

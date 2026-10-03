@@ -212,6 +212,8 @@ from .PrismActionComponent import PrismActionComponent as _GeneratedPrismActionC
 from .PrismComponent import PrismComponent as _GeneratedPrismComponent
 from .PrismContentComponent import PrismContentComponent as _GeneratedPrismContentComponent
 
+# isort: split
+
 # These wrapper classes are the public API. Each one is a subclass of the
 # related generated class above, and adds documentation and type annotations.
 from .Action import Action, PrismAction
@@ -293,42 +295,40 @@ for _component in (
 # PUBLIC API
 # =============================================================================
 
+# Icons
+from .icons import AVAILABLE_ICONS, get_available_icons
+
+# Initialization
+from .init import InitializationError, init
+
+# Parameter validation
+from .params import (
+    FieldError,
+    Param,
+    ParamValidationError,
+)
+
 # Layout Registration
 from .registry import (
-    # Main API
-    register_layout,
-    registry,
+    LayoutParameter,
+    LayoutRegistration,
+    LayoutRegistry,
+    clear_registry,
     get_layout,
     get_registered_layouts_metadata,
-    clear_registry,
-    # Classes
-    LayoutRegistration,
-    LayoutParameter,
-    LayoutRegistry,
+    register_layout,
+    registry,
 )
 
 # Utilities
 from .utils import (
-    walk_layout,
-    inject_tab_id,
+    InvalidWorkspace,
     find_component_by_id,
+    inject_tab_id,
     update_component_props,
     validate_workspace,
-    InvalidWorkspace,
+    walk_layout,
 )
-
-# Parameter validation
-from .params import (
-    Param,
-    FieldError,
-    ParamValidationError,
-)
-
-# Initialization
-from .init import init, InitializationError
-
-# Icons
-from .icons import AVAILABLE_ICONS, get_available_icons
 
 # The names that ``from dash_prism import *`` gives, and the documented public
 # API of the package.

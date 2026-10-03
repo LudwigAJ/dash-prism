@@ -14,24 +14,23 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
-    TAB_SELECTOR,
     CONTEXT_MENU,
-    get_tabs,
-    get_tab_id,
-    wait_for_tab_count,
-    wait_for_element_invisible,
+    TAB_SELECTOR,
     check_browser_errors,
+    get_tab_id,
+    get_tabs,
     open_context_menu,
-    trigger_rename_mode,
-    set_input_value_react,
     press_enter_on_element,
+    set_input_value_react,
+    trigger_rename_mode,
+    wait_for_element_invisible,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration

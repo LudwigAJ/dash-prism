@@ -14,6 +14,7 @@ import time
 import pytest
 from dash import Dash, html
 from selenium.webdriver.support.wait import WebDriverWait
+
 import dash_prism
 
 from conftest import PRISM_ROOT, SEARCHBAR_INPUT, check_browser_errors, get_free_port

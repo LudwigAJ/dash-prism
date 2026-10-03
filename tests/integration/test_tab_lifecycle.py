@@ -17,12 +17,12 @@ import pytest
 
 # Import helpers from conftest
 from conftest import (
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
-    wait_for_tab_count,
-    get_tabs,
-    get_tab_id,
+    TAB_SELECTOR,
     check_browser_errors,
+    get_tab_id,
+    get_tabs,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests
@@ -167,8 +167,8 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
 
     The fix ensures the store is stable and tabs persist.
     """
-    from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.wait import WebDriverWait
 
     duo = prism_app_with_layouts
 

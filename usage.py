@@ -19,7 +19,7 @@ import dash
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import MATCH, Input, Output, State, callback, dcc, html, clientside_callback
+from dash import MATCH, Input, Output, State, callback, clientside_callback, dcc, html
 from dash.exceptions import PreventUpdate
 
 import dash_prism

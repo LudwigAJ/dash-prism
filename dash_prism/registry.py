@@ -45,9 +45,9 @@ parameter options that the search bar shows::
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
-import inspect
 from typing import Any, overload
 
 from .params import (
