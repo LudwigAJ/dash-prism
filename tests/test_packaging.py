@@ -4,6 +4,7 @@ Regression tests for packaging and documentation claims (01 §4, §6).
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -150,3 +151,16 @@ def test_package_json_holds_the_only_test_commands() -> None:
 
     for script in ("test:ts", "test", "lint"):
         assert f"pnpm run {script}" in commands["ci.yml"], script
+
+
+def test_every_integration_server_gets_a_free_port() -> None:
+    """Without a port, every xdist worker gives Dash the same first port, and the servers clash."""
+    for path in sorted((ROOT / "tests" / "integration").glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "start_server"
+            ):
+                ports = [keyword for keyword in node.keywords if keyword.arg == "port"]
+                assert ports, f"{path.name}:{node.lineno} starts a server without a port"

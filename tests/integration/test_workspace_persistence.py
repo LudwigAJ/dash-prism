@@ -25,6 +25,7 @@ from conftest import (
     wait_for_tab_count,
     get_tabs,
     check_browser_errors,
+    get_free_port,
 )
 
 # Mark all tests in this module as integration tests
@@ -93,7 +94,7 @@ def test_prism_initializes_without_persistence(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Should have 1 initial tab
@@ -127,7 +128,7 @@ def test_prism_initializes_with_localStorage_persistence(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Should have 1 initial tab
@@ -161,7 +162,7 @@ def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Should have 1 initial tab
@@ -195,7 +196,9 @@ def _persistence_app(*, persistence: bool, persistence_type: str) -> Dash:
 
 def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
     """persistence=False must win over persistence_type='local' (02 B-1)."""
-    dash_duo.start_server(_persistence_app(persistence=False, persistence_type="local"))
+    dash_duo.start_server(
+        _persistence_app(persistence=False, persistence_type="local"), port=get_free_port()
+    )
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
     dash_duo.driver.execute_script("localStorage.clear(); sessionStorage.clear();")
 
@@ -227,7 +230,9 @@ def _wait_for_stored_tab_count(dash_duo, expected: int, timeout: float = 5.0) ->
 
 def test_persistence_true_with_local_type_writes_workspace(dash_duo):
     """The documented combination stores the workspace in localStorage."""
-    dash_duo.start_server(_persistence_app(persistence=True, persistence_type="local"))
+    dash_duo.start_server(
+        _persistence_app(persistence=True, persistence_type="local"), port=get_free_port()
+    )
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     dash_duo.find_element(ADD_TAB_BUTTON).click()
@@ -243,7 +248,9 @@ def test_undo_is_persisted_across_reload(dash_duo):
     """An undo must reach storage on its own, not only after the next action."""
     from conftest import get_modifier_key
 
-    dash_duo.start_server(_persistence_app(persistence=True, persistence_type="local"))
+    dash_duo.start_server(
+        _persistence_app(persistence=True, persistence_type="local"), port=get_free_port()
+    )
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
     _wait_for_stored_tab_count(dash_duo, 1)
 
@@ -304,7 +311,7 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
         return "no-workspace"
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Initial state: 1 tab
@@ -392,7 +399,7 @@ def test_updateWorkspace_modifies_state(dash_duo):
         return {"tabs": modified_tabs}, "updated"
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Wait for initial readWorkspace sync by observing the store callback output
@@ -495,7 +502,7 @@ def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
         return "no-workspace"
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Wait for initial state sync

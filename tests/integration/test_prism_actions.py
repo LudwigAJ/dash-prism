@@ -15,7 +15,7 @@ import pytest
 from dash import Dash, html, Input, Output
 import dash_prism
 
-from conftest import check_browser_errors, PRISM_ROOT
+from conftest import check_browser_errors, get_free_port, PRISM_ROOT
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -34,7 +34,7 @@ def test_prism_action_renders_in_statusbar(dash_duo):
     app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action1, action2], style={})])
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Wait for actions to render (they're rendered asynchronously)
@@ -72,7 +72,7 @@ def test_prism_action_click_triggers_callback(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Verify initial state
@@ -103,7 +103,7 @@ def test_prism_action_renders_text_label(dash_duo):
     app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action], style={})])
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app)
+    dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
 
     # Wait for and verify action renders the label
