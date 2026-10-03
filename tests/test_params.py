@@ -26,7 +26,8 @@ def _annotated(
     n: Annotated[int, Param(ge=1, le=100, description="Rows")] = 10,
     kind: Literal["bar", "line"] = "bar",
     color: Color = Color.RED,
-    tags: list[str] = [],
+    # The test needs a list default. The layout function never changes it.
+    tags: list[str] = [],  # noqa: B006
 ):
     return html.Div()
 

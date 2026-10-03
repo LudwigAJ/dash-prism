@@ -105,7 +105,9 @@ export class ErrorBoundary extends Component<Props, State> {
                         tabIndex={0}
                         className="text-primary cursor-pointer hover:underline"
                         onClick={this.handleRefreshPage}
-                        onKeyDown={(e) => e.key === 'Enter' && this.handleRefreshPage()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') this.handleRefreshPage();
+                        }}
                         data-testid="error-action-refresh"
                       >
                         Refresh page
@@ -118,9 +120,9 @@ export class ErrorBoundary extends Component<Props, State> {
                             tabIndex={0}
                             className="text-destructive cursor-pointer hover:underline"
                             onClick={this.handleClearStorageAndRefresh}
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' && this.handleClearStorageAndRefresh()
-                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') this.handleClearStorageAndRefresh();
+                            }}
                             data-testid="error-action-clear-storage"
                           >
                             clear storage & refresh
@@ -134,7 +136,9 @@ export class ErrorBoundary extends Component<Props, State> {
                       tabIndex={0}
                       className="text-primary cursor-pointer hover:underline"
                       onClick={this.handleRetry}
-                      onKeyDown={(e) => e.key === 'Enter' && this.handleRetry()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') this.handleRetry();
+                      }}
                       data-testid="error-action-retry"
                     >
                       Try again

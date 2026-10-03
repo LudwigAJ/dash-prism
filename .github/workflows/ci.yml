@@ -189,7 +189,7 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      # Black, mypy, ESLint and tsc, as the lint script in package.json defines.
+      # Ruff, Black, mypy, ESLint, Stylelint and tsc, as the lint script in package.json defines.
       - name: Lint and type check
         run: pnpm run lint
 

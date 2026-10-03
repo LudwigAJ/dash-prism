@@ -24,7 +24,7 @@ export type HelpModalProps = {
 };
 
 /**
- * HelpModal - Displays keyboard shortcuts and help information
+ * Displays keyboard shortcuts and help information.
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows version info, keyboard shortcuts, and feature documentation.
@@ -247,5 +247,3 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
     </Dialog>
   );
 }
-
-export default HelpModal;

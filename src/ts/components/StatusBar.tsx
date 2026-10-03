@@ -216,7 +216,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       {leftItems.map((item, index) => (
         <React.Fragment key={item}>
           {index > 0 && <Sep />}
-          {segments[item as Exclude<StatusBarItem, 'updated'>]}
+          {segments[item]}
         </React.Fragment>
       ))}
 

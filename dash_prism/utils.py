@@ -247,7 +247,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     # -------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     tabs = workspace["tabs"]
@@ -294,7 +294,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     # -------------------------------------------------------------------------
@@ -373,7 +373,7 @@ def validate_workspace(
     # -------------------------------------------------------------------------
     # 6. Each panelTabs key is a leaf panel of the panel tree.
     # -------------------------------------------------------------------------
-    for panel_id in panel_tabs.keys():
+    for panel_id in panel_tabs:
         if not isinstance(panel_id, str) or not panel_id:
             continue
         if panel_id not in leaf_panel_ids:
@@ -423,7 +423,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
 
     return workspace
 

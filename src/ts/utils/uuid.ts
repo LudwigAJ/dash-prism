@@ -1,5 +1,5 @@
 /**
- * Generate a short unique ID (8 lowercase hex characters).
+ * Generates a short unique ID (8 lowercase hex characters).
  *
  * Prefers `crypto.randomUUID()`, but that API only exists in secure contexts
  * (HTTPS, `localhost`, `127.0.0.1`). Dash apps are routinely served over plain

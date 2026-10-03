@@ -12,10 +12,11 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html, Input, Output
+from dash import Dash, Input, Output, html
+
 import dash_prism
 
-from conftest import check_browser_errors, get_free_port, PRISM_ROOT
+from conftest import PRISM_ROOT, check_browser_errors, get_free_port
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration

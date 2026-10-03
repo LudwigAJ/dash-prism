@@ -15,18 +15,18 @@ from __future__ import annotations
 
 import pytest
 from dash import Dash, html
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+
 import dash_prism
 
 from conftest import (
-    TAB_SELECTOR,
-    SEARCHBAR_INPUT,
     PRISM_ROOT,
-    wait_for_tab_count,
-    get_tabs,
+    SEARCHBAR_INPUT,
+    TAB_SELECTOR,
     check_browser_errors,
     get_free_port,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration

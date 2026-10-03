@@ -8,7 +8,7 @@ type EmptyTabViewProps = {
 };
 
 /**
- * Normalise the `emptyTabView` prop. Dash props are untyped at runtime, so an
+ * Normalises the `emptyTabView` prop. Dash props are untyped at runtime, so an
  * unknown value (a typo in Python) falls back to the layout grid rather than
  * blanking the tab. Pure; exported for unit tests.
  */

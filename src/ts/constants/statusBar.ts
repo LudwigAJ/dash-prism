@@ -15,8 +15,8 @@ export const DEFAULT_STATUS_BAR_ITEMS: readonly StatusBarItem[] = [
 const KNOWN = new Set<string>(DEFAULT_STATUS_BAR_ITEMS);
 
 /**
- * Normalise the `statusBarItems` prop: keep only known segment names, drop
- * duplicates, keep the caller's order. Dash props are untyped at runtime, so a
+ * Normalises the `statusBarItems` prop: it keeps only known segment names, drops
+ * duplicates and keeps the caller's order. Dash props are untyped at runtime, so a
  * typo in Python must not crash the bar. Pure; exported for unit tests.
  */
 export function resolveStatusBarItems(items: readonly string[] | undefined): StatusBarItem[] {

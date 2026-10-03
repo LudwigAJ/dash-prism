@@ -103,7 +103,7 @@ export const TAB_ICON_NAMES: readonly string[] = iconsConfig.icons;
 export type TabIconName = (typeof TAB_ICON_NAMES)[number];
 
 /**
- * Get a lucide-react icon component by name.
+ * Gets a lucide-react icon component by name.
  * Returns undefined if the icon name is not found or empty.
  */
 export function getTabIcon(name: string | undefined): LucideIcon | undefined {
@@ -112,7 +112,7 @@ export function getTabIcon(name: string | undefined): LucideIcon | undefined {
 }
 
 /**
- * Convert icon name to display label (e.g., "BarChart3" -> "Bar Chart 3")
+ * Converts icon name to display label (e.g., "BarChart3" -> "Bar Chart 3")
  */
 export function getIconLabel(name: string): string {
   return name

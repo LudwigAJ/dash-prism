@@ -13,19 +13,21 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html, dcc, Input, Output, State
+from dash import Dash, Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.support.wait import WebDriverWait
+
 import dash_prism
 
 from conftest import (
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
     PRISM_ROOT,
-    wait_for_tab_count,
-    get_tabs,
+    TAB_SELECTOR,
     check_browser_errors,
     get_free_port,
+    get_tabs,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests
@@ -68,7 +70,7 @@ def wait_for_storage(
     try:
         WebDriverWait(dash_duo.driver, timeout).until(storage_has_value)
         return dash_duo.driver.execute_script(script)
-    except Exception:
+    except WebDriverException:
         return None
 
 
@@ -348,9 +350,6 @@ def test_updateWorkspace_modifies_state(dash_duo):
         name="Test",
         layout=html.Div("Test content", id="test-content"),
     )
-
-    # Store for capturing workspace state
-    workspace_store = {}
 
     app.layout = html.Div(
         [

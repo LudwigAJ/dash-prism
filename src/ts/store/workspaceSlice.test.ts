@@ -12,7 +12,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
-import workspaceReducer, {
+import {
+  workspaceReducer,
   createInitialWorkspaceState,
   addTab,
   removeTab,
@@ -52,7 +53,7 @@ import { subscribeToToasts, type ToastEvent } from '@utils/toastEmitter';
 // =============================================================================
 
 /**
- * Create a test store with optional preloaded state and maxTabs config.
+ * Creates a test store with optional preloaded state and maxTabs config.
  * Wraps workspace reducer with undoable() to match real store structure.
  */
 function createTestStore(
@@ -62,7 +63,7 @@ function createTestStore(
 ) {
   const thunkExtra: ThunkExtra = {
     getMaxTabs: () => maxTabs,
-    getRegisteredLayouts: () => registeredLayouts as import('@types').RegisteredLayouts,
+    getRegisteredLayouts: () => registeredLayouts,
   };
 
   // Wrap workspace reducer with undoable to match real store structure
@@ -99,14 +100,14 @@ function createTestStore(
 type TestStore = ReturnType<typeof createTestStore>;
 
 /**
- * Helper to get workspace state (unwraps redux-undo .present)
+ * Gets the workspace state (unwraps redux-undo .present).
  */
 function getWorkspace(store: TestStore): WorkspaceState {
   return store.getState().workspace.present;
 }
 
 /**
- * Create a minimal valid state for testing.
+ * Creates a minimal valid state for testing.
  */
 function createTestState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
   const panelId = 'test-panel-1' as PanelId;
@@ -139,7 +140,7 @@ function createTestState(overrides: Partial<WorkspaceState> = {}): WorkspaceStat
 }
 
 /**
- * Create a state with two panels for split/move testing.
+ * Creates a state with two panels for split/move testing.
  */
 function createTwoPanelState(): WorkspaceState {
   const panel1Id = 'panel-1' as PanelId;
@@ -180,14 +181,14 @@ function createTwoPanelState(): WorkspaceState {
 }
 
 /**
- * Helper to get tab by ID from store state.
+ * Gets a tab by ID from the store state.
  */
 function getTab(store: TestStore, tabId: string): Tab | undefined {
   return getWorkspace(store).tabs.find((t) => t.id === tabId);
 }
 
 /**
- * Helper to count leaf panels.
+ * Counts the leaf panels.
  */
 function countLeafPanels(panel: PanelNode): number {
   if (panel.children.length === 0) return 1;
@@ -204,7 +205,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
       const initialCount = getWorkspace(store).tabs.length;
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'New Tab' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'New Tab' }));
 
       expect(getWorkspace(store).tabs.length).toBe(initialCount + 1);
       const newTab = getWorkspace(store).tabs[1];
@@ -215,7 +216,7 @@ describe('workspaceSlice', () => {
     it('adds tab to panelTabs tracking', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
 
       const newTabId = getWorkspace(store).tabs[1].id;
       expect(getWorkspace(store).panelTabs['test-panel-1']).toContain(newTabId);
@@ -224,7 +225,7 @@ describe('workspaceSlice', () => {
     it('sets new tab as active', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
 
       const newTabId = getWorkspace(store).tabs[1].id;
       expect(getWorkspace(store).activeTabIds['test-panel-1']).toBe(newTabId);
@@ -236,7 +237,7 @@ describe('workspaceSlice', () => {
 
       await store.dispatch(
         addTab({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           name: 'Chart Tab',
           layoutId: 'chart-layout',
           params: { type: 'bar' },
@@ -251,7 +252,7 @@ describe('workspaceSlice', () => {
     it('generates unique mountKey for new tabs', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
 
       const newTab = getWorkspace(store).tabs[1];
       expect(newTab.mountKey).toBeDefined();
@@ -263,7 +264,7 @@ describe('workspaceSlice', () => {
     it('removes tab from tabs array', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
 
       expect(getWorkspace(store).tabs.length).toBe(2);
       expect(getTab(store, 'tab-1')).toBeUndefined();
@@ -272,7 +273,7 @@ describe('workspaceSlice', () => {
     it('removes tab from panelTabs tracking', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
 
       expect(getWorkspace(store).panelTabs['panel-1']).not.toContain('tab-1');
     });
@@ -282,7 +283,7 @@ describe('workspaceSlice', () => {
       state.tabs[0].locked = true;
       const store = createTestStore(state);
 
-      store.dispatch(removeTab({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'test-tab-1' }));
 
       expect(getWorkspace(store).tabs.length).toBe(1);
       expect(getTab(store, 'test-tab-1')).toBeDefined();
@@ -292,7 +293,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTwoPanelState());
       // tab-1 is active in panel-1
 
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
 
       // Should select remaining tab in panel
       expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-2');
@@ -302,7 +303,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
       const tabCountBefore = getWorkspace(store).tabs.length;
 
-      store.dispatch(removeTab({ tabId: 'nonexistent' as TabId }));
+      store.dispatch(removeTab({ tabId: 'nonexistent' }));
 
       expect(getWorkspace(store).tabs.length).toBe(tabCountBefore);
     });
@@ -315,7 +316,7 @@ describe('workspaceSlice', () => {
       state.tabs[0].layoutParams = { foo: 'bar' };
       const store = createTestStore(state);
 
-      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       expect(getWorkspace(store).tabs.length).toBe(2);
       const duplicate = getWorkspace(store).tabs[1];
@@ -330,7 +331,7 @@ describe('workspaceSlice', () => {
       state.tabs[0].locked = true;
       const store = createTestStore(state);
 
-      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       const duplicate = getWorkspace(store).tabs[1];
       expect(duplicate.locked).toBe(false);
@@ -339,7 +340,7 @@ describe('workspaceSlice', () => {
     it('adds duplicate to same panel as original', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       const duplicate = getWorkspace(store).tabs[1];
       expect(duplicate.panelId).toBe('test-panel-1');
@@ -351,7 +352,7 @@ describe('workspaceSlice', () => {
       state.tabs[0].layoutParams = { key: 'original' };
       const store = createTestStore(state);
 
-      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       const duplicate = getWorkspace(store).tabs[1];
       expect(duplicate.layoutParams).toEqual({ key: 'original' });
@@ -363,7 +364,7 @@ describe('workspaceSlice', () => {
     it('moves tab between panels', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId }));
+      store.dispatch(moveTab({ tabId: 'tab-1', targetPanelId: 'panel-2' }));
 
       const movedTab = getTab(store, 'tab-1');
       expect(movedTab?.panelId).toBe('panel-2');
@@ -374,7 +375,7 @@ describe('workspaceSlice', () => {
     it('updates activeTabIds for both panels', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId }));
+      store.dispatch(moveTab({ tabId: 'tab-1', targetPanelId: 'panel-2' }));
 
       expect(getWorkspace(store).activeTabIds['panel-2']).toBe('tab-1');
       expect(getWorkspace(store).activePanelId).toBe('panel-2');
@@ -385,9 +386,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
       const stateBefore = store.getState().workspace;
 
-      store.dispatch(
-        moveTab({ tabId: 'test-tab-1' as TabId, targetPanelId: 'test-panel-1' as PanelId })
-      );
+      store.dispatch(moveTab({ tabId: 'test-tab-1', targetPanelId: 'test-panel-1' }));
 
       expect(store.getState().workspace).toEqual(stateBefore);
     });
@@ -395,9 +394,7 @@ describe('workspaceSlice', () => {
     it('moves tab to specific index when provided', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(
-        moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId, targetIndex: 0 })
-      );
+      store.dispatch(moveTab({ tabId: 'tab-1', targetPanelId: 'panel-2', targetIndex: 0 }));
 
       expect(getWorkspace(store).panelTabs['panel-2'][0]).toBe('tab-1');
       expect(getWorkspace(store).panelTabs['panel-2'][1]).toBe('tab-3');
@@ -409,8 +406,8 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         moveTab({
-          tabId: 'tab-1' as TabId,
-          targetPanelId: 'nonexistent-panel' as PanelId,
+          tabId: 'tab-1',
+          targetPanelId: 'nonexistent-panel',
         })
       );
 
@@ -424,8 +421,8 @@ describe('workspaceSlice', () => {
       // container-1 is the parent container, not a leaf panel
       store.dispatch(
         moveTab({
-          tabId: 'tab-1' as TabId,
-          targetPanelId: 'container-1' as PanelId,
+          tabId: 'tab-1',
+          targetPanelId: 'container-1',
         })
       );
 
@@ -437,7 +434,7 @@ describe('workspaceSlice', () => {
     it('reorders tabs within a panel', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(reorderTab({ panelId: 'panel-1' as PanelId, fromIndex: 0, toIndex: 1 }));
+      store.dispatch(reorderTab({ panelId: 'panel-1', fromIndex: 0, toIndex: 1 }));
 
       expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
     });
@@ -445,7 +442,7 @@ describe('workspaceSlice', () => {
     it('clamps toIndex to valid range', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(reorderTab({ panelId: 'panel-1' as PanelId, fromIndex: 0, toIndex: 100 }));
+      store.dispatch(reorderTab({ panelId: 'panel-1', fromIndex: 0, toIndex: 100 }));
 
       expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
     });
@@ -453,7 +450,7 @@ describe('workspaceSlice', () => {
     it('ignores invalid fromIndex', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(reorderTab({ panelId: 'panel-1' as PanelId, fromIndex: -1, toIndex: 0 }));
+      store.dispatch(reorderTab({ panelId: 'panel-1', fromIndex: -1, toIndex: 0 }));
 
       expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-1', 'tab-2']);
     });
@@ -463,7 +460,7 @@ describe('workspaceSlice', () => {
     it('renames the specified tab', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(renameTab({ tabId: 'test-tab-1' as TabId, name: 'Renamed Tab' }));
+      store.dispatch(renameTab({ tabId: 'test-tab-1', name: 'Renamed Tab' }));
 
       expect(getTab(store, 'test-tab-1')?.name).toBe('Renamed Tab');
     });
@@ -472,7 +469,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
       const longName = 'A'.repeat(MAX_TAB_NAME_LENGTH + 10);
 
-      store.dispatch(renameTab({ tabId: 'test-tab-1' as TabId, name: longName }));
+      store.dispatch(renameTab({ tabId: 'test-tab-1', name: longName }));
 
       expect(getTab(store, 'test-tab-1')?.name.length).toBe(MAX_TAB_NAME_LENGTH);
     });
@@ -482,7 +479,7 @@ describe('workspaceSlice', () => {
     it('lockTab locks a tab', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(lockTab({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(lockTab({ tabId: 'test-tab-1' }));
 
       expect(getTab(store, 'test-tab-1')?.locked).toBe(true);
     });
@@ -492,7 +489,7 @@ describe('workspaceSlice', () => {
       state.tabs[0].locked = true;
       const store = createTestStore(state);
 
-      store.dispatch(unlockTab({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(unlockTab({ tabId: 'test-tab-1' }));
 
       expect(getTab(store, 'test-tab-1')?.locked).toBe(false);
     });
@@ -500,10 +497,10 @@ describe('workspaceSlice', () => {
     it('toggleTabLock toggles lock state', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(toggleTabLock({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(toggleTabLock({ tabId: 'test-tab-1' }));
       expect(getTab(store, 'test-tab-1')?.locked).toBe(true);
 
-      store.dispatch(toggleTabLock({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(toggleTabLock({ tabId: 'test-tab-1' }));
       expect(getTab(store, 'test-tab-1')?.locked).toBe(false);
     });
   });
@@ -512,7 +509,7 @@ describe('workspaceSlice', () => {
     it('setTabIcon sets the tab icon', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(setTabIcon({ tabId: 'test-tab-1' as TabId, icon: 'Star' }));
+      store.dispatch(setTabIcon({ tabId: 'test-tab-1', icon: 'Star' }));
 
       expect(getTab(store, 'test-tab-1')?.icon).toBe('Star');
     });
@@ -520,7 +517,7 @@ describe('workspaceSlice', () => {
     it('setTabStyle sets the tab style', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(setTabStyle({ tabId: 'test-tab-1' as TabId, style: 'blue' }));
+      store.dispatch(setTabStyle({ tabId: 'test-tab-1', style: 'blue' }));
 
       expect(getTab(store, 'test-tab-1')?.style).toBe('blue');
     });
@@ -533,7 +530,7 @@ describe('workspaceSlice', () => {
       const originalMountKey = state.tabs[0].mountKey;
       const store = createTestStore(state);
 
-      store.dispatch(refreshTab({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(refreshTab({ tabId: 'test-tab-1' }));
 
       expect(getTab(store, 'test-tab-1')?.mountKey).not.toBe(originalMountKey);
     });
@@ -544,7 +541,7 @@ describe('workspaceSlice', () => {
       const originalMountKey = state.tabs[0].mountKey;
       const store = createTestStore(state);
 
-      store.dispatch(refreshTab({ tabId: 'test-tab-1' as TabId }));
+      store.dispatch(refreshTab({ tabId: 'test-tab-1' }));
 
       expect(getTab(store, 'test-tab-1')?.mountKey).toBe(originalMountKey);
     });
@@ -559,14 +556,14 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
 
       // Add a second tab so we can split
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Tab 2' }));
       const tab2Id = getWorkspace(store).tabs[1].id;
 
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: tab2Id as TabId,
+          tabId: tab2Id,
         })
       );
 
@@ -576,14 +573,14 @@ describe('workspaceSlice', () => {
     it('preserves original panel ID', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
       const tab2Id = getWorkspace(store).tabs[1].id;
 
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: tab2Id as TabId,
+          tabId: tab2Id,
         })
       );
 
@@ -595,14 +592,14 @@ describe('workspaceSlice', () => {
     it('moves tab to new panel', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Tab 2' }));
       const tab2Id = getWorkspace(store).tabs[1].id;
 
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: tab2Id as TabId,
+          tabId: tab2Id,
         })
       );
 
@@ -616,9 +613,9 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: 'test-tab-1' as TabId,
+          tabId: 'test-tab-1',
         })
       );
 
@@ -628,14 +625,14 @@ describe('workspaceSlice', () => {
     it('respects position=before for left/top placement', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
       const tab2Id = getWorkspace(store).tabs[1].id;
 
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: tab2Id as TabId,
+          tabId: tab2Id,
           position: 'before',
         })
       );
@@ -653,7 +650,7 @@ describe('workspaceSlice', () => {
     it('moves all tabs to remaining panel', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(collapsePanel({ panelId: 'panel-2' as PanelId }));
+      store.dispatch(collapsePanel({ panelId: 'panel-2' }));
 
       expect(getTab(store, 'tab-3')?.panelId).toBe('panel-1');
       expect(getWorkspace(store).panelTabs['panel-1']).toContain('tab-3');
@@ -662,7 +659,7 @@ describe('workspaceSlice', () => {
     it('cleans up collapsed panel state', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(collapsePanel({ panelId: 'panel-2' as PanelId }));
+      store.dispatch(collapsePanel({ panelId: 'panel-2' }));
 
       expect(getWorkspace(store).panelTabs['panel-2']).toBeUndefined();
       expect(getWorkspace(store).activeTabIds['panel-2']).toBeUndefined();
@@ -671,17 +668,17 @@ describe('workspaceSlice', () => {
     it('does not collapse last remaining panel', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(collapsePanel({ panelId: 'test-panel-1' as PanelId }));
+      store.dispatch(collapsePanel({ panelId: 'test-panel-1' }));
 
       expect(countLeafPanels(getWorkspace(store).panel)).toBe(1);
     });
 
     it('updates activePanelId to remaining panel', () => {
       const state = createTwoPanelState();
-      state.activePanelId = 'panel-2' as PanelId;
+      state.activePanelId = 'panel-2';
       const store = createTestStore(state);
 
-      store.dispatch(collapsePanel({ panelId: 'panel-2' as PanelId }));
+      store.dispatch(collapsePanel({ panelId: 'panel-2' }));
 
       expect(getWorkspace(store).activePanelId).toBe('panel-1');
     });
@@ -691,7 +688,7 @@ describe('workspaceSlice', () => {
     it('updates panel size with string value', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(resizePanel({ panelId: 'panel-1' as PanelId, size: '30%' }));
+      store.dispatch(resizePanel({ panelId: 'panel-1', size: '30%' }));
 
       const panel1 = getWorkspace(store).panel.children.find((c) => c.id === 'panel-1');
       expect(panel1?.size).toBe('30%');
@@ -700,7 +697,7 @@ describe('workspaceSlice', () => {
     it('accepts numeric size values', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(resizePanel({ panelId: 'panel-1' as PanelId, size: 300 }));
+      store.dispatch(resizePanel({ panelId: 'panel-1', size: 300 }));
 
       const panel1 = getWorkspace(store).panel.children.find((c) => c.id === 'panel-1');
       expect(panel1?.size).toBe(300);
@@ -711,7 +708,7 @@ describe('workspaceSlice', () => {
     it('pinPanel sets pinned to true', () => {
       const store = createTestStore(createTestState());
 
-      store.dispatch(pinPanel({ panelId: 'test-panel-1' as PanelId }));
+      store.dispatch(pinPanel({ panelId: 'test-panel-1' }));
 
       expect(getWorkspace(store).panel.pinned).toBe(true);
     });
@@ -721,7 +718,7 @@ describe('workspaceSlice', () => {
       state.panel.pinned = true;
       const store = createTestStore(state);
 
-      store.dispatch(unpinPanel({ panelId: 'test-panel-1' as PanelId }));
+      store.dispatch(unpinPanel({ panelId: 'test-panel-1' }));
 
       expect(getWorkspace(store).panel.pinned).toBe(false);
     });
@@ -929,11 +926,11 @@ describe('workspaceSlice', () => {
       store.dispatch(
         syncWorkspace({
           tabs: [
-            { id: 'tab-1' as TabId, name: 'Valid', panelId, createdAt: Date.now(), mountKey: 'm1' },
+            { id: 'tab-1', name: 'Valid', panelId, createdAt: Date.now(), mountKey: 'm1' },
             {
-              id: 'tab-2' as TabId,
+              id: 'tab-2',
               name: 'Orphaned',
-              panelId: 'non-existent-panel' as PanelId,
+              panelId: 'non-existent-panel',
               createdAt: Date.now(),
               mountKey: 'm2',
             },
@@ -954,11 +951,9 @@ describe('workspaceSlice', () => {
       // Sync with mismatched panelTabs
       store.dispatch(
         syncWorkspace({
-          tabs: [
-            { id: 'new-tab' as TabId, name: 'New', panelId, createdAt: Date.now(), mountKey: 'm1' },
-          ],
+          tabs: [{ id: 'new-tab', name: 'New', panelId, createdAt: Date.now(), mountKey: 'm1' }],
           panelTabs: {
-            [panelId]: ['wrong-tab-id' as TabId], // Doesn't match tabs
+            [panelId]: ['wrong-tab-id'], // Doesn't match tabs
           },
         })
       );
@@ -972,7 +967,7 @@ describe('workspaceSlice', () => {
       function createReorderedState(): WorkspaceState {
         const panelId = 'panel-1' as PanelId;
         const mk = (id: string, createdAt: number) => ({
-          id: id as TabId,
+          id: id,
           name: id,
           panelId,
           createdAt,
@@ -982,7 +977,7 @@ describe('workspaceSlice', () => {
           tabs: [mk('tab-a', 1), mk('tab-b', 2), mk('tab-c', 3)],
           panel: { id: panelId, order: 0, direction: 'horizontal', children: [], size: '100%' },
           panelTabs: { [panelId]: ['tab-c', 'tab-a', 'tab-b'] as TabId[] },
-          activeTabIds: { [panelId]: 'tab-c' as TabId },
+          activeTabIds: { [panelId]: 'tab-c' },
           activePanelId: panelId,
           favoriteLayouts: [],
           searchBarsHidden: false,
@@ -1010,7 +1005,7 @@ describe('workspaceSlice', () => {
 
       it('survives a real reorderTab followed by a readWorkspace/updateWorkspace round trip', () => {
         const store = createTestStore(createTwoPanelState());
-        store.dispatch(reorderTab({ panelId: 'panel-1' as PanelId, fromIndex: 0, toIndex: 1 }));
+        store.dispatch(reorderTab({ panelId: 'panel-1', fromIndex: 0, toIndex: 1 }));
         expect(getWorkspace(store).panelTabs['panel-1']).toEqual(['tab-2', 'tab-1']);
 
         const snapshot = getWorkspace(store);
@@ -1037,7 +1032,7 @@ describe('workspaceSlice', () => {
           syncWorkspace({
             tabs: [
               ...state.tabs,
-              { id: 'tab-d' as TabId, name: 'tab-d', panelId, createdAt: 4, mountKey: 'm-d' },
+              { id: 'tab-d', name: 'tab-d', panelId, createdAt: 4, mountKey: 'm-d' },
             ],
           })
         );
@@ -1107,7 +1102,7 @@ describe('workspaceSlice', () => {
               'panel-2': ['tab-3'],
               'container-1': ['tab-1'],
               'gone-panel': ['tab-3'],
-            } as Record<PanelId, TabId[]>,
+            },
           })
         );
 
@@ -1119,7 +1114,7 @@ describe('workspaceSlice', () => {
       it('falls back to the first displayed tab (not the first created) when the active tab disappears', () => {
         const state = createReorderedState();
         state.panelTabs = { 'panel-1': ['tab-b', 'tab-c', 'tab-a'] as TabId[] };
-        state.activeTabIds = { 'panel-1': 'tab-b' as TabId };
+        state.activeTabIds = { 'panel-1': 'tab-b' };
         const store = createTestStore(state);
 
         store.dispatch(syncWorkspace({ tabs: state.tabs.filter((t) => t.id !== 'tab-b') }));
@@ -1149,7 +1144,7 @@ describe('workspaceSlice', () => {
         syncWorkspace({
           tabs: [
             {
-              id: 'real-tab' as TabId,
+              id: 'real-tab',
               name: 'Real',
               panelId,
               createdAt: Date.now(),
@@ -1157,7 +1152,7 @@ describe('workspaceSlice', () => {
             },
           ],
           activeTabIds: {
-            [panelId]: 'deleted-tab' as TabId,
+            [panelId]: 'deleted-tab',
           },
         })
       );
@@ -1173,7 +1168,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         syncWorkspace({
-          activePanelId: 'non-existent' as PanelId,
+          activePanelId: 'non-existent',
         })
       );
 
@@ -1248,7 +1243,7 @@ describe('workspaceSlice', () => {
     it('keeps the saved active panel when a different panel collapses', () => {
       const state = createStaleState();
       // panel-2 (only tab on 'gone') will collapse; the user had panel-1 focused.
-      state.activePanelId = 'panel-1' as PanelId;
+      state.activePanelId = 'panel-1';
       state.tabs[0].layoutId = 'home';
       state.tabs[0].locked = false;
       const store = createTestStore(state);
@@ -1262,7 +1257,7 @@ describe('workspaceSlice', () => {
 
     it('moves focus when the active panel itself collapses', () => {
       const state = createStaleState();
-      state.activePanelId = 'panel-2' as PanelId;
+      state.activePanelId = 'panel-2';
       state.tabs[0].layoutId = 'home';
       state.tabs[0].locked = false;
       const store = createTestStore(state);
@@ -1327,7 +1322,7 @@ describe('workspaceSlice', () => {
     it('sets the active panel', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(setActivePanel({ panelId: 'panel-2' as PanelId }));
+      store.dispatch(setActivePanel({ panelId: 'panel-2' }));
 
       expect(getWorkspace(store).activePanelId).toBe('panel-2');
     });
@@ -1337,7 +1332,7 @@ describe('workspaceSlice', () => {
     it('sets the active tab for the panel', () => {
       const store = createTestStore(createTwoPanelState());
 
-      store.dispatch(activateTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-2', panelId: 'panel-1' }));
 
       expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-2');
       expect(getWorkspace(store).activePanelId).toBe('panel-1');
@@ -1352,7 +1347,7 @@ describe('workspaceSlice', () => {
     function createStateWithTabs(tabCount: number): WorkspaceState {
       const panelId = 'test-panel' as PanelId;
       const tabs: Tab[] = Array.from({ length: tabCount }, (_, i) => ({
-        id: `tab-${i}` as TabId,
+        id: `tab-${i}`,
         name: `Tab ${i}`,
         panelId,
         createdAt: Date.now(),
@@ -1369,7 +1364,7 @@ describe('workspaceSlice', () => {
           size: '100%',
         },
         panelTabs: { [panelId]: tabs.map((t) => t.id) },
-        activeTabIds: { [panelId]: tabs[0]?.id ?? ('' as TabId) },
+        activeTabIds: { [panelId]: tabs[0]?.id ?? '' },
         activePanelId: panelId,
         favoriteLayouts: [],
         searchBarsHidden: false,
@@ -1380,7 +1375,7 @@ describe('workspaceSlice', () => {
       it('blocks addTab when at maxTabs limit', async () => {
         const store = createTestStore(createStateWithTabs(3), 3);
 
-        await store.dispatch(addTab({ panelId: 'test-panel' as PanelId, name: 'New Tab' }));
+        await store.dispatch(addTab({ panelId: 'test-panel', name: 'New Tab' }));
 
         expect(getWorkspace(store).tabs.length).toBe(3);
       });
@@ -1388,7 +1383,7 @@ describe('workspaceSlice', () => {
       it('allows addTab when below maxTabs limit', async () => {
         const store = createTestStore(createStateWithTabs(3), 5);
 
-        await store.dispatch(addTab({ panelId: 'test-panel' as PanelId, name: 'New Tab' }));
+        await store.dispatch(addTab({ panelId: 'test-panel', name: 'New Tab' }));
 
         expect(getWorkspace(store).tabs.length).toBe(4);
       });
@@ -1396,7 +1391,7 @@ describe('workspaceSlice', () => {
       it('allows unlimited tabs when maxTabs is 0', async () => {
         const store = createTestStore(createStateWithTabs(100), 0);
 
-        await store.dispatch(addTab({ panelId: 'test-panel' as PanelId, name: 'New Tab' }));
+        await store.dispatch(addTab({ panelId: 'test-panel', name: 'New Tab' }));
 
         expect(getWorkspace(store).tabs.length).toBe(101);
       });
@@ -1404,7 +1399,7 @@ describe('workspaceSlice', () => {
       it('allows unlimited tabs when maxTabs is negative', async () => {
         const store = createTestStore(createStateWithTabs(50), -1);
 
-        await store.dispatch(addTab({ panelId: 'test-panel' as PanelId, name: 'New Tab' }));
+        await store.dispatch(addTab({ panelId: 'test-panel', name: 'New Tab' }));
 
         expect(getWorkspace(store).tabs.length).toBe(51);
       });
@@ -1414,7 +1409,7 @@ describe('workspaceSlice', () => {
       it('blocks duplicateTab when at maxTabs limit', async () => {
         const store = createTestStore(createStateWithTabs(3), 3);
 
-        await store.dispatch(duplicateTab({ tabId: 'tab-0' as TabId }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-0' }));
 
         expect(getWorkspace(store).tabs.length).toBe(3);
       });
@@ -1422,7 +1417,7 @@ describe('workspaceSlice', () => {
       it('allows duplicateTab when below maxTabs limit', async () => {
         const store = createTestStore(createStateWithTabs(3), 5);
 
-        await store.dispatch(duplicateTab({ tabId: 'tab-0' as TabId }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-0' }));
 
         expect(getWorkspace(store).tabs.length).toBe(4);
         expect(getWorkspace(store).tabs[3].name).toBe('Tab 0 (copy)');
@@ -1431,7 +1426,7 @@ describe('workspaceSlice', () => {
       it('allows unlimited tabs when maxTabs is 0 (via duplicate)', async () => {
         const store = createTestStore(createStateWithTabs(100), 0);
 
-        await store.dispatch(duplicateTab({ tabId: 'tab-0' as TabId }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-0' }));
 
         expect(getWorkspace(store).tabs.length).toBe(101);
       });
@@ -1442,9 +1437,9 @@ describe('workspaceSlice', () => {
         const state = createTestState({
           tabs: [
             {
-              id: 'tab-1' as TabId,
+              id: 'tab-1',
               name: 'Analytics',
-              panelId: 'test-panel-1' as PanelId,
+              panelId: 'test-panel-1',
               layoutId: 'analytics',
               createdAt: Date.now(),
               mountKey: 'm1',
@@ -1455,7 +1450,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(state, 16, layouts);
 
         await store.dispatch(
-          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'analytics', name: 'Analytics' })
+          addTab({ panelId: 'test-panel-1', layoutId: 'analytics', name: 'Analytics' })
         );
 
         // Tab should not be added
@@ -1468,7 +1463,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(state, 16, layouts);
 
         await store.dispatch(
-          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'analytics', name: 'Analytics' })
+          addTab({ panelId: 'test-panel-1', layoutId: 'analytics', name: 'Analytics' })
         );
 
         expect(getWorkspace(store).tabs.length).toBe(2);
@@ -1479,9 +1474,9 @@ describe('workspaceSlice', () => {
         const state = createTestState({
           tabs: [
             {
-              id: 'tab-1' as TabId,
+              id: 'tab-1',
               name: 'Chart',
-              panelId: 'test-panel-1' as PanelId,
+              panelId: 'test-panel-1',
               layoutId: 'chart',
               createdAt: Date.now(),
               mountKey: 'm1',
@@ -1492,7 +1487,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(state, 16, layouts);
 
         await store.dispatch(
-          addTab({ panelId: 'test-panel-1' as PanelId, layoutId: 'chart', name: 'Chart 2' })
+          addTab({ panelId: 'test-panel-1', layoutId: 'chart', name: 'Chart 2' })
         );
 
         expect(getWorkspace(store).tabs.length).toBe(2);
@@ -1512,9 +1507,9 @@ describe('workspaceSlice', () => {
         const state = createTestState({
           tabs: [
             {
-              id: 'tab-1' as TabId,
+              id: 'tab-1',
               name: 'Analytics',
-              panelId: 'test-panel-1' as PanelId,
+              panelId: 'test-panel-1',
               layoutId: 'analytics',
               createdAt: Date.now(),
               mountKey: 'm1',
@@ -1524,7 +1519,7 @@ describe('workspaceSlice', () => {
         const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
         const store = createTestStore(state, 16, layouts);
 
-        await store.dispatch(duplicateTab({ tabId: 'tab-1' as TabId }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-1' }));
 
         expect(getWorkspace(store).tabs.length).toBe(1);
       });
@@ -1533,9 +1528,9 @@ describe('workspaceSlice', () => {
         const state = createTestState({
           tabs: [
             {
-              id: 'tab-1' as TabId,
+              id: 'tab-1',
               name: 'Chart',
-              panelId: 'test-panel-1' as PanelId,
+              panelId: 'test-panel-1',
               layoutId: 'chart',
               createdAt: Date.now(),
               mountKey: 'm1',
@@ -1545,7 +1540,7 @@ describe('workspaceSlice', () => {
         const layouts = { chart: { name: 'Chart', allowMultiple: true } };
         const store = createTestStore(state, 16, layouts);
 
-        await store.dispatch(duplicateTab({ tabId: 'tab-1' as TabId }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-1' }));
 
         expect(getWorkspace(store).tabs.length).toBe(2);
       });
@@ -1555,7 +1550,7 @@ describe('workspaceSlice', () => {
       it('allows moveTab regardless of tab count', () => {
         const store = createTestStore(createTwoPanelState(), 2);
 
-        store.dispatch(moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId }));
+        store.dispatch(moveTab({ tabId: 'tab-1', targetPanelId: 'panel-2' }));
 
         expect(getWorkspace(store).tabs.length).toBe(3);
         const movedTab = getTab(store, 'tab-1');
@@ -1574,7 +1569,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         updateTabLayout({
-          tabId: 'test-tab-1' as TabId,
+          tabId: 'test-tab-1',
           layoutId: 'chart-layout',
           name: 'Chart View',
           params: { type: 'bar' },
@@ -1597,7 +1592,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         updateTabLayout({
-          tabId: 'test-tab-1' as TabId,
+          tabId: 'test-tab-1',
           layoutId: 'new-layout',
           name: 'New View',
         })
@@ -1615,7 +1610,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         updateTabLayout({
-          tabId: 'test-tab-1' as TabId,
+          tabId: 'test-tab-1',
           layoutId: 'same-layout',
           name: 'Same View',
         })
@@ -1633,7 +1628,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         updateTabLayout({
-          tabId: 'test-tab-1' as TabId,
+          tabId: 'test-tab-1',
           layoutId: 'new-layout',
           name: 'New View',
         })
@@ -1649,7 +1644,7 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         updateTabLayout({
-          tabId: 'nonexistent' as TabId,
+          tabId: 'nonexistent',
           layoutId: 'new-layout',
           name: 'Test',
         })
@@ -1669,7 +1664,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTestState());
         const tabCountBefore = getWorkspace(store).tabs.length;
 
-        const result = await store.dispatch(duplicateTab({ tabId: 'nonexistent' as TabId }));
+        const result = await store.dispatch(duplicateTab({ tabId: 'nonexistent' }));
 
         expect(result.type).toBe('workspace/duplicateTab/rejected');
         expect(getWorkspace(store).tabs.length).toBe(tabCountBefore);
@@ -1681,9 +1676,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTwoPanelState());
         const stateBefore = store.getState().workspace;
 
-        store.dispatch(
-          moveTab({ tabId: 'nonexistent' as TabId, targetPanelId: 'panel-2' as PanelId })
-        );
+        store.dispatch(moveTab({ tabId: 'nonexistent', targetPanelId: 'panel-2' }));
 
         expect(store.getState().workspace).toEqual(stateBefore);
       });
@@ -1694,7 +1687,7 @@ describe('workspaceSlice', () => {
         const panel2Id = 'panel-2' as PanelId;
         state.panel.children = [
           {
-            id: 'test-panel-1' as PanelId,
+            id: 'test-panel-1',
             order: 0 as const,
             direction: 'horizontal',
             children: [],
@@ -1704,7 +1697,7 @@ describe('workspaceSlice', () => {
         ];
         const store = createTestStore(state);
 
-        store.dispatch(moveTab({ tabId: 'test-tab-1' as TabId, targetPanelId: panel2Id }));
+        store.dispatch(moveTab({ tabId: 'test-tab-1', targetPanelId: panel2Id }));
 
         expect(getWorkspace(store).panelTabs[panel2Id]).toContain('test-tab-1');
       });
@@ -1715,7 +1708,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTestState());
         const originalName = getTab(store, 'test-tab-1')?.name;
 
-        store.dispatch(renameTab({ tabId: 'nonexistent' as TabId, name: 'New Name' }));
+        store.dispatch(renameTab({ tabId: 'nonexistent', name: 'New Name' }));
 
         expect(getTab(store, 'test-tab-1')?.name).toBe(originalName);
       });
@@ -1723,7 +1716,7 @@ describe('workspaceSlice', () => {
       it('handles empty string name', () => {
         const store = createTestStore(createTestState());
 
-        store.dispatch(renameTab({ tabId: 'test-tab-1' as TabId, name: '' }));
+        store.dispatch(renameTab({ tabId: 'test-tab-1', name: '' }));
 
         expect(getTab(store, 'test-tab-1')?.name).toBe('');
       });
@@ -1734,9 +1727,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTestState());
         const originalActiveTabId = getWorkspace(store).activeTabIds['test-panel-1'];
 
-        store.dispatch(
-          activateTab({ tabId: 'nonexistent' as TabId, panelId: 'test-panel-1' as PanelId })
-        );
+        store.dispatch(activateTab({ tabId: 'nonexistent', panelId: 'test-panel-1' }));
 
         // Should not change activeTabId when tab doesn't exist
         expect(getWorkspace(store).activeTabIds['test-panel-1']).toBe(originalActiveTabId);
@@ -1747,7 +1738,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(state);
 
         // Try to select tab-1 (belongs to panel-1) in panel-2
-        store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-2' as PanelId }));
+        store.dispatch(activateTab({ tabId: 'tab-1', panelId: 'panel-2' }));
 
         // Should not change panel-2's activeTabId
         expect(getWorkspace(store).activeTabIds['panel-2']).toBe('tab-3');
@@ -1759,7 +1750,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTestState());
         const originalPanelId = getWorkspace(store).activePanelId;
 
-        store.dispatch(setActivePanel({ panelId: 'nonexistent' as PanelId }));
+        store.dispatch(setActivePanel({ panelId: 'nonexistent' }));
 
         // Should not change activePanelId when panel doesn't exist
         expect(getWorkspace(store).activePanelId).toBe(originalPanelId);
@@ -1771,7 +1762,7 @@ describe('workspaceSlice', () => {
         const originalPanelId = getWorkspace(store).activePanelId;
 
         // Try to set active panel to the container panel
-        store.dispatch(setActivePanel({ panelId: 'container-1' as PanelId }));
+        store.dispatch(setActivePanel({ panelId: 'container-1' }));
 
         // Should not change since container-1 is not a leaf
         expect(getWorkspace(store).activePanelId).toBe(originalPanelId);
@@ -1782,7 +1773,7 @@ describe('workspaceSlice', () => {
       it('lockTab is a no-op when tab does not exist', () => {
         const store = createTestStore(createTestState());
 
-        store.dispatch(lockTab({ tabId: 'nonexistent' as TabId }));
+        store.dispatch(lockTab({ tabId: 'nonexistent' }));
 
         // No error thrown, existing tabs unaffected
         expect(getTab(store, 'test-tab-1')?.locked).toBeFalsy();
@@ -1793,7 +1784,7 @@ describe('workspaceSlice', () => {
         state.tabs[0].locked = true;
         const store = createTestStore(state);
 
-        store.dispatch(unlockTab({ tabId: 'nonexistent' as TabId }));
+        store.dispatch(unlockTab({ tabId: 'nonexistent' }));
 
         // Existing tab still locked
         expect(getTab(store, 'test-tab-1')?.locked).toBe(true);
@@ -1804,7 +1795,7 @@ describe('workspaceSlice', () => {
       it('setTabIcon is a no-op when tab does not exist', () => {
         const store = createTestStore(createTestState());
 
-        store.dispatch(setTabIcon({ tabId: 'nonexistent' as TabId, icon: 'Star' }));
+        store.dispatch(setTabIcon({ tabId: 'nonexistent', icon: 'Star' }));
 
         expect(getTab(store, 'test-tab-1')?.icon).toBeUndefined();
       });
@@ -1812,7 +1803,7 @@ describe('workspaceSlice', () => {
       it('setTabStyle is a no-op when tab does not exist', () => {
         const store = createTestStore(createTestState());
 
-        store.dispatch(setTabStyle({ tabId: 'nonexistent' as TabId, style: 'blue' }));
+        store.dispatch(setTabStyle({ tabId: 'nonexistent', style: 'blue' }));
 
         expect(getTab(store, 'test-tab-1')?.style).toBeUndefined();
       });
@@ -1822,7 +1813,7 @@ describe('workspaceSlice', () => {
         state.tabs[0].icon = 'Star';
         const store = createTestStore(state);
 
-        store.dispatch(setTabIcon({ tabId: 'test-tab-1' as TabId, icon: undefined }));
+        store.dispatch(setTabIcon({ tabId: 'test-tab-1', icon: undefined }));
 
         expect(getTab(store, 'test-tab-1')?.icon).toBeUndefined();
       });
@@ -1833,7 +1824,7 @@ describe('workspaceSlice', () => {
         const store = createTestStore(createTestState());
         const originalMountKey = getTab(store, 'test-tab-1')?.mountKey;
 
-        store.dispatch(refreshTab({ tabId: 'nonexistent' as TabId }));
+        store.dispatch(refreshTab({ tabId: 'nonexistent' }));
 
         expect(getTab(store, 'test-tab-1')?.mountKey).toBe(originalMountKey);
       });
@@ -1867,9 +1858,9 @@ describe('workspaceSlice', () => {
   describe('MAX_LEAF_PANELS enforcement', () => {
     function createStateWithManyPanels(panelCount: number): WorkspaceState {
       // Create a state with multiple leaf panels
-      const panelIds = Array.from({ length: panelCount }, (_, i) => `panel-${i}` as PanelId);
+      const panelIds = Array.from({ length: panelCount }, (_, i) => `panel-${i}`);
       const tabs: Tab[] = panelIds.map((panelId, i) => ({
-        id: `tab-${i}` as TabId,
+        id: `tab-${i}`,
         name: `Tab ${i}`,
         panelId,
         createdAt: Date.now(),
@@ -1878,7 +1869,7 @@ describe('workspaceSlice', () => {
 
       // Add an extra tab to first panel so it can be split
       tabs.push({
-        id: 'extra-tab' as TabId,
+        id: 'extra-tab',
         name: 'Extra Tab',
         panelId: panelIds[0],
         createdAt: Date.now(),
@@ -1930,9 +1921,9 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         splitPanel({
-          panelId: 'panel-0' as PanelId,
+          panelId: 'panel-0',
           direction: 'horizontal',
-          tabId: 'extra-tab' as TabId,
+          tabId: 'extra-tab',
         })
       );
 
@@ -1946,9 +1937,9 @@ describe('workspaceSlice', () => {
       store.dispatch(
         splitPanel({
           maxPanels: 2,
-          panelId: 'panel-0' as PanelId,
+          panelId: 'panel-0',
           direction: 'horizontal',
-          tabId: 'extra-tab' as TabId,
+          tabId: 'extra-tab',
         })
       );
 
@@ -1961,9 +1952,9 @@ describe('workspaceSlice', () => {
       store.dispatch(
         splitPanel({
           maxPanels: 0,
-          panelId: 'panel-0' as PanelId,
+          panelId: 'panel-0',
           direction: 'horizontal',
-          tabId: 'extra-tab' as TabId,
+          tabId: 'extra-tab',
         })
       );
 
@@ -1976,9 +1967,9 @@ describe('workspaceSlice', () => {
 
       store.dispatch(
         splitPanel({
-          panelId: 'panel-0' as PanelId,
+          panelId: 'panel-0',
           direction: 'horizontal',
-          tabId: 'extra-tab' as TabId,
+          tabId: 'extra-tab',
         })
       );
 
@@ -1995,8 +1986,8 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
 
       // Add several tabs
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'Tab 2' }));
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'Tab 3' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Tab 3' }));
 
       // Remove a tab
       const tab2Id = getWorkspace(store).tabs[1].id;
@@ -2017,16 +2008,16 @@ describe('workspaceSlice', () => {
 
       // Verify all activeTabIds point to tabs that exist in their panel
       for (const [panelId, activeTabId] of Object.entries(activeTabIds)) {
-        expect(panelTabs[panelId as PanelId]).toContain(activeTabId);
+        expect(panelTabs[panelId]).toContain(activeTabId);
       }
 
       // Remove active tab
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
 
       // Verify activeTabIds are still valid
       const stateAfter = getWorkspace(store);
       for (const [panelId, activeTabId] of Object.entries(stateAfter.activeTabIds)) {
-        expect(stateAfter.panelTabs[panelId as PanelId]).toContain(activeTabId);
+        expect(stateAfter.panelTabs[panelId]).toContain(activeTabId);
       }
     });
 
@@ -2034,7 +2025,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTwoPanelState());
 
       // Move a tab
-      store.dispatch(moveTab({ tabId: 'tab-1' as TabId, targetPanelId: 'panel-2' as PanelId }));
+      store.dispatch(moveTab({ tabId: 'tab-1', targetPanelId: 'panel-2' }));
 
       // Verify each tab's panelId matches its location in panelTabs
       const { tabs, panelTabs } = getWorkspace(store);
@@ -2052,9 +2043,9 @@ describe('workspaceSlice', () => {
     it('all tabs have unique IDs', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
-      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
+      await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       const { tabs } = getWorkspace(store);
       const ids = tabs.map((t) => t.id);
@@ -2065,8 +2056,8 @@ describe('workspaceSlice', () => {
     it('all tabs have unique mountKeys', async () => {
       const store = createTestStore(createTestState());
 
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
 
       const { tabs } = getWorkspace(store);
       const mountKeys = tabs.map((t) => t.mountKey);
@@ -2084,7 +2075,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState(), 1); // maxTabs = 1, already has 1 tab
       const stateBefore = getWorkspace(store);
 
-      const result = await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId }));
+      const result = await store.dispatch(addTab({ panelId: 'test-panel-1' }));
 
       expect(result.type).toBe('workspace/addTab/rejected');
       expect(getWorkspace(store).tabs).toEqual(stateBefore.tabs);
@@ -2094,7 +2085,7 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState(), 1);
       const stateBefore = getWorkspace(store);
 
-      const result = await store.dispatch(duplicateTab({ tabId: 'test-tab-1' as TabId }));
+      const result = await store.dispatch(duplicateTab({ tabId: 'test-tab-1' }));
 
       expect(result.type).toBe('workspace/duplicateTab/rejected');
       expect(getWorkspace(store).tabs).toEqual(stateBefore.tabs);
@@ -2110,15 +2101,15 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
 
       // Add second tab to enable split
-      await store.dispatch(addTab({ panelId: 'test-panel-1' as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Tab 2' }));
       const tab2Id = getWorkspace(store).tabs[1].id;
 
       // Split panel
       store.dispatch(
         splitPanel({
-          panelId: 'test-panel-1' as PanelId,
+          panelId: 'test-panel-1',
           direction: 'horizontal',
-          tabId: tab2Id as TabId,
+          tabId: tab2Id,
         })
       );
 
@@ -2142,14 +2133,12 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
 
       // Add tab
-      await store.dispatch(
-        addTab({ panelId: 'test-panel-1' as PanelId, name: 'Chart', layoutId: 'chart' })
-      );
+      await store.dispatch(addTab({ panelId: 'test-panel-1', name: 'Chart', layoutId: 'chart' }));
       expect(getWorkspace(store).tabs.length).toBe(2);
 
       // Duplicate it
       const chartTabId = getWorkspace(store).tabs[1].id;
-      await store.dispatch(duplicateTab({ tabId: chartTabId as TabId }));
+      await store.dispatch(duplicateTab({ tabId: chartTabId }));
       expect(getWorkspace(store).tabs.length).toBe(3);
 
       const duplicateTabId = getWorkspace(store).tabs[2].id;
@@ -2157,7 +2146,7 @@ describe('workspaceSlice', () => {
       expect(getTab(store, duplicateTabId)?.layoutId).toBe('chart');
 
       // Remove duplicate
-      store.dispatch(removeTab({ tabId: duplicateTabId as TabId }));
+      store.dispatch(removeTab({ tabId: duplicateTabId }));
       expect(getWorkspace(store).tabs.length).toBe(2);
     });
 
@@ -2165,19 +2154,19 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTwoPanelState());
 
       // Lock tab
-      store.dispatch(lockTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(lockTab({ tabId: 'tab-1' }));
       expect(getTab(store, 'tab-1')?.locked).toBe(true);
 
       // Try to remove (should fail)
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
       expect(getTab(store, 'tab-1')).toBeDefined();
 
       // Unlock
-      store.dispatch(unlockTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(unlockTab({ tabId: 'tab-1' }));
       expect(getTab(store, 'tab-1')?.locked).toBe(false);
 
       // Now remove succeeds
-      store.dispatch(removeTab({ tabId: 'tab-1' as TabId }));
+      store.dispatch(removeTab({ tabId: 'tab-1' }));
       expect(getTab(store, 'tab-1')).toBeUndefined();
     });
   });

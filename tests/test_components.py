@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pytest
 from dash import Dash, html
+
 import dash_prism
 
 

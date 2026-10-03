@@ -18,13 +18,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
     CONTEXT_MENU,
-    wait_for_tab_count,
-    get_tabs,
     get_modifier_key,
+    get_tabs,
     open_context_menu,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests
@@ -125,9 +124,9 @@ def test_keyboard_shortcuts_can_be_disabled(dash_duo):
     from dash import Dash, html
 
     app = Dash(__name__, suppress_callback_exceptions=True)
-    from conftest import PRISM_ROOT, get_free_port  # noqa: E402
-
     import dash_prism
+
+    from conftest import PRISM_ROOT, get_free_port
 
     dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
     app.layout = html.Div(

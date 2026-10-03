@@ -32,7 +32,7 @@ dist: clean build
 format:
     pnpm run format
 
-# Format Python code with black
+# Sort the Python imports with ruff and format the code with black
 format-py:
     pnpm run format:py
 
@@ -44,7 +44,7 @@ check:
 check-py:
     poetry run mypy
 
-# Run all linters (Python + TypeScript)
+# Run all linters (Python, TypeScript and CSS)
 lint:
     pnpm run lint
 

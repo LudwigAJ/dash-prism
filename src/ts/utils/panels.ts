@@ -1,4 +1,4 @@
-import { Draft } from 'immer';
+import { type Draft } from 'immer';
 import type { PanelNode, PanelId, PanelDirection } from '@types';
 import { generateShortId } from '@utils/uuid';
 
@@ -7,21 +7,21 @@ import { generateShortId } from '@utils/uuid';
 // =============================================================================
 
 /**
- * Check if a panel is a leaf panel (can hold tabs)
+ * Checks if a panel is a leaf panel (can hold tabs)
  */
 export function isLeafPanel(root: PanelNode | Draft<PanelNode>): boolean {
   return root.children.length === 0;
 }
 
 /**
- * Check if a panel is a container (has children)
+ * Checks if a panel is a container (has children)
  */
 export function isContainerPanel(root: PanelNode | Draft<PanelNode>): boolean {
   return root.children.length > 0;
 }
 
 /**
- * Get all leaf panel IDs from a panel tree (recursive)
+ * Gets all leaf panel IDs from a panel tree (recursive)
  */
 export function getLeafPanelIds(root: PanelNode | Draft<PanelNode>): PanelId[] {
   if (!root || !root.children) return [];
@@ -30,14 +30,14 @@ export function getLeafPanelIds(root: PanelNode | Draft<PanelNode>): PanelId[] {
 }
 
 /**
- * Count total number of leaf panels in a tree
+ * Counts total number of leaf panels in a tree
  */
 export function countLeafPanels(root: PanelNode | Draft<PanelNode>): number {
   return getLeafPanelIds(root).length;
 }
 
 /**
- * Find a panel by ID in the tree (recursive)
+ * Finds a panel by ID in the tree (recursive)
  */
 export function findPanelById(
   root: PanelNode | Draft<PanelNode>,
@@ -54,7 +54,7 @@ export function findPanelById(
 }
 
 /**
- * Find parent panel (returns just the parent)
+ * Finds parent panel (returns just the parent)
  */
 export function findParentPanel(
   root: PanelNode | Draft<PanelNode>,
@@ -72,7 +72,7 @@ export function findParentPanel(
 }
 
 /**
- * Find parent panel with index (useful for splicing in mutations)
+ * Finds parent panel with index (useful for splicing in mutations)
  */
 export function findParentPanelWithIndex(
   root: PanelNode | Draft<PanelNode>,
@@ -89,15 +89,17 @@ export function findParentPanelWithIndex(
 }
 
 /**
- * Find all leaf panels in the tree (recursive)
+ * Finds all leaf panels in the tree (recursive)
  */
-export function findAllLeaves(root: PanelNode | Draft<PanelNode>): PanelNode | Draft<PanelNode>[] {
+export function findAllLeaves(
+  root: PanelNode | Draft<PanelNode>
+): Array<PanelNode | Draft<PanelNode>> {
   if (isLeafPanel(root)) return [root];
   return root.children.flatMap(findAllLeaves);
 }
 
 /**
- * Check if a panel is the last (only) leaf panel in the tree
+ * Checks if a panel is the last (only) leaf panel in the tree
  */
 export function isLastPanel(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
   const leafPanels = getLeafPanelIds(root);
@@ -109,7 +111,7 @@ export function isLastPanel(root: PanelNode | Draft<PanelNode>, panelId: PanelId
 // =============================================================================
 
 /**
- * Update a panel in the tree by ID (in-place mutation)
+ * Updates a panel in the tree by ID (in-place mutation)
  */
 export function updatePanelInTree(
   root: PanelNode | Draft<PanelNode>,
@@ -129,7 +131,7 @@ export function updatePanelInTree(
 }
 
 /**
- * Remove a panel from tree with bubble-up behavior (in-place)
+ * Removes a panel from tree with bubble-up behavior (in-place)
  * If parent has only one child after removal, child replaces parent
  */
 export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
@@ -176,7 +178,7 @@ export type SplitPanelResult = {
 };
 
 /**
- * Split a leaf panel into a container with two children.
+ * Splits a leaf panel into a container with two children.
  *
  * This transforms a leaf panel at the given location into a container panel
  * with two children: the original panel (keeping its ID) and a new sibling panel.
@@ -273,7 +275,7 @@ export type CollapsePanelResult = {
 };
 
 /**
- * Collapse a panel by removing it from the tree.
+ * Collapses a panel by removing it from the tree.
  *
  * This function only handles the tree manipulation. The caller is responsible for:
  * - Moving tabs from the collapsed panel to another panel

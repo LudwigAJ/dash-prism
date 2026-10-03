@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from './index';
 
 /**
- * Typed dispatch hook - use this instead of plain useDispatch
+ * Gives the typed dispatch function. Use it instead of plain useDispatch.
  *
  * @example
  * ```tsx
@@ -14,7 +14,7 @@ import type { RootState, AppDispatch } from './index';
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 
 /**
- * Typed selector hook - use this instead of plain useSelector
+ * Reads state with a typed selector. Use it instead of plain useSelector.
  *
  * @example
  * ```tsx

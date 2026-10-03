@@ -17,7 +17,7 @@ type NewLayoutProps = {
 
 type LayoutCardProps = {
   id: string;
-  meta: { name: string; description?: string; params?: { name: string }[] };
+  meta: { name: string; description?: string; params?: Array<{ name: string }> };
   isFavorite: boolean;
   onLayoutClick: (layoutId: string) => void;
   onToggleFavorite: (e: React.MouseEvent, layoutId: string) => void;

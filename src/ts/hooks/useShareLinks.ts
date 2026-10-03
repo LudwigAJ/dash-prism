@@ -20,7 +20,7 @@ import {
 const MAX_SHARE_DATA_BYTES = 4096;
 
 /**
- * Encode string to base64 using TextEncoder (modern, UTF-8 safe).
+ * Encodes string to base64 using TextEncoder (modern, UTF-8 safe).
  * Returns null if encoding fails or data exceeds size limit.
  */
 function encodeShareData(data: string): string | null {
@@ -39,7 +39,7 @@ function encodeShareData(data: string): string | null {
 }
 
 /**
- * Decode base64 string using TextDecoder (modern, UTF-8 safe).
+ * Decodes base64 string using TextDecoder (modern, UTF-8 safe).
  * Returns null if decoding fails.
  */
 function decodeShareData(encoded: string): string | null {
@@ -57,7 +57,7 @@ function decodeShareData(encoded: string): string | null {
 }
 
 /**
- * Type guard to validate ShareData structure.
+ * Checks that a value has the ShareData structure.
  * Ensures required fields exist and have correct types.
  */
 function isValidShareData(data: unknown): data is ShareData {
@@ -117,7 +117,7 @@ export function useShareLink() {
 
     // Include params if present
     if (tab.layoutParams) {
-      shareData.layoutParams = tab.layoutParams as Record<string, string>;
+      shareData.layoutParams = tab.layoutParams;
     }
     if (tab.layoutOption) {
       shareData.layoutOption = tab.layoutOption;
@@ -152,16 +152,16 @@ export function useShareLink() {
       if (shareLink) {
         navigator.clipboard
           .writeText(shareLink)
-          .then(() =>
+          .then(() => {
             toast.success('Link copied to clipboard', {
               cancel: { label: 'Dismiss', onClick: () => {} },
-            })
-          )
-          .catch(() =>
+            });
+          })
+          .catch(() => {
             toast.error('Failed to copy link', {
               cancel: { label: 'Dismiss', onClick: () => {} },
-            })
-          );
+            });
+          });
       }
     },
     [generateShareLink]
@@ -307,7 +307,9 @@ export function useShareLinkListener() {
   // Listen for hash changes (user pastes link while app is open)
   useEffect(() => {
     if (!enableShareLinks) return undefined;
-    const handleHashChange = () => processShareHash();
+    const handleHashChange = () => {
+      processShareHash();
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [processShareHash, enableShareLinks]);

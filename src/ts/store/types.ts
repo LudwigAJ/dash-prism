@@ -67,7 +67,7 @@ export type StoreConfig = {
   /** Getter for registered layouts — used by thunks to check constraints like allowMultiple */
   getRegisteredLayouts?: () => RegisteredLayouts;
   /**
-   * Override the redux-persist storage engine. When omitted the engine is
+   * Overrides the redux-persist storage engine. When omitted the engine is
    * chosen from `persistenceType`. Intended for tests that need to seed or
    * inspect persisted data without a browser.
    */

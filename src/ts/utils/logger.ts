@@ -6,7 +6,7 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /**
- * Check if logging is enabled for the given level.
+ * Checks if logging is enabled for the given level.
  * In production, only warnings and errors are logged.
  */
 function isLogEnabled(level: LogLevel): boolean {
@@ -55,7 +55,7 @@ export const logger = {
   },
 
   /**
-   * Log state validation errors (development only).
+   * Logs state validation errors (development only).
    */
   validation: (errors: string[]): void => {
     if (process.env.NODE_ENV === 'production') return;

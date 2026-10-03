@@ -20,13 +20,13 @@ from __future__ import annotations
 import pytest
 
 from conftest import (
-    get_tabs,
-    get_panels,
-    get_panel_id,
     check_browser_errors,
     create_tabs_for_dnd_test,
     drag_tab_to_panel_edge,
+    get_panel_id,
+    get_panels,
     get_tab_order_in_panel,
+    get_tabs,
     wait_for_panel_count,
 )
 

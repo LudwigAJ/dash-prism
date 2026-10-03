@@ -1,5 +1,5 @@
 // src/ts/store/workspaceSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import type { Tab, PanelId, TabId, LayoutId, PanelDirection } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
@@ -25,7 +25,7 @@ export const MAX_TAB_NAME_LENGTH = 24;
 export const MAX_LEAF_PANELS = 20;
 
 /**
- * Normalise the `maxPanels` prop into the number the split guard expects.
+ * Normalises the `maxPanels` prop into the number the split guard expects.
  *
  * An omitted prop (`undefined`) means the default limit, while an explicit
  * `None` from Python arrives as `null` and means "no limit" — the same reading
@@ -43,7 +43,7 @@ export function resolveMaxPanels(value: number | null | undefined): number {
 // =============================================================================
 
 /**
- * Collapse a panel that has no tabs, removing it from the tree.
+ * Collapses a panel that has no tabs, removing it from the tree.
  * Used by removeTab, moveTab, and splitPanel to clean up empty panels.
  *
  * @returns true if the panel was collapsed, false if it's the last panel or collapse failed
@@ -65,7 +65,7 @@ function collapseEmptyPanel(state: WorkspaceState, panelId: PanelId): boolean {
 }
 
 /**
- * Remove a tab and repair the surrounding state: panelTabs, the panel's active
+ * Removes a tab and repairs the surrounding state: panelTabs, the panel's active
  * tab, collapsing a panel that became empty, or spawning a blank tab when the
  * last tab of the last panel was removed.
  *
@@ -139,7 +139,7 @@ function removeTabFromState(
 // =============================================================================
 
 /**
- * Build a fresh initial workspace state: one panel containing one blank
+ * Builds a fresh initial workspace state: one panel containing one blank
  * "New Tab".
  *
  * This is a factory rather than a module-level constant on purpose:
@@ -324,7 +324,7 @@ const workspaceSlice = createSlice({
     },
 
     /**
-     * Reconcile a (re)hydrated workspace with the server it is now talking to.
+     * Reconciles a (re)hydrated workspace with the server it is now talking to.
      *
      * Dispatched once after redux-persist's REHYDRATE. `serverSessionId` is the
      * fingerprint of the server's layout registry (Prism prop of the same name,
@@ -377,19 +377,13 @@ const workspaceSlice = createSlice({
       // Validate: tab must exist
       const tab = findTabById(state.tabs, tabId);
       if (!tab) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[activateTab] Tab not found: ${tabId}`);
-        }
+        logger.debug(`[activateTab] Tab not found: ${tabId}`);
         return;
       }
 
       // Validate: tab must belong to the specified panel
       if (tab.panelId !== panelId) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[activateTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`
-          );
-        }
+        logger.debug(`[activateTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`);
         return;
       }
 
@@ -433,9 +427,7 @@ const workspaceSlice = createSlice({
       const { tabId, layoutId, name, params, option } = action.payload;
       const tab = findTabById(state.tabs, tabId);
       if (!tab) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[updateTabLayout] Tab not found: ${tabId}`);
-        }
+        logger.debug(`[updateTabLayout] Tab not found: ${tabId}`);
         return;
       }
 
@@ -539,9 +531,7 @@ const workspaceSlice = createSlice({
       // Validate: panelId must be a leaf panel
       const leafPanelIds = getLeafPanelIds(state.panel);
       if (!leafPanelIds.includes(panelId)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[setActivePanel] Panel is not a leaf panel: ${panelId}`);
-        }
+        logger.debug(`[setActivePanel] Panel is not a leaf panel: ${panelId}`);
         return;
       }
 
@@ -565,7 +555,7 @@ const workspaceSlice = createSlice({
     },
 
     /**
-     * Split a panel to create a new panel with the specified tab.
+     * Splits a panel to create a new panel with the specified tab.
      * Handles both same-panel splits (tab moves to new sibling) and
      * cross-panel splits (tab from another panel creates new panel here).
      */
@@ -763,7 +753,7 @@ const workspaceSlice = createSlice({
     },
 
     /**
-     * Sync workspace from Dash backend (updateWorkspace prop).
+     * Syncs workspace from Dash backend (updateWorkspace prop).
      *
      * Validates state invariants after applying updates:
      * - All tabs must reference valid leaf panels
@@ -790,11 +780,9 @@ const workspaceSlice = createSlice({
       // 1. Remove tabs that reference non-existent panels
       const validTabs = state.tabs.filter((tab) => leafPanelIds.has(tab.panelId));
       if (validTabs.length !== state.tabs.length) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
-          );
-        }
+        logger.debug(
+          `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
+        );
         state.tabs = validTabs;
       }
 
@@ -846,7 +834,7 @@ const workspaceSlice = createSlice({
       }
 
       // Clean up activeTabIds for non-existent panels
-      for (const panelId of Object.keys(state.activeTabIds) as PanelId[]) {
+      for (const panelId of Object.keys(state.activeTabIds)) {
         if (!leafPanelIds.has(panelId)) {
           delete state.activeTabIds[panelId];
         }
@@ -932,4 +920,4 @@ export const {
   syncWorkspace,
 } = workspaceSlice.actions;
 
-export default workspaceSlice.reducer;
+export const workspaceReducer = workspaceSlice.reducer;

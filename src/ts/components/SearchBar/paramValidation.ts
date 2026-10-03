@@ -1,9 +1,9 @@
 import type { LayoutParam, ParamType, ParamConstraints } from '@types';
 
 export type ParamCheck =
-  /** Submit `value` (always a string on the wire). */
+  /** Submits `value` (always a string on the wire). */
   | { ok: true; value: string }
-  /** Leave the param out so the server applies the callback default. */
+  /** Leaves the param out so the server applies the callback default. */
   | { ok: true; omit: true }
   | { ok: false; message: string };
 
@@ -17,19 +17,23 @@ function checkNumber(kind: 'integer' | 'number', raw: string, c: ParamConstraint
   }
   const n = Number(raw);
   if (c.minimum !== undefined && n < c.minimum) return `Must be at least ${c.minimum}`;
-  if (c.exclusiveMinimum !== undefined && n <= c.exclusiveMinimum)
+  if (c.exclusiveMinimum !== undefined && n <= c.exclusiveMinimum) {
     return `Must be greater than ${c.exclusiveMinimum}`;
+  }
   if (c.maximum !== undefined && n > c.maximum) return `Must be at most ${c.maximum}`;
-  if (c.exclusiveMaximum !== undefined && n >= c.exclusiveMaximum)
+  if (c.exclusiveMaximum !== undefined && n >= c.exclusiveMaximum) {
     return `Must be less than ${c.exclusiveMaximum}`;
+  }
   return null;
 }
 
 function checkLength(len: number, c: ParamConstraints, unit: string): string | null {
-  if (c.minLength !== undefined && len < c.minLength)
+  if (c.minLength !== undefined && len < c.minLength) {
     return `Must have at least ${c.minLength} ${unit}`;
-  if (c.maxLength !== undefined && len > c.maxLength)
+  }
+  if (c.maxLength !== undefined && len > c.maxLength) {
     return `Must have at most ${c.maxLength} ${unit}`;
+  }
   return null;
 }
 
@@ -66,13 +70,16 @@ function checkScalar(type: ParamType, raw: string, param: LayoutParam): string |
       }
       return null;
     }
+    case 'array':
+    case 'object':
+    case 'unknown':
     default:
-      return null; // object / unknown: server validates
+      return null; // array / object / unknown: the server validates
   }
 }
 
 /**
- * Validate a single search-bar input against the parameter's simplified schema.
+ * Validates a single search-bar input against the parameter's simplified schema.
  * Pure function; mirrors the server's coercion rules but never blocks unknown types.
  */
 export function checkParamInput(param: LayoutParam, rawInput: string): ParamCheck {
@@ -115,14 +122,15 @@ export function formatParamHint(param: LayoutParam): string {
   const lo = c.minimum ?? c.exclusiveMinimum;
   const hi = c.maximum ?? c.exclusiveMaximum;
   if (lo !== undefined || hi !== undefined) parts.push(`${lo ?? ''}-${hi ?? ''}`);
-  if (c.minLength !== undefined || c.maxLength !== undefined)
+  if (c.minLength !== undefined || c.maxLength !== undefined) {
     parts.push(`len ${c.minLength ?? ''}-${c.maxLength ?? ''}`);
+  }
   if (param.nullable) parts.push('optional');
   return parts.join(', ');
 }
 
 /**
- * Validate a whole params object (share links, updateWorkspace) against a layout's
+ * Validates a whole params object (share links, updateWorkspace) against a layout's
  * param list. Returns one message per failing field; never throws.
  */
 export function checkParams(
@@ -170,7 +178,7 @@ export function filterChoices(param: LayoutParam, rawInput: string): string[] {
 }
 
 /**
- * Turn share-link parameter values into the string map Prism sends to Dash.
+ * Turns share-link parameter values into the string map Prism sends to Dash.
  *
  * A blank value for a parameter that has a default means "leave it out" — the
  * same thing an empty input means in the search bar. Forwarding it as "" would

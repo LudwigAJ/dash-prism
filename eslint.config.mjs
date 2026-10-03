@@ -36,10 +36,24 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...react.configs.recommended.rules,
       'prettier/prettier': 'error',
-      // Underscore-prefixed names are the conventional "intentionally unused" marker.
+      'default-case': 'error',
+      'no-console': 'error',
+      curly: ['error', 'multi-line'],
+      '@typescript-eslint/array-type': [
+        'error',
+        { default: 'array-simple', readonly: 'array-simple' },
+      ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
+      // A bare `_` is the only name for an unused parameter, and only as a positional
+      // callback parameter that comes before a used one. Delete any other unused name.
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+        // Dropping a key with `const { key, ...rest } = object` is the one way to omit a
+        // property without a mutation, so the unused `key` is legal.
+        { argsIgnorePattern: '^_$', ignoreRestSiblings: true },
       ],
       // eslint-plugin-react-hooks 7 ships React Compiler rules in `recommended`.
       // This project does not use the compiler, and these rules fire on patterns
@@ -58,4 +72,53 @@ export default [
       react: { version: 'detect' },
     },
   },
+  {
+    // The config files outside src/ts need a default export, because their tools read it.
+    files: ['src/ts/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportDefaultDeclaration',
+          message: 'Use a named export (typescript-style, Modules).',
+        },
+      ],
+    },
+  },
+  {
+    // Rules that need type information run on the project files only.
+    files: ['src/ts/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      // A default branch does not count. A switch over a union lists every member.
+      '@typescript-eslint/switch-exhaustiveness-check': [
+        'error',
+        { considerDefaultExhaustiveForUnions: false },
+      ],
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      // A concise arrow body that calls a function stays legal, because the JSX event
+      // handlers use it. Outside JSX, a block body shows that the result is not used.
+      '@typescript-eslint/no-confusing-void-expression': [
+        'error',
+        { ignoreVoidOperator: true, ignoreArrowShorthand: true },
+      ],
+    },
+  },
+  {
+    // The logger is the one place that may call the console.
+    files: ['src/ts/utils/logger.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  // Rules that wait for later work, so that this config reports zero findings:
+  // - Enable `@typescript-eslint/consistent-type-definitions` with 'interface' when the object
+  //   shapes are interfaces.
+  // - Enable `eslint-plugin-jsx-a11y` (the recommended preset) when every interactive element is
+  //   a native control, or has a role, a label and a key handler.
+  // - Enable `jsdoc/require-jsdoc` with `publicOnly` when every exported symbol has a doc comment.
+  // - Enable `import/no-unused-modules` with `unusedExports` when no export is unused.
 ];

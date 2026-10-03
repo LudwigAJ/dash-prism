@@ -168,7 +168,7 @@ export const Panel = memo(function Panel({ panel }: PanelProps) {
   const isLeaf = isLeafPanel(panel);
 
   const handleResizeEnd = useCallback(
-    (sizes: (string | number)[]) => {
+    (sizes: Array<string | number>) => {
       panel.children.forEach((child, index) => {
         if (sizes[index] !== undefined) {
           dispatch(resizePanel({ panelId: child.id, size: sizes[index] }));

@@ -3,10 +3,10 @@ import type { Tab, TabId, PanelId } from '@types';
 
 // Support both regular Tab arrays and Immer Draft arrays
 type TabOrDraft = Tab | Draft<Tab>;
-type TabArrayOrDraft = Tab[] | Draft<Tab>[] | readonly Tab[] | readonly Draft<Tab>[];
+type TabArrayOrDraft = Tab[] | Array<Draft<Tab>> | readonly Tab[] | ReadonlyArray<Draft<Tab>>;
 
 /**
- * Find the index of a tab by ID
+ * Finds the index of a tab by ID
  * @returns Index of tab, or -1 if not found
  */
 export function findTabIndex(tabs: TabArrayOrDraft, tabId: TabId): number {
@@ -14,7 +14,7 @@ export function findTabIndex(tabs: TabArrayOrDraft, tabId: TabId): number {
 }
 
 /**
- * Find a tab by ID
+ * Finds a tab by ID
  * @returns Tab if found, undefined otherwise
  */
 export function findTabById<T extends TabOrDraft>(
@@ -25,7 +25,7 @@ export function findTabById<T extends TabOrDraft>(
 }
 
 /**
- * Get all tabs belonging to a specific panel
+ * Gets all tabs belonging to a specific panel
  * @returns Array of tabs in the panel (empty array if none)
  */
 export function getTabsByPanelId<T extends TabOrDraft>(
@@ -36,7 +36,7 @@ export function getTabsByPanelId<T extends TabOrDraft>(
 }
 
 /**
- * Count tabs in a specific panel
+ * Counts tabs in a specific panel
  * @returns Number of tabs in the panel
  */
 export function countTabsInPanel(tabs: TabArrayOrDraft, panelId: PanelId): number {
@@ -44,7 +44,7 @@ export function countTabsInPanel(tabs: TabArrayOrDraft, panelId: PanelId): numbe
 }
 
 /**
- * Check if a tab is locked
+ * Checks if a tab is locked
  * @returns true if tab exists and is locked
  */
 export function isTabLocked(tabs: TabArrayOrDraft, tabId: TabId): boolean {
@@ -53,7 +53,7 @@ export function isTabLocked(tabs: TabArrayOrDraft, tabId: TabId): boolean {
 }
 
 /**
- * Get the active tab for a panel
+ * Gets the active tab for a panel
  * @param tabs - All tabs
  * @param activeTabIds - Map of panelId -> activeTabId
  * @param panelId - The panel to get active tab for

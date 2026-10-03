@@ -1,5 +1,6 @@
 // src/ts/components/SearchBar/searchBarReducer.ts
 import { produce } from 'immer';
+import { logger } from '@utils/logger';
 
 // =============================================================================
 // Types
@@ -45,7 +46,7 @@ export type ModeContext = {
 // =============================================================================
 
 /**
- * Pure function to derive SearchBar mode from state and context.
+ * Derives the SearchBar mode from state and context.
  * This is the SINGLE SOURCE OF TRUTH for what mode the SearchBar is in.
  */
 export function deriveMode(state: SearchBarState, context: ModeContext): SearchBarMode {
@@ -69,7 +70,7 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
 // Reducer
 // =============================================================================
 
-export function createInitialState(_hasCurrentLayout: boolean): SearchBarState {
+export function createInitialState(): SearchBarState {
   // Note: showDropdown starts false - the useSearchBarState effect will open it
   // based on newTabOpensDropdown config when appropriate
   return {
@@ -85,7 +86,7 @@ export function createInitialState(_hasCurrentLayout: boolean): SearchBarState {
 }
 
 /**
- * Helper function to clear layout selection and param state.
+ * Clears the layout selection and the param state.
  * Extracted to avoid duplication across multiple actions.
  */
 function clearSelection(draft: SearchBarState) {
@@ -98,7 +99,7 @@ function clearSelection(draft: SearchBarState) {
 export const searchBarReducer = produce((draft: SearchBarState, action: SearchBarAction) => {
   switch (action.type) {
     case 'RESET':
-      Object.assign(draft, createInitialState(false));
+      Object.assign(draft, createInitialState());
       break;
     case 'SET_SEARCH_QUERY':
       draft.searchQuery = action.query;
@@ -158,5 +159,11 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
         clearSelection(draft);
       }
       break;
+    default: {
+      // A new action type that no case handles fails to compile here.
+      const unhandled: never = action;
+      logger.debug('Unhandled SearchBar action', unhandled);
+      break;
+    }
   }
 });

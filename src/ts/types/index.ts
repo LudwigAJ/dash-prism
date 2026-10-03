@@ -181,7 +181,7 @@ export type DashComponent = {
 };
 
 /**
- * Type guard to check if a value is a DashComponent.
+ * Checks if a value is a DashComponent.
  * Useful for runtime validation of Dash-serialized React elements.
  */
 export function isDashComponent(value: unknown): value is DashComponent {
@@ -204,7 +204,7 @@ export function isDashComponent(value: unknown): value is DashComponent {
  */
 export type ExternalWrapperProps = {
   component: DashComponent;
-  componentPath: (string | number)[];
+  componentPath: Array<string | number>;
   temp?: boolean;
 };
 
@@ -212,10 +212,10 @@ export type ExternalWrapperProps = {
  * Dash context type returned by useDashContext
  */
 export type DashContextType = {
-  componentPath: (string | number)[];
+  componentPath: Array<string | number>;
   useLoading: (options?: {
-    extraPath?: (string | number)[];
-    rawPath?: (string | number)[]; // fix a bug in Dash
+    extraPath?: Array<string | number>;
+    rawPath?: Array<string | number>; // fix a bug in Dash
     filterFunc?: (loading: unknown) => boolean;
   }) => boolean;
   useStore: () => unknown;
@@ -229,7 +229,7 @@ export type DashComponentApi = {
   ExternalWrapper: React.ComponentType<ExternalWrapperProps>;
   useDashContext: () => DashContextType;
   DashContext: React.Context<DashContextType | undefined>;
-  getLayout: (path: (string | number)[] | string) => Record<string, unknown> | null;
+  getLayout: (path: Array<string | number> | string) => Record<string, unknown> | null;
   stringifyId: (id: string | Record<string, unknown>) => string;
 };
 

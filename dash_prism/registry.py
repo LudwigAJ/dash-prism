@@ -45,9 +45,9 @@ parameter options that the search bar shows::
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
-import inspect
 from typing import Any, overload
 
 from .params import (
@@ -459,7 +459,7 @@ def _validate_param_options(
     """
     param_names = {p.name for p in parameters}
     for option_key, (_, params) in param_options.items():
-        for param_name in params.keys():
+        for param_name in params:
             if param_name not in param_names:
                 raise ValueError(
                     f"param_options['{option_key}'] references unknown parameter "

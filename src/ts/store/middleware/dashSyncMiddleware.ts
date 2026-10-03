@@ -13,7 +13,7 @@ const DEBOUNCE_MS = 500;
 /** Return type for createDashSyncMiddleware - includes cleanup function */
 export type DashSyncMiddlewareResult = {
   middleware: Middleware<object, RootState>;
-  /** Call this to clean up event listeners and pending timeouts */
+  /** Cleans up the event listeners and pending timeouts. */
   cleanup: () => void;
 };
 
@@ -116,7 +116,9 @@ export function createDashSyncMiddleware(
         doSync(workspace);
       } else {
         pendingWorkspace = workspace;
-        timeoutId = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
+        timeoutId = setTimeout(() => {
+          doSync(workspace);
+        }, DEBOUNCE_MS);
       }
 
       // Drop search-bar modes of panels that disappeared in this change, whatever
@@ -169,7 +171,7 @@ export const validationMiddleware: Middleware<object, RootState> =
       const validation = validateWorkspace(workspace);
 
       if (!validation.ok) {
-        const { errors } = validation as { ok: false; errors: string[] };
+        const { errors } = validation;
         logger.validation(errors);
 
         // On rehydration failure, reset to clean state to prevent crash

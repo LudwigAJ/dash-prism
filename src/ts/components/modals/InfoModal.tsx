@@ -20,7 +20,7 @@ export type InfoModalProps = {
 };
 
 /**
- * InfoModal - Displays detailed information about a tab
+ * Displays detailed information about a tab.
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows tab name, ID, creation date, layout, lock status, and parameters.
@@ -104,5 +104,3 @@ export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
     </Dialog>
   );
 }
-
-export default InfoModal;

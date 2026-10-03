@@ -16,16 +16,16 @@ from __future__ import annotations
 
 import pytest
 from dash import Dash, html
+
 import dash_prism
 
 # Import helpers from conftest
 from conftest import (
-    TAB_SELECTOR,
     ADD_TAB_BUTTON,
-    wait_for_tab_count,
-    get_tabs,
     check_browser_errors,
     get_free_port,
+    get_tabs,
+    wait_for_tab_count,
 )
 
 # Mark all tests in this module as integration tests

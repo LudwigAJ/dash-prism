@@ -5,7 +5,8 @@ Tests for dash_prism utility functions.
 from __future__ import annotations
 
 import pytest
-from dash import html, dcc
+from dash import dcc, html
+
 import dash_prism
 
 

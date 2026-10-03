@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
- * Utility function to merge class names (shadcn pattern)
+ * Merges class names (shadcn pattern).
  * Combines clsx for conditional classes with tailwind-merge for deduplication
  *
  * @example

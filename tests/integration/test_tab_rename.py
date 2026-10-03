@@ -14,24 +14,23 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
-    TAB_SELECTOR,
     CONTEXT_MENU,
-    get_tabs,
-    get_tab_id,
-    wait_for_tab_count,
-    wait_for_element_invisible,
+    TAB_SELECTOR,
     check_browser_errors,
+    get_tab_id,
+    get_tabs,
     open_context_menu,
-    trigger_rename_mode,
-    set_input_value_react,
     press_enter_on_element,
+    set_input_value_react,
+    trigger_rename_mode,
+    wait_for_element_invisible,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration
@@ -60,7 +59,7 @@ def _click_context_menu_rename(duo, tab_id: str) -> str:
     rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
     WebDriverWait(duo.driver, 5).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
-        message=f"Rename input should appear after clicking Rename in context menu",
+        message="Rename input should appear after clicking Rename in context menu",
     )
     return rename_input_selector
 
@@ -168,9 +167,7 @@ def test_rename_cancel_with_escape(prism_app_with_layouts):
 
     # Verify original name is preserved
     tab_text = get_tabs(duo)[0].text
-    assert (
-        "This should not stick" not in tab_text
-    ), f"Escape should cancel rename, but tab text is '{tab_text}'"
+    assert tab_text == original_name, f"Escape should keep '{original_name}', got '{tab_text}'"
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"

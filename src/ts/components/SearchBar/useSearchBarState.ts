@@ -52,11 +52,7 @@ export function useSearchBarState(panelId: PanelId) {
   }, [activeTab, registeredLayouts]);
 
   // ===== LOCAL REDUCER STATE =====
-  const [state, dispatch] = useReducer(
-    searchBarReducer,
-    currentLayout !== null,
-    createInitialState
-  );
+  const [state, dispatch] = useReducer(searchBarReducer, undefined, createInitialState);
 
   // ===== REFS (only for DOM) =====
   const inputRef = useRef<HTMLInputElement>(null);
@@ -198,8 +194,8 @@ export function useSearchBarState(panelId: PanelId) {
   }, [focusInput]);
 
   /**
-   * Record a validated value for the current parameter and move on: to the next
-   * parameter, or apply the layout when this was the last one. An omitted value
+   * Records a validated value for the current parameter and moves on: to the next
+   * parameter, or applies the layout when this was the last one. An omitted value
    * (empty input on a parameter with a default) is left out of the request so
    * the server applies the callback's own default.
    */
@@ -292,7 +288,7 @@ export function useSearchBarState(panelId: PanelId) {
   }, [mode]);
 
   /**
-   * Helper to dismiss the searchbar dropdown and return to idle state.
+   * Dismisses the searchbar dropdown and returns to the idle state.
    * Consolidates the repeated dismiss logic used across blur, escape, etc.
    */
   const handleDismiss = useCallback(() => {
@@ -425,9 +421,8 @@ export function useSearchBarState(panelId: PanelId) {
   );
 
   useEffect(() => {
-    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
-    return () =>
-      window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
+    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar);
+    return () => window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar);
   }, [handleFocusSearchbar]);
 
   // Click outside handler
@@ -472,7 +467,9 @@ export function useSearchBarState(panelId: PanelId) {
     commandRef,
 
     // Handlers
-    setSearchQuery: (query: string) => dispatch({ type: 'SET_SEARCH_QUERY', query }),
+    setSearchQuery: (query: string) => {
+      dispatch({ type: 'SET_SEARCH_QUERY', query });
+    },
     setParamValues: (setter: (prev: Record<string, string>) => Record<string, string>) => {
       const newValues = setter(state.paramValues);
       dispatch({ type: 'SET_PARAM_VALUES', values: newValues });
@@ -489,6 +486,8 @@ export function useSearchBarState(panelId: PanelId) {
     handleKeyDown,
     handleClick,
     handleResizeStart,
-    handleToggleFavorite: (layoutId: string) => globalDispatch(toggleFavoriteLayout({ layoutId })),
+    handleToggleFavorite: (layoutId: string) => {
+      globalDispatch(toggleFavoriteLayout({ layoutId }));
+    },
   };
 }

@@ -65,9 +65,9 @@ export function isOverlayOpen(doc: Pick<Document, 'querySelector'>): boolean {
  * the owner unmounts, so the survivors never all go silent.
  */
 export type RootRegistry<T> = {
-  /** Register a mounted root; call the returned function when it unmounts. */
+  /** Registers a mounted root. The returned function unregisters the root when it unmounts. */
   register(root: T): () => void;
-  /** Make `root` the owner (it must still be mounted). */
+  /** Makes `root` the owner (it must still be mounted). */
   claim(root: T): void;
   /** Whether `root` may handle a shortcut right now. */
   owns(root: T): boolean;

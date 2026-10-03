@@ -22,25 +22,29 @@ const listeners = new Set<Listener>();
 
 const toastEmitter = {
   /**
-   * Emit a toast event to all subscribers.
+   * Emits a toast event to all subscribers.
    * Called from reducer when operations fail/succeed.
    */
   emit: (event: ToastEvent): void => {
-    listeners.forEach((fn) => fn(event));
+    listeners.forEach((fn) => {
+      fn(event);
+    });
   },
 
   /**
-   * Subscribe to toast events.
+   * Subscribes to toast events.
    * Returns an unsubscribe function for cleanup.
    */
   subscribe: (fn: Listener): (() => void) => {
     listeners.add(fn);
-    return () => listeners.delete(fn);
+    return () => {
+      listeners.delete(fn);
+    };
   },
 };
 
 /**
- * Subscribe to toast events.
+ * Subscribes to toast events.
  * Returns an unsubscribe function for cleanup.
  */
 export function subscribeToToasts(fn: Listener): () => void {
@@ -48,7 +52,7 @@ export function subscribeToToasts(fn: Listener): () => void {
 }
 
 /**
- * Notify the user with a toast message and log the details.
+ * Notifies the user with a toast message and logs the details.
  * Consolidates the common pattern of logging + toast emission.
  *
  * @param level - The severity level ('info', 'warning', or 'error')

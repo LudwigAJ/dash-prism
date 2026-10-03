@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } fro
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
 import type { TabId, LayoutId } from '@types';
-import { DashComponentProps } from 'props';
+import { type DashComponentProps } from 'props';
 import { normalizeLayoutTimeout } from '@utils/dashSpec';
 
 type ContentData = {

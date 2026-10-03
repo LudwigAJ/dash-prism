@@ -12,15 +12,12 @@ from selenium.webdriver.common.by import By
 
 from conftest import (
     SPLIT_PANEL_BUTTON,
-    ADD_TAB_BUTTON,
-    PANEL_SELECTOR,
-    TAB_SELECTOR,
-    wait_for_tab_count,
+    check_browser_errors,
+    get_panels,
+    get_tabs,
     wait_for_panel_count,
     wait_for_panel_layout_stable,
-    get_tabs,
-    get_panels,
-    check_browser_errors,
+    wait_for_tab_count,
 )
 
 pytestmark = pytest.mark.integration

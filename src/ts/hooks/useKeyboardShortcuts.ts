@@ -8,7 +8,7 @@ import {
 } from './keyboardChords';
 import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
-import type { PanelId, TabId } from '@types';
+import type { PanelId } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -126,7 +126,7 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
 
       const newTab = activePanelTabs[newIndex];
       if (newTab) {
-        dispatch(activateTab({ tabId: newTab.id as TabId, panelId: activePanelId }));
+        dispatch(activateTab({ tabId: newTab.id, panelId: activePanelId }));
       }
     },
     [getActivePanelTabs, activeTabIds, activePanelId, dispatch]
@@ -197,7 +197,9 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
     if (!root || !enableKeyboardShortcuts) return undefined;
     const release = rootRegistry.register(root);
 
-    const claim = () => rootRegistry.claim(root);
+    const claim = () => {
+      rootRegistry.claim(root);
+    };
     root.addEventListener('mousedown', claim);
     root.addEventListener('focusin', claim);
     return () => {
@@ -307,6 +309,10 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
           // Undo close tab
           e.preventDefault();
           undoCloseTab();
+          break;
+
+        default:
+          // Not a Prism shortcut. The browser handles the key.
           break;
       }
     };
