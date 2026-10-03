@@ -7,6 +7,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -128,6 +129,40 @@ def test_ci_runs_on_pull_requests() -> None:
     workflows = _workflows()
     for name in ("ci.yml", "codeql.yml"):
         assert re.search(r"^  pull_request:", workflows[name], re.MULTILINE), name
+
+
+def _major_minor(version: str) -> tuple[int, int]:
+    """Return the (major, minor) pair of the first version number in ``version``."""
+    match = re.search(r"(\d+)\.(\d+)", version)
+    assert match, f"no version number in {version!r}"
+    return int(match.group(1)), int(match.group(2))
+
+
+def _py_target(spelling: str) -> tuple[int, int]:
+    return 3, int(spelling.removeprefix("py3"))
+
+
+def test_every_python_floor_agrees() -> None:
+    """The metadata, the tools and the CI matrix must name the same lowest Python."""
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    floor = _major_minor(pyproject["project"]["requires-python"])
+
+    assert _major_minor(pyproject["tool"]["poetry"]["dependencies"]["python"]) == floor
+    assert _major_minor(pyproject["tool"]["mypy"]["python_version"]) == floor
+    # Black and ruff spell a target as "py311".
+    black_targets = pyproject["tool"]["black"]["target-version"]
+    assert min(_py_target(t) for t in black_targets) == floor
+    assert _py_target(pyproject["tool"]["ruff"]["target-version"]) == floor
+
+    # Poetry adds the Python classifiers itself. A hand-written one must not
+    # name a version below the floor.
+    for classifier in pyproject["tool"]["poetry"]["classifiers"]:
+        if classifier.startswith("Programming Language :: Python :: 3."):
+            assert _major_minor(classifier.rsplit("::", 1)[1]) >= floor, classifier
+
+    ci = yaml.safe_load(_workflows()["ci.yml"])
+    matrix = ci["jobs"]["test-py-version"]["strategy"]["matrix"]["python-version"]
+    assert min(_major_minor(str(v)) for v in matrix) == floor
 
 
 def _workflow_commands(text: str) -> list[str]:

@@ -10,7 +10,7 @@ updates:
       python-dev:
         dependency-type: "development"
     ignore:
-      # Stays compatible with Python 3.10 floor
+      # Major updates need a separate decision: mypy is pinned, numpy serves only the demo.
       - dependency-name: "mypy"
         update-types: ["version-update:semver-major"]
       - dependency-name: "numpy"
