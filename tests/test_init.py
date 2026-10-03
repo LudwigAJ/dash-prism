@@ -5,7 +5,10 @@ Tests for dash_prism initialization functionality.
 from __future__ import annotations
 
 import asyncio
+import logging
+from typing import Any
 
+import pydantic
 import pytest
 from dash import Dash, html
 
@@ -1111,11 +1114,18 @@ def test_async_render_validation_error(prism_app: Dash) -> None:
 # =============================================================================
 
 
-def _render_on_path(path: str, layout_id: str, timeout: float = 5.0) -> object:
+def _render_on_path(
+    path: str,
+    layout_id: str,
+    layout_params: dict[str, Any] | None = None,
+    timeout: float = 5.0,
+) -> Any:
     """Render a tab through the sync path or the async path."""
     if path == "sync":
-        return app_init._render_tab_layout("tab-1", layout_id, None, timeout=timeout)
-    return asyncio.run(app_init._render_tab_layout_async("tab-1", layout_id, None, timeout=timeout))
+        return app_init._render_tab_layout("tab-1", layout_id, layout_params, timeout=timeout)
+    return asyncio.run(
+        app_init._render_tab_layout_async("tab-1", layout_id, layout_params, timeout=timeout)
+    )
 
 
 @pytest.mark.parametrize("path", ["sync", "async"])
@@ -1174,3 +1184,181 @@ def test_invalid_parameters_show_validation_component(prism_app: Dash, path: str
 @pytest.mark.parametrize("path", ["sync", "async"])
 def test_empty_layout_id_renders_nothing(path: str) -> None:
     assert _render_on_path(path, "") is None
+
+
+# =============================================================================
+# Log lines for a failed layout and for a render request
+# =============================================================================
+
+
+def _prism_records(caplog: pytest.LogCaptureFixture, level: int) -> list[logging.LogRecord]:
+    return [
+        record
+        for record in caplog.records
+        if record.name.startswith("dash_prism") and record.levelno >= level
+    ]
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize(
+    ("error", "level"),
+    [
+        (TimeoutError("slow backend"), logging.WARNING),
+        (TypeError("bad type"), logging.WARNING),
+        (ValueError("bad value"), logging.WARNING),
+        (RuntimeError("boom"), logging.ERROR),
+    ],
+    ids=["timeout", "type-error", "value-error", "other"],
+)
+def test_failed_layout_is_logged_once(
+    prism_app: Dash,
+    caplog: pytest.LogCaptureFixture,
+    path: str,
+    error: Exception,
+    level: int,
+) -> None:
+    @dash_prism.register_layout(id="failing", name="Failing")
+    def failing():
+        raise error
+
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        _render_on_path(path, "failing")
+
+    records = _prism_records(caplog, logging.WARNING)
+    assert [record.levelno for record in records] == [level]
+    assert "failing" in records[0].getMessage()
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_missing_layout_is_logged_once(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    dash_prism.register_layout(id="other", name="Other", layout=html.Div("o"))
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        _render_on_path(path, "missing")
+
+    records = _prism_records(caplog, logging.WARNING)
+    assert [record.levelno for record in records] == [logging.WARNING]
+
+
+def test_render_request_is_logged_once_without_parameter_values(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture
+) -> None:
+    @dash_prism.register_layout(id="typed", name="Typed")
+    def typed(n: int = 1):
+        return html.Div(f"n={n}")
+
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    content_id = {"type": "prism-content", "index": "tab-1"}
+    data = {"layoutId": "typed", "layoutParams": {"n": "secret-value"}}
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        result = app_init._render_content_request(content_id, data)
+
+    assert "prism-error-validation" in result.className
+    requests = [r for r in _prism_records(caplog, logging.DEBUG) if "Render request" in r.message]
+    assert [(r.levelno, r.getMessage()) for r in requests] == [
+        (logging.DEBUG, "Render request: tab_id='tab-1' layout_id='typed'")
+    ]
+    assert "secret-value" not in caplog.text
+    warnings_logged = _prism_records(caplog, logging.WARNING)
+    assert [r.getMessage() for r in warnings_logged] == ["Layout 'typed' has invalid parameters: n"]
+
+
+def test_render_request_log_keeps_a_line_break_in_an_id_out_of_the_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    content_id = {"type": "prism-content", "index": "tab\nFAKE LOG LINE"}
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        app_init._parse_content_request(content_id, {"layoutId": "home\r\nFORGED"})
+
+    [message] = [r.getMessage() for r in caplog.records if "Render request" in r.getMessage()]
+    assert "\n" not in message
+    assert "\r" not in message
+
+
+def _raise_type_error(value: str) -> None:
+    raise TypeError(f"cannot use {value}")
+
+
+def _raise_value_error(value: str) -> None:
+    int(value)
+
+
+def _raise_pydantic_error(value: str) -> None:
+    class Settings(pydantic.BaseModel):
+        count: int
+
+    Settings.model_validate({"count": value})
+
+
+def _raise_runtime_error(value: str) -> None:
+    raise RuntimeError(f"unexpected {value}")
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize(
+    "raiser",
+    [_raise_type_error, _raise_value_error, _raise_pydantic_error, _raise_runtime_error],
+    ids=["type-error", "value-error", "pydantic-error", "unexpected"],
+)
+def test_failed_layout_shows_the_value_but_logs_only_the_class(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str, raiser: Any
+) -> None:
+    @dash_prism.register_layout(id="failing", name="Failing")
+    def failing(value: str = ""):
+        raiser(value)
+
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        result = _render_on_path(path, "failing", {"value": "hunter2"})
+
+    assert "hunter2" in _error_message(result)
+    assert "hunter2" not in caplog.text
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_unexpected_exception_log_has_the_class_and_the_frames(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    @dash_prism.register_layout(id="failing", name="Failing")
+    def failing(value: str = ""):
+        _raise_runtime_error(value)
+
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        _render_on_path(path, "failing", {"value": "hunter2"})
+
+    [record] = _prism_records(caplog, logging.WARNING)
+    message = record.getMessage()
+    assert record.levelno == logging.ERROR
+    assert record.exc_info is None
+    assert message.startswith("Layout 'failing' failed with RuntimeError")
+    assert "in failing" in message
+    assert "in _raise_runtime_error" in message
+
+
+def test_log_keeps_a_line_break_in_a_layout_id_out_of_the_log(
+    prism_app: Dash, caplog: pytest.LogCaptureFixture
+) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
+    dash_prism.init("test-prism", prism_app)
+    caplog.clear()
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        app_init._render_tab_layout("tab-1", "missing\nFORGED", None)
+
+    [record] = _prism_records(caplog, logging.WARNING)
+    assert "\n" not in record.getMessage()

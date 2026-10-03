@@ -34,6 +34,7 @@ import hashlib
 import inspect
 import logging
 import math
+import traceback
 import warnings
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, ParamSpec, TypeVar, cast
@@ -484,6 +485,9 @@ def _parse_content_request(
     ``data["timeout"]``, which carries the ``layoutTimeout`` prop of
     :class:`dash_prism.Prism` through the ``PrismContent`` component.
 
+    The function writes the tab ID and the layout ID to the debug log. It never
+    writes the parameters, because they can hold values that the user typed.
+
     :param content_id: The pattern-matching ``id`` of the ``PrismContent``
         component (``{"type": "prism-content", "index": <tab id>}``).
     :type content_id: Any
@@ -508,6 +512,8 @@ def _parse_content_request(
     if not tab_id or not layout_id:
         raise PreventUpdate
 
+    # The browser sends both IDs, so %r keeps a line break in an ID out of the log.
+    logger.debug("Render request: tab_id=%r layout_id=%r", tab_id, layout_id)
     return (
         str(tab_id),
         str(layout_id),
@@ -669,8 +675,12 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
 
     The function selects the component from the class of the exception. There
     is one component for a timeout, one for parameters that are not valid, and
-    one for every other exception. The function writes an unexpected exception
-    to the log with its traceback, so call it from an ``except`` block.
+    one for every other exception. The function writes each failure to the log
+    one time. A failure of the request or of the parameters gets a warning. Any
+    other exception gets an error with the class of the exception and its stack
+    frames. No log line holds an exception message or a parameter value,
+    because both can hold values that the user typed. The tab shows the
+    message.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -683,21 +693,28 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     :rtype: Any
     """
     if isinstance(exc, TimeoutError):
+        logger.warning("Layout %r timed out after %gs", layout_id, timeout)
         return _create_error_component(
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
         )
     # ParamValidationError is a subclass of ValueError, so it must come first.
     if isinstance(exc, params.ParamValidationError):
-        logger.info("Parameter validation failed for layout '%s': %s", layout_id, exc)
+        # The message of the exception holds the input values, so log the field names only.
+        fields = ", ".join(error.field for error in exc.errors)
+        logger.warning("Layout %r has invalid parameters: %s", layout_id, fields)
         return _create_validation_error_component(layout_id, exc)
     if isinstance(exc, TypeError):
+        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
         return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
     if isinstance(exc, ValueError):
         # resolve_layout_params writes its ValueError messages for the user, so
         # the tab shows them as they are.
+        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
         return _create_error_component(str(exc))
-    logger.exception("Unexpected error rendering layout '%s'", layout_id)
+    # The log must not hold the message, so it gets the frames and not exc_info.
+    frames = "".join(traceback.format_tb(exc.__traceback__))
+    logger.error("Layout %r failed with %s\n%s", layout_id, type(exc).__name__, frames)
     return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
 
 
@@ -935,7 +952,6 @@ def _register_render_callback(app: Dash, background: bool) -> None:
         @register
         async def render_prism_content_async(content_id, data):
             """Render the contents of one tab. Dash calls this async callback."""
-            logger.info("render_prism_content_async %s, %s", content_id, data)
             return await _render_content_request_async(content_id, data)
 
     else:
@@ -943,7 +959,6 @@ def _register_render_callback(app: Dash, background: bool) -> None:
         @register
         def render_prism_content(content_id, data):
             """Render the contents of one tab. Dash calls this sync callback."""
-            logger.info("render_prism_content %s, %s", content_id, data)
             return _render_content_request(content_id, data)
 
     mode = "async" if use_async else "sync"
