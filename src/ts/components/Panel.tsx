@@ -7,7 +7,6 @@ import { TabBar } from '@components/TabBar';
 import { SearchBar } from '@components/SearchBar';
 import { PanelDropzone } from '@components/PanelDropzone';
 import type { PanelNode, Tab, TabId, PanelId } from '@types';
-import { cn } from '@utils/cn';
 import { isLeafPanel } from '@utils/panels';
 import { findTabById } from '@utils/tabs';
 import { EmptyTabView } from '@components/layouts';
@@ -102,7 +101,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
   return (
     <div
       ref={panelRef}
-      className={cn('prism-panel', isActive && 'prism-panel-active')}
+      className="prism-panel"
       data-testid={`prism-panel-${panel.id}`}
       data-panel-id={panel.id}
       data-active={isActive || undefined}

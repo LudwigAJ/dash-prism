@@ -20,6 +20,7 @@ import {
   getWorkspaceStorageKey,
   resolvePersistenceType,
 } from '@store';
+import { cn } from '@utils/cn';
 import { subscribeToToasts } from '@utils/toastEmitter';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import { toast } from 'sonner';
@@ -473,7 +474,13 @@ export function Prism({
     <div
       id={id}
       ref={setRootElement}
-      className={`prism-root prism-container ${theme === 'dark' ? 'dark' : ''} prism-size-${size} text-foreground${className ? ` ${className}` : ''}`}
+      className={cn(
+        'prism-root',
+        theme === 'dark' && 'dark',
+        `prism-size-${size}`,
+        'text-foreground',
+        className
+      )}
       style={style}
     >
       <ErrorBoundary
