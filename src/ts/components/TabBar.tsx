@@ -270,6 +270,7 @@ const TabItem = memo(function TabItem({
               <input
                 ref={inputRef}
                 data-testid={`prism-tab-rename-${tab.id}`}
+                aria-label="Tab name"
                 className="prism-tab-rename-input"
                 value={editingName}
                 onChange={(e) => onEditingNameChange(e.target.value)}
@@ -682,7 +683,9 @@ export const TabBar = memo(function TabBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 data-testid="prism-tabbar-add-button"
+                aria-label="New tab"
                 className="prism-tabbar-add"
                 onClick={handleAddTab}
                 disabled={isMaxTabsReached}
@@ -705,7 +708,9 @@ export const TabBar = memo(function TabBar({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              type="button"
               data-testid="prism-tabbar-split-button"
+              aria-label="Split panel"
               className="prism-tabbar-split"
               onClick={handleSplitPanel}
               disabled={isMaxTabsReached}

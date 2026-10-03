@@ -404,7 +404,9 @@ def test_click_outside_closes_dropdown_when_focus_is_inside_it(prism_app_with_la
     label = duo.driver.execute_script(
         "return document.activeElement && document.activeElement.getAttribute('aria-label')"
     )
-    assert label in ("Add to favorites", "Remove from favorites"), label
+    # The name says which layout the star belongs to.
+    assert label.split()[0] in ("Add", "Remove") and "Test" in label, label
+    assert label.endswith("favorites"), label
     assert _dropdown_open(duo), "dropdown must stay open while focus is inside it"
 
     # A real click on a non-interactive element outside the search bar.

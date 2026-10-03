@@ -53,6 +53,13 @@ def test_create_new_tab(prism_app_with_layouts):
     assert len(errors) == 0, f"Browser console should have no errors: {errors}"
 
 
+def test_add_tab_button_has_an_accessible_name(prism_app_with_layouts):
+    """The add button shows only an icon, so its name must come from aria-label."""
+    duo = prism_app_with_layouts
+
+    assert duo.find_element(ADD_TAB_BUTTON).accessible_name == "New tab"
+
+
 def test_close_tab(prism_app_with_layouts):
     """Test closing a tab via the close button."""
     duo = prism_app_with_layouts

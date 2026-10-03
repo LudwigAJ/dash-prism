@@ -104,7 +104,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-reset"
+            aria-label="Reset workspace"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-destructive"
             onClick={handleReset}
           >
@@ -118,7 +120,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-help"
+            aria-label="Help"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-foreground"
             onClick={() => onOpenHelp?.()}
           >
@@ -132,7 +136,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-undo"
+            aria-label="Undo last change"
             className={cn(
               'tw:rounded-sm tw:p-1 tw:transition-colors',
               canUndo

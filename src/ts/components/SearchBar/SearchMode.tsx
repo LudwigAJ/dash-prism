@@ -103,7 +103,11 @@ export const SearchMode = ({
                             ? 'tw:text-primary'
                             : 'tw:text-muted-foreground tw:hover:text-primary'
                         )}
-                        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        aria-label={
+                          isFavorite
+                            ? `Remove ${meta.name} from favorites`
+                            : `Add ${meta.name} to favorites`
+                        }
                       >
                         <Star
                           className={cn(

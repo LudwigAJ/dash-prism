@@ -54,6 +54,8 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
             <button
               type="button"
               onClick={() => handleSelectIcon(undefined)}
+              aria-label="No icon"
+              aria-pressed={noIconSelected}
               title="No icon"
               className={cn(
                 'tw:flex tw:h-10 tw:w-10 tw:items-center tw:justify-center tw:rounded-md tw:transition-colors',
@@ -75,6 +77,8 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
                   key={iconName}
                   type="button"
                   onClick={() => handleSelectIcon(iconName)}
+                  aria-label={getIconLabel(iconName)}
+                  aria-pressed={isSelected}
                   title={getIconLabel(iconName)}
                   className={cn(
                     'tw:flex tw:h-10 tw:w-10 tw:items-center tw:justify-center tw:rounded-md tw:transition-colors',

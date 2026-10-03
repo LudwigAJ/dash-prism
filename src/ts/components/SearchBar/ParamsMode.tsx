@@ -74,6 +74,7 @@ export const ParamsMode = ({
         <input
           ref={inputRef}
           data-testid="prism-searchbar-param-input"
+          aria-label={currentParam.title ?? currentParam.name}
           className={cn(
             'tw:w-full tw:border-none tw:bg-transparent tw:text-sm tw:outline-none',
             paramError && 'tw:text-destructive'
@@ -135,8 +136,10 @@ export const ParamsMode = ({
 
       {/* Cancel X button */}
       <button
+        type="button"
         className="tw:ml-2 tw:flex-shrink-0 tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:text-destructive"
         onClick={onCancel}
+        aria-label="Cancel"
         title="Cancel"
       >
         <X className="tw:size-[1em]" />

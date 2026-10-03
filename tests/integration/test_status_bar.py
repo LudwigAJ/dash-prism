@@ -20,6 +20,7 @@ from conftest import (
 pytestmark = pytest.mark.integration
 
 HELP_BUTTON = "[data-testid='prism-statusbar-help']"
+RESET_BUTTON = "[data-testid='prism-statusbar-reset']"
 UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
 ACTION_BUTTON = "[data-testid='prism-action-save']"
 
@@ -58,6 +59,16 @@ def test_status_bar_hidden(dash_duo):
     dash_duo.find_element(ADD_TAB_BUTTON).click()
     wait_for_tab_count(dash_duo, 2)
     assert check_browser_errors(dash_duo) == []
+
+
+def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
+    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+
+    # The buttons show only an icon, so the name is the only text a screen reader gets.
+    assert dash_duo.find_element(RESET_BUTTON).accessible_name == "Reset workspace"
+    assert dash_duo.find_element(HELP_BUTTON).accessible_name == "Help"
+    assert dash_duo.find_element(UNDO_BUTTON).accessible_name == "Undo last change"
 
 
 def _segment_order(dash_duo) -> list[str]:

@@ -99,6 +99,24 @@ def test_rename_via_context_menu(prism_app_with_layouts):
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
+def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
+    """The rename input has no visible label, so its name must come from aria-label."""
+    duo = prism_app_with_layouts
+    wait_for_tab_count(duo, 1)
+
+    tab_id = get_tab_id(duo, 0)
+    assert tab_id is not None, "Tab ID should not be None"
+    assert trigger_rename_mode(duo, tab_id), "Should be able to trigger rename mode"
+
+    rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
+    WebDriverWait(duo.driver, 5).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
+        message="Rename input should appear after double-click",
+    )
+
+    assert duo.find_element(rename_input_selector).accessible_name == "Tab name"
+
+
 def test_rename_via_double_click(prism_app_with_layouts):
     """Test renaming a tab by double-clicking it."""
     duo = prism_app_with_layouts
