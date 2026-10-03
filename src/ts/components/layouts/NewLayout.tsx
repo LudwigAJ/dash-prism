@@ -30,9 +30,9 @@ function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: L
   return (
     <Card
       className={cn(
-        'hover:border-accent relative cursor-pointer transition-colors hover:shadow-md',
-        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-        'flex flex-col'
+        'tw:relative tw:cursor-pointer tw:transition-colors tw:hover:border-accent tw:hover:shadow-md',
+        'tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none tw:focus-visible:ring-inset',
+        'tw:flex tw:flex-col'
       )}
       onClick={() => onLayoutClick(id)}
       role="button"
@@ -49,24 +49,26 @@ function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: L
         type="button"
         onClick={(e) => onToggleFavorite(e, id)}
         className={cn(
-          'absolute top-2 right-2 rounded-md p-1.5 transition-colors',
-          'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-          isFavorite ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+          'tw:absolute tw:top-2 tw:right-2 tw:rounded-md tw:p-1.5 tw:transition-colors',
+          'tw:hover:bg-muted tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
+          isFavorite ? 'tw:text-primary' : 'tw:text-muted-foreground tw:hover:text-primary'
         )}
         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
-        <Star className={cn('size-[1em]', isFavorite && 'fill-current')} />
+        <Star className={cn('tw:size-[1em]', isFavorite && 'tw:fill-current')} />
       </button>
 
-      <CardHeader className="flex-1 pr-10 pb-2">
-        <CardTitle className="text-[1.15em]">{meta.name}</CardTitle>
+      <CardHeader className="tw:flex-1 tw:pr-10 tw:pb-2">
+        <CardTitle className="tw:text-[1.15em]">{meta.name}</CardTitle>
         {meta.description && (
-          <CardDescription className="line-clamp-3 text-[1em]">{meta.description}</CardDescription>
+          <CardDescription className="tw:line-clamp-3 tw:text-[1em]">
+            {meta.description}
+          </CardDescription>
         )}
       </CardHeader>
       {meta.params && meta.params.length > 0 && (
-        <CardContent className="pt-0">
-          <p className="text-muted-foreground text-[0.85em]">
+        <CardContent className="tw:pt-0">
+          <p className="tw:text-[0.85em] tw:text-muted-foreground">
             {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
@@ -107,12 +109,12 @@ export function NewLayout({ tabId }: NewLayoutProps) {
     return (
       <div
         data-testid="prism-empty-tab-layouts"
-        className="flex h-full items-center justify-center p-6"
+        className="tw:flex tw:h-full tw:items-center tw:justify-center tw:p-6"
       >
-        <Card className="w-full max-w-md">
+        <Card className="tw:w-full tw:max-w-md">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Layers className="text-muted-foreground size-[1.25em]" />
+            <div className="tw:flex tw:items-center tw:gap-2">
+              <Layers className="tw:size-[1.25em] tw:text-muted-foreground" />
               <CardTitle>No Layouts Available</CardTitle>
             </div>
             <CardDescription>
@@ -127,15 +129,15 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   return (
     <div
       data-testid="prism-empty-tab-layouts"
-      className="bg-background flex h-full w-full flex-col overflow-auto p-[1.7em]"
+      className="tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto tw:bg-background tw:p-[1.7em]"
     >
       {/* Favorites Section */}
       {favoriteEntries.length > 0 && (
-        <section className="mb-[2.3em] last:mb-0">
-          <h2 className="text-muted-foreground mb-[1.1em] text-[1em] font-medium tracking-wide uppercase">
+        <section className="tw:mb-[2.3em] tw:last:mb-0">
+          <h2 className="tw:mb-[1.1em] tw:text-[1em] tw:font-medium tw:tracking-wide tw:text-muted-foreground tw:uppercase">
             Favorites
           </h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
+          <div className="tw:grid tw:grid-cols-[repeat(auto-fill,minmax(15em,1fr))] tw:gap-[1.1em]">
             {favoriteEntries.map(([id, meta]) => (
               <LayoutCard
                 key={id}
@@ -152,11 +154,11 @@ export function NewLayout({ tabId }: NewLayoutProps) {
 
       {/* Layouts Section */}
       {otherEntries.length > 0 && (
-        <section className="mb-[2.3em] last:mb-0">
-          <h2 className="text-muted-foreground mb-[1.1em] text-[1em] font-medium tracking-wide uppercase">
+        <section className="tw:mb-[2.3em] tw:last:mb-0">
+          <h2 className="tw:mb-[1.1em] tw:text-[1em] tw:font-medium tw:tracking-wide tw:text-muted-foreground tw:uppercase">
             Layouts
           </h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(15em,1fr))] gap-[1.1em]">
+          <div className="tw:grid tw:grid-cols-[repeat(auto-fill,minmax(15em,1fr))] tw:gap-[1.1em]">
             {otherEntries.map(([id, meta]) => (
               <LayoutCard
                 key={id}

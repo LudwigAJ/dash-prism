@@ -27,6 +27,13 @@ All notable changes to Dash Prism are recorded here. The project follows
   `prism-content-container`, `prism-panel-active`,
   `prism-panel-drop-zone-left`, `-right`, `-top`, `-bottom` and
   `prism-command`).
+- **The Tailwind utility classes of Prism have the prefix `tw:`.** A Dash layout
+  in a tab is inside the Prism root element, so its class names met the utility
+  classes of Prism (`flex`, `hidden`, `border`, `collapse`, `container` and
+  others). Each utility class now has the form `tw:flex`, and no class name in a
+  layout meets a Prism rule. A host that styled the inside of Prism with the old
+  Tailwind class names must use the new names. These names were never public
+  API. The class `scrollbar-none` is now `prism-scrollbar-none`.
 
 ### Changed
 
@@ -42,6 +49,10 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 - The tab rename input keeps its natural height instead of stretching to the
   bottom of the tab.
+- An open Bootstrap collapse (`dbc.Collapse`) in a tab is visible. The Prism
+  utility class `collapse` made it invisible. Other class names of CSS
+  frameworks such as Bootstrap (`container`, `border`, `rounded` and
+  more) no longer get Prism styles in a tab too.
 
 ## 1.0.0
 

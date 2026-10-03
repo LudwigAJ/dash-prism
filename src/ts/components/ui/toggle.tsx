@@ -3,17 +3,17 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@utils/cn';
 
 const toggleVariants = cva(
-  'inline-flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+  'tw:inline-flex tw:items-center tw:justify-center tw:rounded-md tw:p-1.5 tw:transition-colors tw:hover:bg-muted tw:focus-visible:ring-ring tw:focus-visible:ring-2 tw:focus-visible:outline-none tw:disabled:pointer-events-none tw:disabled:opacity-50',
   {
     variants: {
       pressed: {
-        true: 'text-primary',
+        true: 'tw:text-primary',
         false: '',
       },
       size: {
-        sm: 'p-1',
-        md: 'p-1.5',
-        lg: 'p-2',
+        sm: 'tw:p-1',
+        md: 'tw:p-1.5',
+        lg: 'tw:p-2',
       },
     },
     defaultVariants: {

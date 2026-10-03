@@ -83,11 +83,11 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
   // ===== STATE 1: Timed out =====
   if (timedOut && !children) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <Card className="w-full max-w-md">
+      <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:p-6">
+        <Card className="tw:w-full tw:max-w-md">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive size-[1.25em]" />
+            <div className="tw:flex tw:items-center tw:gap-2">
+              <AlertTriangle className="tw:size-[1.25em] tw:text-destructive" />
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
@@ -95,12 +95,12 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               seconds.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
+          <CardContent className="tw:space-y-4">
+            <p className="tw:text-sm tw:text-muted-foreground">
               The server may be overloaded or the layout callback encountered an issue.
             </p>
             <Button variant="default" onClick={() => setTimedOut(false)}>
-              <RefreshCw className="mr-2 size-[1em]" />
+              <RefreshCw className="tw:mr-2 tw:size-[1em]" />
               Try Again
             </Button>
           </CardContent>
@@ -112,15 +112,15 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
   // ===== STATE 2: Loading (callback is processing) =====
   if (loadingState) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <span className="text-muted-foreground ml-2">Loading layout...</span>
+      <div className="tw:flex tw:h-full tw:w-full tw:items-center tw:justify-center">
+        <span className="tw:ml-2 tw:text-muted-foreground">Loading layout...</span>
       </div>
     );
   }
 
   // ===== STATE 3: Render content (children received) =====
   if (children) {
-    return <div className="h-full w-full">{children}</div>;
+    return <div className="tw:h-full tw:w-full">{children}</div>;
   }
 
   // ===== STATE 4: No layout selected (empty tab) =====

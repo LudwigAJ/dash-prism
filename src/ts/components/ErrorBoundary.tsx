@@ -78,11 +78,11 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="prism-scrollable flex h-full items-center justify-center p-6">
-            <Card className="w-full max-w-md">
+          <div className="prism-scrollable tw:flex tw:h-full tw:items-center tw:justify-center tw:p-6">
+            <Card className="tw:w-full tw:max-w-md">
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="text-destructive size-[1.25em]" />
+                <div className="tw:flex tw:items-center tw:gap-2">
+                  <AlertTriangle className="tw:size-[1.25em] tw:text-destructive" />
                   <CardTitle>Something went wrong</CardTitle>
                 </div>
                 <CardDescription>
@@ -91,19 +91,19 @@ export class ErrorBoundary extends Component<Props, State> {
                     : 'An error occurred while rendering this content.'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground bg-muted rounded p-2 font-mono text-sm">
+              <CardContent className="tw:space-y-4">
+                <p className="tw:rounded tw:bg-muted tw:p-2 tw:font-mono tw:text-sm tw:text-muted-foreground">
                   {this.state.error?.message}
                 </p>
 
                 {/* Worded actions instead of buttons */}
-                <div className="text-secondary text-sm">
+                <div className="tw:text-sm tw:text-secondary">
                   {level === 'workspace' ? (
                     <>
                       <span
                         role="button"
                         tabIndex={0}
-                        className="text-primary cursor-pointer hover:underline"
+                        className="tw:cursor-pointer tw:text-primary tw:hover:underline"
                         onClick={this.handleRefreshPage}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') this.handleRefreshPage();
@@ -114,11 +114,11 @@ export class ErrorBoundary extends Component<Props, State> {
                       </span>
                       {this.props.onClearStorage && (
                         <>
-                          <span className="mx-2">or</span>
+                          <span className="tw:mx-2">or</span>
                           <span
                             role="button"
                             tabIndex={0}
-                            className="text-destructive cursor-pointer hover:underline"
+                            className="tw:cursor-pointer tw:text-destructive tw:hover:underline"
                             onClick={this.handleClearStorageAndRefresh}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') this.handleClearStorageAndRefresh();
@@ -134,7 +134,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     <span
                       role="button"
                       tabIndex={0}
-                      className="text-primary cursor-pointer hover:underline"
+                      className="tw:cursor-pointer tw:text-primary tw:hover:underline"
                       onClick={this.handleRetry}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') this.handleRetry();

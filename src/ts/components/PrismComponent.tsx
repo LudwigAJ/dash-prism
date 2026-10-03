@@ -478,7 +478,7 @@ export function Prism({
         'prism-root',
         theme === 'dark' && 'dark',
         `prism-size-${size}`,
-        'text-foreground',
+        'tw:text-foreground',
         className
       )}
       style={style}

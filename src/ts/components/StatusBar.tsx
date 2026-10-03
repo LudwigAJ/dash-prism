@@ -105,10 +105,10 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipTrigger asChild>
           <button
             data-testid="prism-statusbar-reset"
-            className="text-muted-foreground hover:text-destructive hover:bg-muted rounded-sm p-1 transition-colors"
+            className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-destructive"
             onClick={handleReset}
           >
-            <Trash2 className="size-[1em]" />
+            <Trash2 className="tw:size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>Reset workspace (clear saved state)</TooltipContent>
@@ -119,10 +119,10 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipTrigger asChild>
           <button
             data-testid="prism-statusbar-help"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm p-1 transition-colors"
+            className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-foreground"
             onClick={() => onOpenHelp?.()}
           >
-            <Info className="size-[1em]" />
+            <Info className="tw:size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>Help</TooltipContent>
@@ -134,15 +134,15 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
           <button
             data-testid="prism-statusbar-undo"
             className={cn(
-              'rounded-sm p-1 transition-colors',
+              'tw:rounded-sm tw:p-1 tw:transition-colors',
               canUndo
-                ? 'text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer'
-                : 'text-muted-foreground/40 cursor-not-allowed'
+                ? 'tw:cursor-pointer tw:text-muted-foreground tw:hover:bg-muted tw:hover:text-foreground'
+                : 'tw:cursor-not-allowed tw:text-muted-foreground/40'
             )}
             onClick={handleUndo}
             disabled={!canUndo}
           >
-            <Undo2 className="size-[1em]" />
+            <Undo2 className="tw:size-[1em]" />
           </button>
         </TooltipTrigger>
         <TooltipContent>
@@ -157,19 +157,19 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     mode: (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1" data-testid="prism-statusbar-mode">
-            <span className="text-muted-foreground">Mode:</span>
-            <span className="text-foreground font-medium">{searchBarMode}</span>
+          <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-mode">
+            <span className="tw:text-muted-foreground">Mode:</span>
+            <span className="tw:font-medium tw:text-foreground">{searchBarMode}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent>SearchBar mode for active panel</TooltipContent>
       </Tooltip>
     ),
     panels: (
-      <div className="flex items-center gap-1" data-testid="prism-statusbar-panels">
-        Panels: <span className="text-foreground font-medium">{panelCount}</span>
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-panels">
+        Panels: <span className="tw:font-medium tw:text-foreground">{panelCount}</span>
         {panelCount > 1 && (
-          <span className="text-muted-foreground">({activePanelId.slice(0, 8)})</span>
+          <span className="tw:text-muted-foreground">({activePanelId.slice(0, 8)})</span>
         )}
       </div>
     ),
@@ -177,16 +177,21 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Popover>
         <PopoverTrigger asChild>
           <div
-            className="hover:bg-muted flex cursor-pointer items-center gap-1 rounded-sm px-1.5 py-0.5 transition-colors"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:px-1.5 tw:py-0.5 tw:transition-colors tw:hover:bg-muted"
             data-testid="prism-statusbar-tab"
           >
-            Tab: <span className="text-foreground">{activeTab?.name || '--'}</span>
-            {activeTab?.locked && <Lock className="text-muted-foreground size-[1em]" />}
+            Tab: <span className="tw:text-foreground">{activeTab?.name || '--'}</span>
+            {activeTab?.locked && <Lock className="tw:size-[1em] tw:text-muted-foreground" />}
           </div>
         </PopoverTrigger>
         {activeTab && (
-          <PopoverContent className="w-auto min-w-48 p-3" side="top" sideOffset={0} align="start">
-            <div className="space-y-0">
+          <PopoverContent
+            className="tw:w-auto tw:min-w-48 tw:p-3"
+            side="top"
+            sideOffset={0}
+            align="start"
+          >
+            <div className="tw:space-y-0">
               <InfoRow label="Name" value={activeTab.name} />
               <InfoRow label="Tab ID" value={activeTab.id} mono />
               <InfoRow label="Panel ID" value={activeTab.panelId} mono />
@@ -202,8 +207,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       </Popover>
     ),
     count: (
-      <div className="flex items-center gap-1" data-testid="prism-statusbar-count">
-        <span className="text-foreground">
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-count">
+        <span className="tw:text-foreground">
           {maxTabs >= 1 ? `${tabCount}/${maxTabs}` : tabCount}
         </span>
         {tabCount === 1 ? 'tab' : 'tabs'}
@@ -212,7 +217,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
   };
 
   return (
-    <div className="prism-status-bar bg-card text-card-foreground border-border flex items-center gap-2 border-t px-3 py-1.5 text-xs">
+    <div className="prism-status-bar tw:flex tw:items-center tw:gap-2 tw:border-t tw:border-border tw:bg-card tw:px-3 tw:py-1.5 tw:text-xs tw:text-card-foreground">
       {leftItems.map((item, index) => (
         <React.Fragment key={item}>
           {index > 0 && <Sep />}
@@ -220,7 +225,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         </React.Fragment>
       ))}
 
-      <div className="flex-1" />
+      <div className="tw:flex-1" />
 
       {/* Action Buttons - rendered via ExternalWrapper or directly */}
       {actions.length > 0 && (
@@ -274,10 +279,10 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       {/* Last Updated */}
       {showUpdated && (
         <div
-          className="text-muted-foreground flex items-center gap-1"
+          className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground"
           data-testid="prism-statusbar-updated"
         >
-          Updated: <span className="text-foreground">{syncTimeDisplay}</span>
+          Updated: <span className="tw:text-foreground">{syncTimeDisplay}</span>
         </div>
       )}
     </div>
@@ -286,18 +291,18 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 
 /** Thin vertical separator between status bar segments. */
 function Sep() {
-  return <span className="text-border opacity-60">|</span>;
+  return <span className="tw:text-border tw:opacity-60">|</span>;
 }
 
 // Helper component for info rows
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="border-border/50 flex items-center justify-between gap-4 border-b py-2 last:border-0">
-      <span className="text-muted-foreground text-xs">{label}</span>
+    <div className="tw:flex tw:items-center tw:justify-between tw:gap-4 tw:border-b tw:border-border/50 tw:py-2 tw:last:border-0">
+      <span className="tw:text-xs tw:text-muted-foreground">{label}</span>
       <span
         className={cn(
-          'text-foreground text-xs font-medium',
-          mono && 'text-muted-foreground font-mono'
+          'tw:text-xs tw:font-medium tw:text-foreground',
+          mono && 'tw:font-mono tw:text-muted-foreground'
         )}
       >
         {value}

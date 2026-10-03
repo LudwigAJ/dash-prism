@@ -42,7 +42,7 @@ export const OptionsMode = ({
 }: OptionsModeProps) => {
   return (
     <div className={cn('prism-searchbar')} ref={commandRef}>
-      <Command shouldFilter={false} className="flex-1 overflow-visible">
+      <Command shouldFilter={false} className="tw:flex-1 tw:overflow-visible">
         <CommandInput
           ref={inputRef}
           value=""
@@ -55,21 +55,23 @@ export const OptionsMode = ({
 
         {showDropdown && (
           <CommandList
-            className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border"
+            className="tw:absolute tw:top-full tw:right-0 tw:left-0 tw:z-[100] tw:border tw:border-border tw:bg-popover"
             style={{ maxHeight: dropdownHeight }}
           >
             <CommandItem onSelect={onBackToLayouts}>
-              <ArrowLeft className="mr-2 size-[1em]" />
+              <ArrowLeft className="tw:mr-2 tw:size-[1em]" />
               <span>Back to layouts</span>
             </CommandItem>
             <CommandSeparator />
             <CommandGroup heading={`Options for ${selectedLayoutName}`}>
               {Object.entries(paramOptions).map(([key, option]) => (
                 <CommandItem key={key} value={key} onSelect={() => onOptionSelect(key)}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{key}</span>
+                  <div className="tw:flex tw:items-center tw:gap-2">
+                    <span className="tw:font-medium">{key}</span>
                     {option.description && (
-                      <span className="text-muted-foreground text-xs">{option.description}</span>
+                      <span className="tw:text-xs tw:text-muted-foreground">
+                        {option.description}
+                      </span>
                     )}
                   </div>
                 </CommandItem>

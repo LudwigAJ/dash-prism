@@ -6,8 +6,9 @@ export default {
     // The preset asks for @import url(...). Tailwind resolves `@import 'tailwindcss'` only in the
     // plain string form.
     'import-notation': 'string',
-    // Tailwind 4 puts utility class names in the prelude of @apply.
-    'at-rule-prelude-no-invalid': [true, { ignoreAtRules: ['media', 'apply'] }],
+    // Tailwind 4 puts utility class names in the prelude of @apply. It puts the prefix option in
+    // the prelude of @import.
+    'at-rule-prelude-no-invalid': [true, { ignoreAtRules: ['media', 'apply', 'import'] }],
     // Tailwind 4 directives.
     'at-rule-no-unknown': [
       true,

@@ -55,7 +55,7 @@ export const SearchMode = ({
       data-testid="prism-searchbar"
       onClick={onClick}
     >
-      <Command shouldFilter={false} className="flex-1 overflow-visible">
+      <Command shouldFilter={false} className="tw:flex-1 tw:overflow-visible">
         <CommandInput
           ref={inputRef}
           data-testid="prism-searchbar-input"
@@ -70,7 +70,7 @@ export const SearchMode = ({
 
         {showDropdown && (
           <CommandList
-            className="bg-popover border-border absolute top-full right-0 left-0 z-[100] border"
+            className="tw:absolute tw:top-full tw:right-0 tw:left-0 tw:z-[100] tw:border tw:border-border tw:bg-popover"
             style={{ maxHeight: dropdownHeight }}
           >
             {filteredLayouts.length === 0 ? (
@@ -97,31 +97,39 @@ export const SearchMode = ({
                           onToggleFavorite(id);
                         }}
                         className={cn(
-                          'mr-2 shrink-0 rounded p-0.5 transition-colors',
-                          'hover:bg-muted focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-none',
-                          isFavorite ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+                          'tw:mr-2 tw:shrink-0 tw:rounded tw:p-0.5 tw:transition-colors',
+                          'tw:hover:bg-muted tw:focus-visible:ring-1 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
+                          isFavorite
+                            ? 'tw:text-primary'
+                            : 'tw:text-muted-foreground tw:hover:text-primary'
                         )}
                         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
                         <Star
-                          className={cn('size-[1em] text-current', isFavorite && 'fill-current')}
+                          className={cn(
+                            'tw:size-[1em] tw:text-current',
+                            isFavorite && 'tw:fill-current'
+                          )}
                         />
                       </button>
-                      <div className="flex flex-1 items-center gap-3 overflow-hidden">
-                        <span className="shrink-0 font-medium">{meta.name}</span>
+                      <div className="tw:flex tw:flex-1 tw:items-center tw:gap-3 tw:overflow-hidden">
+                        <span className="tw:shrink-0 tw:font-medium">{meta.name}</span>
                         {meta.description && (
-                          <span className="text-muted-foreground truncate text-sm">
+                          <span className="tw:truncate tw:text-sm tw:text-muted-foreground">
                             {meta.description}
                           </span>
                         )}
                       </div>
                       {hasParams ? (
-                        <span className="text-muted-foreground ml-auto text-xs" aria-hidden="true">
+                        <span
+                          className="tw:ml-auto tw:text-xs tw:text-muted-foreground"
+                          aria-hidden="true"
+                        >
                           {'>'}
                         </span>
                       ) : hasOptions ? (
                         <List
-                          className="text-muted-foreground ml-auto size-[1em]"
+                          className="tw:ml-auto tw:size-[1em] tw:text-muted-foreground"
                           aria-hidden="true"
                         />
                       ) : null}

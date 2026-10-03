@@ -48,78 +48,84 @@ export const tabStyleVariants = cva('', {
     {
       color: 'red',
       theme: 'light',
-      className: 'bg-tab-red/20 border-tab-red/40 data-[state=active]:bg-tab-red/30',
+      className: 'tw:bg-tab-red/20 tw:border-tab-red/40 tw:data-[state=active]:bg-tab-red/30',
     },
     {
       color: 'red',
       theme: 'dark',
-      className: 'bg-tab-red/15 border-tab-red/35 data-[state=active]:bg-tab-red/25',
+      className: 'tw:bg-tab-red/15 tw:border-tab-red/35 tw:data-[state=active]:bg-tab-red/25',
     },
     // Orange
     {
       color: 'orange',
       theme: 'light',
-      className: 'bg-tab-orange/20 border-tab-orange/40 data-[state=active]:bg-tab-orange/30',
+      className:
+        'tw:bg-tab-orange/20 tw:border-tab-orange/40 tw:data-[state=active]:bg-tab-orange/30',
     },
     {
       color: 'orange',
       theme: 'dark',
-      className: 'bg-tab-orange/15 border-tab-orange/35 data-[state=active]:bg-tab-orange/25',
+      className:
+        'tw:bg-tab-orange/15 tw:border-tab-orange/35 tw:data-[state=active]:bg-tab-orange/25',
     },
     // Yellow
     {
       color: 'yellow',
       theme: 'light',
-      className: 'bg-tab-yellow/20 border-tab-yellow/40 data-[state=active]:bg-tab-yellow/30',
+      className:
+        'tw:bg-tab-yellow/20 tw:border-tab-yellow/40 tw:data-[state=active]:bg-tab-yellow/30',
     },
     {
       color: 'yellow',
       theme: 'dark',
-      className: 'bg-tab-yellow/15 border-tab-yellow/35 data-[state=active]:bg-tab-yellow/25',
+      className:
+        'tw:bg-tab-yellow/15 tw:border-tab-yellow/35 tw:data-[state=active]:bg-tab-yellow/25',
     },
     // Green
     {
       color: 'green',
       theme: 'light',
-      className: 'bg-tab-green/20 border-tab-green/40 data-[state=active]:bg-tab-green/30',
+      className: 'tw:bg-tab-green/20 tw:border-tab-green/40 tw:data-[state=active]:bg-tab-green/30',
     },
     {
       color: 'green',
       theme: 'dark',
-      className: 'bg-tab-green/15 border-tab-green/35 data-[state=active]:bg-tab-green/25',
+      className: 'tw:bg-tab-green/15 tw:border-tab-green/35 tw:data-[state=active]:bg-tab-green/25',
     },
     // Blue
     {
       color: 'blue',
       theme: 'light',
-      className: 'bg-tab-blue/20 border-tab-blue/40 data-[state=active]:bg-tab-blue/30',
+      className: 'tw:bg-tab-blue/20 tw:border-tab-blue/40 tw:data-[state=active]:bg-tab-blue/30',
     },
     {
       color: 'blue',
       theme: 'dark',
-      className: 'bg-tab-blue/15 border-tab-blue/35 data-[state=active]:bg-tab-blue/25',
+      className: 'tw:bg-tab-blue/15 tw:border-tab-blue/35 tw:data-[state=active]:bg-tab-blue/25',
     },
     // Purple
     {
       color: 'purple',
       theme: 'light',
-      className: 'bg-tab-purple/20 border-tab-purple/40 data-[state=active]:bg-tab-purple/30',
+      className:
+        'tw:bg-tab-purple/20 tw:border-tab-purple/40 tw:data-[state=active]:bg-tab-purple/30',
     },
     {
       color: 'purple',
       theme: 'dark',
-      className: 'bg-tab-purple/15 border-tab-purple/35 data-[state=active]:bg-tab-purple/25',
+      className:
+        'tw:bg-tab-purple/15 tw:border-tab-purple/35 tw:data-[state=active]:bg-tab-purple/25',
     },
     // Pink
     {
       color: 'pink',
       theme: 'light',
-      className: 'bg-tab-pink/20 border-tab-pink/40 data-[state=active]:bg-tab-pink/30',
+      className: 'tw:bg-tab-pink/20 tw:border-tab-pink/40 tw:data-[state=active]:bg-tab-pink/30',
     },
     {
       color: 'pink',
       theme: 'dark',
-      className: 'bg-tab-pink/15 border-tab-pink/35 data-[state=active]:bg-tab-pink/25',
+      className: 'tw:bg-tab-pink/15 tw:border-tab-pink/35 tw:data-[state=active]:bg-tab-pink/25',
     },
   ],
   defaultVariants: {

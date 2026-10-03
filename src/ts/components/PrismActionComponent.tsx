@@ -6,11 +6,11 @@ import { type DashComponentProps } from 'props';
 /** Style variants for action buttons */
 const ACTION_VARIANT_CLASSES: Record<string, string> = {
   default: '',
-  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-  success: 'bg-success text-success-foreground hover:bg-success/90',
-  warning: 'bg-warning text-warning-foreground hover:bg-warning/90',
-  danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  primary: 'tw:bg-primary tw:text-primary-foreground tw:hover:bg-primary/90',
+  secondary: 'tw:bg-secondary tw:text-secondary-foreground tw:hover:bg-secondary/80',
+  success: 'tw:bg-success tw:text-success-foreground tw:hover:bg-success/90',
+  warning: 'tw:bg-warning tw:text-warning-foreground tw:hover:bg-warning/90',
+  danger: 'tw:bg-destructive tw:text-destructive-foreground tw:hover:bg-destructive/90',
 };
 
 /**
@@ -112,12 +112,12 @@ export function PrismAction({
           id={id}
           data-testid={testId}
           className={cn(
-            'rounded-sm px-2 py-0.5 text-xs font-medium transition-colors',
-            'hover:bg-muted border border-transparent',
-            'flex items-center gap-1.5',
+            'tw:rounded-sm tw:px-2 tw:py-0.5 tw:text-xs tw:font-medium tw:transition-colors',
+            'tw:border tw:border-transparent tw:hover:bg-muted',
+            'tw:flex tw:items-center tw:gap-1.5',
             variantClasses,
-            disabled && 'cursor-not-allowed opacity-50',
-            loading && 'cursor-wait'
+            disabled && 'tw:cursor-not-allowed tw:opacity-50',
+            loading && 'tw:cursor-wait'
           )}
           style={customStyle}
           onClick={handleClick}

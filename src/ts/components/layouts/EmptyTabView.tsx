@@ -32,13 +32,13 @@ export function EmptyTabView({ tabId }: EmptyTabViewProps) {
     return (
       <div
         data-testid="prism-empty-tab-hint"
-        className="text-muted-foreground bg-background flex h-full w-full items-center justify-center p-6 text-center text-[0.95em]"
+        className="tw:flex tw:h-full tw:w-full tw:items-center tw:justify-center tw:bg-background tw:p-6 tw:text-center tw:text-[0.95em] tw:text-muted-foreground"
       >
         <p>
           Use the search bar to open a layout
           {enableKeyboardShortcuts && (
-            <span className="ml-2 opacity-70">
-              (<kbd className="font-mono">Ctrl</kbd>+<kbd className="font-mono">Space</kbd>)
+            <span className="tw:ml-2 tw:opacity-70">
+              (<kbd className="tw:font-mono">Ctrl</kbd>+<kbd className="tw:font-mono">Space</kbd>)
             </span>
           )}
         </p>
@@ -47,5 +47,7 @@ export function EmptyTabView({ tabId }: EmptyTabViewProps) {
   }
 
   // 'none'
-  return <div data-testid="prism-empty-tab-blank" className="bg-background h-full w-full" />;
+  return (
+    <div data-testid="prism-empty-tab-blank" className="tw:h-full tw:w-full tw:bg-background" />
+  );
 }
