@@ -61,6 +61,17 @@ def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
     assert len(errors) == 0, f"No console errors on initial load: {errors}"
 
 
+def test_search_input_has_an_accessible_name(prism_app_with_layouts):
+    """The search input is a combobox without a visible label, so cmdk must name it."""
+    duo = prism_app_with_layouts
+    wait_for_tab_count(duo, 1)
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=5)
+
+    search_input = duo.find_element(SEARCHBAR_INPUT)
+    assert search_input.aria_role == "combobox"
+    assert search_input.accessible_name == "Search layouts"
+
+
 def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
     """
     Test basic mode transition: display -> search.

@@ -148,7 +148,11 @@ export const ParamsMode = ({
                 tabIndex={-1}
                 aria-selected={choice === activeChoice}
                 data-testid={`prism-searchbar-param-choice-${choice}`}
-                className="tw:cursor-default tw:px-3 tw:py-1 tw:hover:bg-muted tw:aria-selected:bg-muted"
+                className={cn(
+                  'tw:cursor-default tw:px-3 tw:py-1 tw:hover:bg-muted',
+                  // The bar and the weight carry the mark where the muted background is faint.
+                  'tw:aria-selected:bg-muted tw:aria-selected:font-medium tw:aria-selected:shadow-[inset_2px_0_0_var(--primary)]'
+                )}
                 // Keep focus in the input so the search bar does not dismiss on blur
                 onMouseDown={(e) => e.preventDefault()}
                 // Mouse and keyboard mark the same option, so two never look marked at once

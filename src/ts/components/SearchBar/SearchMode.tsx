@@ -57,7 +57,11 @@ export const SearchMode = ({
       data-testid="prism-searchbar"
       onClick={onClick}
     >
-      <Command shouldFilter={false} className="tw:flex-1 tw:overflow-visible">
+      <Command
+        shouldFilter={false}
+        label="Search layouts"
+        className="tw:flex-1 tw:overflow-visible"
+      >
         <CommandInput
           ref={inputRef}
           data-testid="prism-searchbar-input"
