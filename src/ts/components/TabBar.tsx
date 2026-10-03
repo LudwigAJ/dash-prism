@@ -286,7 +286,6 @@ const TabItem = memo(function TabItem({
       {/* ===== CONTEXT MENU ===== */}
       <ContextMenuContent
         className="min-w-36"
-        theme={theme}
         data-testid="prism-context-menu"
         onCloseAutoFocus={(e) => {
           if (preventFocusRestoreRef.current) {
@@ -351,7 +350,7 @@ const TabItem = memo(function TabItem({
         {/* Style submenu */}
         <ContextMenuSub>
           <ContextMenuSubTrigger>Style</ContextMenuSubTrigger>
-          <ContextMenuSubContent theme={theme}>
+          <ContextMenuSubContent>
             <ContextMenuRadioGroup value={styleColor}>
               {Object.entries(TAB_STYLE_LABELS).map(([styleKey, label]) => (
                 <ContextMenuRadioItem
