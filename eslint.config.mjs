@@ -114,4 +114,11 @@ export default [
     files: ['src/ts/utils/logger.ts'],
     rules: { 'no-console': 'off' },
   },
+  // Rules that wait for later work, so that this config reports zero findings:
+  // - Enable `@typescript-eslint/consistent-type-definitions` with 'interface' when the object
+  //   shapes are interfaces.
+  // - Enable `eslint-plugin-jsx-a11y` (the recommended preset) when every interactive element is
+  //   a native control, or has a role, a label and a key handler.
+  // - Enable `jsdoc/require-jsdoc` with `publicOnly` when every exported symbol has a doc comment.
+  // - Enable `import/no-unused-modules` with `unusedExports` when no export is unused.
 ];
