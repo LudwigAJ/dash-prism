@@ -7,20 +7,27 @@ from __future__ import annotations
 import ast
 import json
 import re
+import tomllib
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _pyproject() -> dict[str, Any]:
+    return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
 def test_build_backend_requires_poetry_core_2() -> None:
     """The [project] table, dynamic fields and PEP 639 license need poetry-core 2.x."""
-    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    # Match the requirement itself, not one way of spelling the TOML array:
-    # quoting, spacing, multi-line arrays and extra entries are all valid.
-    match = re.search(r"poetry-core\s*>=\s*([0-9]+(?:\.[0-9]+)*)", text)
-    assert match, "build-system.requires must pin poetry-core"
+    requirement = next(
+        (r for r in _pyproject()["build-system"]["requires"] if r.startswith("poetry-core")), None
+    )
+    assert requirement, "build-system.requires must pin poetry-core"
+    match = re.search(r">=\s*([0-9]+(?:\.[0-9]+)*)", requirement)
+    assert match, "build-system.requires must set a lower bound for poetry-core"
     parts = tuple(int(p) for p in match.group(1).split("."))
     assert parts + (0, 0) >= (2, 1, 0)
 
@@ -89,10 +96,7 @@ def test_removed_public_helpers_are_gone() -> None:
 
 
 def _pyproject_version() -> str:
-    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
-    assert match, "pyproject.toml must declare [project].version"
-    return match.group(1)
+    return _pyproject()["project"]["version"]
 
 
 def test_package_json_version_matches_pyproject() -> None:
@@ -128,6 +132,40 @@ def test_ci_runs_on_pull_requests() -> None:
     workflows = _workflows()
     for name in ("ci.yml", "codeql.yml"):
         assert re.search(r"^  pull_request:", workflows[name], re.MULTILINE), name
+
+
+def _major_minor(version: str) -> tuple[int, int]:
+    """Return the (major, minor) pair of the first version number in ``version``."""
+    match = re.search(r"(\d+)\.(\d+)", version)
+    assert match, f"no version number in {version!r}"
+    return int(match.group(1)), int(match.group(2))
+
+
+def _py_target(spelling: str) -> tuple[int, int]:
+    return 3, int(spelling.removeprefix("py3"))
+
+
+def test_every_python_floor_agrees() -> None:
+    """The metadata, the tools and the CI matrix must name the same lowest Python."""
+    pyproject = _pyproject()
+    floor = _major_minor(pyproject["project"]["requires-python"])
+
+    assert _major_minor(pyproject["tool"]["poetry"]["dependencies"]["python"]) == floor
+    assert _major_minor(pyproject["tool"]["mypy"]["python_version"]) == floor
+    # Black and ruff spell a target as "py311".
+    black_targets = pyproject["tool"]["black"]["target-version"]
+    assert min(_py_target(t) for t in black_targets) == floor
+    assert _py_target(pyproject["tool"]["ruff"]["target-version"]) == floor
+
+    # Poetry adds the Python classifiers itself. A hand-written one must not
+    # name a version below the floor.
+    for classifier in pyproject["tool"]["poetry"]["classifiers"]:
+        if classifier.startswith("Programming Language :: Python :: 3."):
+            assert _major_minor(classifier.rsplit("::", 1)[1]) >= floor, classifier
+
+    ci = yaml.safe_load(_workflows()["ci.yml"])
+    matrix = ci["jobs"]["test-py-version"]["strategy"]["matrix"]["python-version"]
+    assert min(_major_minor(str(v)) for v in matrix) == floor
 
 
 def _workflow_commands(text: str) -> list[str]:

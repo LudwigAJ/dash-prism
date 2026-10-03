@@ -27,7 +27,7 @@ Features
   the layout function runs.
 - **Async layouts**: A layout function can be an ``async def`` function. See
   :func:`dash_prism.init` for the two callback modes.
-- **Type hints**: The package has type annotations for Python 3.10 and later,
+- **Type hints**: The package has type annotations for Python 3.11 and later,
   and it includes a ``py.typed`` marker.
 
 Quick Start

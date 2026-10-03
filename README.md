@@ -80,7 +80,7 @@ Dash Prism supports both light and dark themes, so the workspace adapts to your 
 
 ## Installation
 
-**Requirements:** Python 3.10+, Dash 3.1.1 – 4.4.x, pydantic 2.10+
+**Requirements:** Python 3.11+, Dash 3.1.1 – 4.4.x, pydantic 2.10+
 
 ```bash
 pip install dash-prism
