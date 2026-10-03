@@ -129,7 +129,7 @@ def test_layout_metadata_contract_with_frontend() -> None:
 
     metadata = dash_prism.get_registered_layouts_metadata()
     layout_meta = metadata["contract-test"]
-    assert "schema" in layout_meta  # JSON Schema (pydantic) or None
+    assert "schema" not in layout_meta
 
     # Verify exact field names (not 'parameters', 'parameterOptions', etc.)
     assert "name" in layout_meta

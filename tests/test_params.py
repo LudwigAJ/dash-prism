@@ -105,7 +105,6 @@ def test_body_model_style():
     assert [p.name for p in P.build_layout_parameters(spec)] == ["n", "title"]
     v = P.build_validator("f", spec)
     assert v.validate({"title": "T", "n": "3"})["params"] == M(n=3, title="T")
-    assert v.json_schema()["properties"]["n"]["minimum"] == 1
     with pytest.raises(ParamValidationError) as exc:
         v.validate({"n": "0"})
     assert {e.field for e in exc.value.errors} == {"n", "title"}
@@ -136,17 +135,16 @@ def test_param_options_validated_at_registration():
             return html.Div()
 
 
-def test_registry_metadata_has_schema_and_typed_params():
+def test_registry_metadata_has_typed_params_and_no_schema():
     @dash_prism.register_layout(id="typed", name="Typed")
     def layout(n: int = 1, kind: Literal["a", "b"] = "a"):
         return html.Div()
 
     meta = dash_prism.get_registered_layouts_metadata()["typed"]
-    assert "schema" in meta
+    assert "schema" not in meta
     by_name = {p["name"]: p for p in meta["params"]}
     assert by_name["n"]["type"] == "integer"
     assert by_name["kind"]["choices"] == ["a", "b"]
-    assert meta["schema"]["properties"]["n"]["type"] == "integer"
 
 
 # =============================================================================

@@ -103,8 +103,6 @@ export type LayoutMeta = {
   allowMultiple?: boolean;
   params?: LayoutParam[];
   paramOptions?: Record<string, LayoutOption>;
-  /** JSON Schema for the params (pydantic only), otherwise null/undefined. */
-  schema?: Record<string, unknown> | null;
 };
 
 export type RegisteredLayouts = Record<string, LayoutMeta>;

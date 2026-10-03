@@ -34,6 +34,15 @@ All notable changes to Dash Prism are recorded here. The project follows
   layout meets a Prism rule. A host that styled the inside of Prism with the old
   Tailwind class names must use the new names. These names were never public
   API. The class `scrollbar-none` is now `prism-scrollbar-none`.
+- **Prism no longer builds or sends a JSON Schema for a layout.** The
+  `LayoutRegistration.schema` attribute and the `schema` key of
+  `get_registered_layouts_metadata()` are removed, so the `registeredLayouts`
+  prop has no `schema` key either. The `json_schema()` method of the layout
+  validator is removed too. The browser never read the schema. The search bar
+  checks input with the `params` list of the layout, and the server checks it
+  with pydantic. The metadata of a layout is now smaller, most of all for a
+  layout that takes a pydantic model. Code that read the schema must build it
+  from its own pydantic model.
 
 ### Changed
 

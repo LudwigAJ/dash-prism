@@ -3,11 +3,10 @@ Layout Parameters
 =================
 
 This module reads the signature of a layout callback. From that signature it
-makes three things:
+makes two things:
 
 - The parameter metadata that the search bar shows to the user.
 - A pydantic model that validates the values the browser sends back.
-- A JSON Schema of that model, which the frontend receives as ``meta.schema``.
 
 A layout declares its parameters in one of three styles::
 
@@ -802,10 +801,6 @@ class LayoutValidator(typing.Protocol):
         """Return coerced kwargs for the callback or raise :class:`ParamValidationError`."""
         ...
 
-    def json_schema(self) -> dict[str, Any] | None:
-        """Return a JSON Schema for the parameters, or ``None`` if unavailable."""
-        ...
-
 
 class PydanticValidator:
     """Validator backed by a pydantic model built from the callback signature."""
@@ -1026,14 +1021,6 @@ class PydanticValidator:
         ]
         if errors:
             raise ParamValidationError(self.layout_id, errors)
-
-    def json_schema(self) -> dict[str, Any] | None:
-        try:
-            schema: dict[str, Any] = self.model.model_json_schema()
-            return schema
-        except Exception as exc:  # noqa: BLE001 - unschematizable custom types
-            logger.debug("No JSON schema for layout '%s': %s", self.layout_id, exc)
-            return None
 
 
 def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:

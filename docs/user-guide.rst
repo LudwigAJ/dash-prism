@@ -123,8 +123,8 @@ preset through the same validator at registration, so a bad preset raises
 ``ValueError`` at import time.
 
 Prism builds this validation on pydantic v2, which is a dependency of the
-package. Thus ``pydantic.Field`` metadata, ``BaseModel`` parameters and a JSON
-Schema in the layout metadata are always available.
+package. Thus ``pydantic.Field`` metadata and ``BaseModel`` parameters are always
+available.
 
 Async Layouts
 ^^^^^^^^^^^^^
