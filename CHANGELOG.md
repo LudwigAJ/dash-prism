@@ -44,9 +44,33 @@ All notable changes to Dash Prism are recorded here. The project follows
 - Inactive tabs keep their real size, so a Plotly graph in a background tab lays
   out correctly when the tab becomes active. Before, Prism hid inactive tabs
   with `display: none`.
+- The test ids of the error boundary actions have the prefix `prism-`:
+  `prism-error-action-retry`, `prism-error-action-refresh` and
+  `prism-error-action-clear-storage`. A host test that used the old
+  `error-action-*` ids must use the new ones.
 
 ### Fixed
 
+- Keyboard and screen reader users can operate more of the controls of Prism.
+  The status bar tab segment, the actions of the error boundary, the search bar
+  display bar and the layout cards are real buttons, so Tab reaches them and
+  both Enter and Space activate them. Before, the segment did not react to the
+  keyboard and the display bar did not react to Enter. The icon-only buttons
+  (new tab, split, reset, help and undo), the tab rename input, the search
+  input and the parameter input have an accessible name, and the favourite star
+  of a layout names the layout. A layout card no longer nests its favourite
+  button in another button, and the focus stays on the star when the card moves
+  to the other section. The close control of a tab is still inside the tab
+  button.
+- A click on a button of Prism no longer submits an `html.Form` or `dbc.Form`
+  that wraps the component. Every button has `type="button"`.
+- The choice list of an enum parameter in the search bar is a combobox. The
+  arrow keys and the mouse mark a choice, Enter selects it, the first Escape
+  clears the mark, and the input announces the marked option to a screen
+  reader.
+- The status bar dividers are no longer a `|` character that a screen reader
+  reads aloud. The titles of cards and the sections of the help dialog are
+  headings in the right order.
 - The tab rename input keeps its natural height instead of stretching to the
   bottom of the tab.
 - An open Bootstrap collapse (`dbc.Collapse`) in a tab is visible. The Prism
