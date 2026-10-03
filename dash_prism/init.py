@@ -102,7 +102,7 @@ def _execute_and_inject_metadata(
     """
     if layout_tree is None:
         logger.warning(
-            f"Layout function returned None. Prism component '{prism_id}' may not be available."
+            "Layout function returned None. Prism component '%s' may not be available.", prism_id
         )
         return None
 
@@ -152,8 +152,8 @@ def _create_layout_wrapper(
             try:
                 # R is the coroutine type for an async layout. mypy cannot see that.
                 layout_tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
-            except Exception as e:
-                logger.exception("Error in async layout function", exc_info=e)
+            except Exception:
+                logger.exception("Error in async layout function")
                 raise  # Raise the same exception again, with the original traceback
 
             return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
@@ -165,8 +165,8 @@ def _create_layout_wrapper(
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             try:
                 layout_tree = original_layout(*args, **kwargs)
-            except Exception as e:
-                logger.exception("Error in sync layout function", exc_info=e)
+            except Exception:
+                logger.exception("Error in sync layout function")
                 raise  # Raise the same exception again, with the original traceback
 
             return _execute_and_inject_metadata(layout_tree, prism_id, layouts_metadata, session_id)
@@ -269,14 +269,14 @@ def _get_layout_root(app: "Dash") -> Any | None:
     # Call the sync layout function.
     try:
         return layout()
-    except Exception as exc:  # pragma: no cover - depends on app layout
+    except Exception:  # pragma: no cover - depends on app layout
         warnings.warn(
             "Failed to call app.layout() while searching for the Prism component. "
             "Make sure that your layout function can be called with no arguments.",
             UserWarning,
             stacklevel=3,
         )
-        logger.exception("Failed to call app.layout() while searching for Prism", exc_info=exc)
+        logger.exception("Failed to call app.layout() while searching for Prism")
         return None
 
 
@@ -641,7 +641,7 @@ def _render_tab_layout_impl(
     except ValueError as e:
         return _create_error_component(str(e))
     except Exception as e:
-        logger.exception(f"Unexpected error rendering layout '{layout_id}'", exc_info=e)
+        logger.exception("Unexpected error rendering layout '%s'", layout_id)
         return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
 
 
@@ -763,7 +763,7 @@ async def _render_tab_layout_async(
     except ValueError as e:
         return _create_error_component(str(e))
     except Exception as e:
-        logger.exception(f"Unexpected error rendering layout '{layout_id}'", exc_info=e)
+        logger.exception("Unexpected error rendering layout '%s'", layout_id)
         return _create_error_component(f"Error rendering layout '{layout_id}': {e}")
 
 
@@ -1038,7 +1038,7 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
                     f"Available layouts: {layout_ids}. "
                     "Register the layout with @dash_prism.register_layout() before calling init()."
                 )
-            logger.info(f"Initial layout '{initial_layout}' validated successfully")
+            logger.info("Initial layout '%s' validated successfully", initial_layout)
 
     # Warn if the app does not suppress the exceptions of the callbacks.
     if not getattr(app.config, "suppress_callback_exceptions", False):
@@ -1077,7 +1077,7 @@ def init(prism_id: str, app: "Dash", background: bool = False) -> None:
             app.layout = wrapped_layout
 
             mode = "async" if is_async else "sync"
-            logger.info(f"Wrapped {mode} callable layout for Prism metadata injection")
+            logger.info("Wrapped %s callable layout for Prism metadata injection", mode)
     else:
         # Dash builds a static layout one time, thus inject the metadata one
         # time, directly into the component that the search found.

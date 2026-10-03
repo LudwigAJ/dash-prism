@@ -247,7 +247,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     # -------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     tabs = workspace["tabs"]
@@ -294,7 +294,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
         return workspace
 
     # -------------------------------------------------------------------------
@@ -423,7 +423,7 @@ def validate_workspace(
         if errors == "raise":
             raise InvalidWorkspace(validation_errors)
         for err in validation_errors:
-            logger.error(f"[Prism] Workspace validation: {err}")
+            logger.error("[Prism] Workspace validation: %s", err)
 
     return workspace
 
