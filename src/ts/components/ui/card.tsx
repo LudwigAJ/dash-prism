@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Card primitives from shadcn/ui, in the Tailwind 4 form with `data-slot` attributes.
+ * Local changes: each utility class has the `tw:` prefix. `CardTitle` renders an `h3` element, so a
+ * screen reader announces a card title as a heading. `CardAction` and `CardFooter` stay although
+ * Prism does not use them.
+ */
 import * as React from 'react';
 import { cn } from '../../utils/cn';
 
@@ -27,9 +33,9 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+function CardTitle({ className, ...props }: React.ComponentProps<'h3'>) {
   return (
-    <div
+    <h3
       data-slot="card-title"
       className={cn('tw:leading-none tw:font-semibold', className)}
       {...props}
