@@ -197,7 +197,9 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
     if (!root || !enableKeyboardShortcuts) return undefined;
     const release = rootRegistry.register(root);
 
-    const claim = () => rootRegistry.claim(root);
+    const claim = () => {
+      rootRegistry.claim(root);
+    };
     root.addEventListener('mousedown', claim);
     root.addEventListener('focusin', claim);
     return () => {

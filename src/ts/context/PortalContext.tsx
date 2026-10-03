@@ -3,6 +3,7 @@ import React, { createContext, useContext, useCallback, useRef, useMemo, useEffe
 import { createHtmlPortalNode, type HtmlPortalNode } from 'react-reverse-portal';
 import { useAppSelector } from '@store/hooks';
 import { selectTabs } from '@store/selectors';
+import { logger } from '@utils/logger';
 import type { TabId } from '@types';
 
 // =============================================================================
@@ -75,9 +76,7 @@ export function PortalProvider({ children }: PortalProviderProps) {
 
     for (const tabId of orphanedPortalIds) {
       portalsRef.current.delete(tabId);
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug(`[PortalProvider] Cleaned up orphaned portal for tab: ${tabId}`);
-      }
+      logger.debug(`[PortalProvider] Cleaned up orphaned portal for tab: ${tabId}`);
     }
   }, [tabs]);
 

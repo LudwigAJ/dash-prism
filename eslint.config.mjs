@@ -37,6 +37,7 @@ export default [
       ...react.configs.recommended.rules,
       'prettier/prettier': 'error',
       'default-case': 'error',
+      'no-console': 'error',
       curly: ['error', 'multi-line'],
       '@typescript-eslint/array-type': [
         'error',
@@ -97,6 +98,17 @@ export default [
         { considerDefaultExhaustiveForUnions: false },
       ],
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      // A concise arrow body that calls a function stays legal, because the JSX event
+      // handlers use it. Outside JSX, a block body shows that the result is not used.
+      '@typescript-eslint/no-confusing-void-expression': [
+        'error',
+        { ignoreVoidOperator: true, ignoreArrowShorthand: true },
+      ],
     },
+  },
+  {
+    // The logger is the one place that may call the console.
+    files: ['src/ts/utils/logger.ts'],
+    rules: { 'no-console': 'off' },
   },
 ];

@@ -116,7 +116,9 @@ export function createDashSyncMiddleware(
         doSync(workspace);
       } else {
         pendingWorkspace = workspace;
-        timeoutId = setTimeout(() => doSync(workspace), DEBOUNCE_MS);
+        timeoutId = setTimeout(() => {
+          doSync(workspace);
+        }, DEBOUNCE_MS);
       }
 
       // Drop search-bar modes of panels that disappeared in this change, whatever

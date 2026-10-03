@@ -126,9 +126,15 @@ export function usePrism() {
     },
     [dispatch]
   );
-  const closeInfoModalFn = useCallback(() => dispatch(closeInfoModal()), [dispatch]);
-  const openHelpModalFn = useCallback(() => dispatch(openHelpModal()), [dispatch]);
-  const closeHelpModalFn = useCallback(() => dispatch(closeHelpModal()), [dispatch]);
+  const closeInfoModalFn = useCallback(() => {
+    dispatch(closeInfoModal());
+  }, [dispatch]);
+  const openHelpModalFn = useCallback(() => {
+    dispatch(openHelpModal());
+  }, [dispatch]);
+  const closeHelpModalFn = useCallback(() => {
+    dispatch(closeHelpModal());
+  }, [dispatch]);
   const openSetIconModalFn = useCallback(
     (tabOrId: Tab | string) => {
       const tabId = typeof tabOrId === 'string' ? tabOrId : tabOrId.id;
@@ -136,7 +142,9 @@ export function usePrism() {
     },
     [dispatch]
   );
-  const closeSetIconModalFn = useCallback(() => dispatch(closeSetIconModal()), [dispatch]);
+  const closeSetIconModalFn = useCallback(() => {
+    dispatch(closeSetIconModal());
+  }, [dispatch]);
 
   return {
     state,

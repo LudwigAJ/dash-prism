@@ -26,7 +26,9 @@ const toastEmitter = {
    * Called from reducer when operations fail/succeed.
    */
   emit: (event: ToastEvent): void => {
-    listeners.forEach((fn) => fn(event));
+    listeners.forEach((fn) => {
+      fn(event);
+    });
   },
 
   /**
@@ -35,7 +37,9 @@ const toastEmitter = {
    */
   subscribe: (fn: Listener): (() => void) => {
     listeners.add(fn);
-    return () => listeners.delete(fn);
+    return () => {
+      listeners.delete(fn);
+    };
   },
 };
 

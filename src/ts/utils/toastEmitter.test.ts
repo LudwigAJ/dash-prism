@@ -11,7 +11,9 @@ describe('toastEmitter', () => {
 
   afterEach(() => {
     // Clean up all subscriptions after each test
-    unsubscribeFns.forEach((fn) => fn());
+    unsubscribeFns.forEach((fn) => {
+      fn();
+    });
     unsubscribeFns = [];
   });
 

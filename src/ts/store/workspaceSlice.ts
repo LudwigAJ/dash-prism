@@ -377,19 +377,13 @@ const workspaceSlice = createSlice({
       // Validate: tab must exist
       const tab = findTabById(state.tabs, tabId);
       if (!tab) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[activateTab] Tab not found: ${tabId}`);
-        }
+        logger.debug(`[activateTab] Tab not found: ${tabId}`);
         return;
       }
 
       // Validate: tab must belong to the specified panel
       if (tab.panelId !== panelId) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[activateTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`
-          );
-        }
+        logger.debug(`[activateTab] Tab ${tabId} belongs to panel ${tab.panelId}, not ${panelId}`);
         return;
       }
 
@@ -433,9 +427,7 @@ const workspaceSlice = createSlice({
       const { tabId, layoutId, name, params, option } = action.payload;
       const tab = findTabById(state.tabs, tabId);
       if (!tab) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[updateTabLayout] Tab not found: ${tabId}`);
-        }
+        logger.debug(`[updateTabLayout] Tab not found: ${tabId}`);
         return;
       }
 
@@ -539,9 +531,7 @@ const workspaceSlice = createSlice({
       // Validate: panelId must be a leaf panel
       const leafPanelIds = getLeafPanelIds(state.panel);
       if (!leafPanelIds.includes(panelId)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[setActivePanel] Panel is not a leaf panel: ${panelId}`);
-        }
+        logger.debug(`[setActivePanel] Panel is not a leaf panel: ${panelId}`);
         return;
       }
 
@@ -790,11 +780,9 @@ const workspaceSlice = createSlice({
       // 1. Remove tabs that reference non-existent panels
       const validTabs = state.tabs.filter((tab) => leafPanelIds.has(tab.panelId));
       if (validTabs.length !== state.tabs.length) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
-          );
-        }
+        logger.debug(
+          `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
+        );
         state.tabs = validTabs;
       }
 

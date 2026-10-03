@@ -152,16 +152,16 @@ export function useShareLink() {
       if (shareLink) {
         navigator.clipboard
           .writeText(shareLink)
-          .then(() =>
+          .then(() => {
             toast.success('Link copied to clipboard', {
               cancel: { label: 'Dismiss', onClick: () => {} },
-            })
-          )
-          .catch(() =>
+            });
+          })
+          .catch(() => {
             toast.error('Failed to copy link', {
               cancel: { label: 'Dismiss', onClick: () => {} },
-            })
-          );
+            });
+          });
       }
     },
     [generateShareLink]
@@ -307,7 +307,9 @@ export function useShareLinkListener() {
   // Listen for hash changes (user pastes link while app is open)
   useEffect(() => {
     if (!enableShareLinks) return undefined;
-    const handleHashChange = () => processShareHash();
+    const handleHashChange = () => {
+      processShareHash();
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [processShareHash, enableShareLinks]);

@@ -471,7 +471,9 @@ export function useSearchBarState(panelId: PanelId) {
     commandRef,
 
     // Handlers
-    setSearchQuery: (query: string) => dispatch({ type: 'SET_SEARCH_QUERY', query }),
+    setSearchQuery: (query: string) => {
+      dispatch({ type: 'SET_SEARCH_QUERY', query });
+    },
     setParamValues: (setter: (prev: Record<string, string>) => Record<string, string>) => {
       const newValues = setter(state.paramValues);
       dispatch({ type: 'SET_PARAM_VALUES', values: newValues });
@@ -488,6 +490,8 @@ export function useSearchBarState(panelId: PanelId) {
     handleKeyDown,
     handleClick,
     handleResizeStart,
-    handleToggleFavorite: (layoutId: string) => globalDispatch(toggleFavoriteLayout({ layoutId })),
+    handleToggleFavorite: (layoutId: string) => {
+      globalDispatch(toggleFavoriteLayout({ layoutId }));
+    },
   };
 }
