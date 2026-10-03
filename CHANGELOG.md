@@ -48,9 +48,28 @@ All notable changes to Dash Prism are recorded here. The project follows
   `prism-error-action-retry`, `prism-error-action-refresh` and
   `prism-error-action-clear-storage`. A host test that used the old
   `error-action-*` ids must use the new ones.
+- Prism logs a failed tab render once, and no log line holds a parameter value.
+  A timeout, a `TypeError`, a `ValueError` and invalid parameters log a warning.
+  Any other exception logs an error. The log names the class of the exception,
+  and for the error also the stack frames, but never the message of the
+  exception, because a message can hold a value that the user typed. The tab
+  still shows the message. Each tab render writes one `DEBUG` line with the tab
+  ID and the layout ID. Before, every render wrote the full request, with every
+  parameter value, at `INFO`. The logger name is now `dash_prism.app_init`, so a
+  handler on `dash_prism` still receives the records.
+- The module `dash_prism.init` is now `dash_prism.app_init`. The function
+  `dash_prism.init` and the other public names are the same. Code that wrote
+  `from dash_prism.init import ...` must import the public names from
+  `dash_prism`.
 
 ### Fixed
 
+- A second `dash_prism.init()` with another `prism_id` now gives that Prism
+  component its layout metadata, and the app keeps one render callback. Before,
+  the second call registered a second callback for the same output, which Dash
+  reports as a duplicate callback output in debug mode. A second call with the
+  same `prism_id` and the same layout does nothing. A call after `app.layout` is
+  set again fills the new layout.
 - Keyboard and screen reader users can operate more of the controls of Prism.
   The status bar tab segment, the actions of the error boundary, the search bar
   display bar and the layout cards are real buttons, so Tab reaches them and
