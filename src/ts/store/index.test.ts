@@ -383,7 +383,7 @@ describe('createPrismStore', () => {
     });
 
     it('loads a version 2 payload', async () => {
-      const { _persist: _ignored, ...presentOnly } = savedWorkspace();
+      const { _persist, ...presentOnly } = savedWorkspace();
       const { storage } = createFakeStorage({ [STORAGE_KEY]: serialiseV2(presentOnly) });
       const created = createStore({ storage });
       await settle(created);

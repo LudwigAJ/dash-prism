@@ -133,7 +133,7 @@ const migrations = {
   2: (state: any) => {
     if (!state || typeof state !== 'object') return state;
     if ('present' in state) return state;
-    const { _persist: _ignored, ...present } = state;
+    const { _persist, ...present } = state;
     return { present };
   },
 } as MigrationManifest;

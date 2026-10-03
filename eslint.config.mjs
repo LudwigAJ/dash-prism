@@ -47,10 +47,13 @@ export default [
         'error',
         { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
       ],
-      // Underscore-prefixed names are the conventional "intentionally unused" marker.
+      // A bare `_` is the only name for an unused parameter, and only as a positional
+      // callback parameter that comes before a used one. Delete any other unused name.
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+        // Dropping a key with `const { key, ...rest } = object` is the one way to omit a
+        // property without a mutation, so the unused `key` is legal.
+        { argsIgnorePattern: '^_$', ignoreRestSiblings: true },
       ],
       // eslint-plugin-react-hooks 7 ships React Compiler rules in `recommended`.
       // This project does not use the compiler, and these rules fire on patterns

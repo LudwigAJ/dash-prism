@@ -70,7 +70,7 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
 // Reducer
 // =============================================================================
 
-export function createInitialState(_hasCurrentLayout: boolean): SearchBarState {
+export function createInitialState(): SearchBarState {
   // Note: showDropdown starts false - the useSearchBarState effect will open it
   // based on newTabOpensDropdown config when appropriate
   return {
@@ -99,7 +99,7 @@ function clearSelection(draft: SearchBarState) {
 export const searchBarReducer = produce((draft: SearchBarState, action: SearchBarAction) => {
   switch (action.type) {
     case 'RESET':
-      Object.assign(draft, createInitialState(false));
+      Object.assign(draft, createInitialState());
       break;
     case 'SET_SEARCH_QUERY':
       draft.searchQuery = action.query;

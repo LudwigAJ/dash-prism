@@ -52,11 +52,7 @@ export function useSearchBarState(panelId: PanelId) {
   }, [activeTab, registeredLayouts]);
 
   // ===== LOCAL REDUCER STATE =====
-  const [state, dispatch] = useReducer(
-    searchBarReducer,
-    currentLayout !== null,
-    createInitialState
-  );
+  const [state, dispatch] = useReducer(searchBarReducer, undefined, createInitialState);
 
   // ===== REFS (only for DOM) =====
   const inputRef = useRef<HTMLInputElement>(null);
