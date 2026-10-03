@@ -1,0 +1,303 @@
+{
+  "static": {
+    "name": "Static Layout",
+    "description": "A layout with no callback",
+    "keywords": [
+      "fixed",
+      "page"
+    ],
+    "allowMultiple": false,
+    "params": [],
+    "paramOptions": null
+  },
+  "plain": {
+    "name": "Plain Params",
+    "description": "",
+    "keywords": [],
+    "allowMultiple": true,
+    "params": [
+      {
+        "name": "label",
+        "hasDefault": false,
+        "default": null,
+        "annotation": "str",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "rows",
+        "hasDefault": true,
+        "default": 10,
+        "annotation": "int",
+        "type": "integer",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "ratio",
+        "hasDefault": true,
+        "default": 0.5,
+        "annotation": "float",
+        "type": "number",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "enabled",
+        "hasDefault": true,
+        "default": false,
+        "annotation": "bool",
+        "type": "boolean",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "mode",
+        "hasDefault": true,
+        "default": "fast",
+        "annotation": "typing.Literal['fast', 'slow']",
+        "type": "enum",
+        "required": false,
+        "nullable": false,
+        "choices": [
+          "fast",
+          "slow"
+        ],
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "note",
+        "hasDefault": true,
+        "default": null,
+        "annotation": "str | None",
+        "type": "string",
+        "required": false,
+        "nullable": true,
+        "choices": null,
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "tags",
+        "hasDefault": true,
+        "default": null,
+        "annotation": "list[str] | None",
+        "type": "array",
+        "required": false,
+        "nullable": true,
+        "choices": null,
+        "items": "string",
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      }
+    ],
+    "paramOptions": null
+  },
+  "annotated": {
+    "name": "Annotated Params",
+    "description": "",
+    "keywords": [],
+    "allowMultiple": false,
+    "params": [
+      {
+        "name": "rows",
+        "hasDefault": true,
+        "default": 10,
+        "annotation": "int",
+        "type": "integer",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {
+          "minimum": 1,
+          "maximum": 100
+        },
+        "description": "Rows to show",
+        "title": "Row count",
+        "examples": [
+          10,
+          50
+        ],
+        "placeholder": "10"
+      },
+      {
+        "name": "code",
+        "hasDefault": true,
+        "default": "ab",
+        "annotation": "str",
+        "type": "string",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {
+          "minLength": 2,
+          "maxLength": 8,
+          "pattern": "^[a-z]+$"
+        },
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "ratio",
+        "hasDefault": true,
+        "default": 0.5,
+        "annotation": "float",
+        "type": "number",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "tier",
+        "hasDefault": true,
+        "default": "gold",
+        "annotation": "str",
+        "type": "enum",
+        "required": false,
+        "nullable": false,
+        "choices": [
+          "gold",
+          "silver"
+        ],
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      }
+    ],
+    "paramOptions": null
+  },
+  "body-model": {
+    "name": "Body Model",
+    "description": "",
+    "keywords": [],
+    "allowMultiple": false,
+    "params": [
+      {
+        "name": "chart_type",
+        "hasDefault": true,
+        "default": "bar",
+        "annotation": "typing.Literal['bar', 'line']",
+        "type": "enum",
+        "required": false,
+        "nullable": false,
+        "choices": [
+          "bar",
+          "line"
+        ],
+        "items": null,
+        "constraints": {},
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      },
+      {
+        "name": "rows",
+        "hasDefault": true,
+        "default": 20,
+        "annotation": "int",
+        "type": "integer",
+        "required": false,
+        "nullable": false,
+        "choices": null,
+        "items": null,
+        "constraints": {
+          "minimum": 1,
+          "maximum": 100
+        },
+        "description": null,
+        "title": null,
+        "examples": null,
+        "placeholder": null
+      }
+    ],
+    "paramOptions": null
+  },
+  "options": {
+    "name": "Parameter Options",
+    "description": "",
+    "keywords": [],
+    "allowMultiple": false,
+    "params": [],
+    "paramOptions": {
+      "bar": {
+        "description": "Bar chart",
+        "params": {
+          "chart_type": "bar"
+        }
+      },
+      "small": {
+        "description": "Five rows",
+        "params": {
+          "rows": 5
+        }
+      },
+      "tagged": {
+        "description": "Two tags",
+        "params": {
+          "tags": [
+            "a",
+            "b"
+          ]
+        }
+      }
+    }
+  }
+}

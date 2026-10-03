@@ -70,10 +70,12 @@ export type ParamConstraints = {
   pattern?: string;
 };
 
+// `null` here is a JSON scalar that a default or a choice can hold. It does not
+// mean that the value is absent.
 export type ParamScalar = string | number | boolean | null;
 
 /** Mirrors dash_prism.params.LayoutParameter.to_dict() */
-export type LayoutParam = {
+export interface LayoutParam {
   name: string;
   hasDefault: boolean;
   /** JSON-safe default (was typed `string` before 1.0, but was always `Any`). */
@@ -89,21 +91,25 @@ export type LayoutParam = {
   title?: string | null;
   examples?: ParamScalar[] | null;
   placeholder?: string | null;
-};
+}
 
-export type LayoutOption = {
+/** One entry of `paramOptions`: a named set of parameter values for a layout. */
+export interface LayoutOption {
   description?: string;
-  params: Record<string, string>;
-};
+  // A preset can hold any JSON value, such as an object for a dict parameter.
+  params: Record<string, unknown>;
+}
 
-export type LayoutMeta = {
+/** Mirrors dash_prism.registry.LayoutRegistration.to_metadata() */
+export interface LayoutMeta {
   name: string;
   description?: string;
   keywords?: string[];
   allowMultiple?: boolean;
   params?: LayoutParam[];
-  paramOptions?: Record<string, LayoutOption>;
-};
+  // Python sends null, not an absent key, for a layout without options.
+  paramOptions?: Record<string, LayoutOption> | null;
+}
 
 export type RegisteredLayouts = Record<string, LayoutMeta>;
 
@@ -166,7 +172,7 @@ export type ShareData = {
  */
 export type BaseDashProps = {
   id?: string | Record<string, string>;
-  [key: string]: unknown;
+  [propName: string]: unknown;
 };
 
 /**
