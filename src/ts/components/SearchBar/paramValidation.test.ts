@@ -13,7 +13,9 @@ import {
   stepActiveChoice,
   stringifyParams,
 } from './paramValidation';
-import type { LayoutParam } from '@types';
+import type { LayoutParam, ParamType } from '@types';
+// The table is not under src/ts, so no path alias reaches it.
+import paramInputTable from '../../../../tests/fixtures/param_inputs.json';
 
 function param(overrides: Partial<LayoutParam>): LayoutParam {
   return { name: 'p', hasDefault: false, ...overrides };
@@ -110,6 +112,23 @@ describe('checkParamInput', () => {
     expect(checkParamInput(param({ type: 'unknown' }), 'anything').ok).toBe(true);
     expect(checkParamInput(param({ type: 'object' }), '{"a":1}').ok).toBe(true);
     expect(checkParamInput(param({}), 'legacy').ok).toBe(true);
+  });
+});
+
+describe('checkParamInput for a list', () => {
+  const ints = param({ type: 'array', items: 'integer' });
+
+  it('submits a comma list as trimmed items joined by commas', () => {
+    expect(checkParamInput(ints, ' 1, 2 ,3 ')).toEqual({ ok: true, value: '1,2,3' });
+  });
+
+  it('submits a JSON array as typed, because the server parses it itself', () => {
+    const strings = param({ type: 'array', items: 'string' });
+    expect(checkParamInput(strings, '["a,b", "c"]')).toEqual({ ok: true, value: '["a,b", "c"]' });
+  });
+
+  it('reports a malformed JSON array', () => {
+    expect(checkParamInput(ints, '[1,')).toEqual({ ok: false, message: 'Must be a JSON array' });
   });
 });
 
@@ -223,5 +242,30 @@ describe('stringifyParams', () => {
 
   it('treats null and undefined as blank', () => {
     expect(stringifyParams(params, { n: null, country: undefined })).toEqual({ country: '' });
+  });
+});
+
+// tests/test_params.py reads the same table and checks it against the server.
+describe('the shared table of inputs', () => {
+  interface InputCase {
+    type: ParamType;
+    input: string;
+    ok: boolean;
+    nullable?: boolean;
+    items?: ParamType;
+    choices?: string[];
+  }
+  // A JSON import types each string as `string`, so the `ParamType` fields need the assertion.
+  const cases = paramInputTable as InputCase[];
+
+  it.each(cases)('accepts or rejects $type input $input as the server does', (testCase) => {
+    const { type, nullable, items, choices } = testCase;
+    const checked = checkParamInput(
+      param({ type, nullable, items, choices }),
+      // The search bar resolves a typed enum choice before it checks the input.
+      resolveEnumInput(param({ type, choices }), testCase.input)
+    );
+
+    expect(checked.ok).toBe(testCase.ok);
   });
 });

@@ -114,6 +114,12 @@ A parameter with no type hint keeps its string value. A parameter with a type
 that pydantic cannot turn into a schema, such as a ``DataFrame``, also keeps its
 string value.
 
+In the search bar, the user types a list as comma-separated values (``a, b, c``)
+or as a JSON array (``["a", "b"]``). To give an ``Optional`` parameter the value
+``None``, the user types ``none`` or ``null``. If the user leaves the input
+empty, Prism leaves out a parameter that has a default value, and the function
+uses that default.
+
 The search bar marks an invalid value next to the field, and it does not make
 the tab. The browser does the same check on the parameters of a share link. If
 invalid parameters reach the server, the tab body shows an "Invalid parameters"

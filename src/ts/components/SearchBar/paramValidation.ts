@@ -9,7 +9,26 @@ export type ParamCheck =
 
 const TRUE_WORDS = new Set(['true', '1', 'yes', 'on', 'y', 't']);
 const FALSE_WORDS = new Set(['false', '0', 'no', 'off', 'n', 'f']);
+// The server turns these words into None for a nullable parameter (_is_blank).
+const BLANK_WORDS = new Set(['none', 'null']);
 const INTEGER_RE = /^[+-]?\d+$/;
+
+/** Turns a parameter value into the string that the server receives. */
+function toWireString(value: unknown): string {
+  // The server splits a list parameter on commas, so a list leaves as one comma-joined string.
+  return Array.isArray(value) ? value.map(String).join(',') : String(value ?? '');
+}
+
+/** Reads the items of a JSON array like the server does, or returns null if the text is not one. */
+function parseJsonArray(text: string): string[] | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed.map(String) : null;
+  } catch {
+    // Malformed JSON: the server hands the text to the validator, which rejects it.
+    return null;
+  }
+}
 
 function checkNumber(kind: 'integer' | 'number', raw: string, c: ParamConstraints): string | null {
   if (kind === 'integer' ? !INTEGER_RE.test(raw) : !Number.isFinite(Number(raw)) || raw === '') {
@@ -92,11 +111,17 @@ export function checkParamInput(param: LayoutParam, rawInput: string): ParamChec
     return { ok: false, message: 'Required' };
   }
 
+  if (param.nullable && BLANK_WORDS.has(raw.toLowerCase())) return { ok: true, value: raw };
+
   if (type === 'array') {
-    const parts = raw
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const isJson = raw.startsWith('[');
+    const parts = isJson
+      ? parseJsonArray(raw)
+      : raw
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
+    if (parts === null) return { ok: false, message: 'Must be a JSON array' };
     const lengthError = checkLength(parts.length, param.constraints ?? {}, 'items');
     if (lengthError) return { ok: false, message: lengthError };
     const itemType = param.items ?? 'unknown';
@@ -104,7 +129,8 @@ export function checkParamInput(param: LayoutParam, rawInput: string): ParamChec
       const itemError = checkScalar(itemType, part, { ...param, constraints: {} });
       if (itemError) return { ok: false, message: `"${part}": ${itemError}` };
     }
-    return { ok: true, value: parts.join(',') };
+    // JSON text goes to the server as typed, because a joined string would split an item that has a comma.
+    return { ok: true, value: isJson ? raw : parts.join(',') };
   }
 
   const error = checkScalar(type, raw, param);
@@ -145,7 +171,7 @@ export function checkParams(
       errors.push({ field: name, message: 'Unknown parameter' });
       continue;
     }
-    const raw = Array.isArray(value) ? value.map(String).join(',') : String(value ?? '');
+    const raw = toWireString(value);
     const result = checkParamInput(param, raw);
     if (result.ok === false) errors.push({ field: name, message: result.message });
   }
@@ -211,7 +237,7 @@ export function stringifyParams(
   const optional = new Set(params.filter((p) => p.hasDefault).map((p) => p.name));
   const out: Record<string, string> = {};
   for (const [name, value] of Object.entries(values)) {
-    const text = Array.isArray(value) ? value.map(String).join(',') : String(value ?? '');
+    const text = toWireString(value);
     if (text === '' && optional.has(name)) continue;
     out[name] = text;
   }
