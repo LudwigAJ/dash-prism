@@ -135,6 +135,51 @@ modules. Thus mypy does not check the generated files.
 If you add a component file whose name contains ``Prism``, the build writes one
 more Python file. Add that file to each place in the list.
 
+Python and TypeScript contracts
+-------------------------------
+
+The Python package and the TypeScript frontend exchange data in three places.
+Each place has one definition on each side. For ``registeredLayouts`` and
+``PrismContent.data``, a test fails when the two sides differ. No test compares
+the two sides of the workspace contract.
+
+``registeredLayouts``
+   ``LayoutRegistration.to_metadata()`` in ``dash_prism/registry.py`` makes the
+   metadata of one layout. :func:`dash_prism.init` puts the metadata of every
+   layout into this prop. The ``RegisteredLayouts`` type in
+   ``src/ts/types/index.ts`` describes it. ``tests/test_registry.py`` compares
+   the metadata of a set of reference layouts with
+   ``tests/fixtures/layout_meta.json``. ``src/ts/types/layoutMeta.test.ts``
+   checks the same file against the type. To change the metadata on purpose,
+   run ``PRISM_WRITE_FIXTURES=1 pytest tests/test_registry.py`` to write the
+   file again. Then change the TypeScript types until ``pnpm run typecheck``
+   passes.
+
+``readWorkspace`` and ``updateWorkspace``
+   Prism writes ``readWorkspace`` for Dash, and a Dash callback sets
+   ``updateWorkspace`` for Prism. Both props hold the same dict. The
+   ``Workspace`` interface in ``src/ts/types/index.ts`` is its shape.
+   ``selectWorkspaceSnapshot`` in ``src/ts/store/selectors.ts`` makes the value
+   of ``readWorkspace``, and the ``syncWorkspace`` action applies a
+   ``Partial<Workspace>``. The Python side is
+   :func:`dash_prism.validate_workspace` in ``dash_prism/utils.py``, which
+   checks the five required keys of a dict. The documentation of the
+   ``readWorkspace`` prop in ``PrismComponent.tsx`` and in ``dash_prism/Prism.py``
+   lists all the keys. When you change a key, change all three places by hand.
+
+``PrismContent.data``
+   ``buildDashSpec`` in ``src/ts/utils/dashSpec.ts`` makes the component that
+   renders one tab. The tab ID is the ``index`` of its ``id``. The ``data`` prop
+   holds ``layoutId``, ``layoutParams``, ``layoutOption`` and ``timeout``.
+   ``_parse_content_request`` in ``dash_prism/app_init.py`` reads these fields
+   in the render callback. ``src/ts/utils/dashSpec.test.ts`` and
+   ``tests/test_init.py`` pin the field names.
+
+The search bar also checks parameter input in the browser with the rules of the
+server. ``tests/fixtures/param_inputs.json`` lists inputs that both sides must
+accept or reject in the same way. ``tests/test_params.py`` and
+``src/ts/components/SearchBar/paramValidation.test.ts`` read it.
+
 Documentation
 -------------
 
