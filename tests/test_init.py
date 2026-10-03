@@ -8,6 +8,7 @@ import pytest
 from dash import Dash, html
 
 import dash_prism
+from dash_prism import utils
 
 
 def test_init_basic(prism_app: Dash) -> None:
@@ -450,9 +451,7 @@ def test_callable_layout_sync(dash_app: Dash) -> None:
     assert layout_result is not None
 
     # Find the Prism component in the result
-    from dash_prism.app_init import _find_component_by_id
-
-    prism = _find_component_by_id(layout_result, "prism-callable")
+    prism = utils.find_component_by_id(layout_result, "prism-callable")
     assert prism is not None
 
     # Verify metadata was injected
@@ -491,9 +490,7 @@ def test_callable_layout_async(dash_app: Dash) -> None:
     assert layout_result is not None
 
     # Find the Prism component in the result
-    from dash_prism.app_init import _find_component_by_id
-
-    prism = _find_component_by_id(layout_result, "prism-async-callable")
+    prism = utils.find_component_by_id(layout_result, "prism-async-callable")
     assert prism is not None
 
     # Verify metadata was injected
@@ -531,9 +528,7 @@ def test_callable_layout_with_params(dash_app: Dash) -> None:
     assert layout_result is not None
 
     # Find the Prism component
-    from dash_prism.app_init import _find_component_by_id
-
-    prism = _find_component_by_id(layout_result, "prism-with-params")
+    prism = utils.find_component_by_id(layout_result, "prism-with-params")
     assert prism is not None
     assert hasattr(prism, "registeredLayouts")
 
@@ -568,11 +563,9 @@ def test_callable_layout_multiple_calls(dash_app: Dash) -> None:
     assert validation_count == initial_count + 1
 
     # Call layout multiple times
-    from dash_prism.app_init import _find_component_by_id
-
     for i in range(3):
         layout_result = dash_app.layout()
-        prism = _find_component_by_id(layout_result, "prism-multi-call")
+        prism = utils.find_component_by_id(layout_result, "prism-multi-call")
         assert prism is not None
         assert hasattr(prism, "registeredLayouts")
         assert "multi-call" in prism.registeredLayouts
@@ -607,9 +600,7 @@ def test_static_layout_unchanged(dash_app: Dash) -> None:
     dash_app.layout = html.Div([dash_prism.Prism(id="prism-static", style={})])
 
     # Get the Prism component before init
-    from dash_prism.app_init import _find_component_by_id
-
-    prism_before = _find_component_by_id(dash_app.layout, "prism-static")
+    prism_before = utils.find_component_by_id(dash_app.layout, "prism-static")
 
     dash_prism.init("prism-static", dash_app)
 
@@ -649,9 +640,7 @@ def test_callable_layout_multiple_init_no_infinite_wrapping(dash_app: Dash) -> N
 
     # Verify the wrapper still works correctly
     layout_result = dash_app.layout()
-    from dash_prism.app_init import _find_component_by_id
-
-    prism = _find_component_by_id(layout_result, "prism-multi-init")
+    prism = utils.find_component_by_id(layout_result, "prism-multi-init")
     assert prism is not None
     assert hasattr(prism, "registeredLayouts")
 
@@ -1029,31 +1018,27 @@ def test_compute_server_session_id_is_stable_and_order_independent() -> None:
 
 
 def test_init_injects_layout_fingerprint_as_server_session_id(prism_app: Dash) -> None:
-    from dash_prism.app_init import _compute_server_session_id, _find_component_by_id
+    from dash_prism.app_init import _compute_server_session_id
 
     dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
     dash_prism.register_layout(id="about", name="About", layout=html.Div("a"))
     dash_prism.init("test-prism", prism_app)
 
-    prism = _find_component_by_id(prism_app.layout, "test-prism")
+    prism = utils.find_component_by_id(prism_app.layout, "test-prism")
     assert prism.serverSessionId == _compute_server_session_id(["about", "home"])
 
 
 def test_init_keeps_an_explicit_server_session_id() -> None:
-    from dash_prism.app_init import _find_component_by_id
-
     app = Dash(__name__, suppress_callback_exceptions=True)
     app.layout = html.Div([dash_prism.Prism(id="p", serverSessionId="release-42", style={})])
     dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
     dash_prism.init("p", app)
 
-    assert _find_component_by_id(app.layout, "p").serverSessionId == "release-42"
+    assert utils.find_component_by_id(app.layout, "p").serverSessionId == "release-42"
 
 
 def test_callable_layout_keeps_an_explicit_server_session_id(dash_app: Dash) -> None:
     """The override must survive the per-render injection of the callable path too."""
-    from dash_prism.app_init import _find_component_by_id
-
     dash_prism.register_layout(id="home", name="Home", layout=html.Div("h"))
 
     def layout():
@@ -1062,7 +1047,7 @@ def test_callable_layout_keeps_an_explicit_server_session_id(dash_app: Dash) -> 
     dash_app.layout = layout
     dash_prism.init("p", dash_app)
 
-    prism = _find_component_by_id(dash_app.layout(), "p")
+    prism = utils.find_component_by_id(dash_app.layout(), "p")
     assert prism.serverSessionId == "release-42"
     assert "home" in prism.registeredLayouts
 
