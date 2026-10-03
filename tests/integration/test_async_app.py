@@ -3,7 +3,7 @@ Integration tests for Dash apps with use_async=True.
 
 Verifies that dash_prism works correctly when the Dash app uses async
 callbacks. This exercises the `render_prism_content_async` code path
-in init.py, which is completely separate from the sync path.
+in app_init.py, which is completely separate from the sync path.
 
 Best Practices Applied:
 - Use explicit waits (wait_for_*) instead of time.sleep()

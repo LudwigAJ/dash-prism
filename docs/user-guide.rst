@@ -856,8 +856,11 @@ Callable layouts are useful for:
    With a callable layout, ``init()`` automatically wraps your layout function
    and injects the Prism metadata on each render. The wrapper adds little work
    (~1ms), and it keeps the metadata correct each time that Dash makes the
-   layout again. A second call to ``init()`` does not wrap the same function
-   twice.
+   layout again. A second call to ``init()`` with the same ``prism_id`` does not
+   wrap the layout again. A call with another ``prism_id`` fills that Prism
+   component too. If you set ``app.layout`` again, for example when you run a
+   notebook cell again, call ``init()`` again to fill the new layout. ``init()``
+   registers the render callback one time for each Dash app.
 
 .. warning::
 
