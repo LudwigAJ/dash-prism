@@ -138,7 +138,7 @@ function validatePanel(value: unknown, path: string, errors: string[]): PanelNod
   return {
     id,
     order,
-    direction: direction as PanelNode['direction'],
+    direction,
     children: normalizedChildren,
     pinned: normalizeOptional(value.pinned as boolean | null | undefined),
     size: normalizeOptional(value.size as string | number | null | undefined),
@@ -236,7 +236,7 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     return { ok: false, errors };
   }
 
-  const activePanelId = activePanelIdValue as string;
+  const activePanelId = activePanelIdValue;
   const favoriteLayouts = normalizeOptional(value.favoriteLayouts as string[] | null | undefined);
   const searchBarsHidden = normalizeOptional(value.searchBarsHidden as boolean | null | undefined);
 

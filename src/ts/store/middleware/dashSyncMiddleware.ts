@@ -169,7 +169,7 @@ export const validationMiddleware: Middleware<object, RootState> =
       const validation = validateWorkspace(workspace);
 
       if (!validation.ok) {
-        const { errors } = validation as { ok: false; errors: string[] };
+        const { errors } = validation;
         logger.validation(errors);
 
         // On rehydration failure, reset to clean state to prevent crash

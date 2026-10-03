@@ -117,7 +117,7 @@ export function useShareLink() {
 
     // Include params if present
     if (tab.layoutParams) {
-      shareData.layoutParams = tab.layoutParams as Record<string, string>;
+      shareData.layoutParams = tab.layoutParams;
     }
     if (tab.layoutOption) {
       shareData.layoutOption = tab.layoutOption;

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger, Spinner } from '@components/ui';
 import { cn } from '@utils/cn';
-import { DashComponentProps } from 'props';
+import { type DashComponentProps } from 'props';
 
 /** Style variants for action buttons */
 const ACTION_VARIANT_CLASSES: Record<string, string> = {

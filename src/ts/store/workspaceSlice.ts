@@ -1,5 +1,5 @@
 // src/ts/store/workspaceSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import type { Tab, PanelId, TabId, LayoutId, PanelDirection } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
@@ -846,7 +846,7 @@ const workspaceSlice = createSlice({
       }
 
       // Clean up activeTabIds for non-existent panels
-      for (const panelId of Object.keys(state.activeTabIds) as PanelId[]) {
+      for (const panelId of Object.keys(state.activeTabIds)) {
         if (!leafPanelIds.has(panelId)) {
           delete state.activeTabIds[panelId];
         }

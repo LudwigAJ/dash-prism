@@ -425,9 +425,8 @@ export function useSearchBarState(panelId: PanelId) {
   );
 
   useEffect(() => {
-    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
-    return () =>
-      window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar as EventListener);
+    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar);
+    return () => window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar);
   }, [handleFocusSearchbar]);
 
   // Click outside handler

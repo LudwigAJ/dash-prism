@@ -3,7 +3,7 @@ import type { Tab, TabId, PanelId } from '@types';
 
 // Support both regular Tab arrays and Immer Draft arrays
 type TabOrDraft = Tab | Draft<Tab>;
-type TabArrayOrDraft = Tab[] | Draft<Tab>[] | readonly Tab[] | readonly Draft<Tab>[];
+type TabArrayOrDraft = Tab[] | Array<Draft<Tab>> | readonly Tab[] | ReadonlyArray<Draft<Tab>>;
 
 /**
  * Find the index of a tab by ID

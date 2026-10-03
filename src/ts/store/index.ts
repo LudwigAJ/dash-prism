@@ -1,5 +1,10 @@
 // src/ts/store/index.ts
-import { configureStore, combineReducers, ThunkDispatch, UnknownAction } from '@reduxjs/toolkit';
+import {
+  configureStore,
+  combineReducers,
+  type ThunkDispatch,
+  type UnknownAction,
+} from '@reduxjs/toolkit';
 import {
   persistStore,
   persistReducer,

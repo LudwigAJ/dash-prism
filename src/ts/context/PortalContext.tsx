@@ -1,6 +1,6 @@
 // src/ts/context/PortalContext.tsx
 import React, { createContext, useContext, useCallback, useRef, useMemo, useEffect } from 'react';
-import { createHtmlPortalNode, HtmlPortalNode } from 'react-reverse-portal';
+import { createHtmlPortalNode, type HtmlPortalNode } from 'react-reverse-portal';
 import { useAppSelector } from '@store/hooks';
 import { selectTabs } from '@store/selectors';
 import type { TabId } from '@types';

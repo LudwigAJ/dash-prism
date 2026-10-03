@@ -200,7 +200,7 @@ describe('createPrismStore', () => {
 
       // ...and, because that state had `_persist.rehydrated === false`, redux-persist
       // stopped writing for the rest of the session. Prove writes still land.
-      created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Renamed' }));
+      created.store.dispatch(renameTab({ tabId: 'tab-a', name: 'Renamed' }));
       await created.persistor.flush();
       const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
       const storedTabs = (JSON.parse(stored.present) as WorkspaceState).tabs;
@@ -218,7 +218,7 @@ describe('createPrismStore', () => {
       const created = createStore({ storage });
       await settle(created);
 
-      created.store.dispatch(removeTab({ tabId: 'tab-b' as TabId }));
+      created.store.dispatch(removeTab({ tabId: 'tab-b' }));
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a']);
       expect(selectCanUndo(created.store.getState())).toBe(true);
       expect(history(created).past).toHaveLength(1);
@@ -238,7 +238,7 @@ describe('createPrismStore', () => {
 
       // Persistence is still live after a normal undo/redo cycle: the next change
       // lands in storage together with the restored tab.
-      created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Renamed' }));
+      created.store.dispatch(renameTab({ tabId: 'tab-a', name: 'Renamed' }));
       await created.persistor.flush();
       const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
       const storedTabs = (JSON.parse(stored.present) as WorkspaceState).tabs;
@@ -302,7 +302,7 @@ describe('createPrismStore', () => {
     it('clears history recorded before rehydration finished (corrupt persisted state)', async () => {
       // activePanelId does not name a leaf panel, so validateWorkspace rejects the
       // payload and validationMiddleware resets the workspace during REHYDRATE.
-      const corrupt = savedWorkspace({ activePanelId: 'does-not-exist' as PanelId });
+      const corrupt = savedWorkspace({ activePanelId: 'does-not-exist' });
       const { storage } = createFakeStorage({ [STORAGE_KEY]: serialisePersisted(corrupt) });
       const created = createStore({ storage });
       await settle(created);
@@ -328,7 +328,7 @@ describe('createPrismStore', () => {
       const created = createStore({ storage });
       await settle(created);
 
-      created.store.dispatch(removeTab({ tabId: 'tab-b' as TabId }));
+      created.store.dispatch(removeTab({ tabId: 'tab-b' }));
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a']);
 
@@ -373,7 +373,7 @@ describe('createPrismStore', () => {
       expect(persistMeta(created)).toMatchObject({ version: 2, rehydrated: true });
 
       // The next write uses the new format
-      created.store.dispatch(renameTab({ tabId: 'tab-a' as TabId, name: 'Migrated' }));
+      created.store.dispatch(renameTab({ tabId: 'tab-a', name: 'Migrated' }));
       await created.persistor.flush();
       const stored = JSON.parse(data.get(STORAGE_KEY) ?? '{}') as Record<string, string>;
       expect('tabs' in stored).toBe(false);
@@ -430,7 +430,7 @@ describe('createPrismStore', () => {
       // order were inverted, reconcile would prune the corrupt payload first and
       // leave a notice about tabs that the reset then discarded anyway.
       const corrupt = savedWorkspace({
-        activePanelId: 'does-not-exist' as PanelId,
+        activePanelId: 'does-not-exist',
         serverSessionId: 'old',
       });
       corrupt.tabs[0].layoutId = 'gone';

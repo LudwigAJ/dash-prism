@@ -1,5 +1,5 @@
 // src/ts/store/uiSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';
 import { removeTab } from './workspaceSlice';
@@ -34,7 +34,7 @@ const uiSlice = createSlice({
     pruneSearchBarModes(state, action: PayloadAction<{ leafPanelIds: PanelId[] }>) {
       const keep = new Set<string>(action.payload.leafPanelIds);
       for (const panelId of Object.keys(state.searchBarModes)) {
-        if (!keep.has(panelId)) delete state.searchBarModes[panelId as PanelId];
+        if (!keep.has(panelId)) delete state.searchBarModes[panelId];
       }
     },
 

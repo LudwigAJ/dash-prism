@@ -24,7 +24,7 @@ import {
 import { uiReducer, setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
-import type { PanelId, TabId } from '@types';
+import type { PanelId } from '@types';
 
 // =============================================================================
 // Test Utilities
@@ -99,7 +99,7 @@ describe('dashSyncMiddleware', () => {
       const { store } = createTestStore(setProps);
 
       // First workspace action
-      store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-1', panelId: 'panel-1' }));
 
       // Should sync immediately without waiting for debounce
       expect(setProps).toHaveBeenCalledTimes(1);
@@ -117,15 +117,15 @@ describe('dashSyncMiddleware', () => {
       const panelId = getState().workspace.present.activePanelId;
 
       // First action - immediate (use addTab since it actually changes state)
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 1' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 1' }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Second action - should be debounced
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 2' }));
       expect(setProps).toHaveBeenCalledTimes(1); // Still 1, debounced
 
       // Third action - still debounced
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 3' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 3' }));
       expect(setProps).toHaveBeenCalledTimes(1); // Still 1
 
       // Advance timer past debounce threshold (500ms)
@@ -139,14 +139,14 @@ describe('dashSyncMiddleware', () => {
       const panelId = getState().workspace.present.activePanelId;
 
       // First action - immediate
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 1' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 1' }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Wait 300ms
       vi.advanceTimersByTime(300);
 
       // Another action resets debounce
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 2' }));
 
       // Wait another 300ms (total 600ms from first, but only 300ms from second)
       vi.advanceTimersByTime(300);
@@ -167,12 +167,12 @@ describe('dashSyncMiddleware', () => {
       const tabId = state.tabs[0]?.id;
 
       // First action
-      store.dispatch(activateTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
+      store.dispatch(activateTab({ tabId: tabId, panelId: panelId }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Same selection again - state hasn't changed
       vi.advanceTimersByTime(500);
-      store.dispatch(activateTab({ tabId: tabId as TabId, panelId: panelId as PanelId }));
+      store.dispatch(activateTab({ tabId: tabId, panelId: panelId }));
       vi.advanceTimersByTime(500);
 
       // Should still be 1 because state is identical
@@ -186,7 +186,7 @@ describe('dashSyncMiddleware', () => {
       const { store, getState } = createTestStore(setProps);
       const panelId = getState().workspace.present.activePanelId;
 
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'New Tab' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'New Tab' }));
 
       expect(setProps).toHaveBeenCalled();
     });
@@ -196,7 +196,7 @@ describe('dashSyncMiddleware', () => {
       const { store } = createTestStore(setProps);
 
       // UI action - should not trigger sync
-      store.dispatch(setSearchBarMode({ panelId: 'panel-1' as PanelId, mode: 'search' }));
+      store.dispatch(setSearchBarMode({ panelId: 'panel-1', mode: 'search' }));
 
       expect(setProps).not.toHaveBeenCalled();
 
@@ -212,7 +212,7 @@ describe('dashSyncMiddleware', () => {
       const panelId = getState().workspace.present.activePanelId;
 
       // First, make a change
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 2' }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Clear debounce
@@ -232,7 +232,7 @@ describe('dashSyncMiddleware', () => {
       const panelId = getState().workspace.present.activePanelId;
 
       // Make a change
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'Tab 2' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'Tab 2' }));
       vi.advanceTimersByTime(500);
 
       // Undo
@@ -255,7 +255,7 @@ describe('dashSyncMiddleware', () => {
 
       // Should not throw
       expect(() => {
-        store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+        store.dispatch(activateTab({ tabId: 'tab-1', panelId: 'panel-1' }));
       }).not.toThrow();
     });
   });
@@ -266,7 +266,7 @@ describe('dashSyncMiddleware', () => {
       const { store, getState } = createTestStore(setProps);
       const panelId = getState().workspace.present.activePanelId;
 
-      await store.dispatch(addTab({ panelId: panelId as PanelId, name: 'New Tab' }));
+      await store.dispatch(addTab({ panelId: panelId, name: 'New Tab' }));
 
       expect(setProps).toHaveBeenCalledWith({
         readWorkspace: expect.objectContaining({
@@ -288,11 +288,11 @@ describe('dashSyncMiddleware', () => {
       const { store, cleanup } = createTestStore(setProps);
 
       // First action - immediate
-      store.dispatch(activateTab({ tabId: 'tab-1' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-1', panelId: 'panel-1' }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Second action - debounced
-      store.dispatch(activateTab({ tabId: 'tab-2' as TabId, panelId: 'panel-1' as PanelId }));
+      store.dispatch(activateTab({ tabId: 'tab-2', panelId: 'panel-1' }));
       expect(setProps).toHaveBeenCalledTimes(1);
 
       // Cleanup before debounce fires
@@ -338,16 +338,14 @@ describe('dashSyncMiddleware', () => {
   // ===========================================================================
   describe('search-bar mode cleanup', () => {
     async function splitIntoTwoPanels(store: ReturnType<typeof createTestStore>['store']) {
-      const rootPanelId = store.getState().workspace.present.panel.id as PanelId;
+      const rootPanelId = store.getState().workspace.present.panel.id;
       await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab A' }));
       await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab B' }));
       const [tabA, tabB] = store.getState().workspace.present.tabs;
-      store.dispatch(
-        splitPanel({ panelId: rootPanelId, direction: 'horizontal', tabId: tabB.id as TabId })
-      );
+      store.dispatch(splitPanel({ panelId: rootPanelId, direction: 'horizontal', tabId: tabB.id }));
       const leafIds = store
         .getState()
-        .workspace.present.panel.children.map((child: { id: string }) => child.id as PanelId);
+        .workspace.present.panel.children.map((child: { id: string }) => child.id);
       const newPanelId = leafIds.find((id: PanelId) => id !== rootPanelId) as PanelId;
       return { rootPanelId, newPanelId, tabA, tabB };
     }
@@ -364,7 +362,7 @@ describe('dashSyncMiddleware', () => {
 
       // removeTab collapses the now-empty panel internally; no collapsePanel
       // action is ever dispatched.
-      store.dispatch(removeTab({ tabId: tabB.id as TabId }));
+      store.dispatch(removeTab({ tabId: tabB.id }));
 
       expect(getState().ui.searchBarModes[newPanelId]).toBeUndefined();
       expect(getState().ui.searchBarModes[rootPanelId]).toBe('search');
@@ -387,7 +385,7 @@ describe('dashSyncMiddleware', () => {
       store.dispatch(setSearchBarMode({ panelId: rootPanelId, mode: 'search' }));
 
       dispatched.length = 0;
-      store.dispatch(activateTab({ panelId: rootPanelId, tabId: tabA.id as TabId }));
+      store.dispatch(activateTab({ panelId: rootPanelId, tabId: tabA.id }));
 
       expect(dispatched).not.toContain('ui/pruneSearchBarModes');
     });
@@ -398,7 +396,7 @@ describe('dashSyncMiddleware', () => {
       store.dispatch(setSearchBarMode({ panelId: newPanelId, mode: 'search' }));
 
       dispatched.length = 0;
-      store.dispatch(removeTab({ tabId: tabB.id as TabId }));
+      store.dispatch(removeTab({ tabId: tabB.id }));
 
       expect(dispatched).toContain('ui/pruneSearchBarModes');
     });

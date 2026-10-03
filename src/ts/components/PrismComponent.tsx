@@ -33,7 +33,7 @@ import type {
   StatusBarItem,
 } from '@types';
 import '../global.css';
-import { DashComponentProps } from 'props';
+import { type DashComponentProps } from 'props';
 
 /** Clear workspace from storage (used by workspace-level error boundary) */
 function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: string): void {
@@ -149,7 +149,9 @@ export type PrismProps = {
    * always placed at the far right, after any actions. Unknown names are
    * ignored; an empty list leaves only the actions. Default: all segments.
    */
-  statusBarItems?: ('reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated')[];
+  statusBarItems?: Array<
+    'reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated'
+  >;
 
   /**
    * The current workspace state, which Prism writes for Dash (Prism -> Dash).

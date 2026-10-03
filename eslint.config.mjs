@@ -38,6 +38,14 @@ export default [
       'prettier/prettier': 'error',
       'default-case': 'error',
       curly: ['error', 'multi-line'],
+      '@typescript-eslint/array-type': [
+        'error',
+        { default: 'array-simple', readonly: 'array-simple' },
+      ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
       // Underscore-prefixed names are the conventional "intentionally unused" marker.
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -88,6 +96,7 @@ export default [
         'error',
         { considerDefaultExhaustiveForUnions: false },
       ],
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
     },
   },
 ];

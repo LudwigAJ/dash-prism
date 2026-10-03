@@ -1,4 +1,4 @@
-import { Draft } from 'immer';
+import { type Draft } from 'immer';
 import type { PanelNode, PanelId, PanelDirection } from '@types';
 import { generateShortId } from '@utils/uuid';
 
@@ -91,7 +91,9 @@ export function findParentPanelWithIndex(
 /**
  * Find all leaf panels in the tree (recursive)
  */
-export function findAllLeaves(root: PanelNode | Draft<PanelNode>): PanelNode | Draft<PanelNode>[] {
+export function findAllLeaves(
+  root: PanelNode | Draft<PanelNode>
+): Array<PanelNode | Draft<PanelNode>> {
   if (isLeafPanel(root)) return [root];
   return root.children.flatMap(findAllLeaves);
 }
