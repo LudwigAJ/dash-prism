@@ -148,3 +148,34 @@ def test_context_menu_closes_on_escape(prism_app_with_layouts):
     menus = duo.find_elements(CONTEXT_MENU)
     if len(menus) > 0:
         assert not menus[0].is_displayed(), "Context menu should be hidden"
+
+
+ICON_DIALOG = "[role='dialog']"
+ICON_BUTTONS = f"{ICON_DIALOG} button[aria-pressed]"
+
+
+def _open_icon_picker(duo):
+    open_context_menu(duo, duo.find_element(TAB_SELECTOR))
+    duo.find_element("[data-testid='prism-context-menu-icon']").click()
+    duo.wait_for_element(ICON_DIALOG, timeout=5)
+    return duo.find_elements(ICON_BUTTONS)
+
+
+def test_icon_picker_buttons_have_names_and_announce_the_current_icon(prism_app_with_layouts):
+    duo = prism_app_with_layouts
+
+    buttons = _open_icon_picker(duo)
+    assert buttons[0].accessible_name == "No icon"
+    assert buttons[0].get_attribute("aria-pressed") == "true"
+    assert all(button.accessible_name for button in buttons)
+    assert [button.get_attribute("aria-pressed") for button in buttons[1:]] == ["false"] * len(
+        buttons[1:]
+    )
+
+    chosen = buttons[1].accessible_name
+    buttons[1].click()
+    wait_for_element_invisible(duo, ICON_DIALOG, timeout=3)
+
+    buttons = _open_icon_picker(duo)
+    pressed = [b.accessible_name for b in buttons if b.get_attribute("aria-pressed") == "true"]
+    assert pressed == [chosen]

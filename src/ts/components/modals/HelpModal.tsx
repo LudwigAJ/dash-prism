@@ -83,7 +83,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
         <div className="tw:-mr-2 tw:flex-1 tw:overflow-y-auto tw:pt-2 tw:pr-2">
           {enableKeyboardShortcuts && (
             <>
-              <h4 className={sectionTitleClass}>Keyboard Shortcuts</h4>
+              <h3 className={sectionTitleClass}>Keyboard Shortcuts</h3>
               <div className={sectionBoxClass}>
                 <div className={shortcutRowClass}>
                   <span className={shortcutLabelClass}>New tab</span>
@@ -190,7 +190,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
             </>
           )}
 
-          <h4 className={sectionTitleClass}>Tab Management</h4>
+          <h3 className={sectionTitleClass}>Tab Management</h3>
           <div className={cn(sectionBoxClass, 'tw:space-y-2')}>
             <p className="tw:text-sm tw:text-muted-foreground">
               <strong className="tw:text-foreground">Right-click</strong> a tab for context menu
@@ -215,7 +215,7 @@ export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalPr
             )}
           </div>
 
-          <h4 className={sectionTitleClass}>Panel Management</h4>
+          <h3 className={sectionTitleClass}>Panel Management</h3>
           <div className={cn(sectionBoxClass, 'tw:space-y-2')}>
             <p className="tw:text-sm tw:text-muted-foreground">
               <strong className="tw:text-foreground">Split panels</strong> by dragging a tab to the

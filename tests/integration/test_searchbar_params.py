@@ -9,7 +9,9 @@ from typing import Annotated, Literal, Optional
 import pytest
 from dash import Dash, html
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
 
@@ -240,3 +242,254 @@ def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
     assert "tags.1" in panel
     assert "Input should be 'a' or 'b'" in panel
     assert duo.find_elements("[id*='items-content']") == []
+
+
+# =============================================================================
+# Combobox pattern for the choice list
+# =============================================================================
+CHOICE_LIST = "[data-testid='prism-searchbar-param-choices']"
+# Module level, because the annotations are strings that the registry resolves in the module.
+MANY_CHOICES = [f"choice-{index:02d}" for index in range(40)]
+
+
+def _active_option_id(duo) -> str | None:
+    return duo.find_element(PARAM_INPUT).get_attribute("aria-activedescendant")
+
+
+def _wait_for_active_choice(duo, choice: str) -> None:
+    """Wait until the input points at the option of ``choice`` and that option is marked."""
+
+    def points_at_choice(driver) -> bool:
+        option = driver.find_element("css selector", CHOICE.format(choice))
+        return (
+            _active_option_id(duo) == option.get_attribute("id")
+            and option.get_attribute("aria-selected") == "true"
+        )
+
+    WebDriverWait(duo.driver, 5).until(
+        points_at_choice, message=f"The input should point at the option {choice!r}"
+    )
+
+
+def _to_the_choice_list(duo) -> None:
+    """Answer the integer parameter so that the input offers the choices of the enum one."""
+    _enter_params_mode(duo)
+    set_input_value_react(duo, PARAM_INPUT, "5")
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
+    duo.wait_for_element(CHOICE.format("line"), timeout=5)
+
+
+def test_choice_input_is_a_combobox_that_controls_the_list(dash_duo):
+    duo = _start(dash_duo)
+    _enter_params_mode(duo)
+
+    # The integer parameter has no list, so its input stays a plain text box.
+    number_input = duo.find_element(PARAM_INPUT)
+    assert number_input.aria_role == "textbox"
+    assert number_input.get_attribute("aria-expanded") is None
+
+    set_input_value_react(duo, PARAM_INPUT, "5")
+    number_input.send_keys(Keys.ENTER)
+    duo.wait_for_element(CHOICE_LIST, timeout=5)
+
+    combobox = duo.find_element(PARAM_INPUT)
+    assert combobox.aria_role == "combobox"
+    assert combobox.accessible_name == "kind"
+    assert combobox.get_attribute("aria-expanded") == "true"
+    assert combobox.get_attribute("aria-controls") == duo.find_element(CHOICE_LIST).get_attribute(
+        "id"
+    )
+    assert _active_option_id(duo) is None
+    assert duo.find_element(CHOICE_LIST).get_attribute("role") == "listbox"
+    options = duo.find_elements(f"{CHOICE_LIST} [role='option']")
+    assert [option.text for option in options] == ["bar", "line"]
+    assert all(option.get_attribute("aria-selected") == "false" for option in options)
+
+
+def test_arrow_keys_move_the_active_choice_and_enter_selects_it(dash_duo):
+    duo = _start(dash_duo)
+    _to_the_choice_list(duo)
+    field = duo.find_element(PARAM_INPUT)
+
+    field.send_keys(Keys.ARROW_DOWN)
+    _wait_for_active_choice(duo, "bar")
+    field.send_keys(Keys.ARROW_DOWN)
+    _wait_for_active_choice(duo, "line")
+    field.send_keys(Keys.ARROW_DOWN)  # wraps to the first choice
+    _wait_for_active_choice(duo, "bar")
+    field.send_keys(Keys.ARROW_UP)  # wraps to the last choice
+    _wait_for_active_choice(duo, "line")
+    assert duo.find_element(CHOICE.format("bar")).get_attribute("aria-selected") == "false"
+
+    # Focus stays in the input the whole time, as the pattern requires.
+    assert duo.driver.switch_to.active_element == field
+
+    field.send_keys(Keys.ENTER)
+
+    duo.wait_for_element("[id*='typed-content']", timeout=10)
+    assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
+    assert check_browser_errors(duo) == []
+
+
+def test_arrow_up_starts_at_the_last_choice(dash_duo):
+    duo = _start(dash_duo)
+    _to_the_choice_list(duo)
+
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ARROW_UP)
+
+    _wait_for_active_choice(duo, "line")
+
+
+def test_typing_drops_the_active_choice_and_enter_submits_the_text(dash_duo):
+    duo = _start(dash_duo)
+    _to_the_choice_list(duo)
+    field = duo.find_element(PARAM_INPUT)
+    field.send_keys(Keys.ARROW_DOWN)
+    _wait_for_active_choice(duo, "bar")
+
+    field.send_keys("li")
+    WebDriverWait(duo.driver, 5).until(
+        lambda driver: _active_option_id(duo) is None,
+        message="Typing should drop the active choice",
+    )
+    field.send_keys(Keys.ENTER)  # the unique prefix "li" means 'line', not the marked 'bar'
+
+    duo.wait_for_element("[id*='typed-content']", timeout=10)
+    assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
+
+
+def test_escape_clears_the_marked_choice_before_it_leaves_the_prompt(dash_duo):
+    duo = _start(dash_duo)
+    _to_the_choice_list(duo)
+    field = duo.find_element(PARAM_INPUT)
+    field.send_keys(Keys.ARROW_DOWN)
+    _wait_for_active_choice(duo, "bar")
+
+    field.send_keys(Keys.ESCAPE)
+
+    WebDriverWait(duo.driver, 5).until(
+        lambda driver: _active_option_id(duo) is None,
+        message="The first Escape should clear the marked choice",
+    )
+    assert duo.find_elements(PARAM_INPUT), "The first Escape should keep the prompt open"
+    assert duo.find_elements(CHOICE_LIST)
+
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ESCAPE)
+
+    WebDriverWait(duo.driver, 5).until(
+        lambda driver: driver.find_elements("css selector", PARAM_INPUT) == [],
+        message="The second Escape should leave the prompt",
+    )
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+
+
+def test_hovering_a_choice_marks_it_and_the_arrow_keys_continue_from_there(dash_duo):
+    duo = _start(dash_duo)
+    _to_the_choice_list(duo)
+    field = duo.find_element(PARAM_INPUT)
+    field.send_keys(Keys.ARROW_DOWN)
+    _wait_for_active_choice(duo, "bar")
+
+    ActionChains(duo.driver).move_to_element(duo.find_element(CHOICE.format("line"))).perform()
+    _wait_for_active_choice(duo, "line")
+    marked = duo.find_elements(f"{CHOICE_LIST} [aria-selected='true']")
+    assert [option.text for option in marked] == ["line"], "Only one option may look marked"
+
+    field.send_keys(Keys.ARROW_DOWN)  # continues from the hovered option and wraps
+    _wait_for_active_choice(duo, "bar")
+
+
+def test_the_cancel_button_has_a_label_and_returns_to_the_layouts(dash_duo):
+    duo = _start(dash_duo)
+    _enter_params_mode(duo)
+
+    cancel = duo.find_element("button[aria-label='Cancel']")
+    cancel.click()
+
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    assert duo.find_elements(PARAM_INPUT) == []
+
+
+def test_arrow_keys_leave_a_parameter_without_choices_alone(dash_duo):
+    duo = _start(dash_duo)
+    _enter_params_mode(duo)
+
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ARROW_DOWN)
+
+    assert duo.find_elements(CHOICE_LIST) == []
+    assert _active_option_id(duo) is None
+    assert duo.find_elements(PARAM_INPUT), "The parameter prompt should stay open"
+
+
+def _start_many(dash_duo):
+    """Serve a layout whose only parameter has 40 choices, more than the list shows."""
+    app = Dash(__name__, suppress_callback_exceptions=True)
+
+    @dash_prism.register_layout(id="many", name="Many", allow_multiple=True)
+    def many_layout(pick: Annotated[str, dash_prism.Param(choices=MANY_CHOICES)]):
+        return html.Div(f"pick={pick!r}", id="many-content")
+
+    app.layout = html.Div(
+        [
+            dash_prism.Prism(
+                id="prism",
+                persistence=False,
+                persistence_type="memory",
+                style={"height": "100vh"},
+            )
+        ],
+        style={"height": "100vh"},
+    )
+    dash_prism.init("prism", app)
+    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    return dash_duo
+
+
+def test_the_active_choice_is_scrolled_into_view_in_the_list_only(dash_duo):
+    # A short window makes the list taller than the panel around it. The marked choice
+    # must scroll the list and nothing else: the input stays in view and no ancestor moves.
+    duo = _start_many(dash_duo)
+    duo.driver.set_window_size(900, 300)
+    _enter_params_mode(duo, search="Many", layout_id="many")
+    duo.wait_for_element(CHOICE_LIST, timeout=5)
+
+    duo.find_element(PARAM_INPUT).send_keys(Keys.ARROW_UP)  # the last of 40 choices
+    _wait_for_active_choice(duo, MANY_CHOICES[-1])
+
+    def option_is_inside_the_list(driver) -> bool:
+        return driver.execute_script(
+            """
+            const list = document.querySelector(arguments[0]).getBoundingClientRect();
+            const option = document.querySelector(arguments[1]).getBoundingClientRect();
+            return option.top >= list.top && option.bottom <= list.bottom;
+            """,
+            CHOICE_LIST,
+            CHOICE.format(MANY_CHOICES[-1]),
+        )
+
+    WebDriverWait(duo.driver, 5).until(
+        option_is_inside_the_list, message="The list should scroll to the active choice"
+    )
+
+    scrolled_ancestors = duo.driver.execute_script(
+        """
+        const scrolled = [];
+        for (let el = document.querySelector(arguments[0]).parentElement; el; el = el.parentElement) {
+            if (el.scrollTop !== 0) scrolled.push(el.className || el.tagName);
+        }
+        return scrolled;
+        """,
+        CHOICE_LIST,
+    )
+    assert scrolled_ancestors == [], "Only the list may scroll"
+    assert duo.driver.execute_script(
+        """
+        const input = document.querySelector(arguments[0]).getBoundingClientRect();
+        return input.top >= 0 && input.bottom <= window.innerHeight;
+        """,
+        PARAM_INPUT,
+    ), "The input must stay in view"
+    assert duo.driver.execute_script(
+        "return document.querySelector(arguments[0]).scrollTop > 0;", CHOICE_LIST
+    ), "The list itself should have scrolled"

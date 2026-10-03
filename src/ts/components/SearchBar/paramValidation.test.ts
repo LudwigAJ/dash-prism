@@ -10,6 +10,7 @@ import {
   filterChoices,
   formatParamHint,
   resolveEnumInput,
+  stepActiveChoice,
   stringifyParams,
 } from './paramValidation';
 import type { LayoutParam } from '@types';
@@ -163,6 +164,35 @@ describe('resolveEnumInput / filterChoices', () => {
     expect(filterChoices(kind, '')).toEqual(['bar', 'line', 'scatter']);
     expect(filterChoices(kind, 'a')).toEqual(['bar', 'scatter']);
     expect(filterChoices(kind, 'zzz')).toEqual([]);
+  });
+
+  it('offers no choices for a param that is not an enum', () => {
+    expect(filterChoices(param({ type: 'string', choices: ['a'] }), '')).toEqual([]);
+  });
+});
+
+describe('stepActiveChoice', () => {
+  const choices = ['bar', 'line', 'scatter'];
+
+  it('starts at the first choice going down and at the last going up', () => {
+    expect(stepActiveChoice(choices, null, 1)).toBe('bar');
+    expect(stepActiveChoice(choices, null, -1)).toBe('scatter');
+  });
+
+  it('moves one step and wraps at both ends', () => {
+    expect(stepActiveChoice(choices, 'bar', 1)).toBe('line');
+    expect(stepActiveChoice(choices, 'scatter', 1)).toBe('bar');
+    expect(stepActiveChoice(choices, 'line', -1)).toBe('bar');
+    expect(stepActiveChoice(choices, 'bar', -1)).toBe('scatter');
+  });
+
+  it('treats a choice that left the list as no choice', () => {
+    expect(stepActiveChoice(['bar', 'line'], 'scatter', 1)).toBe('bar');
+  });
+
+  it('has no active choice in an empty list', () => {
+    expect(stepActiveChoice([], null, 1)).toBeNull();
+    expect(stepActiveChoice([], 'bar', -1)).toBeNull();
   });
 });
 

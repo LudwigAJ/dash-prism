@@ -10,6 +10,7 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Separator,
 } from '@components/ui';
 import { cn } from '@utils/cn';
 import { resolveStatusBarItems } from '@constants/statusBar';
@@ -104,7 +105,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-reset"
+            aria-label="Reset workspace"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-destructive"
             onClick={handleReset}
           >
@@ -118,7 +121,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-help"
+            aria-label="Help"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-foreground"
             onClick={() => onOpenHelp?.()}
           >
@@ -132,7 +137,9 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             data-testid="prism-statusbar-undo"
+            aria-label="Undo last change"
             className={cn(
               'tw:rounded-sm tw:p-1 tw:transition-colors',
               canUndo
@@ -176,13 +183,14 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     tab: (
       <Popover>
         <PopoverTrigger asChild>
-          <div
+          <button
+            type="button"
             className="tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:px-1.5 tw:py-0.5 tw:transition-colors tw:hover:bg-muted"
             data-testid="prism-statusbar-tab"
           >
             Tab: <span className="tw:text-foreground">{activeTab?.name || '--'}</span>
             {activeTab?.locked && <Lock className="tw:size-[1em] tw:text-muted-foreground" />}
-          </div>
+          </button>
         </PopoverTrigger>
         {activeTab && (
           <PopoverContent
@@ -291,7 +299,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 
 /** Thin vertical separator between status bar segments. */
 function Sep() {
-  return <span className="tw:text-border tw:opacity-60">|</span>;
+  return <Separator orientation="vertical" className="tw:h-3" />;
 }
 
 // Helper component for info rows

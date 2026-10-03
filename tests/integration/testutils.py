@@ -475,6 +475,32 @@ def press_enter_on_element(dash_duo, selector: str):
     )
 
 
+def tab_to(dash_duo, selector: str, max_presses: int = 80) -> None:
+    """
+    Press Tab until the element that matches ``selector`` has focus.
+
+    A control that a keyboard user cannot reach with Tab fails here. The helper
+    starts from the current focus, so a test can move to a known element first.
+
+    :param dash_duo: The dash testing fixture.
+    :param selector: The CSS selector of the element that must receive focus.
+    :param max_presses: The number of Tab presses after which the helper gives up.
+    :raises AssertionError: If no element that matches ``selector`` received focus.
+    """
+    for _ in range(max_presses):
+        if dash_duo.driver.execute_script(
+            "return document.activeElement.matches(arguments[0]);", selector
+        ):
+            return
+        ActionChains(dash_duo.driver).send_keys(Keys.TAB).perform()
+    raise AssertionError(f"Tab did not reach {selector!r} in {max_presses} presses")
+
+
+def press_key(dash_duo, key: str) -> None:
+    """Send one key press to the element that has focus."""
+    ActionChains(dash_duo.driver).send_keys(key).perform()
+
+
 # =============================================================================
 # Tab Management Helpers
 # =============================================================================

@@ -109,6 +109,7 @@ export function PrismAction({
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          type="button"
           id={id}
           data-testid={testId}
           className={cn(

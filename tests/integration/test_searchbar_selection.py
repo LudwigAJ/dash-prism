@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pytest
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
@@ -22,6 +23,8 @@ from conftest import (
     TAB_SELECTOR,
     check_browser_errors,
     get_tabs,
+    press_key,
+    tab_to,
     wait_for_tab_count,
 )
 
@@ -158,3 +161,44 @@ def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
+
+
+DISPLAY_BAR = "[data-testid='prism-searchbar-display']"
+
+
+def _open_static_layout(duo) -> None:
+    """Open the static layout in the first tab, so the search bar shows its display mode."""
+    duo.wait_for_element(".prism-searchbar", timeout=5)
+    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(SEARCHBAR_INPUT).send_keys("Static")
+    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
+    duo.find_element("[data-testid='prism-layout-item-test-static']").click()
+    duo.wait_for_element(DISPLAY_BAR, timeout=10)
+
+
+@pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "space"])
+def test_display_bar_opens_search_from_the_keyboard(prism_app_with_layouts, key):
+    """The display bar is a button, so Enter and Space open the search with an empty query."""
+    duo = prism_app_with_layouts
+    _open_static_layout(duo)
+    assert duo.find_element(DISPLAY_BAR).tag_name == "button"
+
+    tab_to(duo, DISPLAY_BAR)
+    press_key(duo, key)
+
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    assert duo.find_element(SEARCHBAR_INPUT).get_attribute("value") == ""
+    assert check_browser_errors(duo) == []
+
+
+def test_typing_on_the_display_bar_starts_a_search(prism_app_with_layouts):
+    duo = prism_app_with_layouts
+    _open_static_layout(duo)
+
+    tab_to(duo, DISPLAY_BAR)
+    press_key(duo, "c")
+
+    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    assert duo.find_element(SEARCHBAR_INPUT).get_attribute("value") == "c"
+    assert check_browser_errors(duo) == []

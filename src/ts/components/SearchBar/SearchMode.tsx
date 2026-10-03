@@ -49,13 +49,19 @@ export const SearchMode = ({
   commandRef,
 }: SearchModeProps) => {
   return (
+    // The input opens the dropdown on focus, so a keyboard user needs no key handler here.
     <div
       className={cn('prism-searchbar')}
       ref={commandRef}
+      role="presentation"
       data-testid="prism-searchbar"
       onClick={onClick}
     >
-      <Command shouldFilter={false} className="tw:flex-1 tw:overflow-visible">
+      <Command
+        shouldFilter={false}
+        label="Search layouts"
+        className="tw:flex-1 tw:overflow-visible"
+      >
         <CommandInput
           ref={inputRef}
           data-testid="prism-searchbar-input"
@@ -103,7 +109,11 @@ export const SearchMode = ({
                             ? 'tw:text-primary'
                             : 'tw:text-muted-foreground tw:hover:text-primary'
                         )}
-                        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        aria-label={
+                          isFavorite
+                            ? `Remove ${meta.name} from favorites`
+                            : `Add ${meta.name} to favorites`
+                        }
                       >
                         <Star
                           className={cn(
@@ -138,8 +148,12 @@ export const SearchMode = ({
                 })}
               </CommandGroup>
             )}
-            {/* Resize handle */}
-            <div className="prism-searchbar-resize-handle" onMouseDown={onResizeStart} />
+            {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
+            <div
+              className="prism-searchbar-resize-handle"
+              aria-hidden="true"
+              onMouseDown={onResizeStart}
+            />
           </CommandList>
         )}
       </Command>

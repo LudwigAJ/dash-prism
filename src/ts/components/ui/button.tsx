@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Button from shadcn/ui, with the variants as `cva` classes.
+ * Local changes: each utility class has the `tw:` prefix. The button has the type `button` by
+ * default, unless `asChild` is set, so that it does not submit a form of the host page.
+ */
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -49,6 +54,8 @@ function Button({
 
   return (
     <Comp
+      // A button without a type submits the form of a host page that wraps Prism.
+      type={asChild ? undefined : 'button'}
       data-slot="button"
       data-variant={variant}
       data-size={size}

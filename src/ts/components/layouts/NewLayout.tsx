@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@components/ui/card';
 import { useConfig } from '@context/ConfigContext';
 import { cn } from '@utils/cn';
@@ -20,7 +20,7 @@ type LayoutCardProps = {
   meta: { name: string; description?: string; params?: Array<{ name: string }> };
   isFavorite: boolean;
   onLayoutClick: (layoutId: string) => void;
-  onToggleFavorite: (e: React.MouseEvent, layoutId: string) => void;
+  onToggleFavorite: (layoutId: string) => void;
 };
 
 // Defined at module level so React sees a stable component identity across renders.
@@ -28,52 +28,60 @@ type LayoutCardProps = {
 // replacing DOM nodes and swallowing in-flight click events.
 function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: LayoutCardProps) {
   return (
-    <Card
-      className={cn(
-        'tw:relative tw:cursor-pointer tw:transition-colors tw:hover:border-accent tw:hover:shadow-md',
-        'tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none tw:focus-visible:ring-inset',
-        'tw:flex tw:flex-col'
-      )}
-      onClick={() => onLayoutClick(id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onLayoutClick(id);
-        }
-      }}
-    >
-      {/* Favorite star button */}
-      <button
-        type="button"
-        onClick={(e) => onToggleFavorite(e, id)}
+    <article data-testid={`prism-layout-card-${id}`} className="tw:flex">
+      <Card
         className={cn(
-          'tw:absolute tw:top-2 tw:right-2 tw:rounded-md tw:p-1.5 tw:transition-colors',
-          'tw:hover:bg-muted tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
-          isFavorite ? 'tw:text-primary' : 'tw:text-muted-foreground tw:hover:text-primary'
+          'tw:relative tw:flex tw:min-w-0 tw:flex-1 tw:flex-col',
+          'tw:transition-colors tw:hover:border-accent tw:hover:shadow-md'
         )}
-        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
-        <Star className={cn('tw:size-[1em]', isFavorite && 'tw:fill-current')} />
-      </button>
-
-      <CardHeader className="tw:flex-1 tw:pr-10 tw:pb-2">
-        <CardTitle className="tw:text-[1.15em]">{meta.name}</CardTitle>
-        {meta.description && (
-          <CardDescription className="tw:line-clamp-3 tw:text-[1em]">
-            {meta.description}
-          </CardDescription>
+        <CardHeader className="tw:flex-1 tw:pr-10 tw:pb-2">
+          <CardTitle className="tw:text-[1.15em]">
+            {/* The ::after element covers the whole card, so a click anywhere on the card opens the layout. */}
+            <button
+              type="button"
+              data-testid={`prism-layout-card-open-${id}`}
+              onClick={() => onLayoutClick(id)}
+              className={cn(
+                'tw:cursor-pointer tw:text-left tw:after:absolute tw:after:inset-0 tw:after:rounded-xl',
+                'tw:focus-visible:outline-none tw:focus-visible:after:ring-2 tw:focus-visible:after:ring-ring tw:focus-visible:after:ring-inset'
+              )}
+            >
+              {meta.name}
+            </button>
+          </CardTitle>
+          {meta.description && (
+            <CardDescription className="tw:line-clamp-3 tw:text-[1em]">
+              {meta.description}
+            </CardDescription>
+          )}
+        </CardHeader>
+        {meta.params && meta.params.length > 0 && (
+          <CardContent className="tw:pt-0">
+            <p className="tw:text-[0.85em] tw:text-muted-foreground">
+              {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
         )}
-      </CardHeader>
-      {meta.params && meta.params.length > 0 && (
-        <CardContent className="tw:pt-0">
-          <p className="tw:text-[0.85em] tw:text-muted-foreground">
-            {meta.params.length} parameter{meta.params.length !== 1 ? 's' : ''}
-          </p>
-        </CardContent>
-      )}
-    </Card>
+
+        {/* The star follows the title in the focus order. It is a sibling, because a button cannot contain a button. */}
+        <button
+          type="button"
+          data-testid={`prism-layout-card-favorite-${id}`}
+          onClick={() => onToggleFavorite(id)}
+          className={cn(
+            'tw:absolute tw:top-2 tw:right-2 tw:z-10 tw:rounded-md tw:p-1.5 tw:transition-colors',
+            'tw:hover:bg-muted tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
+            isFavorite ? 'tw:text-primary' : 'tw:text-muted-foreground tw:hover:text-primary'
+          )}
+          aria-label={
+            isFavorite ? `Remove ${meta.name} from favorites` : `Add ${meta.name} to favorites`
+          }
+        >
+          <Star className={cn('tw:size-[1em]', isFavorite && 'tw:fill-current')} />
+        </button>
+      </Card>
+    </article>
   );
 }
 
@@ -84,7 +92,20 @@ function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: L
 export function NewLayout({ tabId }: NewLayoutProps) {
   const { registeredLayouts } = useConfig();
   const dispatch = useAppDispatch();
-  const favoriteLayouts = useAppSelector(selectFavoriteLayouts) ?? [];
+  const storedFavorites = useAppSelector(selectFavoriteLayouts);
+  const favoriteLayouts = storedFavorites ?? [];
+  const gridRef = useRef<HTMLDivElement>(null);
+  const toggledLayoutIdRef = useRef<string | null>(null);
+
+  // A card moves to the other section when the user toggles its star, and React mounts the
+  // card again there. Without this effect the focus would fall back to the page.
+  useEffect(() => {
+    const layoutId = toggledLayoutIdRef.current;
+    if (layoutId === null) return;
+    toggledLayoutIdRef.current = null;
+    const testId = `prism-layout-card-favorite-${CSS.escape(layoutId)}`;
+    gridRef.current?.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
+  }, [storedFavorites]);
 
   const layoutEntries = Object.entries(registeredLayouts);
 
@@ -92,8 +113,8 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   const favoriteEntries = layoutEntries.filter(([id]) => favoriteLayouts.includes(id));
   const otherEntries = layoutEntries.filter(([id]) => !favoriteLayouts.includes(id));
 
-  const handleToggleFavorite = (e: React.MouseEvent, layoutId: string) => {
-    e.stopPropagation();
+  const handleToggleFavorite = (layoutId: string) => {
+    toggledLayoutIdRef.current = layoutId;
     dispatch(toggleFavoriteLayout({ layoutId }));
   };
 
@@ -128,6 +149,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
 
   return (
     <div
+      ref={gridRef}
       data-testid="prism-empty-tab-layouts"
       className="tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto tw:bg-background tw:p-[1.7em]"
     >

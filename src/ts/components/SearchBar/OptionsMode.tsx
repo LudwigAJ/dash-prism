@@ -42,7 +42,11 @@ export const OptionsMode = ({
 }: OptionsModeProps) => {
   return (
     <div className={cn('prism-searchbar')} ref={commandRef}>
-      <Command shouldFilter={false} className="tw:flex-1 tw:overflow-visible">
+      <Command
+        shouldFilter={false}
+        label={`Options for ${selectedLayoutName}`}
+        className="tw:flex-1 tw:overflow-visible"
+      >
         <CommandInput
           ref={inputRef}
           value=""
@@ -77,8 +81,12 @@ export const OptionsMode = ({
                 </CommandItem>
               ))}
             </CommandGroup>
-            {/* Resize handle */}
-            <div className="prism-searchbar-resize-handle" onMouseDown={onResizeStart} />
+            {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
+            <div
+              className="prism-searchbar-resize-handle"
+              aria-hidden="true"
+              onMouseDown={onResizeStart}
+            />
           </CommandList>
         )}
       </Command>

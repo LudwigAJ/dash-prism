@@ -19,6 +19,7 @@ describe('deriveMode', () => {
     isUserSearching: false,
     isPendingLayout: null,
     paramError: null,
+    activeChoice: null,
   };
 
   const baseContext: ModeContext = {
@@ -333,5 +334,32 @@ describe('paramError (doc 04 §3.7)', () => {
     expect(
       searchBarReducer(state, { type: 'SET_PARAM_ERROR', message: null }).paramError
     ).toBeNull();
+  });
+});
+
+describe('activeChoice', () => {
+  it('SET_ACTIVE_CHOICE stores the choice and null clears it', () => {
+    let state = createInitialState();
+    state = searchBarReducer(state, { type: 'SET_ACTIVE_CHOICE', choice: 'line' });
+    expect(state.activeChoice).toBe('line');
+    expect(searchBarReducer(state, { type: 'SET_ACTIVE_CHOICE', choice: null }).activeChoice).toBe(
+      null
+    );
+  });
+
+  it('typing, advancing, resetting and clearing the selection drop the marked choice', () => {
+    const state = searchBarReducer(createInitialState(), {
+      type: 'SET_ACTIVE_CHOICE',
+      choice: 'line',
+    });
+
+    const next = [
+      searchBarReducer(state, { type: 'SET_PARAM_VALUES', values: { kind: 'l' } }),
+      searchBarReducer(state, { type: 'ADVANCE_PARAM' }),
+      searchBarReducer(state, { type: 'RESET_PARAMS' }),
+      searchBarReducer(state, { type: 'CLEAR_SELECTION' }),
+      searchBarReducer(state, { type: 'RESET' }),
+    ];
+    expect(next.map((s) => s.activeChoice)).toEqual([null, null, null, null, null]);
   });
 });

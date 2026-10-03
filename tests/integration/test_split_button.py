@@ -34,6 +34,13 @@ def test_split_button_visible_on_active_panel(prism_app_with_layouts):
     assert len(errors) == 0, f"Browser console should have no errors: {errors}"
 
 
+def test_split_button_has_an_accessible_name(prism_app_with_layouts):
+    """The split button shows only an icon, so its name must come from aria-label."""
+    duo = prism_app_with_layouts
+
+    assert duo.find_element(SPLIT_PANEL_BUTTON).accessible_name == "Split panel"
+
+
 def test_split_button_creates_new_panel(prism_app_with_layouts):
     """Clicking the split button should create a second panel with a new tab."""
     duo = prism_app_with_layouts
