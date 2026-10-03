@@ -3,6 +3,15 @@ name: CI
 on:
   push:
     branches: [main, dev]
+  # No branch filter: a pull request onto a feature branch (a stacked pull
+  # request) also gets the checks.
+  pull_request:
+
+# A new push to a pull request cancels the run for the earlier push. Runs for a
+# push to main or dev always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -62,9 +71,9 @@ jobs:
       - name: Verify Chrome version
         run: google-chrome --version || /usr/bin/google-chrome --version || echo "Chrome not found"
 
+      # The pytest addopts in pyproject.toml write the coverage reports.
       - name: Run tests with coverage
-        run: |
-          poetry run pytest --headless --reruns 2 --reruns-delay 1 --cov=dash_prism --cov-report=xml --cov-report=html --cov-report=term
+        run: pnpm run test
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v7
@@ -148,8 +157,7 @@ jobs:
           install-chromedriver: false
 
       - name: Run tests
-        run: |
-          poetry run pytest --headless --reruns 2 --reruns-delay 1
+        run: pnpm run test
 
   lint:
     name: Lint and Type Check
@@ -169,12 +177,6 @@ jobs:
       - name: Install dependencies (dev group)
         run: poetry install --with dev --no-interaction
 
-      - name: Check formatting with black
-        run: poetry run black --check dash_prism tests
-
-      - name: Type check with mypy
-        run: poetry run mypy
-
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
@@ -187,11 +189,9 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint TypeScript with ESLint
+      # Black, mypy, ESLint and tsc, as the lint script in package.json defines.
+      - name: Lint and type check
         run: pnpm run lint
-
-      - name: Type check TypeScript
-        run: pnpm run typecheck
 
   build:
     name: Build Distribution
