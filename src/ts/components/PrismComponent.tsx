@@ -469,20 +469,6 @@ export function Prism({
     clearWorkspaceStorage(persistenceType, id);
   }, [persistenceType, id]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const previousTheme = root.getAttribute('data-prism-theme');
-    root.setAttribute('data-prism-theme', theme);
-
-    return () => {
-      if (previousTheme === null) {
-        root.removeAttribute('data-prism-theme');
-      } else {
-        root.setAttribute('data-prism-theme', previousTheme);
-      }
-    };
-  }, [theme]);
-
   return (
     <div
       id={id}

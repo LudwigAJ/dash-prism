@@ -2,20 +2,47 @@
  * Prism Global Styles - shadcn/ui base + semantic tab colors
  */
 
-@import 'tailwindcss';
+/*
+ * Prism shares the page with the host Dash app, so the sheet does not style an element outside
+ * .prism-root. The sheet imports only the theme layer of Tailwind. It does not import the
+ * Tailwind preflight layer, because that layer resets every element of the page. The file
+ * preflight.css has the same rules, nested in .prism-root. The utilities are nested in
+ * .prism-root too, so each utility selector starts with .prism-root. The @property and
+ * @keyframes rules stay global, and they style no element.
+ * The theme import has the inline option, so Tailwind does not put its theme variables on :root.
+ * The utilities have no automatic source detection. Tailwind emits a theme variable when any
+ * scanned file contains its name, so only the @source paths below are scanned.
+ * The tokens below belong to .prism-root, so each instance has its own theme. A Radix portal
+ * renders inside .prism-root and uses the tokens of its instance.
+ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme) theme(inline);
+@import './preflight.css' layer(base);
+
+@layer utilities {
+  .prism-root {
+    @tailwind utilities source(none);
+  }
+}
 
 /* Source paths for Tailwind to scan for class usage */
 @source '../**/*.{ts,tsx}';
 @source './**/*.{ts,tsx,css}';
 
 /* Dark mode variant */
-@custom-variant dark (&:is(.dark *, [data-prism-theme='dark'] *));
+@custom-variant dark (&:is(.prism-root.dark *));
 
 /* =============================================================================
-  THEME VARIABLES - Light Mode (shadcn base + semantic tab colors)
+  PRISM ROOT - layout and light mode theme variables (shadcn base + semantic tab colors)
   ============================================================================= */
 
-:root {
+.prism-root {
+  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
+
+  background: var(--background);
+
   /* Base colors (shadcn) */
   --background: oklch(96% 0 0deg);
   --foreground: oklch(14.5% 0 0deg);
@@ -61,8 +88,7 @@
   THEME VARIABLES - Dark Mode (shadcn base + semantic tab colors)
   ============================================================================= */
 
-.dark,
-[data-prism-theme='dark'] {
+.prism-root.dark {
   /* Base colors (shadcn) */
   --background: oklch(22% 0 0deg);
   --foreground: oklch(87% 0 0deg);
@@ -155,13 +181,16 @@
    BASE LAYER
    ============================================================================= */
 
+/*
+ * The preflight rules reset the border width to 0 with the color currentcolor. These rules set the
+ * Prism border color and the outline color for each element in the root, as shadcn does.
+ */
 @layer base {
-  * {
+  .prism-root,
+  .prism-root *,
+  .prism-root ::before,
+  .prism-root ::after {
     @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }
 
@@ -183,14 +212,8 @@
 }
 
 /* =============================================================================
-   PRISM ROOT LAYOUT
+   PRISM WORKSPACE LAYOUT
    ============================================================================= */
-
-.prism-root {
-  @apply text-foreground flex min-h-0 w-full flex-col overflow-hidden;
-
-  background: var(--background);
-}
 
 .prism-view-workspace {
   @apply flex min-h-0 flex-1 flex-col overflow-hidden;
@@ -235,12 +258,12 @@
   background-color: var(--muted-foreground);
 }
 
-.scrollbar-none {
+.prism-root .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.scrollbar-none::-webkit-scrollbar {
+.prism-root .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
 
@@ -541,15 +564,17 @@
    ============================================================================= */
 
 @media print {
-  .prism-status-bar,
-  .prism-searchbar,
-  [data-slot='tabs-list'] {
-    display: none !important;
+  .prism-root .prism-status-bar,
+  .prism-root .prism-searchbar,
+  .prism-root [data-slot='tabs-list'] {
+    display: none;
   }
 
-  .prism-container {
-    background: white !important;
-    color: black !important;
+  /* Each panel paints var(--background), so these tokens print the workspace black on white. */
+  .prism-root,
+  .prism-root.dark {
+    --background: #fff;
+    --foreground: #000;
   }
 }
 

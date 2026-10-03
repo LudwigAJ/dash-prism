@@ -1,5 +1,7 @@
 export default {
   extends: ['stylelint-config-standard'],
+  // A copy of the Tailwind preflight rules. See the comment at the top of the file.
+  ignoreFiles: ['src/ts/preflight.css'],
   rules: {
     // The preset asks for @import url(...). Tailwind resolves `@import 'tailwindcss'` only in the
     // plain string form.
