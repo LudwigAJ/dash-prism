@@ -133,7 +133,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                   key={tab.id}
                   value={tab.id}
                   forceMount={true}
-                  className="h-full min-h-full w-full data-[state=inactive]:hidden"
+                  className="h-full min-h-full w-full"
                 >
                   <ErrorBoundary>
                     {!tab.layoutId ? (

@@ -84,8 +84,10 @@ const TabsContent = React.forwardRef<
     data-slot="tabs-content"
     className={cn(
       'flex-1 outline-none',
-      // Hide inactive tabs using visibility (not display:none) to keep Dash components mounted
-      'data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=inactive]:absolute data-[state=inactive]:inset-0',
+      // Hide inactive tabs with visibility, not with display:none, to keep Dash components mounted.
+      // Plotly graphs need a real size to lay out correctly when the tab becomes active.
+      // The overflow clip keeps the content of a hidden tab out of the scroll area of the panel.
+      'data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=inactive]:absolute data-[state=inactive]:inset-0 data-[state=inactive]:overflow-hidden',
       className
     )}
     {...props}
