@@ -956,7 +956,7 @@ def test_registered_sync_callback_passes_client_timeout() -> None:
             {
                 "id": cid,
                 "property": "data",
-                "value": {"tabId": "tab-1", "layoutId": "slow-async", "timeout": 0.05},
+                "value": {"layoutId": "slow-async", "timeout": 0.05},
             },
         ],
         "changedPropIds": [f"{sid}.data"],

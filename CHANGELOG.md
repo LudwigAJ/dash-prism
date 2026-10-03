@@ -70,6 +70,9 @@ All notable changes to Dash Prism are recorded here. The project follows
   `dash_prism.init` and the other public names are the same. Code that wrote
   `from dash_prism.init import ...` must import the public names from
   `dash_prism`.
+- The `data` prop of `PrismContent` no longer has the key `tabId`. The render
+  callback always read the tab ID from the `index` of the component `id`, so the
+  key was never used.
 
 ### Fixed
 
