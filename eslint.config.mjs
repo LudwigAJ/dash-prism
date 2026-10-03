@@ -37,6 +37,8 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...react.configs.recommended.rules,
       'prettier/prettier': 'error',
+      // A button without a type submits the form of a host page that wraps Prism.
+      'react/button-has-type': 'error',
       'default-case': 'error',
       'no-console': 'error',
       curly: ['error', 'multi-line'],
