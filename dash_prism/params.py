@@ -355,31 +355,6 @@ def _strip_optional(tp: Any) -> tuple[Any, bool]:
     return tp, False
 
 
-def _nullable_choice_type(choices: Sequence[Any]) -> Any:
-    """Build ``Optional[Literal[*choices]]`` by whichever route typing allows.
-
-    Python 3.10 removes the duplicates from a union by a hash of its members.
-    Thus a ``Literal`` of unhashable choices, such as a list or a dictionary,
-    cannot go into an ``Optional`` on that version. Python 3.11 added a
-    fallback and accepts it.
-
-    ``Literal`` itself accepts unhashable members on all supported versions.
-    Thus the blank becomes a ``None`` member of the ``Literal``, and the
-    parameter stays nullable on every version.
-
-    :param choices: The values the parameter accepts.
-    :returns: A type that accepts those values and ``None``.
-    """
-    literal = Literal[tuple(choices)]  # type: ignore[valid-type]
-    try:
-        return typing.Optional[literal]
-    except TypeError:
-        logger.debug(
-            "typing refused Optional[%r]. The blank becomes a Literal member instead.", literal
-        )
-        return Literal[tuple([*choices, None])]
-
-
 def _same_choices(left: Sequence[Any], right: Sequence[Any]) -> bool:
     """Whether two choice lists allow the same values, whatever their order.
 
@@ -920,11 +895,9 @@ class PydanticValidator:
                 # None. A type rebuilt from the choices alone drops the
                 # Optional and rejects that None. The user then has no input
                 # that can succeed, except a choice from the list.
-                tp = (
-                    _nullable_choice_type(p.meta.choices)
-                    if inner_nullable
-                    else Literal[tuple(p.meta.choices)]
-                )
+                tp = Literal[tuple(p.meta.choices)]
+                if inner_nullable:
+                    tp = typing.Optional[tp]
             field_kwargs = p.meta.as_field_kwargs()
             if describe_type(tp)[0] == "unknown":
                 # pydantic cannot make a schema for an arbitrary class, such

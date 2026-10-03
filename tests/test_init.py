@@ -926,7 +926,7 @@ def test_async_callback_honours_client_timeout() -> None:
         import time
 
         # The executor branch is asyncio.wait_for(run_in_executor(...)); on Python
-        # 3.10/3.11 a finished executor future wins over an expired timer, so keep
+        # 3.11 a finished executor future wins over an expired timer, so keep
         # a wide margin between this sleep and the 0.05 s timeout below.
         time.sleep(1.0)
         return html.Div("done", id="slow-sync-done")
