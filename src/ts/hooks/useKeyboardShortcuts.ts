@@ -308,6 +308,10 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
           e.preventDefault();
           undoCloseTab();
           break;
+
+        default:
+          // Not a Prism shortcut. The browser handles the key.
+          break;
       }
     };
 

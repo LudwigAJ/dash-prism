@@ -17,19 +17,23 @@ function checkNumber(kind: 'integer' | 'number', raw: string, c: ParamConstraint
   }
   const n = Number(raw);
   if (c.minimum !== undefined && n < c.minimum) return `Must be at least ${c.minimum}`;
-  if (c.exclusiveMinimum !== undefined && n <= c.exclusiveMinimum)
+  if (c.exclusiveMinimum !== undefined && n <= c.exclusiveMinimum) {
     return `Must be greater than ${c.exclusiveMinimum}`;
+  }
   if (c.maximum !== undefined && n > c.maximum) return `Must be at most ${c.maximum}`;
-  if (c.exclusiveMaximum !== undefined && n >= c.exclusiveMaximum)
+  if (c.exclusiveMaximum !== undefined && n >= c.exclusiveMaximum) {
     return `Must be less than ${c.exclusiveMaximum}`;
+  }
   return null;
 }
 
 function checkLength(len: number, c: ParamConstraints, unit: string): string | null {
-  if (c.minLength !== undefined && len < c.minLength)
+  if (c.minLength !== undefined && len < c.minLength) {
     return `Must have at least ${c.minLength} ${unit}`;
-  if (c.maxLength !== undefined && len > c.maxLength)
+  }
+  if (c.maxLength !== undefined && len > c.maxLength) {
     return `Must have at most ${c.maxLength} ${unit}`;
+  }
   return null;
 }
 
@@ -66,8 +70,11 @@ function checkScalar(type: ParamType, raw: string, param: LayoutParam): string |
       }
       return null;
     }
+    case 'array':
+    case 'object':
+    case 'unknown':
     default:
-      return null; // object / unknown: server validates
+      return null; // array / object / unknown: the server validates
   }
 }
 
@@ -115,8 +122,9 @@ export function formatParamHint(param: LayoutParam): string {
   const lo = c.minimum ?? c.exclusiveMinimum;
   const hi = c.maximum ?? c.exclusiveMaximum;
   if (lo !== undefined || hi !== undefined) parts.push(`${lo ?? ''}-${hi ?? ''}`);
-  if (c.minLength !== undefined || c.maxLength !== undefined)
+  if (c.minLength !== undefined || c.maxLength !== undefined) {
     parts.push(`len ${c.minLength ?? ''}-${c.maxLength ?? ''}`);
+  }
   if (param.nullable) parts.push('optional');
   return parts.join(', ');
 }

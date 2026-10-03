@@ -36,6 +36,8 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...react.configs.recommended.rules,
       'prettier/prettier': 'error',
+      'default-case': 'error',
+      curly: ['error', 'multi-line'],
       // Underscore-prefixed names are the conventional "intentionally unused" marker.
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -68,6 +70,23 @@ export default [
           selector: 'ExportDefaultDeclaration',
           message: 'Use a named export (typescript-style, Modules).',
         },
+      ],
+    },
+  },
+  {
+    // Rules that need type information run on the project files only.
+    files: ['src/ts/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      // A default branch does not count. A switch over a union lists every member.
+      '@typescript-eslint/switch-exhaustiveness-check': [
+        'error',
+        { considerDefaultExhaustiveForUnions: false },
       ],
     },
   },

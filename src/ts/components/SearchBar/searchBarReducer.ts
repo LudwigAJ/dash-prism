@@ -1,5 +1,6 @@
 // src/ts/components/SearchBar/searchBarReducer.ts
 import { produce } from 'immer';
+import { logger } from '@utils/logger';
 
 // =============================================================================
 // Types
@@ -158,5 +159,11 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
         clearSelection(draft);
       }
       break;
+    default: {
+      // A new action type that no case handles fails to compile here.
+      const unhandled: never = action;
+      logger.debug('Unhandled SearchBar action', unhandled);
+      break;
+    }
   }
 });
