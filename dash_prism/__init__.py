@@ -295,11 +295,11 @@ for _component in (
 # PUBLIC API
 # =============================================================================
 
+# Initialization
+from .app_init import InitializationError, init
+
 # Icons
 from .icons import AVAILABLE_ICONS, get_available_icons
-
-# Initialization
-from .init import InitializationError, init
 
 # Parameter validation
 from .params import (

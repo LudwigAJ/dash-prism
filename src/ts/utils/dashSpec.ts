@@ -1,6 +1,6 @@
 import type { DashComponent } from '@types';
 
-/** Default layout timeout in seconds; mirrors DEFAULT_LAYOUT_TIMEOUT in dash_prism/init.py. */
+/** Default layout timeout in seconds; mirrors DEFAULT_LAYOUT_TIMEOUT in dash_prism/app_init.py. */
 export const DEFAULT_LAYOUT_TIMEOUT = 30;
 
 /**
