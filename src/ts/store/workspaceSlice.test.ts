@@ -53,7 +53,7 @@ import { subscribeToToasts, type ToastEvent } from '@utils/toastEmitter';
 // =============================================================================
 
 /**
- * Create a test store with optional preloaded state and maxTabs config.
+ * Creates a test store with optional preloaded state and maxTabs config.
  * Wraps workspace reducer with undoable() to match real store structure.
  */
 function createTestStore(
@@ -100,14 +100,14 @@ function createTestStore(
 type TestStore = ReturnType<typeof createTestStore>;
 
 /**
- * Helper to get workspace state (unwraps redux-undo .present)
+ * Gets the workspace state (unwraps redux-undo .present).
  */
 function getWorkspace(store: TestStore): WorkspaceState {
   return store.getState().workspace.present;
 }
 
 /**
- * Create a minimal valid state for testing.
+ * Creates a minimal valid state for testing.
  */
 function createTestState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
   const panelId = 'test-panel-1' as PanelId;
@@ -140,7 +140,7 @@ function createTestState(overrides: Partial<WorkspaceState> = {}): WorkspaceStat
 }
 
 /**
- * Create a state with two panels for split/move testing.
+ * Creates a state with two panels for split/move testing.
  */
 function createTwoPanelState(): WorkspaceState {
   const panel1Id = 'panel-1' as PanelId;
@@ -181,14 +181,14 @@ function createTwoPanelState(): WorkspaceState {
 }
 
 /**
- * Helper to get tab by ID from store state.
+ * Gets a tab by ID from the store state.
  */
 function getTab(store: TestStore, tabId: string): Tab | undefined {
   return getWorkspace(store).tabs.find((t) => t.id === tabId);
 }
 
 /**
- * Helper to count leaf panels.
+ * Counts the leaf panels.
  */
 function countLeafPanels(panel: PanelNode): number {
   if (panel.children.length === 0) return 1;

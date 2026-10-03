@@ -7,7 +7,7 @@ import { getLeafPanelIds } from '@utils/panels';
 // Workspace Selectors (access .present for redux-undo wrapped state)
 // =============================================================================
 
-/** Access the present workspace state (unwraps redux-undo) */
+/** Accesses the present workspace state (unwraps redux-undo) */
 export const selectWorkspacePresent = (state: RootState) => state.workspace.present;
 
 export const selectTabs = (state: RootState) => state.workspace.present.tabs;
@@ -26,16 +26,16 @@ export const selectSearchBarsHidden = (state: RootState) =>
 // Redux-Undo History Selectors
 // =============================================================================
 
-/** Check if undo is available (has past states) */
+/** Checks if undo is available (has past states) */
 export const selectCanUndo = (state: RootState) => state.workspace.past.length > 0;
 
-/** Check if redo is available (has future states) */
+/** Checks if redo is available (has future states) */
 export const selectCanRedo = (state: RootState) => state.workspace.future.length > 0;
 
-/** Get the number of undo steps available */
+/** Gets the number of undo steps available */
 export const selectUndoCount = (state: RootState) => state.workspace.past.length;
 
-/** Get the number of redo steps available */
+/** Gets the number of redo steps available */
 export const selectRedoCount = (state: RootState) => state.workspace.future.length;
 
 // =============================================================================
@@ -56,7 +56,7 @@ export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 
 /**
- * Check if a new tab can be added based on maxTabs limit.
+ * Checks if a new tab can be added based on maxTabs limit.
  * This is a utility function (not a pure selector) because maxTabs comes from config.
  *
  * @param tabCount - Current number of tabs
@@ -78,7 +78,7 @@ export const selectPanelCount = createSelector(
 // It uses state.workspace.past.length > 0 (redux-undo approach)
 
 /**
- * Select workspace snapshot for Dash sync
+ * Selects workspace snapshot for Dash sync
  */
 export const selectWorkspaceSnapshot = createSelector(
   selectTabs,

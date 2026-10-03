@@ -181,7 +181,7 @@ export type DashComponent = {
 };
 
 /**
- * Type guard to check if a value is a DashComponent.
+ * Checks if a value is a DashComponent.
  * Useful for runtime validation of Dash-serialized React elements.
  */
 export function isDashComponent(value: unknown): value is DashComponent {

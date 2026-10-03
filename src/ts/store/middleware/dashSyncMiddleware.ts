@@ -13,7 +13,7 @@ const DEBOUNCE_MS = 500;
 /** Return type for createDashSyncMiddleware - includes cleanup function */
 export type DashSyncMiddlewareResult = {
   middleware: Middleware<object, RootState>;
-  /** Call this to clean up event listeners and pending timeouts */
+  /** Cleans up the event listeners and pending timeouts. */
   cleanup: () => void;
 };
 

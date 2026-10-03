@@ -4,7 +4,7 @@ import type { DashComponent } from '@types';
 export const DEFAULT_LAYOUT_TIMEOUT = 30;
 
 /**
- * Apply the same rule as the server's _coerce_timeout: only a finite, positive
+ * Applies the same rule as the server's _coerce_timeout: only a finite, positive
  * number is a usable timeout, anything else (an explicit None from Python
  * arrives as null; 0 and negatives are not "unlimited") means the default.
  */
@@ -15,7 +15,7 @@ export function normalizeLayoutTimeout(value: unknown): number {
 }
 
 /**
- * Build the Dash component spec that renders one tab's content.
+ * Builds the Dash component spec that renders one tab's content.
  *
  * The spec is handed to Dash's ExternalWrapper, which mounts a PrismContent and
  * fires the pattern-matching render callback registered by dash_prism.init().

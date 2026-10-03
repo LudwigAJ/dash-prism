@@ -35,7 +35,7 @@ import type {
 import '../global.css';
 import { type DashComponentProps } from 'props';
 
-/** Clear workspace from storage (used by workspace-level error boundary) */
+/** Clears workspace from storage (used by workspace-level error boundary) */
 function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: string): void {
   const key = getWorkspaceStorageKey(componentId);
   try {

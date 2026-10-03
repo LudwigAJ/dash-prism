@@ -68,7 +68,7 @@ type ConfigProviderProps = {
   theme?: Theme;
   size?: Size;
   maxTabs?: number;
-  /** Omit for the default limit; null (Python None) means no limit. */
+  /** The default limit applies when the prop is omitted. A null (Python None) means no limit. */
   maxPanels?: number | null;
   persistence?: boolean;
   persistenceType?: PersistenceType;

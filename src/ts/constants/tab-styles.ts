@@ -158,7 +158,7 @@ export const TAB_STYLE_MIGRATION_MAP: Record<string, TabStyleColor> = {
 };
 
 /**
- * Migrate a tab style from old Catppuccin names to new semantic colors.
+ * Migrates a tab style from old Catppuccin names to new semantic colors.
  * Returns 'default' for unknown styles, undefined, or 'default'.
  */
 export function migrateTabStyle(style: string | undefined): TabStyleColor {

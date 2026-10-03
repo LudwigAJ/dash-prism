@@ -14,14 +14,14 @@ const ACTION_VARIANT_CLASSES: Record<string, string> = {
 };
 
 /**
- * Check if a string is a valid hex color
+ * Checks if a string is a valid hex color
  */
 function isHexColor(value: string): boolean {
   return /^#([0-9A-Fa-f]{3}){1,2}$/.test(value);
 }
 
 /**
- * Compute a contrasting text color (black or white) for a given hex background.
+ * Computes a contrasting text color (black or white) for a given hex background.
  * Uses relative luminance to ensure WCAG-compliant contrast.
  */
 function getContrastColor(hex: string): string {

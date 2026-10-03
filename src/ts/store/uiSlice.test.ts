@@ -322,7 +322,7 @@ describe('uiSlice', () => {
     const tab2Id = 'tab-2' as TabId;
 
     /**
-     * Create a combined store with both workspace and UI reducers
+     * Creates a combined store with both workspace and UI reducers
      * to test cross-slice extraReducers behavior.
      */
     function createCombinedStore(uiOverrides: Partial<UiState> = {}) {

@@ -20,7 +20,7 @@ import {
 const MAX_SHARE_DATA_BYTES = 4096;
 
 /**
- * Encode string to base64 using TextEncoder (modern, UTF-8 safe).
+ * Encodes string to base64 using TextEncoder (modern, UTF-8 safe).
  * Returns null if encoding fails or data exceeds size limit.
  */
 function encodeShareData(data: string): string | null {
@@ -39,7 +39,7 @@ function encodeShareData(data: string): string | null {
 }
 
 /**
- * Decode base64 string using TextDecoder (modern, UTF-8 safe).
+ * Decodes base64 string using TextDecoder (modern, UTF-8 safe).
  * Returns null if decoding fails.
  */
 function decodeShareData(encoded: string): string | null {
@@ -57,7 +57,7 @@ function decodeShareData(encoded: string): string | null {
 }
 
 /**
- * Type guard to validate ShareData structure.
+ * Checks that a value has the ShareData structure.
  * Ensures required fields exist and have correct types.
  */
 function isValidShareData(data: unknown): data is ShareData {

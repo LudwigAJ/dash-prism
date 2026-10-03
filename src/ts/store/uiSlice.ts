@@ -26,7 +26,7 @@ const uiSlice = createSlice({
     },
 
     /**
-     * Drop search-bar modes for panels that no longer exist. Dispatched by
+     * Drops search-bar modes for panels that no longer exist. Dispatched by
      * dashSyncMiddleware after any workspace change, so internal collapses
      * (removeTab, moveTab, splitPanel, reconcileWithServer, rehydrate) are
      * covered as well as the explicit collapsePanel action.

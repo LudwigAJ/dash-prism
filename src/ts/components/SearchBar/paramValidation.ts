@@ -1,9 +1,9 @@
 import type { LayoutParam, ParamType, ParamConstraints } from '@types';
 
 export type ParamCheck =
-  /** Submit `value` (always a string on the wire). */
+  /** Submits `value` (always a string on the wire). */
   | { ok: true; value: string }
-  /** Leave the param out so the server applies the callback default. */
+  /** Leaves the param out so the server applies the callback default. */
   | { ok: true; omit: true }
   | { ok: false; message: string };
 
@@ -79,7 +79,7 @@ function checkScalar(type: ParamType, raw: string, param: LayoutParam): string |
 }
 
 /**
- * Validate a single search-bar input against the parameter's simplified schema.
+ * Validates a single search-bar input against the parameter's simplified schema.
  * Pure function; mirrors the server's coercion rules but never blocks unknown types.
  */
 export function checkParamInput(param: LayoutParam, rawInput: string): ParamCheck {
@@ -130,7 +130,7 @@ export function formatParamHint(param: LayoutParam): string {
 }
 
 /**
- * Validate a whole params object (share links, updateWorkspace) against a layout's
+ * Validates a whole params object (share links, updateWorkspace) against a layout's
  * param list. Returns one message per failing field; never throws.
  */
 export function checkParams(
@@ -178,7 +178,7 @@ export function filterChoices(param: LayoutParam, rawInput: string): string[] {
 }
 
 /**
- * Turn share-link parameter values into the string map Prism sends to Dash.
+ * Turns share-link parameter values into the string map Prism sends to Dash.
  *
  * A blank value for a parameter that has a default means "leave it out" — the
  * same thing an empty input means in the search bar. Forwarding it as "" would

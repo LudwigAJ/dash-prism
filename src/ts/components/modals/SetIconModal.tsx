@@ -24,7 +24,7 @@ export type SetIconModalProps = {
 };
 
 /**
- * SetIconModal - Displays a scrollable grid of icons for tab customization
+ * Displays a scrollable grid of icons for tab customization.
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows all available Lucide icons from TAB_ICONS constant.

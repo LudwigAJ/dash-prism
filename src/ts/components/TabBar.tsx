@@ -85,7 +85,7 @@ type TabItemProps = {
 };
 
 /**
- * TabItem - Renders a single tab with its own loading state hook.
+ * Renders a single tab with its own loading state hook.
  *
  * By isolating each tab into its own component:
  * 1. useLoading can be called at the top level (satisfying Rules of Hooks)

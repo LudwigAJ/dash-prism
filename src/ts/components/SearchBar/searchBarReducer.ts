@@ -46,7 +46,7 @@ export type ModeContext = {
 // =============================================================================
 
 /**
- * Pure function to derive SearchBar mode from state and context.
+ * Derives the SearchBar mode from state and context.
  * This is the SINGLE SOURCE OF TRUTH for what mode the SearchBar is in.
  */
 export function deriveMode(state: SearchBarState, context: ModeContext): SearchBarMode {
@@ -86,7 +86,7 @@ export function createInitialState(): SearchBarState {
 }
 
 /**
- * Helper function to clear layout selection and param state.
+ * Clears the layout selection and the param state.
  * Extracted to avoid duplication across multiple actions.
  */
 function clearSelection(draft: SearchBarState) {

@@ -14,7 +14,7 @@ type PortalMap = Map<TabId, HtmlPortalNode>;
 
 type PortalContextValue = {
   /**
-   * Get or create a portal node for a tab.
+   * Gets or creates a portal node for a tab.
    * Returns the same node on subsequent calls for the same tabId.
    */
   getPortalNode: (tabId: TabId) => HtmlPortalNode;
@@ -35,8 +35,8 @@ type PortalProviderProps = {
 };
 
 /**
- * Provider for managing React portals that preserve Dash component state
- * when tabs are moved between panels.
+ * Manages the React portals that preserve Dash component state when tabs
+ * move between panels.
  *
  * @example
  * ```tsx
@@ -90,7 +90,7 @@ export function PortalProvider({ children }: PortalProviderProps) {
 // =============================================================================
 
 /**
- * Hook to access portal management functions.
+ * Gives access to the portal management functions.
  *
  * @example
  * ```tsx

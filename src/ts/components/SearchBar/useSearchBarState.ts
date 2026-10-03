@@ -194,8 +194,8 @@ export function useSearchBarState(panelId: PanelId) {
   }, [focusInput]);
 
   /**
-   * Record a validated value for the current parameter and move on: to the next
-   * parameter, or apply the layout when this was the last one. An omitted value
+   * Records a validated value for the current parameter and moves on: to the next
+   * parameter, or applies the layout when this was the last one. An omitted value
    * (empty input on a parameter with a default) is left out of the request so
    * the server applies the callback's own default.
    */
@@ -288,7 +288,7 @@ export function useSearchBarState(panelId: PanelId) {
   }, [mode]);
 
   /**
-   * Helper to dismiss the searchbar dropdown and return to idle state.
+   * Dismisses the searchbar dropdown and returns to the idle state.
    * Consolidates the repeated dismiss logic used across blur, escape, etc.
    */
   const handleDismiss = useCallback(() => {

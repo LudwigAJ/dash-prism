@@ -38,7 +38,7 @@ import { generateShortId } from '@utils/uuid';
 const WORKSPACE_PERSIST_PREFIX = 'prism-workspace';
 
 /**
- * Build the redux-persist config key for a workspace.
+ * Builds the redux-persist config key for a workspace.
  * This is the key passed to `persistReducer({ key: ... })`.
  * redux-persist adds its own `persist:` prefix when writing to storage.
  */
@@ -47,7 +47,7 @@ export function getWorkspacePersistKey(componentId?: string): string {
 }
 
 /**
- * Build the full storage key as it appears in localStorage / sessionStorage.
+ * Builds the full storage key as it appears in localStorage / sessionStorage.
  * redux-persist prefixes config keys with `persist:` by default.
  * Use this when directly removing persisted data via `storage.removeItem()`.
  */
@@ -67,7 +67,7 @@ const memoryStorage: Storage = {
 };
 
 /**
- * Resolve the storage engine that should actually be used.
+ * Resolves the storage engine that should actually be used.
  *
  * `persistence` is the on/off switch (as in Dash core components) and
  * `persistence_type` only selects where to store when it is on. With
@@ -169,7 +169,7 @@ const UNDO_EXCLUDED_ACTIONS = [
 // =============================================================================
 
 /**
- * Create a configured Redux store with persistence, undo/redo, and middleware.
+ * Creates a configured Redux store with persistence, undo/redo, and middleware.
  *
  * @example
  * ```tsx
@@ -315,7 +315,7 @@ export type RootState = {
 export type AppDispatch = ThunkDispatch<RootState, ThunkExtra, UnknownAction>;
 
 /**
- * Helper type to access present workspace state (unwraps redux-undo)
+ * The present workspace state (unwraps redux-undo).
  */
 export type WorkspacePresent = RootState['workspace']['present'];
 
@@ -324,19 +324,19 @@ export type WorkspacePresent = RootState['workspace']['present'];
 // =============================================================================
 
 /**
- * Undo the last workspace action.
+ * Undoes the last workspace action.
  * @example dispatch(undo())
  */
 export const undo = UndoActionCreators.undo;
 
 /**
- * Redo the last undone workspace action.
+ * Redoes the last undone workspace action.
  * @example dispatch(redo())
  */
 export const redo = UndoActionCreators.redo;
 
 /**
- * Clear all undo/redo history.
+ * Clears all undo/redo history.
  * @example dispatch(clearHistory())
  */
 export const clearHistory = UndoActionCreators.clearHistory;

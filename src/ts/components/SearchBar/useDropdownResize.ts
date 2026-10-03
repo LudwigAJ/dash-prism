@@ -5,7 +5,7 @@ const MIN_DROPDOWN_HEIGHT = 120;
 const MAX_DROPDOWN_HEIGHT = 600;
 
 /**
- * Hook to manage dropdown resize functionality.
+ * Manages the vertical resize of the dropdown.
  * Handles mouse drag events to resize the dropdown vertically.
  */
 export function useDropdownResize(initialHeight: number = DEFAULT_DROPDOWN_HEIGHT) {

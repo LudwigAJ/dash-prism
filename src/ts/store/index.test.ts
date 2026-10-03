@@ -57,7 +57,7 @@ function createFakeStorage(seed: Record<string, string> = {}) {
   return { storage, data };
 }
 
-/** Serialise like redux-persist does: each top-level key is JSON-encoded separately. */
+/** Serialises like redux-persist does: each top-level key is JSON-encoded separately. */
 function serialisePersisted(state: Persisted): string {
   return JSON.stringify(
     Object.fromEntries(Object.entries(state).map(([key, value]) => [key, JSON.stringify(value)]))
@@ -126,7 +126,7 @@ const LAYOUTS: RegisteredLayouts = { home: { name: 'Home' }, about: { name: 'Abo
 
 type Created = ReturnType<typeof createStore>;
 
-/** Wait for redux-persist to finish rehydrating (the PersistGate condition). */
+/** Waits until redux-persist completes the rehydration (the PersistGate condition). */
 async function settle({ persistor }: Created): Promise<void> {
   await vi.waitFor(() => {
     expect(persistor.getState().bootstrapped).toBe(true);
