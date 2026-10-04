@@ -81,7 +81,13 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
                     </div>
                   </div>
                 ))}
-                {/* The search bar list and the dialogs handle these keys themselves */}
+                {/* The focused tab, the search bar list and the dialogs handle these keys */}
+                <div className={SHORTCUT_ROW_CLASS}>
+                  <span className={SHORTCUT_LABEL_CLASS}>Close focused tab</span>
+                  <div className="tw:flex tw:items-center tw:gap-1">
+                    <kbd className={KBD_CLASS}>Delete</kbd>
+                  </div>
+                </div>
                 <div className={SHORTCUT_ROW_CLASS}>
                   <span className={SHORTCUT_LABEL_CLASS}>Navigate results</span>
                   <div className="tw:flex tw:items-center tw:gap-1">

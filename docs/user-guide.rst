@@ -667,6 +667,13 @@ Shortcut                      Action
 ``Ctrl`` + ``Space``          Focus the layout search
 ============================  ===========================================
 
+A tab in the tab bar takes the keyboard focus like the tabs of other apps: the
+arrow keys move between the tabs, ``Enter`` or ``Space`` opens the focused tab,
+and ``Delete`` closes it (``Backspace`` too, the Delete key of a Mac keyboard).
+A locked tab and a tab in a pinned panel stay open. ``Space`` on a tab also
+picks the tab up for a keyboard drag: the arrow keys move it and ``Space`` drops
+it.
+
 New tab is a three-key chord. Chrome, Edge and Safari keep plain
 ``Ctrl``/``Cmd`` + ``N`` for themselves, and do not give that keystroke to the
 page. The other bindings replace the browser's own default for the workspace

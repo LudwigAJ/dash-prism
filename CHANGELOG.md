@@ -90,6 +90,14 @@ All notable changes to Dash Prism are recorded here. The project follows
 - Reset workspace clears the storage of the active `persistence_type` only. A
   stale entry left in the other storage after a `persistence_type` switch is
   never read and stays until cleared by hand.
+- The tab close button is a native button next to the tab, and no longer a tab
+  stop. `Delete` (or `Backspace`) on a focused tab closes it, unless the tab is
+  locked or its panel is pinned. The wrapper of a tab is no longer a
+  `role="button"` with its own tab stop, so `Tab` goes from the active tab to
+  the add button. A keyboard drag starts from the focused tab, and the focus
+  comes back to that tab after the drop.
+- `Enter` on a focused tab selects it and no longer starts a keyboard drag.
+  `Space` selects the tab and starts the drag.
 - A keyboard shortcut works only with exactly its keys. An extra Shift or Alt
   stops it, so `Ctrl+Shift+D` and `Ctrl+Alt+D` no longer close a tab. The
   legacy `'Spacebar'` key value of old browsers is no longer read.
@@ -108,6 +116,8 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Fixed
 
+- A click on the close button of an inactive tab no longer selects that tab
+  before it closes it, so the selected tab stays selected.
 - `dash_prism.init()` no longer warns that it cannot find the Prism component
   when `app.layout` is an async function. `init` cannot call an async function,
   so it does not check that layout. Before, every app with an async layout

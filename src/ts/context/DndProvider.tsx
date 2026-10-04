@@ -55,8 +55,10 @@ export function DndProvider({ children }: DndProviderProps) {
         distance: 8, // Same constraint for Selenium ActionChains compatibility
       },
     }),
+    // Enter only selects a focused tab. Space selects it and picks it up for a keyboard drag.
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] },
     })
   );
 

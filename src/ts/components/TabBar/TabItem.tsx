@@ -21,6 +21,8 @@ import { cn } from '@utils/cn';
 import { makeComponentPath } from '@utils/dashSpec';
 import { TabContextMenu } from './TabContextMenu';
 
+const ACTIVE_TAB_SELECTOR = '[role="tablist"] [role="tab"][data-state="active"]';
+
 /** Holds the props of `TabItem`. */
 interface TabItemProps {
   tab: Tab;
@@ -65,7 +67,15 @@ export const TabItem = memo(function TabItem({
   const isDefaultStyle = styleColor === 'default';
   const isLocked = tab.locked ?? false;
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: tab.id,
     data: {
       type: 'tab',
@@ -85,10 +95,34 @@ export const TabItem = memo(function TabItem({
   };
   const hasCloseButton = !isLocked && !isPinned;
 
+  const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    // Delete closes the focused tab, as in the APG tabs pattern. Backspace is the Delete key of a
+    // Mac keyboard.
+    if ((e.key !== 'Delete' && e.key !== 'Backspace') || !hasCloseButton) return;
+    e.preventDefault();
+    const tabList = e.currentTarget.closest('[role="tablist"]');
+    const root = e.currentTarget.closest('.prism-root');
+    dispatch(removeTab({ tabId: tab.id }));
+    // The focused trigger is gone, so the focus moves to the tab that is active now. When the
+    // panel closed with its last tab, its tab list is gone too, so another panel takes the focus.
+    requestAnimationFrame(() => {
+      const scope = tabList?.isConnected ? tabList : root;
+      scope?.querySelector<HTMLElement>(ACTIVE_TAB_SELECTOR)?.focus();
+    });
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        {/* The wrapper is the drag handle. TabsTrigger selects the tab. */}
+        {/*
+          The wrapper takes the pointer and keyboard listeners of the drag, so a press on the close
+          button can also start a drag. The trigger is the activator: the keyboard drag starts only
+          when Space on the trigger bubbles up to the wrapper. The trigger handles the key first,
+          and the Tabs root uses manual activation, so Space both selects the tab and picks it up.
+          Enter only selects it, because the keyboard sensor in DndProvider starts on Space alone.
+          The wrapper takes no role and no tab stop, so the tab list has one tab stop, the active
+          trigger.
+        */}
         <div
           ref={setNodeRef}
           style={style}
@@ -99,9 +133,10 @@ export const TabItem = memo(function TabItem({
             isPinned && 'tw:flex tw:flex-1'
           )}
           {...listeners}
-          {...attributes}
         >
           <TabsTrigger
+            ref={setActivatorNodeRef}
+            aria-describedby={attributes['aria-describedby']}
             value={tab.id}
             isLocked={isLocked}
             isLoading={isLoading}
@@ -110,6 +145,7 @@ export const TabItem = memo(function TabItem({
               e.stopPropagation();
               onStartRename(tab);
             }}
+            onKeyDown={handleTriggerKeyDown}
             className={cn(
               'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none tw:data-[state=inactive]:opacity-100',
               tabStyleVariants({ color: styleColor, theme }),
@@ -161,23 +197,20 @@ export const TabItem = memo(function TabItem({
             <span className={cn('prism-tab-close', !isPanelActive && 'tw:opacity-65')}>
               <Tooltip>
                 <TooltipTrigger asChild>
+                  {/* Delete on the trigger closes the tab, so the button is no tab stop */}
                   <button
                     type="button"
+                    tabIndex={-1}
                     aria-label={`Close ${tab.name} tab`}
                     data-testid={`prism-tab-close-${tab.id}`}
                     className={cn(
                       'tw:group/close tw:flex tw:cursor-pointer tw:items-center tw:rounded-sm tw:p-0.5 tw:text-muted-foreground tw:transition-all',
-                      'tw:hover:bg-muted/70 tw:hover:text-foreground tw:focus-visible:opacity-100',
+                      'tw:hover:bg-muted/70 tw:hover:text-foreground',
                       isLoading || isActiveTab
                         ? 'tw:opacity-100'
                         : 'tw:opacity-0 tw:group-hover/tab:opacity-100'
                     )}
                     onClick={() => dispatch(removeTab({ tabId: tab.id }))}
-                    onKeyDown={(e) => {
-                      // Enter and Space click the button. The drag sensor on the wrapper must
-                      // not see them, because it starts a keyboard drag on these keys.
-                      if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
-                    }}
                   >
                     {/* A loading tab shows a spinner, and an X on hover to cancel the load */}
                     {isLoading ? (
