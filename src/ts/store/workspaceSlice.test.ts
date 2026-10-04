@@ -42,6 +42,7 @@ import {
   reconcileWithServer,
   MAX_TAB_NAME_LENGTH,
   MAX_LEAF_PANELS,
+  switchToOpenTab,
   resolveMaxPanels,
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
@@ -1499,6 +1500,86 @@ describe('workspaceSlice', () => {
         await store.dispatch(addTab({ panelId: getWorkspace(store).activePanelId }));
 
         expect(getWorkspace(store).tabs.length).toBe(2);
+      });
+    });
+
+    describe('switchToOpenTab', () => {
+      function twoPanelStateWithOpenLayout(): WorkspaceState {
+        const state = createTwoPanelState();
+        state.tabs[0].layoutId = 'analytics';
+        return state;
+      }
+
+      it('activates the open tab of a single-instance layout and tells the user', () => {
+        const state = twoPanelStateWithOpenLayout();
+        state.activePanelId = 'panel-2';
+        const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
+        const store = createTestStore(state, 16, layouts);
+        const events: ToastEvent[] = [];
+        const unsubscribe = subscribeToToasts((event) => events.push(event));
+
+        const switched = store.dispatch(switchToOpenTab('analytics'));
+        unsubscribe();
+
+        expect(switched).toBe(true);
+        expect(getWorkspace(store).activePanelId).toBe('panel-1');
+        expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-1');
+        expect(events).toEqual([
+          expect.objectContaining({
+            type: 'info',
+            message: 'Layout "Analytics" is already open. Switching to it.',
+          }),
+        ]);
+      });
+
+      it('does nothing for a layout that allows several tabs', () => {
+        const layouts = { analytics: { name: 'Analytics', allowMultiple: true } };
+        const store = createTestStore(twoPanelStateWithOpenLayout(), 16, layouts);
+        const before = getWorkspace(store);
+
+        expect(store.dispatch(switchToOpenTab('analytics'))).toBe(false);
+        expect(getWorkspace(store)).toBe(before);
+      });
+
+      it('does nothing when no tab shows the layout or the layout is unknown', () => {
+        const layouts = { other: { name: 'Other', allowMultiple: false } };
+        const store = createTestStore(twoPanelStateWithOpenLayout(), 16, layouts);
+
+        expect(store.dispatch(switchToOpenTab('other'))).toBe(false);
+        expect(store.dispatch(switchToOpenTab('unknown'))).toBe(false);
+      });
+    });
+
+    describe('a layout without allowMultiple', () => {
+      // The registry always sends allowMultiple. If it is missing, every layer reads it as false.
+      const layouts = { analytics: { name: 'Analytics' } };
+      const openAnalytics = () =>
+        createTestState({
+          tabs: [
+            {
+              id: 'tab-1',
+              name: 'Analytics',
+              panelId: 'test-panel-1',
+              layoutId: 'analytics',
+              createdAt: Date.now(),
+              mountKey: 'm1',
+            },
+          ],
+        });
+
+      it('blocks addTab and duplicateTab like allowMultiple=false', async () => {
+        const store = createTestStore(openAnalytics(), 16, layouts);
+
+        await store.dispatch(addTab({ panelId: 'test-panel-1', layoutId: 'analytics' }));
+        await store.dispatch(duplicateTab({ tabId: 'tab-1' }));
+
+        expect(getWorkspace(store).tabs.length).toBe(1);
+      });
+
+      it('lets switchToOpenTab switch to the open tab', () => {
+        const store = createTestStore(openAnalytics(), 16, layouts);
+
+        expect(store.dispatch(switchToOpenTab('analytics'))).toBe(true);
       });
     });
 

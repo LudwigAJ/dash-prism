@@ -1,9 +1,15 @@
 // src/ts/store/workspaceSlice.ts
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import {
+  createSlice,
+  createAsyncThunk,
+  type PayloadAction,
+  type ThunkAction,
+  type UnknownAction,
+} from '@reduxjs/toolkit';
 import type { Tab, PanelId, TabId, LayoutId, PanelDirection, Workspace } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
-import { findTabById, findTabIndex } from '@utils/tabs';
+import { findOpenTabForLayout, findTabById, findTabIndex } from '@utils/tabs';
 import {
   getLeafPanelIds,
   findPanelById,
@@ -224,17 +230,14 @@ export const addTab = createAsyncThunk<
 
   // Validate allowMultiple constraint
   if (payload.layoutId) {
-    const registeredLayouts = extra.getRegisteredLayouts();
-    const layoutMeta = registeredLayouts[payload.layoutId];
-    if (layoutMeta && layoutMeta.allowMultiple === false) {
-      if (tabs.some((t) => t.layoutId === payload.layoutId)) {
-        notifyUser(
-          'info',
-          `"${layoutMeta.name}" is already open`,
-          `This layout does not allow multiple instances.`
-        );
-        return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
-      }
+    const layoutMeta = extra.getRegisteredLayouts()[payload.layoutId];
+    if (layoutMeta && findOpenTabForLayout(tabs, payload.layoutId, layoutMeta)) {
+      notifyUser(
+        'info',
+        `"${layoutMeta.name}" is already open`,
+        `This layout does not allow multiple instances.`
+      );
+      return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
     }
   }
 
@@ -279,11 +282,11 @@ export const duplicateTab = createAsyncThunk<
     return rejectWithValue('Tab not found');
   }
 
-  // Validate allowMultiple constraint
+  // Validate allowMultiple constraint. The original tab is open, so a layout that does not
+  // allow multiple tabs always has an open tab here.
   if (originalTab.layoutId) {
-    const registeredLayouts = extra.getRegisteredLayouts();
-    const layoutMeta = registeredLayouts[originalTab.layoutId];
-    if (layoutMeta && layoutMeta.allowMultiple === false) {
+    const layoutMeta = extra.getRegisteredLayouts()[originalTab.layoutId];
+    if (layoutMeta && findOpenTabForLayout(tabs, originalTab.layoutId, layoutMeta)) {
       notifyUser(
         'info',
         `"${layoutMeta.name}" does not allow duplicates`,
@@ -919,3 +922,25 @@ export const {
 } = workspaceSlice.actions;
 
 export const workspaceReducer = workspaceSlice.reducer;
+
+/**
+ * Switches to the open tab of a layout that does not allow multiple tabs, and tells the user.
+ * The search bar and the share link use it before they open a layout.
+ *
+ * @returns true if it switched to an open tab, false if the layout can open in a new tab
+ */
+export const switchToOpenTab =
+  (
+    layoutId: LayoutId
+  ): ThunkAction<boolean, { workspace: { present: WorkspaceState } }, ThunkExtra, UnknownAction> =>
+  (dispatch, getState, extra) => {
+    const layout = extra.getRegisteredLayouts()[layoutId];
+    if (!layout) return false;
+
+    const openTab = findOpenTabForLayout(getState().workspace.present.tabs, layoutId, layout);
+    if (!openTab) return false;
+
+    notifyUser('info', `Layout "${layout.name}" is already open. Switching to it.`);
+    dispatch(activateTab({ tabId: openTab.id, panelId: openTab.panelId }));
+    return true;
+  };

@@ -9,7 +9,6 @@ import {
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
 import { prismToast } from '@utils/toastEmitter';
-import { findOpenTabForLayout } from '@utils/tabs';
 import {
   searchBarReducer,
   createInitialState,
@@ -28,7 +27,7 @@ import {
   selectLayoutSelectionRequest,
   selectSearchFocusPanelId,
   updateTabLayout,
-  activateTab,
+  switchToOpenTab,
   toggleSearchBars,
   toggleFavoriteLayout,
   setSearchBarMode,
@@ -153,10 +152,7 @@ export function useSearchBarState(panelId: PanelId) {
       if (!layout) return;
 
       // Check allowMultiple constraint
-      const existingTab = findOpenTabForLayout(tabs, layoutId, layout);
-      if (existingTab) {
-        prismToast('info', `Layout "${layout.name}" is already open. Switching to it.`);
-        globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
+      if (globalDispatch(switchToOpenTab(layoutId))) {
         dispatch({ type: 'RESET' });
         dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
         return;
@@ -181,7 +177,7 @@ export function useSearchBarState(panelId: PanelId) {
         focusInput();
       }
     },
-    [registeredLayouts, tabs, globalDispatch, applyLayout, focusInput]
+    [registeredLayouts, globalDispatch, applyLayout, focusInput]
   );
 
   const handleOptionSelect = useCallback(

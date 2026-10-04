@@ -2,17 +2,15 @@ import { useEffect, useCallback } from 'react';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import { prismToast } from '@utils/toastEmitter';
-import { findOpenTabForLayout } from '@utils/tabs';
 import type { Tab, ShareData } from '@types';
 import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
 import { layoutHasParams } from '@components/SearchBar/searchBarUtils';
 import {
   useAppDispatch,
   useAppSelector,
-  selectTabs,
   selectActivePanelId,
   addTab,
-  activateTab,
+  switchToOpenTab,
 } from '@store';
 
 /**
@@ -98,7 +96,6 @@ function isValidShareData(data: unknown): data is ShareData {
  */
 export function useShareLink() {
   const dispatch = useAppDispatch();
-  const tabs = useAppSelector(selectTabs);
   const activePanelId = useAppSelector(selectActivePanelId);
   const { registeredLayouts } = useConfig();
 
@@ -175,12 +172,7 @@ export function useShareLink() {
       const layoutInfo = registeredLayouts[layoutId];
 
       // Check allowMultiple constraint
-      const existing = findOpenTabForLayout(tabs, layoutId, layoutInfo);
-      if (existing) {
-        prismToast('info', `Layout "${layoutInfo.name}" is already open. Switching to it.`);
-        dispatch(activateTab({ tabId: existing.id, panelId: existing.panelId }));
-        return false;
-      }
+      if (dispatch(switchToOpenTab(layoutId))) return false;
 
       // Pre-validate parameters against the layout's schema (the server re-checks)
       if (layoutParams && layoutHasParams(layoutInfo)) {
@@ -217,7 +209,7 @@ export function useShareLink() {
       prismToast('success', `Opened shared tab: ${name || layoutInfo.name}`);
       return true;
     },
-    [registeredLayouts, tabs, activePanelId, dispatch]
+    [registeredLayouts, activePanelId, dispatch]
   );
 
   // =========================================================================
