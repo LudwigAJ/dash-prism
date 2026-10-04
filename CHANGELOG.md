@@ -90,6 +90,10 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Fixed
 
+- `dash_prism.init()` no longer warns that it cannot find the Prism component
+  when `app.layout` is an async function. `init` cannot call an async function,
+  so it does not check that layout. Before, every app with an async layout
+  function got the warning.
 - With two Prism components on one page, a toast now shows only in the component
   that raised it. Before, every component showed every toast. Each component has
   its own toaster, and its `id` is the `id` of the component.

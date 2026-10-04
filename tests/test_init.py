@@ -60,6 +60,7 @@ def test_init_invalid_prism_id(prism_app: Dash) -> None:
 
 def test_init_component_not_found_warning(dash_app: Dash) -> None:
     """Test warning when Prism component not found in layout."""
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
     dash_app.layout = html.Div("No Prism here")
 
     with pytest.warns(UserWarning, match="Could not find Prism component"):
@@ -484,7 +485,10 @@ def test_callable_layout_async(dash_app: Dash) -> None:
         return html.Div([dash_prism.Prism(id="prism-async-callable", style={})])
 
     dash_app.layout = async_layout
-    dash_prism.init("prism-async-callable", dash_app)
+    # init cannot call an async layout, so it must not claim that Prism is missing.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="Could not find Prism component")
+        dash_prism.init("prism-async-callable", dash_app)
 
     # Verify wrapper is async
     assert inspect.iscoroutinefunction(dash_app.layout)
@@ -581,6 +585,7 @@ def test_callable_layout_preserves_function_metadata(dash_app: Dash) -> None:
         """This is my layout function."""
         return html.Div([dash_prism.Prism(id="prism-metadata", style={})])
 
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
     dash_app.layout = layout
     dash_prism.init("prism-metadata", dash_app)
 
@@ -1350,8 +1355,12 @@ def test_callable_layout_returning_none_stays_none(
             return None
 
     dash_app.layout = layout
-    with pytest.warns(UserWarning, match="Could not find Prism component"):
+    if is_async:
+        # init cannot call an async layout, so it has no tree to warn about.
         dash_prism.init("test-prism", dash_app)
+    else:
+        with pytest.warns(UserWarning, match="Could not find Prism component"):
+            dash_prism.init("test-prism", dash_app)
 
     with caplog.at_level(logging.WARNING, logger="dash_prism"):
         result = asyncio.run(dash_app.layout()) if is_async else dash_app.layout()

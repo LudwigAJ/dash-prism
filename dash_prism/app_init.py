@@ -317,7 +317,8 @@ def _validate_prism_component(app: Dash, prism_id: str) -> Any | None:
     The function sends a :class:`UserWarning` if the layout holds no component
     with the ID ``prism_id``. It sends a different :class:`UserWarning` if the
     component that it finds is not a Prism component. A warning does not stop
-    :func:`init`.
+    :func:`init`. The function does not check an async layout function, because
+    it cannot call that function.
 
     :param app: The Dash application.
     :type app: Dash
@@ -329,6 +330,8 @@ def _validate_prism_component(app: Dash, prism_id: str) -> Any | None:
     :rtype: Any | None
     """
     layout_root = _get_layout_root(app)
+    if inspect.iscoroutinefunction(app.layout):
+        return None
     prism_component = utils.find_component_by_id(layout_root, prism_id)
 
     if prism_component is None:
