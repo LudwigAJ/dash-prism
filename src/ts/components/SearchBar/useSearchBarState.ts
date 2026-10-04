@@ -17,6 +17,11 @@ import {
 } from './searchBarReducer';
 import { filterLayouts, layoutHasOptions, layoutHasParams } from './searchBarUtils';
 import { useDropdownResize } from './useDropdownResize';
+import { useSearchBarEvents } from './useSearchBarEvents';
+import type { DisplayModeProps } from './DisplayMode';
+import type { OptionsModeProps } from './OptionsMode';
+import type { ParamsModeProps } from './ParamsMode';
+import type { SearchModeProps } from './SearchMode';
 import {
   useAppDispatch,
   useAppSelector,
@@ -24,20 +29,16 @@ import {
   selectActiveTabIds,
   selectSearchBarsHidden,
   selectFavoriteLayouts,
-  selectLayoutSelectionRequest,
-  selectSearchFocusPanelId,
   updateTabLayout,
   switchToOpenTab,
-  toggleSearchBars,
   toggleFavoriteLayout,
   setSearchBarMode,
-  clearLayoutSelectionRequest,
-  clearSearchFocusRequest,
 } from '@store';
 
 /**
- * SearchBar state management hook.
- * Now uses a local reducer with derived mode instead of scattered useState calls.
+ * Holds the state of the search bar of one panel: a local reducer, the mode that `deriveMode`
+ * computes from it, and the handlers. It gives the props of the component of each mode. A mode
+ * whose data is missing gets null, and SearchBar then falls back to the search mode.
  */
 export function useSearchBarState(panelId: PanelId) {
   const globalDispatch = useAppDispatch();
@@ -48,7 +49,7 @@ export function useSearchBarState(panelId: PanelId) {
   const favoriteLayouts = useAppSelector(selectFavoriteLayouts);
   const { registeredLayouts, searchBarPlaceholder, newTabOpensDropdown } = useConfig();
 
-  // ===== DERIVED GLOBAL STATE =====
+  // Derived global state
   const activeTabId = activeTabIds[panelId];
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
@@ -61,10 +62,10 @@ export function useSearchBarState(panelId: PanelId) {
     return layout ? { id: activeTab.layoutId, name: layout.name } : null;
   }, [activeTab, registeredLayouts]);
 
-  // ===== LOCAL REDUCER STATE =====
+  // Local reducer state
   const [state, dispatch] = useReducer(searchBarReducer, undefined, createInitialState);
 
-  // ===== REFS (only for DOM) =====
+  // Refs (only for the DOM)
   const inputRef = useRef<HTMLInputElement>(null);
   const commandRef = useRef<HTMLDivElement>(null);
 
@@ -74,10 +75,10 @@ export function useSearchBarState(panelId: PanelId) {
   // Track if initial auto-focus has happened (to prevent auto-opening dropdown on mount)
   const hasReceivedInitialFocusRef = useRef(false);
 
-  // ===== RESIZE LOGIC =====
+  // Resize logic
   const { height: dropdownHeight, handleResizeStart } = useDropdownResize();
 
-  // ===== DERIVED MODE =====
+  // Derived mode
   const selectedLayout = state.selectedLayoutId ? registeredLayouts[state.selectedLayoutId] : null;
 
   const modeContext: ModeContext = {
@@ -93,7 +94,7 @@ export function useSearchBarState(panelId: PanelId) {
 
   const mode = deriveMode(state, modeContext);
 
-  // ===== DERIVED DATA =====
+  // Derived data
   const layoutEntries = useMemo(() => Object.entries(registeredLayouts), [registeredLayouts]);
 
   const filteredLayouts = useMemo(
@@ -110,12 +111,12 @@ export function useSearchBarState(panelId: PanelId) {
     [currentParam, currentParamValue]
   );
 
-  // ===== FOCUS HELPER =====
+  // Focus helper
   const focusInput = useCallback(() => {
     inputRef.current?.focus();
   }, []);
 
-  // ===== HANDLERS =====
+  // Handlers
   const applyLayout = useCallback(
     (layoutId: string, name: string, params?: Record<string, string>, option?: string) => {
       // Read fresh activeTabId to avoid stale closure
@@ -132,8 +133,7 @@ export function useSearchBarState(panelId: PanelId) {
         toast('error', 'Layout is no longer available', {
           logDetails: `Cannot apply layout '${layoutId}' in panel '${panelId}': layout no longer exists`,
         });
-        dispatch({ type: 'RESET' });
-        dispatch({ type: 'RETURN_TO_IDLE', showDropdown: currentLayout === null });
+        dispatch({ type: 'LAYOUT_APPLIED', showDropdown: currentLayout === null });
         return;
       }
 
@@ -141,8 +141,7 @@ export function useSearchBarState(panelId: PanelId) {
         updateTabLayout({ tabId: currentActiveTabId, layoutId, name, params, option })
       );
 
-      dispatch({ type: 'RESET' });
-      dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
+      dispatch({ type: 'LAYOUT_APPLIED', showDropdown: false });
     },
     [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout, toast]
   );
@@ -154,8 +153,7 @@ export function useSearchBarState(panelId: PanelId) {
 
       // Check allowMultiple constraint
       if (globalDispatch(switchToOpenTab(layoutId))) {
-        dispatch({ type: 'RESET' });
-        dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
+        dispatch({ type: 'LAYOUT_APPLIED', showDropdown: false });
         return;
       }
 
@@ -313,8 +311,7 @@ export function useSearchBarState(panelId: PanelId) {
 
   const handleBlur = useCallback(
     (e: React.FocusEvent) => {
-      const relatedTarget = e.relatedTarget as HTMLElement;
-      if (!commandRef.current?.contains(relatedTarget)) {
+      if (!commandRef.current?.contains(e.relatedTarget)) {
         handleDismiss();
       }
     },
@@ -367,49 +364,16 @@ export function useSearchBarState(panelId: PanelId) {
     ]
   );
 
-  // ===== EFFECTS =====
+  // Effects
 
-  // Layout the user picked on the empty-tab screen. The search bar of the panel whose active tab
-  // is the target consumes the request (see UiState).
-  const layoutRequest = useAppSelector(selectLayoutSelectionRequest);
-  useEffect(() => {
-    if (layoutRequest === null || layoutRequest.tabId !== activeTabId) return;
-    globalDispatch(clearLayoutSelectionRequest());
-
-    const layout = registeredLayouts[layoutRequest.layoutId];
-    if (!layout) return;
-
-    if (searchBarsHidden && (layoutHasParams(layout) || layoutHasOptions(layout))) {
-      dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: layoutRequest.layoutId });
-      globalDispatch(toggleSearchBars());
-      return;
-    }
-
-    handleLayoutSelect(layoutRequest.layoutId);
-  }, [
-    layoutRequest,
+  useSearchBarEvents({
+    panelId,
     activeTabId,
-    registeredLayouts,
-    searchBarsHidden,
+    pendingLayoutId: state.pendingLayoutId,
+    dispatch,
     handleLayoutSelect,
-    globalDispatch,
-  ]);
-
-  // Handle searchBarsHidden state changes
-  useEffect(() => {
-    if (searchBarsHidden) {
-      // Mode will be derived as 'hidden'
-      dispatch({ type: 'SET_SHOW_DROPDOWN', show: false });
-      return;
-    }
-
-    if (state.isPendingLayout) {
-      const pendingLayoutId = state.isPendingLayout;
-      dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: null });
-      handleLayoutSelect(pendingLayoutId);
-      focusInput();
-    }
-  }, [searchBarsHidden, state.isPendingLayout, handleLayoutSelect, focusInput]);
+    focusInput,
+  });
 
   // Handle active tab layout changes
   useEffect(() => {
@@ -445,24 +409,14 @@ export function useSearchBarState(panelId: PanelId) {
     globalDispatch(setSearchBarMode({ panelId, mode }));
   }, [mode, panelId, globalDispatch]);
 
-  // Focus request from the global shortcut. The search bar of the target panel consumes it (see
-  // UiState).
-  const searchFocusPanelId = useAppSelector(selectSearchFocusPanelId);
-  useEffect(() => {
-    if (searchFocusPanelId !== panelId) return;
-    globalDispatch(clearSearchFocusRequest());
-    if (searchBarsHidden) return;
-
-    dispatch({ type: 'ENTER_SEARCH_MODE' });
-    focusInput();
-  }, [searchFocusPanelId, panelId, searchBarsHidden, focusInput, globalDispatch]);
-
   // Click outside handler
   useEffect(() => {
     if (!state.showDropdown) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
+      const command = commandRef.current;
+      // The params mode has no command element, so a click there never dismisses
+      if (command && e.target instanceof Node && !command.contains(e.target)) {
         handleDismiss();
       }
     };
@@ -471,58 +425,79 @@ export function useSearchBarState(panelId: PanelId) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [handleDismiss, state.showDropdown]);
 
-  // ===== PUBLIC API =====
-  return {
-    // Derived state
-    mode,
-    activeTab,
-    currentLayout,
-    filteredLayouts,
-    selectedLayout,
-    paramOptions,
-    allParams,
-    currentParam,
-    favoriteLayouts: favoriteLayouts ?? [],
-    searchBarPlaceholder,
+  // Props of each mode
+  const displayProps: DisplayModeProps | null = currentLayout
+    ? {
+        currentLayoutName: currentLayout.name,
+        activeTab,
+        onDisplayClick: handleDisplayClick,
+        onKeyDown: handleDisplayKeyDown,
+      }
+    : null;
 
-    // Local state
+  const paramsProps: ParamsModeProps | null = currentParam
+    ? {
+        selectedLayoutName: selectedLayout?.name ?? '',
+        currentParam,
+        currentParamIndex: state.currentParamIndex,
+        totalParams: allParams.length,
+        paramValue: currentParamValue,
+        paramError: state.paramError,
+        choices: paramChoices,
+        activeChoice: state.activeChoice,
+        onParamValueChange: (value) => {
+          dispatch({
+            type: 'SET_PARAM_VALUES',
+            values: { ...state.paramValues, [currentParam.name]: value },
+          });
+        },
+        onChoiceSelect: handleChoiceSelect,
+        onChoiceHover: handleChoiceHover,
+        onKeyDown: handleKeyDown,
+        onBlur: handleBlur,
+        onCancel: handleBackToLayouts,
+        inputRef,
+      }
+    : null;
+
+  const optionsProps: OptionsModeProps | null = paramOptions
+    ? {
+        selectedLayoutName: selectedLayout?.name ?? '',
+        paramOptions,
+        showDropdown: state.showDropdown,
+        dropdownHeight,
+        onOptionSelect: handleOptionSelect,
+        onBackToLayouts: handleBackToLayouts,
+        onKeyDown: handleKeyDown,
+        onBlur: handleBlur,
+        onResizeStart: handleResizeStart,
+        inputRef,
+        commandRef,
+      }
+    : null;
+
+  const searchProps: SearchModeProps = {
     searchQuery: state.searchQuery,
+    filteredLayouts,
+    favoriteLayouts: favoriteLayouts ?? [],
     showDropdown: state.showDropdown,
     dropdownHeight,
-    paramValues: state.paramValues,
-    paramError: state.paramError,
-    paramChoices,
-    activeChoice: state.activeChoice,
-    currentParamIndex: state.currentParamIndex,
-    selectedLayoutId: state.selectedLayoutId,
-
-    // Refs
-    inputRef,
-    commandRef,
-
-    // Handlers
-    setSearchQuery: (query: string) => {
+    searchBarPlaceholder,
+    onSearchQueryChange: (query) => {
       dispatch({ type: 'SET_SEARCH_QUERY', query });
     },
-    setParamValues: (setter: (prev: Record<string, string>) => Record<string, string>) => {
-      const newValues = setter(state.paramValues);
-      dispatch({ type: 'SET_PARAM_VALUES', values: newValues });
-    },
-    handleLayoutSelect,
-    handleOptionSelect,
-    handleBackToLayouts,
-    handleParamSubmit,
-    handleChoiceSelect,
-    handleChoiceHover,
-    handleDisplayClick,
-    handleDisplayKeyDown,
-    handleFocus,
-    handleBlur,
-    handleKeyDown,
-    handleClick,
-    handleResizeStart,
-    handleToggleFavorite: (layoutId: string) => {
+    onLayoutSelect: handleLayoutSelect,
+    onToggleFavorite: (layoutId) => {
       globalDispatch(toggleFavoriteLayout({ layoutId }));
     },
+    onFocus: handleFocus,
+    onBlur: handleBlur,
+    onKeyDown: handleKeyDown,
+    onClick: handleClick,
+    onResizeStart: handleResizeStart,
+    inputRef,
+    commandRef,
   };
+
+  return { mode, displayProps, paramsProps, optionsProps, searchProps };
 }
