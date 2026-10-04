@@ -18,7 +18,7 @@ import {
   selectHelpModalOpen,
   selectSetIconModalTabId,
   selectCanUndo,
-  getWorkspaceStorageKey,
+  clearPersistedWorkspace,
   // UI actions for modals
   openInfoModal,
   closeInfoModal,
@@ -54,7 +54,7 @@ import {
 export function usePrism() {
   const dispatch = useAppDispatch();
   const { getPortalNode } = usePortal();
-  const { componentId } = useConfig();
+  const { componentId, persistenceType } = useConfig();
 
   // Select all state from Redux
   const tabs = useAppSelector(selectTabs);
@@ -109,14 +109,8 @@ export function usePrism() {
 
   // Clear persisted state helper (redux-persist handles persistence)
   const clearPersistedState = useCallback(() => {
-    const key = getWorkspaceStorageKey(componentId);
-    try {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    } catch {
-      // Storage access may fail in some contexts
-    }
-  }, [componentId]);
+    clearPersistedWorkspace(componentId, persistenceType);
+  }, [componentId, persistenceType]);
 
   // Modal controls - accept Tab or tabId
   const openInfoModalFn = useCallback(

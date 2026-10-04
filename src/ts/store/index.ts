@@ -15,12 +15,8 @@ import {
   PERSIST,
   PURGE,
   REGISTER,
-  type Storage,
-  type MigrationManifest,
   type PersistState,
 } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
-import storageSession from 'redux-persist/lib/storage/session';
 import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'redux-undo';
 
 import { workspaceReducer, createInitialWorkspaceState } from './workspaceSlice';
@@ -28,116 +24,8 @@ import { uiReducer, initialUiState } from './uiSlice';
 import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
 import { createReconcileMiddleware } from './middleware/reconcileMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
-import { generateShortId } from '@utils/uuid';
 import { prismToast } from '@utils/prismToast';
-
-// =============================================================================
-// Persistence Key Helpers
-// =============================================================================
-
-/** Base prefix for workspace persistence keys (used by redux-persist config). */
-const WORKSPACE_PERSIST_PREFIX = 'prism-workspace';
-
-/**
- * Builds the redux-persist config key for a workspace.
- * This is the key passed to `persistReducer({ key: ... })`.
- * redux-persist adds its own `persist:` prefix when writing to storage.
- */
-export function getWorkspacePersistKey(componentId?: string): string {
-  return componentId ? `${WORKSPACE_PERSIST_PREFIX}-${componentId}` : WORKSPACE_PERSIST_PREFIX;
-}
-
-/**
- * Builds the full storage key as it appears in localStorage / sessionStorage.
- * redux-persist prefixes config keys with `persist:` by default.
- * Use this when directly removing persisted data via `storage.removeItem()`.
- */
-export function getWorkspaceStorageKey(componentId?: string): string {
-  return `persist:${getWorkspacePersistKey(componentId)}`;
-}
-
-// =============================================================================
-// Storage Configuration
-// =============================================================================
-
-/** No-op storage for memory persistence mode */
-const memoryStorage: Storage = {
-  getItem: () => Promise.resolve(null),
-  setItem: () => Promise.resolve(),
-  removeItem: () => Promise.resolve(),
-};
-
-/**
- * Resolves the storage engine that should actually be used.
- *
- * `persistence` is the on/off switch (as in Dash core components) and
- * `persistence_type` only selects where to store when it is on. With
- * `persistence=false` nothing may be written, whatever `persistence_type` says.
- */
-export function resolvePersistenceType(
-  persistence: boolean,
-  persistenceType: 'local' | 'session' | 'memory'
-): 'local' | 'session' | 'memory' {
-  return persistence ? persistenceType : 'memory';
-}
-
-function getStorage(type: 'local' | 'session' | 'memory'): Storage {
-  switch (type) {
-    case 'local':
-      return storage;
-    case 'session':
-      return storageSession;
-    case 'memory':
-    default:
-      return memoryStorage;
-  }
-}
-
-// =============================================================================
-// Persistence Migration
-// =============================================================================
-
-/**
- * Migration manifest for handling persisted state upgrades.
- * Each key is a version number, and the function transforms state from the previous version.
- *
- * Note: Type cast is required because redux-persist's MigrationManifest has strict
- * typing around _persist that doesn't match our migration patterns.
- */
-const migrations = {
-  // Version 1: Initial Redux migration from useReducer
-  // - Ensure all tabs have mountKey
-  // - Normalize panel structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  1: (state: any) => {
-    if (!state || typeof state !== 'object') return state;
-
-    // Ensure all tabs have mountKey (required field that may be missing in old data)
-    const tabs =
-      state.tabs?.map((tab: Record<string, unknown>) => ({
-        ...tab,
-        mountKey: tab.mountKey ?? generateShortId(),
-      })) ?? [];
-
-    return {
-      ...state,
-      tabs,
-      // Ensure favoriteLayouts exists
-      favoriteLayouts: state.favoriteLayouts ?? [],
-    };
-  },
-
-  // Version 2: the persisted payload is redux-undo's `present` only, stored
-  // under a single `present` key (persistReducer now wraps undoable(), see
-  // createPrismStore). Wrap the old flat workspace object.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  2: (state: any) => {
-    if (!state || typeof state !== 'object') return state;
-    if ('present' in state) return state;
-    const { _persist, ...present } = state;
-    return { present };
-  },
-} as MigrationManifest;
+import { PERSIST_VERSION, getStorage, getWorkspacePersistKey, migrations } from './persistence';
 
 // =============================================================================
 // Redux-Undo Configuration
@@ -203,7 +91,7 @@ export function createPrismStore(config: StoreConfig) {
   // and a reload right after an undo silently lost it.
   const workspacePersistConfig = {
     key: getWorkspacePersistKey(componentId),
-    version: 2, // Increment this when adding new migrations
+    version: PERSIST_VERSION,
     storage: storage ?? getStorage(persistenceType),
     whitelist: ['present'],
     migrate: createMigrate(migrations, { debug: process.env.NODE_ENV !== 'production' }),
@@ -358,6 +246,7 @@ export { createInitialWorkspaceState, initialUiState };
 export * from './workspaceSlice';
 export * from './workspaceThunks';
 export * from './uiSlice';
+export * from './persistence';
 
 // Export selectors
 export * from './selectors';

@@ -12,11 +12,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isAction, type Middleware } from '@reduxjs/toolkit';
-import { ActionCreators } from 'redux-undo';
+import { ActionCreators, ActionTypes } from 'redux-undo';
+import { PERSIST, REHYDRATE } from 'redux-persist';
 import { activateTab, removeTab, collapsePanel } from '../workspaceSlice';
 import { addTab, splitPanel } from '../workspaceThunks';
 import { setSearchBarMode, openHelpModal } from '../uiSlice';
-import { createDashSyncMiddleware } from './dashSyncMiddleware';
+import { createDashSyncMiddleware, isWorkspaceChange } from './dashSyncMiddleware';
 import { createTestStore, PANEL_1, TAB_1, TAB_2, type TestStore } from '../testing';
 
 function createSyncedStore(setProps?: (props: Record<string, unknown>) => void) {
@@ -332,5 +333,27 @@ describe('dashSyncMiddleware', () => {
 
       expect(dispatched).toContain('ui/pruneSearchBarModes');
     });
+  });
+});
+
+describe('isWorkspaceChange', () => {
+  it('matches workspace actions, history moves and the rehydration', () => {
+    for (const type of [
+      'workspace/renameTab',
+      ActionTypes.UNDO,
+      ActionTypes.REDO,
+      ActionTypes.JUMP,
+      ActionTypes.JUMP_TO_PAST,
+      ActionTypes.JUMP_TO_FUTURE,
+      REHYDRATE,
+    ]) {
+      expect(isWorkspaceChange({ type })).toBe(true);
+    }
+  });
+
+  it('does not match ui actions or actions that leave the present workspace alone', () => {
+    for (const type of ['ui/openHelpModal', ActionTypes.CLEAR_HISTORY, PERSIST]) {
+      expect(isWorkspaceChange({ type })).toBe(false);
+    }
   });
 });
