@@ -46,14 +46,14 @@ parameter options that the search bar shows::
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, overload
 
 from .params import (
     LayoutParameter,  # params.py holds this class. registry.py re-exports it.
-    LayoutValidator,
     ParamValidationError,
+    PydanticValidator,
     build_layout_parameters,
     build_validator,
     introspect_callable,
@@ -120,7 +120,7 @@ class LayoutRegistration:
         of the callback. The validator changes each string that the browser
         sends into the type that the callback declares. It is ``None`` for a
         static layout.
-    :type validator: LayoutValidator | None
+    :type validator: PydanticValidator | None
     :ivar body_param: The name of the one pydantic ``BaseModel`` parameter, if
         the callback declares such a parameter. If not, it is ``None``.
     :type body_param: str | None
@@ -136,7 +136,7 @@ class LayoutRegistration:
     is_async: bool = False
     parameters: list[LayoutParameter] = field(default_factory=list)
     param_options: dict[str, tuple[str, dict[str, Any]]] | None = None
-    validator: LayoutValidator | None = field(default=None, repr=False, compare=False)
+    validator: PydanticValidator | None = field(default=None, repr=False, compare=False)
     body_param: str | None = None
 
     @property
@@ -241,7 +241,7 @@ class LayoutRegistry:
         """Return the number of registered layouts."""
         return len(self._layouts)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         """Return an iterator over the registered layout identifiers."""
         return iter(self._layouts)
 
@@ -426,7 +426,7 @@ def _validate_registration(
 def _validate_param_options(
     param_options: dict[str, tuple[str, dict[str, Any]]],
     parameters: list[LayoutParameter],
-    validator: LayoutValidator | None = None,
+    validator: PydanticValidator | None = None,
 ) -> None:
     """Validate the parameter options of a callback layout.
 
@@ -447,7 +447,7 @@ def _validate_param_options(
     :type parameters: list[LayoutParameter]
     :param validator: The validator of the layout, or ``None`` to check only
         the parameter names.
-    :type validator: LayoutValidator | None
+    :type validator: PydanticValidator | None
     :raises ValueError: If an option names a parameter that the callback does
         not declare, or if the validator rejects the values of an option.
     """

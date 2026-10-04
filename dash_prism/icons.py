@@ -19,6 +19,7 @@ no icon for a name that ``icons.json`` does not hold.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from functools import lru_cache
 from pathlib import Path
 
@@ -137,7 +138,7 @@ class _AvailableIconsProxy:
     def __contains__(self, item: object) -> bool:
         return item in self._load()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._load())
 
     def __len__(self) -> int:

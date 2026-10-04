@@ -183,9 +183,6 @@ known-first-party = ["dash_prism", "tests"]
 # Move the pydantic import to the top of the module to remove the E402 part of this entry.
 # The slow demo layout sleeps on purpose.
 "usage.py" = ["E402", "TID251"]
-# params.py imports pydantic inside four functions. Move the imports to the top of the module
-# to remove this entry.
-"dash_prism/params.py" = ["PLC0415"]
 # The slow layouts under test sleep on purpose.
 "tests/integration/test_layout_timeout.py" = ["TID251"]
 "tests/test_init.py" = ["TID251"]
@@ -195,7 +192,7 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_ignores = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
 ignore_missing_imports = true
 follow_imports = "silent"
 files = [

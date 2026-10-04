@@ -960,14 +960,14 @@ def _register_render_callback(app: Dash, background: bool) -> None:
     if use_async:
 
         @register
-        async def render_prism_content_async(content_id, data):
+        async def render_prism_content_async(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this async callback."""
             return await _render_content_request_async(content_id, data)
 
     else:
 
         @register
-        def render_prism_content(content_id, data):
+        def render_prism_content(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this sync callback."""
             return _render_content_request(content_id, data)
 
