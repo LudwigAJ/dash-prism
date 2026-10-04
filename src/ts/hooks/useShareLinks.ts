@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
+import { findOpenTabForLayout } from '@utils/tabs';
 import type { Tab, ShareData } from '@types';
 import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
 import { layoutHasParams } from '@components/SearchBar/searchBarUtils';
@@ -22,21 +23,17 @@ const MAX_SHARE_DATA_BYTES = 4096;
 
 /**
  * Encodes string to base64 using TextEncoder (modern, UTF-8 safe).
- * Returns null if encoding fails or data exceeds size limit.
+ * Returns null if data exceeds size limit.
  */
 function encodeShareData(data: string): string | null {
-  try {
-    const bytes = new TextEncoder().encode(data);
-    if (bytes.length > MAX_SHARE_DATA_BYTES) {
-      logger.warn(`Share data exceeds ${MAX_SHARE_DATA_BYTES} bytes (${bytes.length})`);
-      return null;
-    }
-    // Convert Uint8Array to base64
-    const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join('');
-    return btoa(binString);
-  } catch {
+  const bytes = new TextEncoder().encode(data);
+  if (bytes.length > MAX_SHARE_DATA_BYTES) {
+    logger.warn(`Share data exceeds ${MAX_SHARE_DATA_BYTES} bytes (${bytes.length})`);
     return null;
   }
+  // Convert Uint8Array to base64. btoa cannot throw here: every character is one byte.
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join('');
+  return btoa(binString);
 }
 
 /**
@@ -103,7 +100,7 @@ export function useShareLink() {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const activePanelId = useAppSelector(selectActivePanelId);
-  const { registeredLayouts, maxTabs } = useConfig();
+  const { registeredLayouts } = useConfig();
 
   // =========================================================================
   // Generate Share Link (Pure Function - no state change)
@@ -172,7 +169,7 @@ export function useShareLink() {
   // Spawn Shared Tab (Redux Action - reversible!)
   // =========================================================================
   const spawnSharedTab = useCallback(
-    (shareData: ShareData): boolean => {
+    async (shareData: ShareData): Promise<boolean> => {
       const { layoutId, name, layoutParams, layoutOption } = shareData;
 
       // Validate layout exists
@@ -186,15 +183,13 @@ export function useShareLink() {
       const layoutInfo = registeredLayouts[layoutId];
 
       // Check allowMultiple constraint
-      if (!layoutInfo.allowMultiple) {
-        const existing = tabs?.find((t) => t.layoutId === layoutId);
-        if (existing) {
-          toast.info(`Layout "${layoutInfo.name}" already open. Switching to it.`, {
-            cancel: { label: 'Dismiss', onClick: () => {} },
-          });
-          dispatch(activateTab({ tabId: existing.id, panelId: existing.panelId }));
-          return false;
-        }
+      const existing = findOpenTabForLayout(tabs, layoutId, layoutInfo);
+      if (existing) {
+        toast.info(`Layout "${layoutInfo.name}" is already open. Switching to it.`, {
+          cancel: { label: 'Dismiss', onClick: () => {} },
+        });
+        dispatch(activateTab({ tabId: existing.id, panelId: existing.panelId }));
+        return false;
       }
 
       // Pre-validate parameters against the layout's schema (the server re-checks)
@@ -214,17 +209,9 @@ export function useShareLink() {
         ? stringifyParams(layoutInfo.params ?? [], layoutParams)
         : undefined;
 
-      // Check maxTabs limit
-      if (maxTabs && maxTabs > 0 && (tabs?.length ?? 0) >= maxTabs) {
-        toast.error(`Max tabs (${maxTabs}) reached`, {
-          cancel: { label: 'Dismiss', onClick: () => {} },
-        });
-        return false;
-      }
-
       // Dispatch Redux action - THIS IS THE REVERSIBLE PART
       // User can close the tab to "undo" opening the share link
-      dispatch(
+      const result = await dispatch(
         addTab({
           panelId: activePanelId,
           name: name || layoutInfo.name || 'Shared Tab',
@@ -233,13 +220,15 @@ export function useShareLink() {
           option: layoutOption || undefined,
         })
       );
+      // The thunk tells the user why it refused, for example when the tab limit is reached.
+      if (!addTab.fulfilled.match(result)) return false;
 
       toast.success(`Opened shared tab: ${name || layoutInfo.name}`, {
         cancel: { label: 'Dismiss', onClick: () => {} },
       });
       return true;
     },
-    [registeredLayouts, tabs, activePanelId, maxTabs, dispatch]
+    [registeredLayouts, tabs, activePanelId, dispatch]
   );
 
   // =========================================================================
@@ -278,14 +267,11 @@ export function useShareLink() {
       return;
     }
 
-    try {
-      spawnSharedTab(shareData);
-    } finally {
-      // Clear hash from URL (side effect, not Redux)
-      if (window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+    // Clear hash from URL (side effect, not Redux)
+    if (window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+    void spawnSharedTab(shareData);
   }, [spawnSharedTab]);
 
   return {

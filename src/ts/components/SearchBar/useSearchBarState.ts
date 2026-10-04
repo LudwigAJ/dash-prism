@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
+import { findOpenTabForLayout } from '@utils/tabs';
 import {
   searchBarReducer,
   createInitialState,
@@ -147,18 +148,16 @@ export function useSearchBarState(panelId: PanelId) {
       if (!layout) return;
 
       // Check allowMultiple constraint
-      if (!layout.allowMultiple) {
-        const existingTab = tabs?.find((t) => t.layoutId === layoutId);
-        if (existingTab) {
-          logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
-          toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
-            cancel: { label: 'Dismiss', onClick: () => {} },
-          });
-          globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
-          dispatch({ type: 'RESET' });
-          dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
-          return;
-        }
+      const existingTab = findOpenTabForLayout(tabs, layoutId, layout);
+      if (existingTab) {
+        logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
+        toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
+          cancel: { label: 'Dismiss', onClick: () => {} },
+        });
+        globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
+        dispatch({ type: 'RESET' });
+        dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
+        return;
       }
 
       dispatch({ type: 'SELECT_LAYOUT', layoutId });
