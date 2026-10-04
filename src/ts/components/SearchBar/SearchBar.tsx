@@ -8,7 +8,6 @@ import { OptionsMode } from './OptionsMode';
 
 type SearchBarProps = {
   panelId: PanelId;
-  isPinned?: boolean;
 };
 
 export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {

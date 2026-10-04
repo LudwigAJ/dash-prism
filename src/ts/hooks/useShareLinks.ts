@@ -91,7 +91,7 @@ function isValidShareData(data: unknown): data is ShareData {
  * Share-link helpers for URL hash based tab sharing: `generateShareLink` (pure,
  * tab to URL), `shareTab` (clipboard and toast) and `processShareHash` (hash to
  * Redux action). No listeners and no timers, so this is safe to call from any
- * component; TabBar uses it for the context-menu item and `useShareLinkListener`
+ * component; TabContextMenu uses it for the Share item and `useShareLinkListener`
  * below owns the side effects.
  */
 export function useShareLink() {

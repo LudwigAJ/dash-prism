@@ -236,7 +236,7 @@ export {
   syncWorkspace,
   switchToOpenTab,
 } from './workspaceSlice';
-export { addTab, duplicateTab, splitPanel, canAddPanel } from './workspaceThunks';
+export { addTab, duplicateTab, splitPanel, canAddTab, canAddPanel } from './workspaceThunks';
 export {
   initialUiState,
   setSearchBarMode,

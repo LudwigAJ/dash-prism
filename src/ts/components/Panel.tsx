@@ -25,7 +25,6 @@ import { usePortal } from '@context/PortalContext';
 
 type PanelProps = {
   panel: PanelNode;
-  onOpenInfo?: (tab: Tab) => void;
 };
 
 export function makeComponentPath(componentId: string, tabId: TabId): string[] {
@@ -120,7 +119,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
           isActive={isActive}
         />
 
-        <SearchBar panelId={panel.id} isPinned={isPinned} />
+        <SearchBar panelId={panel.id} />
 
         <PanelDropzone panelId={panel.id} isPinned={isPinned}>
           <div className="tw:relative tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto">

@@ -127,7 +127,7 @@ export default [
     // the search is the way into a new tab. The rename input and the parameter input take
     // focus after a user action. In all three files the move of focus is intended.
     files: [
-      'src/ts/components/TabBar.tsx',
+      'src/ts/components/TabBar/TabItem.tsx',
       'src/ts/components/SearchBar/SearchMode.tsx',
       'src/ts/components/SearchBar/ParamsMode.tsx',
     ],
