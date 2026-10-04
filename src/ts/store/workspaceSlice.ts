@@ -1,13 +1,12 @@
 // src/ts/store/workspaceSlice.ts
 import {
   createSlice,
-  createAsyncThunk,
   isAnyOf,
   type PayloadAction,
   type ThunkAction,
   type UnknownAction,
 } from '@reduxjs/toolkit';
-import type { Tab, PanelId, TabId, LayoutId, PanelDirection, Workspace } from '@types';
+import type { Tab, PanelId, TabId, LayoutId, Workspace } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
 import { createTab, findOpenTabForLayout, findTabById, findTabIndex } from '@utils/tabs';
@@ -21,17 +20,21 @@ import {
   removePanelFromTree,
 } from '@utils/panels';
 import { logger } from '@utils/logger';
-import { canAddPanel, canAddTab } from './selectors';
+import {
+  addTab,
+  canAddPanel,
+  canAddTab,
+  duplicateTab,
+  splitPanel,
+  type SplitPanelPayload,
+  type WorkspaceThunkConfig,
+} from './workspaceThunks';
+import { healWorkspace } from './workspaceHeal';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
+/** Gives the longest tab name. renameTab cuts a longer name to this length. */
 export const MAX_TAB_NAME_LENGTH = 24;
 
-// =============================================================================
-// Helpers
-// =============================================================================
+// Tab and panel helpers for the reducers
 
 /**
  * Collapses a panel that has no tabs, removing it from the tree.
@@ -132,19 +135,6 @@ function removeTabFromState(
   return true;
 }
 
-/** Arguments of the splitPanel thunk. */
-interface SplitPanelPayload {
-  panelId: PanelId;
-  direction: PanelDirection;
-  tabId: TabId;
-  position?: 'before' | 'after';
-}
-
-/** The splitPanel thunk adds the panel limit for the race condition guard in the reducer. */
-interface SplitPanelResult extends SplitPanelPayload {
-  maxPanels: number;
-}
-
 /**
  * Splits a panel to create a new panel with the specified tab.
  * Handles both same-panel splits (tab moves to new sibling) and
@@ -175,9 +165,7 @@ function splitPanelInState(state: WorkspaceState, payload: SplitPanelPayload): v
   }
 }
 
-// =============================================================================
-// Initial State
-// =============================================================================
+// Initial state
 
 /**
  * Builds a fresh initial workspace state: one panel containing one blank
@@ -186,11 +174,11 @@ function splitPanelInState(state: WorkspaceState, payload: SplitPanelPayload): v
  * This is a factory rather than a module-level constant on purpose:
  * - IDs must not be generated while the bundle is evaluating. `generateShortId`
  *   touches `crypto`, and any failure there would stop `window.dash_prism`
- *   from ever being defined (02 A-1).
+ *   from ever being defined.
  * - Every store, and every `resetWorkspace`, must get its own IDs and
  *   `createdAt`. A module-level constant would make two Prism instances on
  *   one page share tab/panel IDs, and a reset would reuse the IDs of the
- *   very first tab, so React would not see a new key (02 A-6).
+ *   very first tab, so React would not see a new key.
  */
 export function createInitialWorkspaceState(): WorkspaceState {
   const panelId: PanelId = generateShortId();
@@ -213,179 +201,13 @@ export function createInitialWorkspaceState(): WorkspaceState {
   };
 }
 
-// =============================================================================
-// Async Thunks (for maxTabs validation)
-// =============================================================================
-
-/** Gives the store shape and the extra argument that the workspace thunks use. */
-interface WorkspaceThunkConfig {
-  state: { workspace: { present: WorkspaceState } };
-  extra: ThunkExtra;
-  rejectValue: string;
-}
-
-/** Arguments of the addTab thunk. */
-interface AddTabPayload {
-  panelId: PanelId;
-  name?: string;
-  layoutId?: string;
-  params?: Record<string, string>;
-  option?: string;
-}
-
-/**
- * Holds a tab that addTab or duplicateTab built, with the tab limit that the thunk read. The
- * reducer checks the limit again, because another tab can arrive between the thunk and the reducer.
- */
-interface TabInsertResult {
-  tab: Tab;
-  maxTabs: number;
-}
-
-/**
- * Adds a tab to a panel and makes it active. The thunk reads the limits from the thunk extra
- * argument. It rejects the tab at the tab limit, and for a layout that does not allow multiple
- * tabs while one is open, and tells the user why.
- */
-export const addTab = createAsyncThunk<TabInsertResult, AddTabPayload, WorkspaceThunkConfig>(
-  'workspace/addTab',
-  async (payload, { getState, extra, rejectWithValue }) => {
-    const { tabs } = getState().workspace.present;
-
-    // Validate maxTabs limit using shared canAddTab helper
-    if (!canAddTab(tabs.length, extra.getMaxTabs())) {
-      extra.notify(
-        'warning',
-        `Maximum tabs limit reached (${extra.getMaxTabs()})`,
-        `Cannot add tab: maximum of ${extra.getMaxTabs()} tabs reached.`
-      );
-      return rejectWithValue(`Maximum tabs limit reached (${extra.getMaxTabs()})`);
-    }
-
-    // Validate allowMultiple constraint
-    if (payload.layoutId) {
-      const layoutMeta = extra.getRegisteredLayouts()[payload.layoutId];
-      if (layoutMeta && findOpenTabForLayout(tabs, payload.layoutId, layoutMeta)) {
-        extra.notify(
-          'info',
-          `"${layoutMeta.name}" is already open`,
-          `This layout does not allow multiple instances.`
-        );
-        return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
-      }
-    }
-
-    const newTab = createTab(payload.panelId, {
-      name: payload.name,
-      layoutId: payload.layoutId,
-      layoutParams: payload.params,
-      layoutOption: payload.option,
-    });
-
-    return { tab: newTab, maxTabs: extra.getMaxTabs() };
-  }
-);
-
-/**
- * Adds a copy of a tab next to the original, in the same panel. The copy is unlocked, its name
- * ends with "(copy)", and it gets fresh ids, so it mounts its own layout.
- *
- * The thunk applies the same limits as addTab: the tab limit, and a layout that does not allow
- * multiple tabs.
- */
-export const duplicateTab = createAsyncThunk<
-  TabInsertResult,
-  { tabId: TabId },
-  WorkspaceThunkConfig
->('workspace/duplicateTab', async ({ tabId }, { getState, extra, rejectWithValue }) => {
-  const { tabs } = getState().workspace.present;
-
-  // Validate maxTabs limit using shared canAddTab helper
-  if (!canAddTab(tabs.length, extra.getMaxTabs())) {
-    extra.notify(
-      'warning',
-      `Cannot duplicate: maximum tabs limit reached (${extra.getMaxTabs()})`,
-      `DUPLICATE_TAB blocked: workspace at maxTabs limit (${extra.getMaxTabs()})`
-    );
-    return rejectWithValue(`Maximum tabs limit reached`);
-  }
-
-  const originalTab = findTabById(tabs, tabId);
-  if (!originalTab) {
-    return rejectWithValue('Tab not found');
-  }
-
-  // Validate allowMultiple constraint. The original tab is open, so a layout that does not
-  // allow multiple tabs always has an open tab here.
-  if (originalTab.layoutId) {
-    const layoutMeta = extra.getRegisteredLayouts()[originalTab.layoutId];
-    if (layoutMeta && findOpenTabForLayout(tabs, originalTab.layoutId, layoutMeta)) {
-      extra.notify(
-        'info',
-        `"${layoutMeta.name}" does not allow duplicates`,
-        `This layout does not allow multiple instances.`
-      );
-      return rejectWithValue(`Layout "${originalTab.layoutId}" does not allow multiple instances`);
-    }
-  }
-
-  const newTab = createTab(originalTab.panelId, {
-    ...originalTab,
-    name: `${originalTab.name} (copy)`,
-    locked: false,
-    layoutParams: originalTab.layoutParams ? { ...originalTab.layoutParams } : undefined,
-  });
-
-  return { tab: newTab, maxTabs: extra.getMaxTabs() };
-});
-
-/**
- * Async thunk for splitting a panel with maxPanels validation.
- * Uses the thunk extra argument to read the limit, like addTab does for maxTabs.
- */
-export const splitPanel = createAsyncThunk<
-  SplitPanelResult,
-  SplitPanelPayload,
-  WorkspaceThunkConfig
->('workspace/splitPanel', async (payload, { getState, extra, rejectWithValue }) => {
-  const { panel } = getState().workspace.present;
-  const maxPanels = extra.getMaxPanels();
-  if (!canAddPanel(countLeafPanels(panel), maxPanels)) {
-    extra.notify(
-      'warning',
-      `Cannot split: maximum of ${maxPanels} panels reached`,
-      `Cannot split panel: maximum of ${maxPanels} panels reached.`
-    );
-    return rejectWithValue(`Maximum panels limit reached (${maxPanels})`);
-  }
-
-  // The UI only offers a leaf panel, so these two are faults. The thunk reports them, because a
-  // throw in the reducer would reject the dispatch and no caller catches that.
-  const target = findPanelById(panel, payload.panelId);
-  if (!target) {
-    extra.notify('error', 'Cannot split: panel not found');
-    return rejectWithValue(`Panel '${payload.panelId}' not found`);
-  }
-  if (!isLeafPanel(target)) {
-    extra.notify('error', 'Cannot split a non-leaf panel');
-    return rejectWithValue(`Panel '${payload.panelId}' is not a leaf panel`);
-  }
-
-  // Pass maxPanels through for race condition guard in reducer
-  return { ...payload, maxPanels };
-});
-
-// =============================================================================
-// Slice Definition
-// =============================================================================
+// Slice
 
 const workspaceSlice = createSlice({
   name: 'workspace',
   initialState: createInitialWorkspaceState,
   reducers: {
-    // -------------------------------------------------------------------------
-    // Tab Actions (synchronous)
-    // -------------------------------------------------------------------------
+    // Tab actions
 
     removeTab(state, action: PayloadAction<{ tabId: TabId }>) {
       removeTabFromState(state, action.payload.tabId);
@@ -559,9 +381,7 @@ const workspaceSlice = createSlice({
       }
     },
 
-    // -------------------------------------------------------------------------
-    // Panel Actions
-    // -------------------------------------------------------------------------
+    // Panel actions
 
     setActivePanel(state, action: PayloadAction<{ panelId: PanelId }>) {
       const { panelId } = action.payload;
@@ -636,9 +456,7 @@ const workspaceSlice = createSlice({
       state.activePanelId = targetPanelId;
     },
 
-    // -------------------------------------------------------------------------
-    // Workspace Actions
-    // -------------------------------------------------------------------------
+    // Workspace actions
 
     toggleSearchBars(state) {
       state.searchBarsHidden = !state.searchBarsHidden;
@@ -655,27 +473,17 @@ const workspaceSlice = createSlice({
       }
     },
 
-    // Note: popUndo is removed - redux-undo handles undo/redo for all actions.
-    // Use dispatch(undo()) from redux-undo instead.
-
     resetWorkspace() {
       return createInitialWorkspaceState();
     },
 
     /**
-     * Syncs workspace from Dash backend (updateWorkspace prop).
-     *
-     * Validates state invariants after applying updates:
-     * - All tabs must reference valid leaf panels
-     * - panelTabs must be consistent with tabs array
-     * - activeTabIds must reference existing tabs in correct panels
-     *
-     * Auto-heals inconsistencies when possible to prevent crashes.
+     * Applies a workspace that a Dash callback sent through the `updateWorkspace` prop. Each
+     * field in the payload replaces the field of the state, and healWorkspace then repairs what
+     * the mix of old and new fields broke.
      */
     syncWorkspace(state, action: PayloadAction<Partial<Workspace>>) {
       const update = action.payload;
-
-      // Apply updates
       if (update.tabs) state.tabs = update.tabs;
       if (update.panel) state.panel = update.panel;
       if (update.panelTabs) state.panelTabs = update.panelTabs;
@@ -683,87 +491,14 @@ const workspaceSlice = createSlice({
       if (update.activePanelId) state.activePanelId = update.activePanelId;
       if (update.favoriteLayouts) state.favoriteLayouts = update.favoriteLayouts;
       if (update.searchBarsHidden !== undefined) state.searchBarsHidden = update.searchBarsHidden;
-
-      // Validate and auto-heal state invariants
-      const leafPanelIds = new Set(getLeafPanelIds(state.panel));
-
-      // 1. Remove tabs that reference non-existent panels
-      const validTabs = state.tabs.filter((tab) => leafPanelIds.has(tab.panelId));
-      if (validTabs.length !== state.tabs.length) {
-        logger.debug(
-          `[syncWorkspace] Removed ${state.tabs.length - validTabs.length} orphaned tabs`
-        );
-        state.tabs = validTabs;
-      }
-
-      // 2. Heal panelTabs without discarding tab order.
-      // panelTabs is the source of truth for the order of tabs within a panel:
-      // reorderTab only touches panelTabs, while `tabs` stays in creation order.
-      // Rebuilding panelTabs from `tabs` (the previous behaviour) therefore reset
-      // every user reorder on each updateWorkspace, including a plain
-      // readWorkspace -> updateWorkspace echo. Instead keep the incoming/current
-      // order per panel, drop ids that no longer exist, belong to another panel
-      // (tab.panelId is authoritative) or are duplicated, and append tabs that
-      // are missing from their panel's list.
-      const tabById = new Map(state.tabs.map((tab) => [tab.id, tab]));
-      const healedPanelTabs: Record<PanelId, TabId[]> = {};
-      for (const panelId of leafPanelIds) {
-        const seen = new Set<TabId>();
-        // updateWorkspace payloads are untyped at runtime: tolerate a missing or
-        // malformed per-panel list by rebuilding that panel from `tabs` order.
-        const incoming = state.panelTabs[panelId];
-        healedPanelTabs[panelId] = (Array.isArray(incoming) ? incoming : []).filter((tabId) => {
-          const tab = tabById.get(tabId);
-          if (!tab || tab.panelId !== panelId || seen.has(tabId)) return false;
-          seen.add(tabId);
-          return true;
-        });
-      }
-      for (const tab of state.tabs) {
-        const list = healedPanelTabs[tab.panelId];
-        if (list && !list.includes(tab.id)) {
-          list.push(tab.id);
-        }
-      }
-      state.panelTabs = healedPanelTabs;
-
-      // 3. Validate and fix activeTabIds
-      const tabIdSet = new Set(state.tabs.map((t) => t.id));
-      for (const panelId of leafPanelIds) {
-        const activeTabId = state.activeTabIds[panelId];
-        const panelTabIds = state.panelTabs[panelId] ?? [];
-
-        if (activeTabId && (!tabIdSet.has(activeTabId) || !panelTabIds.includes(activeTabId))) {
-          // Active tab doesn't exist or isn't in this panel - pick first tab or delete
-          if (panelTabIds.length > 0) {
-            state.activeTabIds[panelId] = panelTabIds[0];
-          } else {
-            delete state.activeTabIds[panelId];
-          }
-        }
-      }
-
-      // Clean up activeTabIds for non-existent panels
-      for (const panelId of Object.keys(state.activeTabIds)) {
-        if (!leafPanelIds.has(panelId)) {
-          delete state.activeTabIds[panelId];
-        }
-      }
-
-      // 4. Validate activePanelId
-      if (!leafPanelIds.has(state.activePanelId)) {
-        const firstLeafPanel = Array.from(leafPanelIds)[0];
-        if (firstLeafPanel) {
-          state.activePanelId = firstLeafPanel;
-        }
-      }
+      Object.assign(state, healWorkspace(state));
     },
   },
 
   extraReducers: (builder) => {
     builder
       .addCase(splitPanel.fulfilled, (state, action) => {
-        // Guard: Re-check maxPanels limit to prevent race condition, as addTab does for maxTabs.
+        // Two quick splits can both pass the check of the thunk. The second split is dropped.
         if (!canAddPanel(countLeafPanels(state.panel), action.payload.maxPanels)) return;
         // An earlier split in the same tick can also remove the target, and the tree split throws then.
         const target = findPanelById(state.panel, action.payload.panelId);
@@ -781,7 +516,6 @@ const workspaceSlice = createSlice({
   },
 });
 
-// Export actions
 export const {
   removeTab,
   reconcileWithServer,
@@ -808,6 +542,9 @@ export const {
 } = workspaceSlice.actions;
 
 export const workspaceReducer = workspaceSlice.reducer;
+
+// This thunk dispatches a slice action, so it lives here. workspaceThunks.ts cannot import the
+// slice, because the slice imports the thunks.
 
 /**
  * Switches to the open tab of a layout that does not allow multiple tabs, and tells the user.

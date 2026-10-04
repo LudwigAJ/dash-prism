@@ -13,7 +13,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isAction, type Middleware } from '@reduxjs/toolkit';
 import { ActionCreators } from 'redux-undo';
-import { activateTab, addTab, removeTab, splitPanel, collapsePanel } from '../workspaceSlice';
+import { activateTab, removeTab, collapsePanel } from '../workspaceSlice';
+import { addTab, splitPanel } from '../workspaceThunks';
 import { setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import { createTestStore, PANEL_1, TAB_1, TAB_2, type TestStore } from '../testing';

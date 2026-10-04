@@ -34,7 +34,6 @@ import {
   selectSearchFocusPanelId,
   selectIsSingleTabMode,
   splitPanel,
-  canAddPanel,
 } from './index';
 import type { WorkspaceState } from './types';
 import { MAX_LEAF_PANELS } from '@constants/panels';
@@ -706,18 +705,6 @@ describe('createPrismStore', () => {
       expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
 
       created.cleanup();
-    });
-  });
-
-  describe('canAddPanel', () => {
-    it('treats a limit below 1 as unlimited', () => {
-      expect(canAddPanel(5, 0)).toBe(true);
-      expect(canAddPanel(5, -1)).toBe(true);
-    });
-
-    it('allows a panel only below the limit', () => {
-      expect(canAddPanel(1, 2)).toBe(true);
-      expect(canAddPanel(2, 2)).toBe(false);
     });
   });
 

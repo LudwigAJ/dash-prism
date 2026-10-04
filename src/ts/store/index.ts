@@ -356,6 +356,7 @@ export { createInitialWorkspaceState, initialUiState };
 
 // Export slice actions
 export * from './workspaceSlice';
+export * from './workspaceThunks';
 export * from './uiSlice';
 
 // Export selectors

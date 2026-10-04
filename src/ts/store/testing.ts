@@ -130,3 +130,8 @@ export type TestStore = ReturnType<typeof createTestStore>;
 export function getWorkspace(store: TestStore): WorkspaceState {
   return store.getState().workspace.present;
 }
+
+/** Gives a tab of the present workspace of a test store, or undefined. */
+export function getTab(store: TestStore, tabId: TabId): Tab | undefined {
+  return getWorkspace(store).tabs.find((tab) => tab.id === tabId);
+}

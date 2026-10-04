@@ -57,29 +57,6 @@ export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 
-/**
- * Checks if a new tab can be added based on maxTabs limit.
- * This is a utility function (not a pure selector) because maxTabs comes from config.
- *
- * @param tabCount - Current number of tabs
- * @param maxTabs - Maximum tabs allowed (0 or negative means unlimited)
- * @returns true if a new tab can be added
- */
-export function canAddTab(tabCount: number, maxTabs: number): boolean {
-  return maxTabs < 1 || tabCount < maxTabs;
-}
-
-/**
- * Checks if a panel can be added based on the maxPanels limit.
- *
- * @param panelCount - Current number of leaf panels
- * @param maxPanels - Maximum panels allowed (0 or negative means unlimited)
- * @returns true if a new panel can be added
- */
-export function canAddPanel(panelCount: number, maxPanels: number): boolean {
-  return maxPanels < 1 || panelCount < maxPanels;
-}
-
 export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(
