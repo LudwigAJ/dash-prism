@@ -7,10 +7,9 @@ drop the undo history and, with memory persistence, the whole workspace).
 
 from __future__ import annotations
 
-import time
-
 import pytest
 from dash import Dash, Input, Output, ctx, html
+from selenium.common.exceptions import TimeoutException
 
 from tests.integration import testutils
 
@@ -55,8 +54,8 @@ def test_changing_max_tabs_keeps_workspace_and_undo_history(dash_duo):
     assert _undo_enabled(duo)
 
     duo.find_element(testutils.ADD_TAB_BUTTON).click()
-    time.sleep(0.5)
-    assert len(testutils.get_tabs(duo)) == 2, "adding beyond maxTabs must be blocked"
+    with pytest.raises(TimeoutException):
+        testutils.wait_for_tab_count(duo, 3, timeout=1.5)
 
     # Raise the limit from a callback: same tabs, undo history intact.
     duo.find_element("#limit-4").click()
@@ -72,8 +71,8 @@ def test_changing_max_tabs_keeps_workspace_and_undo_history(dash_duo):
     duo.find_element("#limit-1").click()
     duo.wait_for_contains_text(TAB_COUNT, "3/1", timeout=5)
     duo.find_element(testutils.ADD_TAB_BUTTON).click()
-    time.sleep(0.5)
-    assert len(testutils.get_tabs(duo)) == 3
+    with pytest.raises(TimeoutException):
+        testutils.wait_for_tab_count(duo, 4, timeout=1.5)
 
     # Undo still walks the history recorded before the prop changes.
     duo.find_element(UNDO_BUTTON).click()

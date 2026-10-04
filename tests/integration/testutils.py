@@ -19,7 +19,6 @@ from typing import Any
 from dash import Dash, html
 from dash.development.base_component import Component
 from dash.testing.composite import DashComposite
-from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -118,75 +117,38 @@ def start_prism(
 
 
 # =============================================================================
-# Layout Stabilization Helpers
+# Wait Helpers
+# Each wait raises TimeoutException when its condition does not hold in time.
 # =============================================================================
-def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> bool:
+def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> None:
     """
-    Wait until panels have non-zero dimensions (layout is stable).
+    Wait until every panel has a width and a height.
 
-    This is critical for headless Chrome where ResizeObserver may not fire
-    immediately, causing react-split-pane to not render children.
+    react-split-pane renders the children of a panel only after a ResizeObserver
+    gave the panel a size, so a drag must not start before then.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    timeout : float
-        Maximum wait time in seconds.
-
-    Returns
-    -------
-    bool
-        True if all panels have non-zero dimensions.
+    :param dash_duo: The dash testing fixture.
+    :param timeout: The maximum wait in seconds.
     """
 
     def panels_have_size(driver):
         panels = driver.find_elements(By.CSS_SELECTOR, PANEL_SELECTOR)
-        if not panels:
-            return False
-        for panel in panels:
-            rect = panel.rect
-            if rect["width"] <= 0 or rect["height"] <= 0:
-                return False
-        return True
-
-    try:
-        WebDriverWait(dash_duo.driver, timeout).until(
-            panels_have_size, message="Panels do not have non-zero dimensions"
+        return bool(panels) and all(
+            panel.rect["width"] > 0 and panel.rect["height"] > 0 for panel in panels
         )
-        return True
-    except WebDriverException:
-        return False
+
+    WebDriverWait(dash_duo.driver, timeout).until(
+        panels_have_size, message="Panels do not have non-zero dimensions"
+    )
 
 
-# =============================================================================
-# Wait Helpers - explicit waits per Dash testing best practices
-# Default timeout is 10s for reliability in headless Chrome.
-# =============================================================================
-def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> bool:
+def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> None:
     """
-    Wait until the number of tabs equals expected_count.
+    Wait until the number of tabs equals ``expected_count``.
 
-    Uses explicit WebDriverWait instead of time.sleep() for reliability.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    expected_count : int
-        Expected number of tabs.
-    timeout : float
-        Maximum wait time in seconds.
-
-    Returns
-    -------
-    bool
-        True if condition met within timeout.
-
-    Raises
-    ------
-    TimeoutException
-        If condition not met within timeout.
+    :param dash_duo: The dash testing fixture.
+    :param expected_count: The expected number of tabs.
+    :param timeout: The maximum wait in seconds.
     """
 
     def tab_count_equals(driver):
@@ -196,26 +158,15 @@ def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> 
     WebDriverWait(dash_duo.driver, timeout).until(
         tab_count_equals, message=f"Expected {expected_count} tabs but condition not met"
     )
-    return True
 
 
-def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -> bool:
+def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -> None:
     """
-    Wait until the number of panels equals expected_count.
+    Wait until the number of panels equals ``expected_count``.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    expected_count : int
-        Expected number of panels.
-    timeout : float
-        Maximum wait time in seconds (default 10s).
-
-    Returns
-    -------
-    bool
-        True if condition met within timeout.
+    :param dash_duo: The dash testing fixture.
+    :param expected_count: The expected number of panels.
+    :param timeout: The maximum wait in seconds.
     """
 
     def panel_count_equals(driver):
@@ -225,60 +176,36 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -
     WebDriverWait(dash_duo.driver, timeout).until(
         panel_count_equals, message=f"Expected {expected_count} panels but condition not met"
     )
-    return True
 
 
-def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) -> bool:
+def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) -> None:
     """
-    Wait until an element is no longer visible.
+    Wait until no visible element matches ``selector``.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    selector : str
-        CSS selector for the element.
-    timeout : float
-        Maximum wait time in seconds (default 5s).
-
-    Returns
-    -------
-    bool
-        True if element became invisible within timeout.
+    :param dash_duo: The dash testing fixture.
+    :param selector: The CSS selector of the element.
+    :param timeout: The maximum wait in seconds.
     """
     WebDriverWait(dash_duo.driver, timeout).until(
         EC.invisibility_of_element_located((By.CSS_SELECTOR, selector)),
         message=f"Element {selector} did not become invisible",
     )
-    return True
 
 
-def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> bool:
+def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> None:
     """
-    Wait for drop zone elements to appear during drag.
+    Wait until the drop zones of a drag appear.
 
-    Drop zones only render when a drag is active and panel is not
-    in single-tab mode or pinned.
+    The drop zones exist only while a drag is active, and only in a panel that is
+    not pinned, when the workspace holds more than one tab.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    timeout : float
-        Maximum wait time (default 5s).
-
-    Returns
-    -------
-    bool
-        True if drop zones appeared.
+    :param dash_duo: The dash testing fixture.
+    :param timeout: The maximum wait in seconds.
     """
-    try:
-        WebDriverWait(dash_duo.driver, timeout).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, DROP_ZONE_LEFT))
-        )
-        return True
-    except WebDriverException:
-        return False
+    WebDriverWait(dash_duo.driver, timeout).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, DROP_ZONE_LEFT)),
+        message="The drop zones did not appear",
+    )
 
 
 # =============================================================================
@@ -416,48 +343,26 @@ def check_browser_errors(dash_duo) -> list:
 # =============================================================================
 # React Interaction Helpers
 # =============================================================================
-def trigger_rename_mode(dash_duo, tab_id: str) -> bool:
+def trigger_rename_mode(dash_duo, tab_id: str) -> str:
     """
-    Trigger rename mode on a tab using JavaScript dblclick.
+    Double-click a tab and wait for its rename input.
 
-    This handles React's async state updates by using execute_async_script.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_id : str
-        The tab ID to rename.
-
-    Returns
-    -------
-    bool
-        True if rename mode was triggered successfully.
+    :param dash_duo: The dash testing fixture.
+    :param tab_id: The ID of the tab to rename.
+    :returns: The CSS selector of the rename input.
     """
-    result = dash_duo.driver.execute_async_script(
-        """
-        var callback = arguments[arguments.length - 1];
-        var tabId = arguments[0];
-        var tabWrapper = document.querySelector("[data-testid='prism-tab-" + tabId + "']");
-        if (!tabWrapper) { callback(false); return; }
-
-        // Target the inner TabsTrigger button — the onDoubleClick handler is
-        // on this child element, NOT on the outer wrapper div.  Events don't
-        // propagate downward, so we must dispatch directly on the button.
-        var trigger = tabWrapper.querySelector("[role='tab']");
-        if (!trigger) { callback(false); return; }
-
-        var evt = new MouseEvent('dblclick', {
-            bubbles: true, cancelable: true, view: window, detail: 2
-        });
-        trigger.dispatchEvent(evt);
-
-        // Wait for React to process the state update
-        setTimeout(function() { callback(true); }, 150);
-    """,
-        tab_id,
+    # The onDoubleClick handler is on the inner TabsTrigger button, not on the
+    # wrapper that has the test ID. A synthetic event on the button reaches it
+    # without the pointer events that start a drag.
+    trigger = dash_duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']")
+    dash_duo.driver.execute_script(
+        "arguments[0].dispatchEvent(new MouseEvent('dblclick', "
+        "{bubbles: true, cancelable: true, view: window, detail: 2}));",
+        trigger,
     )
-    return result
+    rename_input = f"[data-testid='prism-tab-rename-{tab_id}']"
+    dash_duo.wait_for_element(rename_input, timeout=5)
+    return rename_input
 
 
 def set_input_value_react(dash_duo, selector: str, value: str):
@@ -594,77 +499,56 @@ def create_tabs_for_dnd_test(dash_duo, count: int = 3) -> list[str]:
 # =============================================================================
 # Drag-and-Drop Helpers - for @dnd-kit testing with ActionChains
 # =============================================================================
+def _activate_drag(dash_duo, source) -> None:
+    """Press the mouse on ``source`` and move it past the 8 px activation distance of dnd-kit."""
+    ActionChains(dash_duo.driver).click_and_hold(source).move_by_offset(15, 0).perform()
+
+
+def _drop(dash_duo) -> None:
+    """Release the mouse and wait until the drag ends."""
+    ActionChains(dash_duo.driver).release().perform()
+    # A WebDriver search for a missing element waits out the implicit wait of
+    # dash[testing] (2 s). A query in the page returns at once.
+    WebDriverWait(dash_duo.driver, 5).until(
+        lambda driver: driver.execute_script(
+            "return document.querySelector(arguments[0]) === null;", DROP_ZONE_LEFT
+        ),
+        message="The drag did not end",
+    )
+
+
 def drag_tab_to_position(
     dash_duo,
     source_tab_index: int,
     target_tab_index: int,
     panel_index: int = 0,
-) -> bool:
+) -> None:
     """
-    Drag a tab to a new position within the same panel (reorder).
+    Drag a tab onto another tab of the same panel, so the tabs change places.
 
-    For @dnd-kit/sortable, we need to:
-    1. Start the drag (click_and_hold + initial movement)
-    2. Move to the target tab element (sortable handles reordering on hover)
-    3. Release
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    source_tab_index : int
-        Index of the tab to drag.
-    target_tab_index : int
-        Index position to drop at.
-    panel_index : int
-        Panel index if multiple panels exist (default 0).
-
-    Returns
-    -------
-    bool
-        True if operation completed.
+    :param dash_duo: The dash testing fixture.
+    :param source_tab_index: The index of the tab to drag.
+    :param target_tab_index: The index of the tab to drop on.
+    :param panel_index: The index of the panel that holds both tabs.
     """
-    # Wait for layout to stabilize before attempting drag
-    wait_for_panel_layout_stable(dash_duo, timeout=5.0)
-    dash_duo.wait_for_element(PANEL_SELECTOR, timeout=5)
+    wait_for_panel_layout_stable(dash_duo)
+    tabs = get_panels(dash_duo)[panel_index].find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+    source_tab, target_tab = tabs[source_tab_index], tabs[target_tab_index]
 
-    panels = get_panels(dash_duo)
-    if panel_index >= len(panels):
-        return False
-
-    panel = panels[panel_index]
-    tabs = panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-
-    if source_tab_index >= len(tabs) or target_tab_index >= len(tabs):
-        return False
-
-    source_tab = tabs[source_tab_index]
-    target_tab = tabs[target_tab_index]
-
-    # Scroll tab bar into view to prevent MoveTargetOutOfBoundsException
-    # Scroll the source tab into view first
-    dash_duo.driver.execute_script(
-        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", source_tab
+    _activate_drag(dash_duo, source_tab)
+    wait_for_drop_zones_visible(dash_duo)
+    ActionChains(dash_duo.driver).move_to_element(target_tab).perform()
+    # dnd-kit reads the drop target from its last render. The sortable list moves
+    # the target tab aside when it renders the target, so a release before that
+    # would drop on the previous target.
+    WebDriverWait(dash_duo.driver, 5).until(
+        lambda driver: driver.execute_script(
+            "return /translate3d\\((?!0px, 0px)/.test(arguments[0].style.transform);",
+            target_tab,
+        ),
+        message="The target tab did not move aside for the dragged tab",
     )
-    dash_duo.driver.execute_script(
-        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", target_tab
-    )
-
-    # Use ActionChains with a stable sequence to avoid headless Chrome crashes
-    actions = ActionChains(dash_duo.driver)
-    actions.move_to_element(source_tab).pause(0.1)
-    actions.click_and_hold().pause(0.2)
-
-    # Incremental "wiggle" movement to reliably exceed 8px activation threshold
-    actions.move_by_offset(5, 0).pause(0.1)
-    actions.move_by_offset(5, 0).pause(0.1)
-    actions.move_by_offset(5, 0).pause(0.1)
-
-    # Move to target tab center and release
-    actions.move_to_element(target_tab).pause(0.2)
-    actions.release().perform()
-
-    return True
+    _drop(dash_duo)
 
 
 def drag_tab_to_panel_edge(
@@ -673,151 +557,51 @@ def drag_tab_to_panel_edge(
     edge: str,
     source_panel_index: int = 0,
     target_panel_index: int = 0,
-) -> bool:
+) -> None:
     """
-    Drag a tab to a panel edge to trigger panel splitting.
+    Drag a tab onto an edge drop zone of a panel, so the panel splits.
 
-    Uses a two-phase approach:
-    1. Wait for layout to stabilize (panels have non-zero dimensions)
-    2. Start drag to make drop zones appear
-    3. Move to the target drop zone and release
+    The caller waits for the new panel count.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_index : int
-        Index of the tab to drag within source panel.
-    edge : str
-        Edge to drop on: 'left', 'right', 'top', 'bottom'.
-    source_panel_index : int
-        Source panel index (default 0).
-    target_panel_index : int
-        Target panel index (default 0).
-
-    Returns
-    -------
-    bool
-        True if operation completed.
+    :param dash_duo: The dash testing fixture.
+    :param tab_index: The index of the tab in the source panel.
+    :param edge: The edge to drop on: ``left``, ``right``, ``top`` or ``bottom``.
+    :param source_panel_index: The index of the panel that holds the tab.
+    :param target_panel_index: The index of the panel to split.
     """
-    # Wait for layout to stabilize before attempting drag
-    wait_for_panel_layout_stable(dash_duo, timeout=5.0)
+    wait_for_panel_layout_stable(dash_duo)
+    source_panel = get_panels(dash_duo)[source_panel_index]
+    source_tab = source_panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)[tab_index]
+    drop_zone = (
+        f"[data-testid='prism-drop-zone-{edge}-{get_panel_id(dash_duo, target_panel_index)}']"
+    )
 
-    # Extra wait for React to settle under parallel execution
-    dash_duo.wait_for_element(PANEL_SELECTOR, timeout=5)
-
-    panels = get_panels(dash_duo)
-    if source_panel_index >= len(panels) or target_panel_index >= len(panels):
-        return False
-
-    source_panel = panels[source_panel_index]
-
-    tabs = source_panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-    if tab_index >= len(tabs):
-        return False
-
-    source_tab = tabs[tab_index]
-
-    # Get source position for offset calculation
-    source_rect = source_tab.rect
-    source_x = source_rect["x"] + source_rect["width"] / 2
-    source_y = source_rect["y"] + source_rect["height"] / 2
-
-    # Phase 1: Start drag to make drop zones appear
-    # Use longer pauses for stability under parallel execution
-    actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(1.0).perform()
-
-    # Wait for drop zones to appear (they only exist during active drag)
-    drop_zone_selector = f"[data-testid^='prism-drop-zone-{edge}']"
-    try:
-        WebDriverWait(dash_duo.driver, 5.0).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, drop_zone_selector))
-        )
-    except WebDriverException:
-        ActionChains(dash_duo.driver).release().perform()
-        return False
-
-    drop_zones = dash_duo.driver.find_elements(By.CSS_SELECTOR, drop_zone_selector)
-
-    if not drop_zones:
-        ActionChains(dash_duo.driver).release().perform()
-        return False
-
-    dz = drop_zones[0]
-    dz_rect = dz.rect
-
-    # Phase 2: Move to drop zone center and release
-    dz_center_x = dz_rect["x"] + dz_rect["width"] / 2
-    dz_center_y = dz_rect["y"] + dz_rect["height"] / 2
-
-    # Current position after phase 1: source_x + 15, source_y + 15
-    current_x = source_x + 15
-    current_y = source_y + 15
-
-    # Calculate delta to drop zone center
-    delta_x = int(dz_center_x - current_x)
-    delta_y = int(dz_center_y - current_y)
-
-    # Move to drop zone and release with longer pause
-    actions2 = ActionChains(dash_duo.driver)
-    actions2.move_by_offset(delta_x, delta_y).pause(1.0).release().pause(1.0).perform()
-
-    # Wait for React to process the drop action and re-render
-    # This explicit wait is critical for parallel test execution
-    wait_for_panel_layout_stable(dash_duo, timeout=10.0)
-
-    return True
+    _activate_drag(dash_duo, source_tab)
+    ActionChains(dash_duo.driver).move_to_element(
+        dash_duo.wait_for_element(drop_zone, timeout=5)
+    ).perform()
+    # The zone renders its highlight child when dnd-kit picks it as the drop target.
+    dash_duo.wait_for_element(f"{drop_zone} > div", timeout=5)
+    _drop(dash_duo)
 
 
 def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> None:
     """
-    Start a drag operation without releasing (for testing drag state).
+    Start a drag of a tab and keep the mouse pressed.
 
-    Uses ActionChains chaining with .pause() per DASH_TESTING_GUIDELINES.md.
-    After calling this, use cancel_drag_with_escape() to cancel.
+    Call :func:`cancel_drag_with_escape` to end the drag.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_index : int
-        Index of the tab to drag.
-    panel_index : int
-        Panel index (default 0).
+    :param dash_duo: The dash testing fixture.
+    :param tab_index: The index of the tab in the panel.
+    :param panel_index: The index of the panel that holds the tab.
     """
-    panels = get_panels(dash_duo)
-    if panel_index >= len(panels):
-        raise ValueError(f"Panel index {panel_index} out of range")
-
-    panel = panels[panel_index]
-    tabs = panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-
-    if tab_index >= len(tabs):
-        raise ValueError(f"Tab index {tab_index} out of range")
-
-    source_tab = tabs[tab_index]
-
-    # Use chained ActionChains with pause() - not time.sleep()
-    actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(1.0).move_by_offset(15, 15).pause(
-        1.0
-    ).perform()  # >8px to trigger PointerSensor
+    panel = get_panels(dash_duo)[panel_index]
+    _activate_drag(dash_duo, panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)[tab_index])
 
 
 def cancel_drag_with_escape(dash_duo) -> None:
-    """
-    Cancel an active drag operation by pressing Escape.
-
-    Uses ActionChains chaining with .pause() per DASH_TESTING_GUIDELINES.md.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    """
-    actions = ActionChains(dash_duo.driver)
-    actions.send_keys(Keys.ESCAPE).pause(1.0).perform()
+    """Press Escape, which cancels an active drag."""
+    ActionChains(dash_duo.driver).send_keys(Keys.ESCAPE).perform()
 
 
 # =============================================================================

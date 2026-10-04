@@ -91,18 +91,19 @@ def _wait_for_initial_write(duo, timeout: float = 15.0, stable_for: float = 0.6)
     sync each land in their own write a few ticks apart, so a seed dropped after
     the first one can still be overwritten. Wait for the value to hold steady.
     """
-    deadline = time.monotonic() + timeout
-    previous, steady_since = None, None
-    while time.monotonic() < deadline:
+    previous, steady_since = None, time.monotonic()
+
+    def stored_value_is_steady(driver) -> bool:
+        nonlocal previous, steady_since
         current = _read_stored(duo)
-        if current is not None and current == previous:
-            steady_since = steady_since or time.monotonic()
-            if time.monotonic() - steady_since >= stable_for:
-                return
-        else:
-            previous, steady_since = current, None
-        time.sleep(0.1)
-    raise AssertionError("redux-persist kept rewriting the workspace")
+        if current is None or current != previous:
+            previous, steady_since = current, time.monotonic()
+            return False
+        return time.monotonic() - steady_since >= stable_for
+
+    WebDriverWait(duo.driver, timeout, poll_frequency=0.1).until(
+        stored_value_is_steady, message="redux-persist kept rewriting the workspace"
+    )
 
 
 def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):

@@ -47,8 +47,7 @@ class TestPanelSplit:
         assert len(testutils.get_panels(duo)) == 1, "Should start with 1 panel"
 
         # Drag to specified edge to split
-        result = testutils.drag_tab_to_panel_edge(duo, 1, edge)
-        assert result, f"Drag to {edge} edge should complete"
+        testutils.drag_tab_to_panel_edge(duo, 1, edge)
 
         # Wait for panel split (10s timeout for reliability)
         testutils.wait_for_panel_count(duo, 2, timeout=10.0)

@@ -17,7 +17,7 @@ import json
 import pytest
 from dash import Dash, Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -25,46 +25,6 @@ from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
-
-
-def wait_for_storage(
-    dash_duo,
-    storage_key: str,
-    storage_type: str = "local",
-    timeout: float = 5.0,
-) -> str | None:
-    """
-    Wait for a value to appear in browser storage.
-
-    Uses explicit WebDriverWait instead of time.sleep().
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash_duo test fixture.
-    storage_key : str
-        The key to check in storage.
-    storage_type : str
-        Either 'local' or 'session'.
-    timeout : float
-        Maximum time to wait in seconds.
-
-    Returns
-    -------
-    str | None
-        The storage value if found, None otherwise.
-    """
-    storage_obj = "localStorage" if storage_type == "local" else "sessionStorage"
-    script = f"return {storage_obj}.getItem('{storage_key}')"
-
-    def storage_has_value(driver):
-        return driver.execute_script(script) is not None
-
-    try:
-        WebDriverWait(dash_duo.driver, timeout).until(storage_has_value)
-        return dash_duo.driver.execute_script(script)
-    except WebDriverException:
-        return None
 
 
 def test_prism_initializes_without_persistence(dash_duo):
@@ -110,8 +70,15 @@ def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
     dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(dash_duo, 2)
 
-    assert wait_for_storage(dash_duo, STORAGE_KEY, "local", timeout=2.0) is None
-    assert wait_for_storage(dash_duo, STORAGE_KEY, "session", timeout=0.5) is None
+    # Nothing may reach either storage.
+    with pytest.raises(TimeoutException):
+        WebDriverWait(dash_duo.driver, 2.0).until(
+            lambda driver: driver.execute_script(
+                "return localStorage.getItem(arguments[0]) !== null"
+                " || sessionStorage.getItem(arguments[0]) !== null;",
+                STORAGE_KEY,
+            )
+        )
 
 
 def _stored_tab_count(dash_duo) -> int | None:

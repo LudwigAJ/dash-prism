@@ -91,13 +91,7 @@ def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
 
     tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None, "Tab ID should not be None"
-    assert testutils.trigger_rename_mode(duo, tab_id), "Should be able to trigger rename mode"
-
-    rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
-    WebDriverWait(duo.driver, 5).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
-        message="Rename input should appear after double-click",
-    )
+    rename_input_selector = testutils.trigger_rename_mode(duo, tab_id)
 
     assert duo.find_element(rename_input_selector).accessible_name == "Tab name"
 
@@ -110,16 +104,7 @@ def test_rename_via_double_click(prism_app_with_layouts):
     tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None, "Tab ID should not be None"
 
-    # Double-click the tab's inner trigger (button) to enter rename mode
-    result = testutils.trigger_rename_mode(duo, tab_id)
-    assert result, "Should be able to trigger rename mode"
-
-    # Wait for rename input (allow time for React state + render cycle)
-    rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
-    WebDriverWait(duo.driver, 5).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
-        message="Rename input should appear after double-click",
-    )
+    rename_input_selector = testutils.trigger_rename_mode(duo, tab_id)
 
     # Set new name using React-compatible input setter
     testutils.set_input_value_react(duo, rename_input_selector, "Renamed Tab")

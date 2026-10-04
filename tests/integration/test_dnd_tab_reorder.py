@@ -46,8 +46,7 @@ class TestTabReorder:
         testutils.create_tabs_for_dnd_test(duo, 3)
         initial_order = testutils.get_tab_order_in_panel(duo, 0)
 
-        result = testutils.drag_tab_to_position(duo, source_idx, target_idx)
-        assert result, "Drag operation should complete"
+        testutils.drag_tab_to_position(duo, source_idx, target_idx)
 
         new_order = testutils.get_tab_order_in_panel(duo, 0)
 
@@ -67,8 +66,7 @@ class TestTabReorder:
 
         initial_order = testutils.get_tab_order_in_panel(duo, 0)
 
-        result = testutils.drag_tab_to_position(duo, 0, 1)
-        assert result, "Drag operation should complete"
+        testutils.drag_tab_to_position(duo, 0, 1)
 
         new_order = testutils.get_tab_order_in_panel(duo, 0)
         assert len(new_order) == 2, "Still 2 tabs"

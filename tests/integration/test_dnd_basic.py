@@ -15,6 +15,7 @@ Best Practices Applied (per DASH_TESTING_GUIDELINES.md):
 from __future__ import annotations
 
 import pytest
+from selenium.common.exceptions import TimeoutException
 
 from tests.integration import testutils
 
@@ -39,8 +40,8 @@ class TestDropZoneBehavior:
         # Even during drag attempt, no drop zones
         try:
             testutils.start_drag_without_drop(duo, 0)
-            zones_appeared = testutils.wait_for_drop_zones_visible(duo, timeout=2.0)
-            assert not zones_appeared, "Drop zones should not appear in single-tab mode"
+            with pytest.raises(TimeoutException):
+                testutils.wait_for_drop_zones_visible(duo, timeout=2.0)
         finally:
             testutils.cancel_drag_with_escape(duo)
 
@@ -58,9 +59,7 @@ class TestDropZoneBehavior:
 
         try:
             testutils.start_drag_without_drop(duo, 0)
-            assert testutils.wait_for_drop_zones_visible(
-                duo, timeout=5.0
-            ), "Drop zones should appear"
+            testutils.wait_for_drop_zones_visible(duo)
         finally:
             testutils.cancel_drag_with_escape(duo)
 
@@ -83,6 +82,7 @@ class TestDragCancellation:
 
         try:
             testutils.start_drag_without_drop(duo, 0)
+            testutils.wait_for_drop_zones_visible(duo)
         finally:
             testutils.cancel_drag_with_escape(duo)
 
