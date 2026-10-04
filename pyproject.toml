@@ -108,6 +108,14 @@ markers = [
     "integration: marks tests as integration tests",
     "allow_console_errors(*texts): accept the browser console errors that hold one of the texts",
 ]
+filterwarnings = [
+    # dash[testing] caps selenium at 4.2.0, and that selenium needs urllib3 1.26. Selenium
+    # calls HTTPResponse.getheader(), which urllib3 1.26 deprecates, for each WebDriver
+    # command, so the warning came thousands of times in each run. The filter names no
+    # module, because pytest.warns passes on a warning that it does not match with the
+    # module "warnings", not the module of selenium.
+    'ignore:HTTPResponse\.getheader\(\) is deprecated:DeprecationWarning',
+]
 
 [tool.black]
 line-length = 100
