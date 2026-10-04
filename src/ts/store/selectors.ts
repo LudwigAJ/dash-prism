@@ -87,6 +87,13 @@ export const selectPanelCount = createSelector(
   (leafPanels) => leafPanels.length
 );
 
+/** True while the workspace has one tab in one panel, so no drag-and-drop operation can apply. */
+export const selectIsSingleTabMode = createSelector(
+  selectTabCount,
+  selectPanelCount,
+  (tabCount, panelCount) => tabCount === 1 && panelCount === 1
+);
+
 // Note: selectCanUndo is defined above in Redux-Undo History Selectors
 // It uses state.workspace.past.length > 0 (redux-undo approach)
 

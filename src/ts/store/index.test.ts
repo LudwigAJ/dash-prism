@@ -29,9 +29,11 @@ import {
   requestLayoutSelection,
   requestSearchFocus,
   startRenameTab,
-  splitPanel,
   selectLayoutSelectionRequest,
   selectSearchFocusPanelId,
+  selectIsSingleTabMode,
+  splitPanel,
+  canAddPanel,
 } from './index';
 import type { WorkspaceState } from './types';
 import { MAX_LEAF_PANELS } from '@constants/panels';
@@ -580,6 +582,28 @@ describe('createPrismStore', () => {
     });
   });
 
+  describe('maxPanels read through a getter', () => {
+    it('applies a limit changed after the store was created', async () => {
+      let limit = 1;
+      const created = createStore({ maxPanels: () => limit });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      const tabId = present(created).tabs[1].id;
+
+      const rejected = await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId })
+      );
+      expect(splitPanel.rejected.match(rejected)).toBe(true);
+
+      limit = 2;
+      await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
+      expect(present(created).panelTabs[panelId]).not.toContain(tabId);
+
+      created.cleanup();
+    });
+  });
+
   describe('splitPanel in the undo history', () => {
     it('records one entry for a split, none for a refused split, and undoes to the old panel', async () => {
       const created = createStore({ maxPanels: 2 });
@@ -653,6 +677,36 @@ describe('createPrismStore', () => {
       expect(present(created).panelTabs[firstPanelId]).toContain(tabC.id);
 
       created.cleanup();
+    });
+  });
+
+  describe('selectIsSingleTabMode', () => {
+    it('is true only for one tab in one panel', async () => {
+      const created = createStore();
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(true);
+
+      await created.store.dispatch(addTab({ panelId }));
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
+
+      const tabId = present(created).tabs[1].id;
+      await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
+
+      created.cleanup();
+    });
+  });
+
+  describe('canAddPanel', () => {
+    it('treats a limit below 1 as unlimited', () => {
+      expect(canAddPanel(5, 0)).toBe(true);
+      expect(canAddPanel(5, -1)).toBe(true);
+    });
+
+    it('allows a panel only below the limit', () => {
+      expect(canAddPanel(1, 2)).toBe(true);
+      expect(canAddPanel(2, 2)).toBe(false);
     });
   });
 

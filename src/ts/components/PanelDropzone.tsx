@@ -1,30 +1,25 @@
 import React from 'react';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
 import type { PanelId } from '@types';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
-import { getLeafPanelIds } from '@utils/panels';
+import { useAppSelector, selectIsSingleTabMode, selectPanelCount, canAddPanel } from '@store';
 
-type PanelDropzoneProps = {
+interface PanelDropzoneProps {
   panelId: PanelId;
   children: React.ReactNode;
   /** When true, disable all edge dropzones (no splits allowed) */
   isPinned?: boolean;
-};
+}
 
 export function PanelDropzone({ panelId, children, isPinned = false }: PanelDropzoneProps) {
   const { active } = useDndContext();
-  const { state } = usePrism();
   const { maxPanels } = useConfig();
+  const isSingleTabMode = useAppSelector(selectIsSingleTabMode);
+  const panelCount = useAppSelector(selectPanelCount);
   const isActive = !!active;
 
-  // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
-  const leafPanelIds = getLeafPanelIds(state.panel);
-  const tabCount = state.tabs?.length ?? 0;
-  const isSingleTabMode = tabCount === 1 && leafPanelIds.length === 1;
-
   // Edge zones split the panel, so they are off once the maxPanels limit is reached
-  const isMaxPanelsReached = maxPanels >= 1 && leafPanelIds.length >= maxPanels;
+  const isMaxPanelsReached = !canAddPanel(panelCount, maxPanels);
 
   // Disable dropzones entirely for pinned panels, single-tab mode, or at the panel limit
   const dropzonesEnabled = isActive && !isPinned && !isSingleTabMode && !isMaxPanelsReached;
