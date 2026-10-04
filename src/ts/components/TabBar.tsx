@@ -572,16 +572,18 @@ export const TabBar = memo(function TabBar({
     }
   }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached, maxPanels]);
 
-  // Listen for keyboard-triggered rename via renamingTabId
+  // The rename request in the store has one consumer: the TabBar of the panel that holds the
+  // tab. That TabBar starts the rename and then clears the request. The TabBars of other panels
+  // ignore it and must not clear it, or the request could vanish before the owner reads it.
   useEffect(() => {
     if (!renamingTabId) return;
 
-    // Only handle if the tab belongs to this panel
     const tab = tabs.find((t) => t.id === renamingTabId);
-    if (tab && !tab.locked && !isPinned) {
+    if (!tab) return;
+
+    if (!tab.locked && !isPinned) {
       startRename(tab);
     }
-    // Clear the rename trigger after handling
     dispatch(clearRenameTab());
   }, [renamingTabId, tabs, isPinned, startRename, dispatch]);
 
