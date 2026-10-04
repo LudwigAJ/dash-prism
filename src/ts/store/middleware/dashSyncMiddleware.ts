@@ -160,9 +160,9 @@ export const validationMiddleware: Middleware<object, RootState> =
     const isRehydrate = action.type === REHYDRATE;
     if (process.env.NODE_ENV === 'production' && !isRehydrate) return result;
 
-    const validation = validateWorkspace(store.getState().workspace.present);
-    if (!validation.ok) {
-      logger.validation(validation.errors);
+    const errors = validateWorkspace(store.getState().workspace.present);
+    if (errors.length > 0) {
+      logger.validation(errors);
       if (isRehydrate) {
         store.dispatch(resetWorkspace());
       }
