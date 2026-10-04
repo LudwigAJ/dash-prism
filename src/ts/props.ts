@@ -1,15 +1,5 @@
-/**
- * Every Dash components are given these props.
- * Use with your own props:
- * ```
- * type Props = {
- *     my_prop: string;
- * } & DashComponentProps;
- * ```
- * Recommended to use `type` instead of `interface` so you can define the
- * order of props with types concatenation.
- */
-export type DashComponentProps = {
+/** Holds the props that Dash gives to every component. */
+export interface DashComponentProps {
   /**
    * Unique ID to identify this component in Dash callbacks.
    */
@@ -18,4 +8,4 @@ export type DashComponentProps = {
    * Updates props to trigger callbacks.
    */
   setProps: (props: Record<string, unknown>) => void;
-};
+}
