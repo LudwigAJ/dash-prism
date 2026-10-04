@@ -55,7 +55,6 @@ def test_share_links_enabled_by_default(dash_duo):
     # A share hash opens the layout in a new tab
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Shared"))
     testutils.wait_for_tab_count(duo, 2, timeout=10)
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_links_disabled(dash_duo):
@@ -73,7 +72,6 @@ def test_share_links_disabled(dash_duo):
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
     # ...and left in the URL rather than consumed
     assert "#p:" in duo.driver.current_url
-    assert testutils.check_browser_errors(duo) == []
 
 
 def _load_with_hash(duo, share_hash: str) -> None:
@@ -97,7 +95,6 @@ def test_share_link_opens_on_a_cold_load(dash_duo):
     # A fresh workspace starts with one empty tab; the shared one is the second.
     testutils.wait_for_tab_count(duo, 2, timeout=10)
     assert "Shared" in duo.find_element(testutils.PRISM_ROOT).text
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
@@ -109,7 +106,6 @@ def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
         testutils.wait_for_tab_count(duo, 2, timeout=2.0)
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
     assert "#p:" in duo.driver.current_url
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
@@ -126,7 +122,6 @@ def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
     toast_text = " ".join(t.text for t in duo.find_elements(TOAST_SELECTOR))
     assert "Opened shared tab: Second" not in toast_text
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 2
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
@@ -138,4 +133,3 @@ def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
     duo.wait_for_contains_text(TOAST_SELECTOR, "is already open. Switching to it.", timeout=10)
 
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
-    assert testutils.check_browser_errors(duo) == []

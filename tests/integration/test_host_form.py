@@ -48,4 +48,3 @@ def test_prism_buttons_do_not_submit_the_form_around_them(dash_duo):
 
     assert dash_duo.driver.execute_script("return window.__submitted;") is False
     assert dash_duo.find_elements(testutils.PRISM_ROOT)
-    assert testutils.check_browser_errors(dash_duo) == []

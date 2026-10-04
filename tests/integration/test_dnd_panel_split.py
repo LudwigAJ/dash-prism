@@ -57,9 +57,6 @@ class TestPanelSplit:
         assert len(testutils.get_panels(duo)) == 2, "Should have 2 panels after split"
         assert len(testutils.get_tabs(duo)) == 3, "Should still have 3 tabs total"
 
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
-
     def test_split_moves_only_dragged_tab(self, prism_app_with_layouts):
         """
         Test that only the dragged tab moves to the new panel.
@@ -87,9 +84,6 @@ class TestPanelSplit:
         # One panel should have 1 tab, other should have 2
         tab_counts = sorted([len(panel0_tabs), len(panel1_tabs)])
         assert tab_counts == [1, 2], f"Expected [1, 2] distribution, got {tab_counts}"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
 
     def test_split_preserves_original_panel_id(self, prism_app_with_layouts):
         """
@@ -132,6 +126,3 @@ class TestPanelSplit:
         # Verify state
         assert len(testutils.get_panels(duo)) >= 2, "Should have at least 2 panels"
         assert len(testutils.get_tabs(duo)) == 4, "Should still have 4 tabs"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"

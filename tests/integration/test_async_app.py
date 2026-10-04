@@ -83,9 +83,6 @@ def test_async_app_renders_initial_tab(dash_duo):
     tabs = testutils.get_tabs(duo)
     assert len(tabs) == 1, "Should start with 1 tab in async mode"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors in async mode: {errors}"
-
 
 def test_async_app_static_layout_works(dash_duo):
     """Test that static layouts work in an async Dash app."""
@@ -109,9 +106,6 @@ def test_async_app_static_layout_works(dash_duo):
         return any("Static Async Layout" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(tab_shows_name)
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors: {errors}"
 
 
 def test_async_callback_layout_renders(dash_duo):
@@ -137,9 +131,6 @@ def test_async_callback_layout_renders(dash_duo):
 
     WebDriverWait(duo.driver, 5).until(tab_shows_name)
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors: {errors}"
-
 
 def test_async_app_tab_creation(dash_duo):
     """Test that tab creation works normally in async mode."""
@@ -153,6 +144,3 @@ def test_async_app_tab_creation(dash_duo):
 
     tabs = testutils.get_tabs(duo)
     assert len(tabs) == 2, "Should have 2 tabs in async mode"
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors: {errors}"

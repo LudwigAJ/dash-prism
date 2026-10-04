@@ -80,5 +80,3 @@ def test_changing_max_tabs_keeps_workspace_and_undo_history(dash_duo):
     testutils.wait_for_tab_count(duo, 2)
     duo.find_element(UNDO_BUTTON).click()
     testutils.wait_for_tab_count(duo, 1)
-
-    assert testutils.check_browser_errors(duo) == []

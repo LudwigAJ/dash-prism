@@ -86,7 +86,3 @@ def test_prism_action_renders_text_label(dash_duo):
     action_button = dash_duo.find_element("[data-testid='prism-action-label-action']")
     assert action_button is not None, "Action should render"
     assert "Label Action" in action_button.text, "Action should have correct label"
-
-    # Check no browser errors
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"

@@ -42,10 +42,6 @@ def test_create_new_tab(prism_app_with_layouts):
     tabs = testutils.get_tabs(duo)
     assert len(tabs) == 2, "Should have 2 tabs after clicking add"
 
-    # Best practice: check for browser errors
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
-
 
 def test_add_tab_button_has_an_accessible_name(prism_app_with_layouts):
     """The add button shows only an icon, so its name must come from aria-label."""
@@ -202,7 +198,3 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
     WebDriverWait(duo.driver, 3).until(
         tabs_still_at_3, message="Both new tabs should persist after Redux sync cycle"
     )
-
-    # Verify no browser errors occurred
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"

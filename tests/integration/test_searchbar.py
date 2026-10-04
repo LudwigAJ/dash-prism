@@ -49,10 +49,6 @@ def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
     searchbar = duo.find_element(".prism-searchbar")
     assert searchbar is not None, "SearchBar should render on initial load"
 
-    # No browser errors
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No console errors on initial load: {errors}"
-
 
 def test_search_input_has_an_accessible_name(prism_app_with_layouts):
     """The search input is a combobox without a visible label, so cmdk must name it."""
@@ -87,9 +83,6 @@ def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
     assert search_input is not None, "Search input should appear"
     assert search_input.is_displayed(), "Search input should be visible"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Mode transition should not cause errors: {errors}"
-
 
 def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
     """
@@ -116,10 +109,6 @@ def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
 
     # Wait for search input to disappear
     time.sleep(_UI_SETTLE_MS)
-
-    # Verify no console errors
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Escape key should not cause errors: {errors}"
 
 
 def test_searchbar_typing_updates_query(prism_app_with_layouts):
@@ -153,10 +142,6 @@ def test_searchbar_typing_updates_query(prism_app_with_layouts):
         message="Search input should contain 'test' after typing",
     )
 
-    # Verify no errors
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Typing should not cause errors: {errors}"
-
 
 def test_searchbar_independent_per_tab(prism_app_with_layouts):
     """
@@ -188,10 +173,6 @@ def test_searchbar_independent_per_tab(prism_app_with_layouts):
     tabs = testutils.get_tabs(duo)  # Re-fetch to avoid stale elements
     tabs[1].click()
     duo.wait_for_element(".prism-searchbar", timeout=3)
-
-    # No errors during tab switching
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Tab switching should not cause errors: {errors}"
 
 
 def test_searchbar_rapid_interactions(prism_app_with_layouts):
@@ -225,10 +206,6 @@ def test_searchbar_rapid_interactions(prism_app_with_layouts):
 
         time.sleep(0.1)
 
-    # Final state should be stable
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Rapid interactions should not cause errors: {errors}"
-
 
 def test_searchbar_handles_multiple_open_close_cycles(prism_app_with_layouts):
     """
@@ -260,10 +237,6 @@ def test_searchbar_handles_multiple_open_close_cycles(prism_app_with_layouts):
             pass
 
         time.sleep(0.2)
-
-    # After all cycles, verify no errors accumulated
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Multiple cycles should not cause errors: {errors}"
 
 
 def test_searchbar_focus_management(prism_app_with_layouts):
@@ -298,9 +271,6 @@ def test_searchbar_focus_management(prism_app_with_layouts):
         ),
         message="Input should contain 'focused' after typing",
     )
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Focus management should not cause errors: {errors}"
 
 
 def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
@@ -345,9 +315,6 @@ def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
         message="Search input should contain 'test' after tab operations",
     )
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"SearchBar should work after tab operations: {errors}"
-
 
 def test_searchbar_survives_page_resize(prism_app_with_layouts):
     """
@@ -378,9 +345,6 @@ def test_searchbar_survives_page_resize(prism_app_with_layouts):
 
     # SearchBar should still be present and functional
     duo.wait_for_element(".prism-searchbar", timeout=3)
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Window resize should not cause errors: {errors}"
 
 
 # =============================================================================
@@ -424,7 +388,6 @@ def test_click_outside_closes_dropdown_when_focus_is_inside_it(prism_app_with_la
         lambda d: not _dropdown_open(duo),
         message="dropdown should close on click outside (A-4 click-outside listener)",
     )
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_mousedown_outside_closes_dropdown_without_blur(prism_app_with_layouts):
@@ -442,4 +405,3 @@ def test_mousedown_outside_closes_dropdown_without_blur(prism_app_with_layouts):
         lambda d: not _dropdown_open(duo),
         message="dropdown should close on mousedown outside (A-4 click-outside listener)",
     )
-    assert testutils.check_browser_errors(duo) == []

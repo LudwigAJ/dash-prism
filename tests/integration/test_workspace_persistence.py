@@ -75,10 +75,6 @@ def test_prism_initializes_without_persistence(dash_duo):
     tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 1, "Should have 1 initial tab"
 
-    # No browser errors
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_prism_initializes_with_localStorage_persistence(dash_duo):
     """Test that Prism initializes with localStorage persistence enabled."""
@@ -87,10 +83,6 @@ def test_prism_initializes_with_localStorage_persistence(dash_duo):
     # Should have 1 initial tab
     tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 1, "Should have 1 initial tab"
-
-    # No browser errors
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
@@ -120,7 +112,6 @@ def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
 
     assert wait_for_storage(dash_duo, STORAGE_KEY, "local", timeout=2.0) is None
     assert wait_for_storage(dash_duo, STORAGE_KEY, "session", timeout=0.5) is None
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def _stored_tab_count(dash_duo) -> int | None:
@@ -148,7 +139,6 @@ def test_persistence_true_with_local_type_writes_workspace(dash_duo):
     # The second tab reaches storage a couple of timer ticks after the reducer
     # ran, so wait for the count rather than reading it once.
     _wait_for_stored_tab_count(dash_duo, 2)
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_undo_is_persisted_across_reload(dash_duo):
@@ -168,7 +158,6 @@ def test_undo_is_persisted_across_reload(dash_duo):
     dash_duo.driver.refresh()
     dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     testutils.wait_for_tab_count(dash_duo, 1)
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 # =============================================================================
@@ -216,9 +205,6 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
 
     # readWorkspace should now reflect 2 tabs (with debounce delay)
     dash_duo.wait_for_text_to_equal("#workspace-output", "tabs:2", timeout=10)
-
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_updateWorkspace_modifies_state(dash_duo):
@@ -312,9 +298,6 @@ def test_updateWorkspace_modifies_state(dash_duo):
         f"but got '{tabs[0].text}'"
     )
 
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
     """
@@ -399,6 +382,3 @@ def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
 
     tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 3, "Should have 3 tabs after load"
-
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"

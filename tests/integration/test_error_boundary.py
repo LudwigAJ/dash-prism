@@ -14,7 +14,11 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
 
-pytestmark = pytest.mark.integration
+# The child throws on purpose, and React and the boundary write the error to the console.
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.allow_console_errors("Something broke in this tab"),
+]
 
 # The boundary renders inside the Prism root, where the stylesheet applies. The child
 # throws until the test clears window.__prismThrow, so "Try again" can succeed.

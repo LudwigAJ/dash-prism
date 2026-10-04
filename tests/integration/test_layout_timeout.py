@@ -18,7 +18,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 import dash_prism
 from tests.integration import testutils
 
-pytestmark = pytest.mark.integration
+# PrismContent writes a "timed out" line to the console when the layout is slow.
+pytestmark = [pytest.mark.integration, pytest.mark.allow_console_errors("timed out")]
 
 SLOW_SECONDS = 4.0
 TIMEOUT_SECONDS = 1
@@ -57,15 +58,6 @@ def _root_text(duo) -> str:
     return duo.find_element(testutils.PRISM_ROOT).text
 
 
-def _unexpected_browser_errors(duo) -> list:
-    """Console errors other than PrismContent's own 'timed out' log line."""
-    return [
-        e
-        for e in testutils.check_browser_errors(duo)
-        if "timed out" not in str(e.get("message", ""))
-    ]
-
-
 def test_server_enforces_layout_timeout_for_async_layouts_in_sync_app(dash_duo):
     """The sync render callback passes layoutTimeout to asyncio.wait_for."""
     duo = _start_app(dash_duo)
@@ -79,7 +71,6 @@ def test_server_enforces_layout_timeout_for_async_layouts_in_sync_app(dash_duo):
     )
     assert time.monotonic() - started < SLOW_SECONDS
     assert duo.find_elements("[id*='slow-async-done']") == []
-    assert _unexpected_browser_errors(duo) == []
 
 
 def test_client_shows_timeout_card_after_layout_timeout_seconds(dash_duo):
@@ -95,4 +86,3 @@ def test_client_shows_timeout_card_after_layout_timeout_seconds(dash_duo):
     # Once the callback finishes the real content replaces the card.
     duo.wait_for_element("[id*='slow-sync-done']", timeout=SLOW_SECONDS + 5)
     assert "Layout Loading Timeout" not in _root_text(duo)
-    assert _unexpected_browser_errors(duo) == []

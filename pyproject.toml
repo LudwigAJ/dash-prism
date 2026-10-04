@@ -106,6 +106,7 @@ addopts = [
 ]
 markers = [
     "integration: marks tests as integration tests",
+    "allow_console_errors(*texts): accept the browser console errors that hold one of the texts",
 ]
 
 [tool.black]

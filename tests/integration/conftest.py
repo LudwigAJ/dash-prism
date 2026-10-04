@@ -63,6 +63,27 @@ def clear_registry_integration():
     dash_prism.clear_registry()
 
 
+@pytest.fixture(autouse=True)
+def assert_no_browser_errors(request, dash_duo):
+    """
+    Fail each test that leaves an error in the browser console.
+
+    The check runs after the test, so a failure shows as a pytest ERROR in the
+    teardown, not as a test failure. A test marked with
+    ``@pytest.mark.allow_console_errors(text, ...)`` accepts the errors that hold one
+    of the texts.
+    """
+    yield
+    marker = request.node.get_closest_marker("allow_console_errors")
+    allowed = marker.args if marker else ()
+    errors = [
+        error
+        for error in testutils.check_browser_errors(dash_duo)
+        if not any(text in error["message"] for text in allowed)
+    ]
+    assert errors == [], f"The browser console holds errors: {errors}"
+
+
 @pytest.fixture
 def prism_app_with_layouts(dash_duo):
     """

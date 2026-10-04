@@ -44,9 +44,6 @@ class TestDropZoneBehavior:
         finally:
             testutils.cancel_drag_with_escape(duo)
 
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
-
     def test_multi_tab_drop_zones_appear(self, prism_app_with_layouts):
         """
         Test that drop zones appear during drag with 2+ tabs.
@@ -70,9 +67,6 @@ class TestDropZoneBehavior:
         # Drop zones disappear after cancel
         testutils.wait_for_element_invisible(duo, testutils.DROP_ZONE_LEFT, timeout=5.0)
         assert not testutils.are_drop_zones_present(duo), "Drop zones should disappear"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 class TestDragCancellation:
@@ -98,6 +92,3 @@ class TestDragCancellation:
         final_order = testutils.get_tab_order_in_panel(duo, 0)
         assert final_order == initial_order, "Order should be unchanged after cancel"
         assert len(testutils.get_panels(duo)) == 1, "Panel count unchanged"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"

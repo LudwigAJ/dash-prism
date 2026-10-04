@@ -23,9 +23,6 @@ def test_split_button_visible_on_active_panel(prism_app_with_layouts):
     buttons = duo.driver.find_elements(By.CSS_SELECTOR, testutils.SPLIT_PANEL_BUTTON)
     assert len(buttons) == 1, "Split button should be visible on the active panel"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
-
 
 def test_split_button_has_an_accessible_name(prism_app_with_layouts):
     """The split button shows only an icon, so its name must come from aria-label."""
@@ -54,9 +51,6 @@ def test_split_button_creates_new_panel(prism_app_with_layouts):
     assert len(testutils.get_panels(duo)) == 2, "Should have 2 panels after split"
     assert len(testutils.get_tabs(duo)) == 2, "Should have 2 tabs after split"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
-
 
 def test_split_button_hidden_when_not_active(prism_app_with_layouts):
     """After split, only the active panel should show the split button."""
@@ -73,9 +67,6 @@ def test_split_button_hidden_when_not_active(prism_app_with_layouts):
     buttons = duo.driver.find_elements(By.CSS_SELECTOR, testutils.SPLIT_PANEL_BUTTON)
     assert len(buttons) == 1, "Only the active panel should show the split button"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
-
 
 def test_double_click_empty_space_still_works(prism_app_with_layouts):
     """Non-regression: double-clicking the empty tab bar space still adds a tab."""
@@ -91,6 +82,3 @@ def test_double_click_empty_space_still_works(prism_app_with_layouts):
 
     testutils.wait_for_tab_count(duo, 2)
     assert len(testutils.get_tabs(duo)) == 2, "Double-click on empty space should add a tab"
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"

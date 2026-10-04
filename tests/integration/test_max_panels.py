@@ -20,7 +20,6 @@ def _start(dash_duo, max_panels: int):
 def test_max_panels_one_disables_splitting(dash_duo):
     duo = _start(dash_duo, 1)
     assert duo.find_elements(testutils.SPLIT_PANEL_BUTTON) == []
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_split_button_disappears_at_the_limit(dash_duo):
@@ -31,4 +30,3 @@ def test_split_button_disappears_at_the_limit(dash_duo):
 
     # Both panels are at the limit now: no split button anywhere
     assert duo.find_elements(testutils.SPLIT_PANEL_BUTTON) == []
-    assert testutils.check_browser_errors(duo) == []

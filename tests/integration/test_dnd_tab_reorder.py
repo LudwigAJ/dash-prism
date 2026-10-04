@@ -56,9 +56,6 @@ class TestTabReorder:
         assert len(testutils.get_tabs(duo)) == 3, "Still 3 tabs"
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
-
     def test_reorder_with_two_tabs(self, prism_app_with_layouts):
         """
         Test reordering with exactly 2 tabs (minimum for DnD).
@@ -76,9 +73,6 @@ class TestTabReorder:
         new_order = testutils.get_tab_order_in_panel(duo, 0)
         assert len(new_order) == 2, "Still 2 tabs"
         assert set(new_order) == set(initial_order), "Same tabs exist"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"
 
     def test_multiple_sequential_reorders(self, prism_app_with_layouts):
         """
@@ -98,6 +92,3 @@ class TestTabReorder:
 
         assert set(final_order) == initial_tabs, "All tabs preserved"
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
-
-        errors = testutils.check_browser_errors(duo)
-        assert len(errors) == 0, f"No browser errors expected: {errors}"

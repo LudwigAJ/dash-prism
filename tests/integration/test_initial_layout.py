@@ -69,9 +69,6 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     # like {"type":"home-content","index":"<tabId>"}, so use attribute-contains selector
     dash_duo.wait_for_element("[id*='home-content']", timeout=10)
 
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_initial_layout_ignored_with_persistence(dash_duo):
     """Test that initialLayout does NOT override a persisted workspace.
@@ -118,9 +115,6 @@ def test_initial_layout_without_prop_shows_new_tab(dash_duo):
     assert (
         "New Tab" in tabs[0].text
     ), f"Without initialLayout, tab should be 'New Tab', got '{tabs[0].text}'"
-
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_initial_layout_new_tabs_still_empty(dash_duo):

@@ -55,9 +55,6 @@ def test_select_layout_from_search(prism_app_with_layouts):
     # Verify the layout content was rendered
     duo.wait_for_element("[id*='static-content']", timeout=10)
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_select_layout_with_callback_content(prism_app_with_layouts):
     """Test selecting the callback layout renders the callback content."""
@@ -91,9 +88,6 @@ def test_select_layout_with_callback_content(prism_app_with_layouts):
     # Verify the callback layout content is rendered
     duo.wait_for_element("[id*='test-button']", timeout=10)
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_search_filters_layouts(prism_app_with_layouts):
     """Test that typing in search bar filters the layout list."""
@@ -117,9 +111,6 @@ def test_search_filters_layouts(prism_app_with_layouts):
     assert (
         len(callback_items) == 0
     ), "Callback layout should be filtered out when searching 'Static'"
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
@@ -151,9 +142,6 @@ def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
 
     WebDriverWait(duo.driver, 10).until(tab_renamed, message="Tab should show layout name")
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 DISPLAY_BAR = "[data-testid='prism-searchbar-display']"
 
@@ -181,7 +169,6 @@ def test_display_bar_opens_search_from_the_keyboard(prism_app_with_layouts, key)
 
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     assert duo.find_element(testutils.SEARCHBAR_INPUT).get_attribute("value") == ""
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_typing_on_the_display_bar_starts_a_search(prism_app_with_layouts):
@@ -193,4 +180,3 @@ def test_typing_on_the_display_bar_starts_a_search(prism_app_with_layouts):
 
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     assert duo.find_element(testutils.SEARCHBAR_INPUT).get_attribute("value") == "c"
-    assert testutils.check_browser_errors(duo) == []

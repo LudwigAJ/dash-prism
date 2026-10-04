@@ -138,4 +138,3 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
         lambda _: _stored_session_id(duo) == expected,
         message="expected the derived serverSessionId to be persisted",
     )
-    assert testutils.check_browser_errors(duo) == []

@@ -64,7 +64,6 @@ def test_invalid_input_is_flagged_inline_and_valid_input_advances(dash_duo):
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_empty_input_uses_the_callback_default(dash_duo):
@@ -77,7 +76,6 @@ def test_empty_input_uses_the_callback_default(dash_duo):
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=1 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_parameters_are_validated(dash_duo):
@@ -125,7 +123,6 @@ def test_blank_is_accepted_for_an_optional_parameter_with_choices(dash_duo):
     duo.wait_for_element("[id*='optional-content']", timeout=10)
     assert duo.find_element("[id*='optional-content']").text == "ticker=None"
     assert "Invalid parameters" not in duo.find_element("body").text
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
@@ -143,7 +140,6 @@ def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
 
     duo.wait_for_element("[id*='optional-content']", timeout=10)
     assert duo.find_element("[id*='optional-content']").text == "ticker='FRTR'"
-    assert testutils.check_browser_errors(duo) == []
 
 
 def _start_items(dash_duo):
@@ -172,7 +168,6 @@ def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
 
     duo.wait_for_element("[id*='items-content']", timeout=10)
     assert duo.find_element("[id*='items-content']").text == "tags=['a', 'b']"
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
@@ -274,7 +269,6 @@ def test_arrow_keys_move_the_active_choice_and_enter_selects_it(dash_duo):
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert testutils.check_browser_errors(duo) == []
 
 
 def test_arrow_up_starts_at_the_last_choice(dash_duo):

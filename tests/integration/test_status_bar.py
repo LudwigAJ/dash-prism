@@ -42,7 +42,6 @@ def test_status_bar_hidden(dash_duo):
     # The workspace itself keeps working
     dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(dash_duo, 2)
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
@@ -75,7 +74,6 @@ def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, ke
         message="The popover should open when Enter or Space presses the segment",
     )
     assert "Tab ID" in dash_duo.find_element(POPOVER).text
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
@@ -118,7 +116,6 @@ def test_status_bar_shown_by_default(dash_duo):
     _start(dash_duo)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_selects_segments(dash_duo):
@@ -132,7 +129,6 @@ def test_status_bar_items_selects_segments(dash_duo):
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
     assert _segment_order(dash_duo) == ["count", "help"]
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_follows_the_listed_order(dash_duo):
@@ -141,7 +137,6 @@ def test_status_bar_items_follows_the_listed_order(dash_duo):
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     assert _segment_order(dash_duo) == ["help", "count"]
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
@@ -150,7 +145,6 @@ def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
     dash_duo.wait_for_element("[data-testid='prism-statusbar-updated']", timeout=10)
 
     assert _segment_order(dash_duo) == ["count", "reset", "updated"]
-    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_empty_leaves_only_actions(dash_duo):
@@ -159,4 +153,3 @@ def test_status_bar_items_empty_leaves_only_actions(dash_duo):
 
     for hidden in ("reset", "help", "undo", "mode", "panels", "tab", "count", "updated"):
         assert dash_duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
-    assert testutils.check_browser_errors(dash_duo) == []

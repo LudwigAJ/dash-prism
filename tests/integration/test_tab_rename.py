@@ -83,9 +83,6 @@ def test_rename_via_context_menu(prism_app_with_layouts):
         tab_has_new_name, message="Tab should be renamed to 'My Custom Tab'"
     )
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
     """The rename input has no visible label, so its name must come from aria-label."""
@@ -142,9 +139,6 @@ def test_rename_via_double_click(prism_app_with_layouts):
         tab_has_new_name, message="Tab should be renamed to 'Renamed Tab'"
     )
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_rename_cancel_with_escape(prism_app_with_layouts):
     """Test that pressing Escape cancels a rename operation."""
@@ -175,9 +169,6 @@ def test_rename_cancel_with_escape(prism_app_with_layouts):
     tab_text = testutils.get_tabs(duo)[0].text
     assert tab_text == original_name, f"Escape should keep '{original_name}', got '{tab_text}'"
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_rename_shortcut_starts_in_the_panel_that_owns_the_tab(prism_app_with_layouts):
     """Ctrl/Cmd+R renames the active tab of whichever panel is active.
@@ -206,6 +197,3 @@ def test_rename_shortcut_starts_in_the_panel_that_owns_the_tab(prism_app_with_la
 
         duo.find_element(rename_input_selector).send_keys(Keys.ESCAPE)
         testutils.wait_for_element_invisible(duo, rename_input_selector, timeout=3)
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"

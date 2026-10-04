@@ -97,9 +97,6 @@ def test_callback_layout_renders_content(dash_duo):
         tab_shows_greeting, message="Tab should show 'Greeting' layout name"
     )
 
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_static_and_callback_layouts_coexist(dash_duo):
     """Test that static and callback layouts can both be used in the same app."""
@@ -125,6 +122,3 @@ def test_static_and_callback_layouts_coexist(dash_duo):
         return any("Static Page" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(tab_shows_static)
-
-    errors = testutils.check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"

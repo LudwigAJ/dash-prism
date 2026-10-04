@@ -81,10 +81,6 @@ def test_static_layout_integration(dash_duo):
     tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 2, "Should have 2 tabs after clicking add"
 
-    # Check for browser console errors
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
-
 
 def test_callable_layout_integration(dash_duo):
     """Test that Prism works correctly with callable app.layout (supported for compatibility)."""
@@ -147,7 +143,3 @@ def test_callable_layout_integration(dash_duo):
     # Verify we now have 2 tabs
     tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 2, "Should have 2 tabs after clicking add"
-
-    # Check for browser console errors
-    errors = testutils.check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"Browser console should have no errors: {errors}"
