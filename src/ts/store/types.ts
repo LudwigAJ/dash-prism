@@ -28,7 +28,7 @@ export interface WorkspaceState extends Workspace {
  */
 export type SearchBarMode = 'hidden' | 'display' | 'search' | 'params' | 'options';
 
-export type UiState = {
+export interface UiState {
   searchBarModes: Record<PanelId, SearchBarMode>;
   // Command requests: `renamingTabId`, `layoutSelectionRequest` and `searchFocusPanelId`.
   // A producer sets the request. Only the component that owns the target consumes it, and it
@@ -51,12 +51,12 @@ export type UiState = {
    * REHYDRATE because nothing has subscribed to toasts yet at that point.
    */
   loadNotice: { closedTabs: number } | null;
-};
+}
 
 /**
  * Store configuration passed at runtime
  */
-export type StoreConfig = {
+export interface StoreConfig {
   componentId?: string;
   serverSessionId?: string;
   persistenceType: 'local' | 'session' | 'memory';
@@ -78,12 +78,12 @@ export type StoreConfig = {
    * inspect persisted data without a browser.
    */
   storage?: Storage;
-};
+}
 
 /**
  * Thunk extra argument - injected config available in async thunks
  */
-export type ThunkExtra = {
+export interface ThunkExtra {
   /** Live tab limit, read at dispatch time so prop changes apply immediately. */
   getMaxTabs: () => number;
   /** Live panel limit, read at dispatch time like the tab limit. */
@@ -91,4 +91,4 @@ export type ThunkExtra = {
   getRegisteredLayouts: () => RegisteredLayouts;
   /** Shows a toast in the Toaster of this Prism instance, and logs `logDetails` or the message. */
   notify: (level: 'info' | 'warning' | 'error', message: string, logDetails?: string) => void;
-};
+}

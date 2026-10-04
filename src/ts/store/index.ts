@@ -191,7 +191,7 @@ export function createPrismStore(config: StoreConfig) {
 /**
  * Root state type - manually defined to match redux-undo wrapped workspace
  */
-export type RootState = {
+export interface RootState {
   workspace: {
     past: WorkspaceState[];
     present: WorkspaceState;
@@ -201,7 +201,7 @@ export type RootState = {
     _persist?: PersistState;
   };
   ui: UiState;
-};
+}
 
 /**
  * App dispatch type with thunk support.
