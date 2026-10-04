@@ -75,11 +75,15 @@ export const TabItem = memo(function TabItem({
     disabled: isLocked || isPinned || isLoading || isEditing,
   });
 
+  // The close button and the rename input are next to the trigger, because a button cannot hold
+  // another control. So the wrapper, and not the trigger, dims an inactive tab, and the close
+  // button dims with it.
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: (isDragging ? 0.5 : 1) * (isActiveTab ? 1 : 0.5),
   };
+  const hasCloseButton = !isLocked && !isPinned;
 
   return (
     <ContextMenu>
@@ -91,7 +95,7 @@ export const TabItem = memo(function TabItem({
           data-testid={`prism-tab-${tab.id}`}
           className={cn(
             'tw:group/tab tw:relative tw:cursor-default tw:self-stretch',
-            isDragging && 'tw:z-50 tw:opacity-50',
+            isDragging && 'tw:z-50',
             isPinned && 'tw:flex tw:flex-1'
           )}
           {...listeners}
@@ -107,7 +111,7 @@ export const TabItem = memo(function TabItem({
               onStartRename(tab);
             }}
             className={cn(
-              'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none',
+              'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none tw:data-[state=inactive]:opacity-100',
               tabStyleVariants({ color: styleColor, theme }),
               isPinned && 'tw:flex-1',
               isDefaultStyle && 'prism-tab-default'
@@ -144,56 +148,56 @@ export const TabItem = memo(function TabItem({
                   </TooltipTrigger>
                   <TooltipContent>Tab is locked</TooltipContent>
                 </Tooltip>
-              ) : !isPinned ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Close ${tab.name} tab`}
-                      data-testid={`prism-tab-close-${tab.id}`}
-                      className={cn(
-                        'tw:group/close tw:flex tw:cursor-pointer tw:items-center tw:rounded-sm tw:p-0.5 tw:text-muted-foreground tw:transition-all',
-                        'tw:hover:bg-muted/70 tw:hover:text-foreground',
-                        isLoading || isActiveTab
-                          ? 'tw:opacity-100'
-                          : 'tw:opacity-0 tw:group-hover/tab:opacity-100'
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dispatch(removeTab({ tabId: tab.id }));
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          dispatch(removeTab({ tabId: tab.id }));
-                        }
-                      }}
-                    >
-                      {/* A loading tab shows a spinner, and an X on hover to cancel the load */}
-                      {isLoading ? (
-                        <>
-                          <Spinner size="sm" className="tw:shrink-0 tw:group-hover/close:hidden" />
-                          <X className="tw:hidden tw:size-[1.2em] tw:stroke-[2.5] tw:group-hover/close:block" />
-                        </>
-                      ) : (
-                        <X className="tw:size-[1.2em] tw:stroke-[2.5]" />
-                      )}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
-                </Tooltip>
+              ) : hasCloseButton ? (
+                // Keeps the room of the close button, which covers this spacer
+                <span className="tw:box-content tw:size-[1.2em] tw:p-0.5" />
               ) : isLoading ? (
                 <Spinner size="sm" className="tw:text-muted-foreground" />
               ) : null}
             </span>
-
-            {/* The input is outside the dimmed wrapper and covers the name */}
-            {isEditing && (
-              <TabRenameInput tab={tab} onCommit={onCommitRename} onCancel={onCancelRename} />
-            )}
           </TabsTrigger>
+
+          {hasCloseButton && (
+            <span className={cn('prism-tab-close', !isPanelActive && 'tw:opacity-65')}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Close ${tab.name} tab`}
+                    data-testid={`prism-tab-close-${tab.id}`}
+                    className={cn(
+                      'tw:group/close tw:flex tw:cursor-pointer tw:items-center tw:rounded-sm tw:p-0.5 tw:text-muted-foreground tw:transition-all',
+                      'tw:hover:bg-muted/70 tw:hover:text-foreground tw:focus-visible:opacity-100',
+                      isLoading || isActiveTab
+                        ? 'tw:opacity-100'
+                        : 'tw:opacity-0 tw:group-hover/tab:opacity-100'
+                    )}
+                    onClick={() => dispatch(removeTab({ tabId: tab.id }))}
+                    onKeyDown={(e) => {
+                      // Enter and Space click the button. The drag sensor on the wrapper must
+                      // not see them, because it starts a keyboard drag on these keys.
+                      if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+                    }}
+                  >
+                    {/* A loading tab shows a spinner, and an X on hover to cancel the load */}
+                    {isLoading ? (
+                      <>
+                        <Spinner size="sm" className="tw:shrink-0 tw:group-hover/close:hidden" />
+                        <X className="tw:hidden tw:size-[1.2em] tw:stroke-[2.5] tw:group-hover/close:block" />
+                      </>
+                    ) : (
+                      <X className="tw:size-[1.2em] tw:stroke-[2.5]" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{isLoading ? 'Cancel' : 'Close tab'}</TooltipContent>
+              </Tooltip>
+            </span>
+          )}
+
+          {isEditing && (
+            <TabRenameInput tab={tab} onCommit={onCommitRename} onCancel={onCancelRename} />
+          )}
         </div>
       </ContextMenuTrigger>
 
@@ -234,9 +238,6 @@ function TabRenameInput({ tab, onCommit, onCancel }: TabRenameInputProps) {
         if (e.key === 'Enter') onCommit(tab.id, name);
         if (e.key === 'Escape') onCancel();
       }}
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
       autoFocus
     />
   );

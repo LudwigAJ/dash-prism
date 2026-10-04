@@ -283,12 +283,22 @@
   height: 1em;
 }
 
-.prism-root [data-slot='tabs-trigger'] button {
-  padding: 0.15em;
-}
-
 .prism-root [data-slot='tabs-trigger'].prism-tab-default {
   border-color: var(--border);
+}
+
+/*
+ * The close button sits next to the trigger, because a button cannot hold a button. It covers the
+ * spacer at the end of the trigger, so it uses the font size and the right padding of the trigger.
+ */
+.prism-tab-close {
+  position: absolute;
+  top: 0;
+  right: 0.85em;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.85em;
 }
 
 /* =============================================================================
@@ -431,8 +441,15 @@
   border: 1px solid var(--ring);
   border-radius: 0.3em;
   padding: 0.15em 0.6em;
-  font-size: inherit;
+
+  /*
+   * The input sits next to the trigger and not in it, so it repeats the font of the trigger:
+   * text-sm and font-medium, with the font size of the tab bar.
+   */
   font-family: inherit;
+  font-size: 0.85em;
+  font-weight: 500;
+  line-height: calc(1.25 / 0.875);
   color: var(--foreground);
   outline: none;
   box-sizing: border-box;

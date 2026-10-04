@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
@@ -49,6 +50,41 @@ def test_close_tab(prism_app_with_layouts):
     duo.wait_for_element(f"[data-testid='prism-tab-close-{tab_id}']", timeout=2).click()
 
     testutils.wait_for_tab_count(duo, 1)
+
+
+def test_close_button_is_a_named_button_outside_the_tab(prism_app_with_layouts):
+    """The close button is a native button next to the tab trigger, not inside it.
+
+    A button inside the role=tab button is invalid nesting, and a screen reader
+    announces the two controls as one.
+    """
+    duo = prism_app_with_layouts
+    tab_id = testutils.get_tab_id(duo, 0)
+    close = duo.find_element(f"[data-testid='prism-tab-close-{tab_id}']")
+
+    assert close.tag_name == "button"
+    assert close.accessible_name == f"Close {testutils.get_tabs(duo)[0].text} tab"
+    nested = duo.driver.execute_script(
+        "return document.querySelectorAll("
+        "\"[role='tab'] button, [role='tab'] [role='button'], [role='tab'] input\").length;"
+    )
+    assert nested == 0, "A tab trigger must not hold another control"
+
+
+@pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE])
+def test_close_button_closes_the_tab_from_the_keyboard(prism_app_with_layouts, key):
+    """Tab moves from the tab to its close button, and Enter or Space closes the tab."""
+    duo = prism_app_with_layouts
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(duo, 2)
+    tab_id = testutils.get_tab_id(duo, 1)
+
+    duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']").click()
+    testutils.tab_to(duo, f"[data-testid='prism-tab-close-{tab_id}']", max_presses=3)
+    testutils.press_key(duo, key)
+
+    testutils.wait_for_tab_count(duo, 1)
+    assert testutils.get_tab_id(duo, 0) != tab_id
 
 
 def test_create_multiple_tabs(prism_app_with_layouts):
