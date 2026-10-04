@@ -23,11 +23,10 @@ export interface WorkspaceState extends Workspace {
   serverSessionId?: string;
 }
 
-/**
- * Ephemeral UI state - never persisted
- */
+/** Names the mode of the search bar of a panel. */
 export type SearchBarMode = 'hidden' | 'display' | 'search' | 'params' | 'options';
 
+/** Holds the ui state. The store never persists it, so a reload starts from initialUiState. */
 export interface UiState {
   searchBarModes: Record<PanelId, SearchBarMode>;
   // Command requests: `renamingTabId`, `layoutSelectionRequest` and `searchFocusPanelId`.
@@ -53,9 +52,7 @@ export interface UiState {
   loadNotice: { closedTabs: number } | null;
 }
 
-/**
- * Store configuration passed at runtime
- */
+/** Holds the settings that Prism passes to createPrismStore. */
 export interface StoreConfig {
   componentId?: string;
   serverSessionId?: string;
@@ -80,9 +77,7 @@ export interface StoreConfig {
   storage?: Storage;
 }
 
-/**
- * Thunk extra argument - injected config available in async thunks
- */
+/** Holds the extra argument of the thunks: the live limits, the layouts and the toast channel. */
 export interface ThunkExtra {
   /** Live tab limit, read at dispatch time so prop changes apply immediately. */
   getMaxTabs: () => number;

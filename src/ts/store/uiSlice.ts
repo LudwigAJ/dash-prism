@@ -4,6 +4,7 @@ import type { LayoutId, PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';
 import { removeTab } from './workspaceSlice';
 
+/** Holds the ui state of a new store: no modal, no request and no search-bar mode. */
 export const initialUiState: UiState = {
   searchBarModes: {},
   renamingTabId: null,

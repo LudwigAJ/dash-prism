@@ -2,6 +2,7 @@
 // Namespace Types
 // =============================================================================
 
+// TabId, PanelId and LayoutId are plain strings. The names only tell which id a value holds.
 export type TabId = string;
 export type PanelId = string;
 export type LayoutId = string;
@@ -21,6 +22,7 @@ export type StatusBarItem =
 // Core Types
 // =============================================================================
 
+/** Holds one tab: its name, its panel and the layout that it shows. */
 export type Tab = {
   id: TabId;
   name: string;
@@ -39,6 +41,7 @@ export type Tab = {
   style?: string;
 };
 
+/** Holds one node of the panel tree. A node without children is a leaf panel that holds tabs. */
 export type PanelNode = {
   id: PanelId;
   order: PanelOrder;
@@ -107,6 +110,7 @@ export interface LayoutMeta {
   paramOptions?: Record<string, LayoutOption> | null;
 }
 
+/** Maps each layout id to its metadata, as dash_prism.init sends it. */
 export type RegisteredLayouts = Record<string, LayoutMeta>;
 
 // =============================================================================

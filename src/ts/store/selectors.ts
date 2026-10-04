@@ -3,7 +3,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { getLeafPanelIds } from '@utils/panels';
 
-// Workspace Selectors (access .present for redux-undo wrapped state)
+// Workspace selectors. Each one reads the field of the same name of the present workspace.
 
 export const selectTabs = (state: RootState) => state.workspace.present.tabs;
 export const selectPanel = (state: RootState) => state.workspace.present.panel;
@@ -14,12 +14,12 @@ export const selectFavoriteLayouts = (state: RootState) => state.workspace.prese
 export const selectSearchBarsHidden = (state: RootState) =>
   state.workspace.present.searchBarsHidden;
 
-// Redux-Undo History Selectors
+// Undo history selectors
 
-/** Checks if undo is available (has past states) */
+/** Tells if the undo history has a step to undo. */
 export const selectCanUndo = (state: RootState) => state.workspace.past.length > 0;
 
-// UI Selectors
+// Ui selectors. Each one reads the field of the same name of the ui state.
 
 export const selectSearchBarModes = (state: RootState) => state.ui.searchBarModes;
 export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
@@ -30,27 +30,27 @@ export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
 export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
 export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
-// Derived Selectors (memoized)
+// Derived selectors (memoized)
 
+/** Gives the number of tabs in the workspace. */
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 
 const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
+/** Gives the number of leaf panels, the panels that hold tabs. */
 export const selectPanelCount = createSelector(
   selectLeafPanelIds,
   (leafPanels) => leafPanels.length
 );
 
-/** True while the workspace has one tab in one panel, so no drag-and-drop operation can apply. */
+/** Tells if the workspace has one tab in one panel, so no drag-and-drop operation can apply. */
 export const selectIsSingleTabMode = createSelector(
   selectTabCount,
   selectPanelCount,
   (tabCount, panelCount) => tabCount === 1 && panelCount === 1
 );
 
-/**
- * Selects workspace snapshot for Dash sync
- */
+/** Gives the fields of the workspace that Dash sees, as the `readWorkspace` prop sends them. */
 export const selectWorkspaceSnapshot = createSelector(
   selectTabs,
   selectPanel,

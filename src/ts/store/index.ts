@@ -183,7 +183,8 @@ export function createPrismStore(config: StoreConfig) {
 // Type Exports
 
 /**
- * Root state type - manually defined to match redux-undo wrapped workspace
+ * Holds the state of a Prism store: the workspace inside the redux-undo history, and the ui
+ * state. It is written by hand to match the persisted, undoable reducer.
  */
 export interface RootState {
   workspace: {
@@ -197,9 +198,7 @@ export interface RootState {
   ui: UiState;
 }
 
-/**
- * App dispatch type with thunk support.
- */
+/** Gives the dispatch type of a Prism store, which also takes thunks. */
 export type AppDispatch = ThunkDispatch<RootState, ThunkExtra, UnknownAction>;
 
 // Undo/Redo Action Creators

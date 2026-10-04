@@ -74,6 +74,7 @@ export type RootRegistry<T> = {
   owns(root: T): boolean;
 };
 
+/** Builds an empty RootRegistry. The keyboard shortcut hook keeps one for the whole page. */
 export function createRootRegistry<T>(): RootRegistry<T> {
   const mounted = new Set<T>();
   let active: T | null = null;
