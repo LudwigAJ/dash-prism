@@ -177,8 +177,7 @@ known-first-party = ["dash_prism", "tests"]
 "time.sleep".msg = "Use the explicit waits in tests/integration/testutils.py."
 
 [tool.ruff.lint.per-file-ignores]
-# The public API imports follow the definitions in the same module. Move the imports to the top
-# of the module to remove this entry.
+# The check of the Dash import runs before the component imports.
 "dash_prism/__init__.py" = ["E402"]
 # Move the pydantic import to the top of the module to remove the E402 part of this entry.
 # The slow demo layout sleeps on purpose.
@@ -197,6 +196,7 @@ ignore_missing_imports = true
 follow_imports = "silent"
 files = [
     "dash_prism/__init__.py",
+    "dash_prism/_component_base.py",
     "dash_prism/Action.py",
     "dash_prism/icons.py",
     "dash_prism/app_init.py",

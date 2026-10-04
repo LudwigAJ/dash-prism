@@ -18,12 +18,8 @@ from typing import Any, Literal
 
 from dash.development.base_component import Component
 
-from .PrismComponent import PrismComponent
-
-# Sentinel default for every keyword argument. Dash must know which props the
-# caller gave. An explicit ``None`` reaches the browser as ``null`` and clears
-# the prop, but an omitted argument keeps the default of the React component.
-_UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
+from dash_prism import _component_base
+from dash_prism.PrismComponent import PrismComponent
 
 
 class Prism(PrismComponent):
@@ -354,50 +350,40 @@ class Prism(PrismComponent):
     def __init__(
         self,
         # Identity
-        id: str | None = _UNSET,
-        className: str | None = _UNSET,
-        style: dict[str, Any] | None = _UNSET,
+        id: str | None = _component_base.UNSET,
+        className: str | None = _component_base.UNSET,
+        style: dict[str, Any] | None = _component_base.UNSET,
         # Appearance
-        theme: Literal["light", "dark"] = _UNSET,
-        size: Literal["sm", "md", "lg"] = _UNSET,
-        actions: Sequence[Component] | None = _UNSET,
-        showStatusBar: bool = _UNSET,
-        statusBarPosition: Literal["top", "bottom"] = _UNSET,
+        theme: Literal["light", "dark"] = _component_base.UNSET,
+        size: Literal["sm", "md", "lg"] = _component_base.UNSET,
+        actions: Sequence[Component] | None = _component_base.UNSET,
+        showStatusBar: bool = _component_base.UNSET,
+        statusBarPosition: Literal["top", "bottom"] = _component_base.UNSET,
         statusBarItems: Sequence[
             Literal["reset", "help", "undo", "mode", "panels", "tab", "count", "updated"]
-        ] = _UNSET,
+        ] = _component_base.UNSET,
         # Persistence
-        persistence: bool = _UNSET,
-        persistence_type: Literal["memory", "session", "local"] = _UNSET,
+        persistence: bool = _component_base.UNSET,
+        persistence_type: Literal["memory", "session", "local"] = _component_base.UNSET,
         # Behavior
-        maxTabs: int = _UNSET,
-        maxPanels: int = _UNSET,
-        initialLayout: str | None = _UNSET,
-        newTabOpensDropdown: bool = _UNSET,
-        emptyTabView: Literal["layouts", "hint", "none"] = _UNSET,
-        enableKeyboardShortcuts: bool = _UNSET,
-        enableShareLinks: bool = _UNSET,
-        searchBarPlaceholder: str = _UNSET,
-        layoutTimeout: float = _UNSET,
+        maxTabs: int = _component_base.UNSET,
+        maxPanels: int = _component_base.UNSET,
+        initialLayout: str | None = _component_base.UNSET,
+        newTabOpensDropdown: bool = _component_base.UNSET,
+        emptyTabView: Literal["layouts", "hint", "none"] = _component_base.UNSET,
+        enableKeyboardShortcuts: bool = _component_base.UNSET,
+        enableShareLinks: bool = _component_base.UNSET,
+        searchBarPlaceholder: str = _component_base.UNSET,
+        layoutTimeout: float = _component_base.UNSET,
         # Advanced props that init(), the frontend or a callback normally sets
-        children: list[Component] | None = _UNSET,
-        serverSessionId: str | None = _UNSET,
-        registeredLayouts: dict[str, Any] | None = _UNSET,
-        readWorkspace: dict[str, Any] | None = _UNSET,
-        updateWorkspace: dict[str, Any] | None = _UNSET,
+        children: list[Component] | None = _component_base.UNSET,
+        serverSessionId: str | None = _component_base.UNSET,
+        registeredLayouts: dict[str, Any] | None = _component_base.UNSET,
+        readWorkspace: dict[str, Any] | None = _component_base.UNSET,
+        updateWorkspace: dict[str, Any] | None = _component_base.UNSET,
         **kwargs: Any,
     ):
-        # Forward only the arguments that the caller gave. The sentinel keeps
-        # an omitted argument out of the dict, thus ``_explicitize_args`` on
-        # the base class sees the same set of props as a direct call to
-        # ``PrismComponent``, and the React defaults stay in control.
-        _locals = locals()
-        explicit = {
-            k: v
-            for k, v in _locals.items()
-            if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
-        }
-        explicit.update(kwargs)
+        explicit = _component_base.explicit_props(locals())
 
         if (
             explicit.get("persistence") is True

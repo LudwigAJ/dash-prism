@@ -77,6 +77,13 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Changed
 
+- `AVAILABLE_ICONS` is a real `frozenset`, so the set operations work too.
+  The package reads `icons.json` when Python imports it. Before, a proxy read
+  the file at the first use and had only the membership test, iteration and
+  `len()`.
+- `import dash_prism` raises `ImportError` when Dash does not import correctly,
+  for example because of a local file `dash.py`. Before, it printed a message
+  and ended the process with `sys.exit(1)`.
 - The exception of `validate_workspace` is now `InvalidWorkspaceError`, so all
   three public exceptions end in `Error`. `InvalidWorkspace` stays as an alias
   of the same class.
@@ -166,6 +173,8 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Removed
 
+- The module attribute `dash_prism.package_name` is removed. It was never
+  documented.
 - The bundle no longer re-exports internal store helpers (`redo`,
   `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
   `usePanelTabs`). They were never documented.

@@ -11,11 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .PrismActionComponent import PrismActionComponent
-
-# Sentinel that shows the difference between a prop you do not give and a prop
-# you set to an explicit None.
-_UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
+from dash_prism import _component_base
+from dash_prism.PrismActionComponent import PrismActionComponent
 
 
 class Action(PrismActionComponent):
@@ -193,18 +190,18 @@ class Action(PrismActionComponent):
 
     def __init__(
         self,
-        label: str = _UNSET,
-        id: str | None = _UNSET,
-        tooltip: str | None = _UNSET,
-        variant: str | None = _UNSET,
-        disabled: bool = _UNSET,
-        loading: bool = _UNSET,
-        n_clicks: int = _UNSET,
+        label: str = _component_base.UNSET,
+        id: str | None = _component_base.UNSET,
+        tooltip: str | None = _component_base.UNSET,
+        variant: str | None = _component_base.UNSET,
+        disabled: bool = _component_base.UNSET,
+        loading: bool = _component_base.UNSET,
+        n_clicks: int = _component_base.UNSET,
         **kwargs: Any,
     ):
         """Make an action button and send only the arguments that you give.
 
-        The wrapper drops each argument that keeps the ``_UNSET`` sentinel.
+        The wrapper drops each argument that keeps the ``UNSET`` sentinel.
         Thus the React component applies its own default to that prop, and a
         prop that you set to ``None`` stays ``None``.
 
@@ -213,14 +210,7 @@ class Action(PrismActionComponent):
         :type kwargs: Any
         :raises TypeError: If you do not give ``label``.
         """
-        _locals = locals()
-        explicit = {
-            k: v
-            for k, v in _locals.items()
-            if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
-        }
-        explicit.update(kwargs)
-        super().__init__(**explicit)
+        super().__init__(**_component_base.explicit_props(locals()))
 
 
 # Alias kept for code that imports the older name.

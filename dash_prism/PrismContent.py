@@ -13,11 +13,8 @@ from typing import Any
 
 from dash.development.base_component import Component
 
-from .PrismContentComponent import PrismContentComponent
-
-# Sentinel that shows the difference between a prop you do not give and a prop
-# you set to an explicit None.
-_UNSET: Any = type("_Unset", (), {"__repr__": lambda self: "_UNSET"})()
+from dash_prism import _component_base
+from dash_prism.PrismContentComponent import PrismContentComponent
 
 
 class PrismContent(PrismContentComponent):
@@ -64,15 +61,15 @@ class PrismContent(PrismContentComponent):
 
     def __init__(
         self,
-        children: Component | list[Component] | str | int | float | None = _UNSET,
-        id: str | dict[str, Any] | None = _UNSET,
-        data: dict[str, Any] | None = _UNSET,
-        layoutTimeout: float = _UNSET,
+        children: Component | list[Component] | str | int | float | None = _component_base.UNSET,
+        id: str | dict[str, Any] | None = _component_base.UNSET,
+        data: dict[str, Any] | None = _component_base.UNSET,
+        layoutTimeout: float = _component_base.UNSET,
         **kwargs: Any,
     ):
         """Make a content host and send only the arguments that you give.
 
-        The wrapper drops each argument that keeps the ``_UNSET`` sentinel.
+        The wrapper drops each argument that keeps the ``UNSET`` sentinel.
         Thus the React component applies its own default to that prop, and a
         prop that you set to ``None`` stays ``None``.
 
@@ -80,11 +77,4 @@ class PrismContent(PrismContentComponent):
             them to the explicit arguments.
         :type kwargs: Any
         """
-        _locals = locals()
-        explicit = {
-            k: v
-            for k, v in _locals.items()
-            if k not in ("self", "kwargs", "_locals", "__class__") and v is not _UNSET
-        }
-        explicit.update(kwargs)
-        super().__init__(**explicit)
+        super().__init__(**_component_base.explicit_props(locals()))

@@ -100,12 +100,14 @@ Icons
 A tab can show an icon. The icon names come from a selected subset of the
 `lucide-react <https://lucide.dev/icons>`_ icon set. The frontend bundle
 contains only this subset, thus a tab with a name that is not in the list shows
-no icon. The two names that follow read the list from ``icons.json`` on the
-first access, and not at import time.
+no icon. The package reads the list from ``icons.json`` one time, when Python
+imports ``dash_prism``. :data:`dash_prism.AVAILABLE_ICONS` is a
+:class:`frozenset`, thus it has the set operations too.
 
 .. autofunction:: dash_prism.get_available_icons
 
 .. autodata:: dash_prism.AVAILABLE_ICONS
+   :no-value:
 
 Utilities
 ---------
