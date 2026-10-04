@@ -9,6 +9,7 @@ import {
   useAppSelector,
   selectFavoriteLayouts,
   toggleFavoriteLayout,
+  requestLayoutSelection,
 } from '@store';
 
 type NewLayoutProps = {
@@ -119,11 +120,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   };
 
   const handleLayoutClick = (layoutId: string) => {
-    window.dispatchEvent(
-      new CustomEvent('prism:select-layout', {
-        detail: { layoutId, tabId },
-      })
-    );
+    dispatch(requestLayoutSelection({ tabId, layoutId }));
   };
 
   if (layoutEntries.length === 0) {

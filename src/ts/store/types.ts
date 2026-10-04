@@ -1,5 +1,5 @@
 // src/ts/store/types.ts
-import type { PanelId, TabId, RegisteredLayouts, Workspace } from '@types';
+import type { LayoutId, PanelId, TabId, RegisteredLayouts, Workspace } from '@types';
 import type { Storage } from 'redux-persist';
 
 /**
@@ -30,7 +30,16 @@ export type SearchBarMode = 'hidden' | 'display' | 'search' | 'params' | 'option
 
 export type UiState = {
   searchBarModes: Record<PanelId, SearchBarMode>;
+  // Command requests: `renamingTabId`, `layoutSelectionRequest` and `searchFocusPanelId`.
+  // A producer sets the request. Only the component that owns the target consumes it, and it
+  // clears the request after it handled it: the TabBar of the panel that holds the tab for a
+  // rename, and the SearchBar of the panel for the other two. A component that does not own
+  // the target leaves the request alone. If it cleared it, the owner could miss the request.
   renamingTabId: TabId | null;
+  /** A layout the user picked on the empty-tab screen of `tabId`. */
+  layoutSelectionRequest: { tabId: TabId; layoutId: LayoutId } | null;
+  /** The panel whose search bar must take the focus. */
+  searchFocusPanelId: PanelId | null;
   // Modal state (moved from PrismContext useState)
   infoModalTabId: TabId | null;
   helpModalOpen: boolean;

@@ -44,6 +44,8 @@ export const selectRedoCount = (state: RootState) => state.workspace.future.leng
 
 export const selectSearchBarModes = (state: RootState) => state.ui.searchBarModes;
 export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
+export const selectLayoutSelectionRequest = (state: RootState) => state.ui.layoutSelectionRequest;
+export const selectSearchFocusPanelId = (state: RootState) => state.ui.searchFocusPanelId;
 export const selectInfoModalTabId = (state: RootState) => state.ui.infoModalTabId;
 export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
 export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;

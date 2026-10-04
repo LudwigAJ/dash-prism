@@ -20,9 +20,11 @@ from selenium.webdriver.support.wait import WebDriverWait
 from conftest import (
     ADD_TAB_BUTTON,
     CONTEXT_MENU,
+    SPLIT_PANEL_BUTTON,
     get_modifier_key,
     get_tabs,
     open_context_menu,
+    wait_for_panel_count,
     wait_for_tab_count,
 )
 
@@ -117,6 +119,32 @@ def test_shortcuts_do_not_fire_while_a_context_menu_is_open(prism_app_with_layou
     WebDriverWait(duo.driver, 3).until(lambda d: not d.find_elements(*_css(CONTEXT_MENU)))
     duo.find_element("body").send_keys(modifier, "d")
     wait_for_tab_count(duo, 1, timeout=5)
+
+
+def test_ctrl_space_focuses_the_search_bar_of_the_active_panel(prism_app_with_layouts):
+    """Ctrl+Space puts the focus in the search bar of the active panel only."""
+    duo = prism_app_with_layouts
+    duo.find_element(SPLIT_PANEL_BUTTON).click()
+    wait_for_panel_count(duo, 2)
+    wait_for_tab_count(duo, 2)
+
+    panel_of = "return arguments[0].closest(\"[data-testid^='prism-panel-']\").dataset.testid;"
+    focused = (
+        "var el = document.activeElement;"
+        "var panel = el.closest(\"[data-testid^='prism-panel-']\");"
+        "return [el.dataset.testid, panel && panel.dataset.testid];"
+    )
+
+    for index in (1, 0):
+        tab = get_tabs(duo)[index]
+        tab.click()
+        expected = ["prism-searchbar-input", duo.driver.execute_script(panel_of, tab)]
+
+        duo.find_element("body").send_keys(Keys.CONTROL, Keys.SPACE)
+        WebDriverWait(duo.driver, 5).until(
+            lambda driver: driver.execute_script(focused) == expected,
+            message=f"Ctrl+Space should focus the search bar of the panel of tab {index}",
+        )
 
 
 def test_keyboard_shortcuts_can_be_disabled(dash_duo):

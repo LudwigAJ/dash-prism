@@ -19,12 +19,18 @@ import {
   createPrismStore,
   getWorkspaceStorageKey,
   addTab,
+  activateTab,
   removeTab,
   renameTab,
   undo,
   redo,
   selectCanUndo,
   selectCanRedo,
+  requestLayoutSelection,
+  requestSearchFocus,
+  startRenameTab,
+  selectLayoutSelectionRequest,
+  selectSearchFocusPanelId,
 } from './index';
 import type { WorkspaceState } from './types';
 import type { PanelId, TabId, RegisteredLayouts } from '@types';
@@ -262,6 +268,34 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(1);
       created.store.dispatch(undo());
       expect(present(created).tabs[0].name).toBe('New Tab');
+
+      created.cleanup();
+    });
+
+    it('does not record ui request actions', async () => {
+      const created = createStore();
+      await settle(created);
+      const { id: tabId, panelId } = present(created).tabs[0];
+
+      // activateTab is excluded from the history. Without `syncFilter: true` it would leave
+      // redux-undo's latest unfiltered state behind the present state, and the next ui action
+      // would enter the history.
+      await created.store.dispatch(addTab({ panelId }));
+      created.store.dispatch(activateTab({ tabId, panelId }));
+      expect(history(created).past).toHaveLength(1);
+
+      // The undoable reducer sees every action. A ui action leaves the workspace unchanged,
+      // so redux-undo adds no history entry.
+      created.store.dispatch(requestLayoutSelection({ tabId, layoutId: 'home' }));
+      created.store.dispatch(requestSearchFocus({ panelId }));
+      created.store.dispatch(startRenameTab({ tabId }));
+
+      expect(history(created).past).toHaveLength(1);
+      expect(selectLayoutSelectionRequest(created.store.getState())).toEqual({
+        tabId,
+        layoutId: 'home',
+      });
+      expect(selectSearchFocusPanelId(created.store.getState())).toBe(panelId);
 
       created.cleanup();
     });

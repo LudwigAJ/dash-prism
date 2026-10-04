@@ -8,7 +8,7 @@ import {
 } from './keyboardChords';
 import { useConfig } from '@context/ConfigContext';
 import { findPanelById } from '@utils/panels';
-import type { PanelId } from '@types';
+import type { PanelId, Tab } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -30,6 +30,7 @@ import {
   refreshTab,
   undo,
   startRenameTab,
+  requestSearchFocus,
 } from '@store';
 
 /** Which Prism workspace owns the shortcuts; see useKeyboardShortcuts. */
@@ -78,7 +79,9 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
   // ========== Helper: Get tabs in active panel ==========
   const getActivePanelTabs = useCallback(() => {
     const tabIds = panelTabs[activePanelId] ?? [];
-    return tabIds.map((id) => tabs?.find((t) => t.id === id)).filter(Boolean);
+    return tabIds
+      .map((id) => tabs?.find((t) => t.id === id))
+      .filter((t): t is Tab => t !== undefined);
   }, [panelTabs, activePanelId, tabs]);
 
   // ========== Action: Create new tab ==========
@@ -114,7 +117,7 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
       if (activePanelTabs.length === 0) return;
 
       const activeTabId = activeTabIds[activePanelId];
-      const currentIndex = activePanelTabs.findIndex((t) => t?.id === activeTabId);
+      const currentIndex = activePanelTabs.findIndex((t) => t.id === activeTabId);
       if (currentIndex === -1) return;
 
       let newIndex: number;
@@ -239,11 +242,7 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
       if (isCtrlSpace) {
         e.preventDefault();
         if (!searchBarsHidden) {
-          window.dispatchEvent(
-            new CustomEvent('prism:focus-searchbar', {
-              detail: { panelId: activePanelId },
-            })
-          );
+          dispatch(requestSearchFocus({ panelId: activePanelId }));
         }
         return;
       }
@@ -324,6 +323,7 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
     rootRef,
     activePanelId,
     searchBarsHidden,
+    dispatch,
     createTab,
     closeActiveTab,
     navigateTab,

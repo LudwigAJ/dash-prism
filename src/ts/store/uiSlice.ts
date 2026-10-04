@@ -1,12 +1,14 @@
 // src/ts/store/uiSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { PanelId, TabId } from '@types';
+import type { LayoutId, PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';
 import { removeTab } from './workspaceSlice';
 
 export const initialUiState: UiState = {
   searchBarModes: {},
   renamingTabId: null,
+  layoutSelectionRequest: null,
+  searchFocusPanelId: null,
   infoModalTabId: null,
   helpModalOpen: false,
   setIconModalTabId: null,
@@ -44,6 +46,22 @@ const uiSlice = createSlice({
 
     clearRenameTab(state) {
       state.renamingTabId = null;
+    },
+
+    requestLayoutSelection(state, action: PayloadAction<{ tabId: TabId; layoutId: LayoutId }>) {
+      state.layoutSelectionRequest = action.payload;
+    },
+
+    clearLayoutSelectionRequest(state) {
+      state.layoutSelectionRequest = null;
+    },
+
+    requestSearchFocus(state, action: PayloadAction<{ panelId: PanelId }>) {
+      state.searchFocusPanelId = action.payload.panelId;
+    },
+
+    clearSearchFocusRequest(state) {
+      state.searchFocusPanelId = null;
     },
 
     openInfoModal(state, action: PayloadAction<{ tabId: TabId }>) {
@@ -85,6 +103,7 @@ const uiSlice = createSlice({
     builder.addCase(removeTab, (state, action) => {
       const { tabId } = action.payload;
       if (state.renamingTabId === tabId) state.renamingTabId = null;
+      if (state.layoutSelectionRequest?.tabId === tabId) state.layoutSelectionRequest = null;
       if (state.infoModalTabId === tabId) state.infoModalTabId = null;
       if (state.setIconModalTabId === tabId) state.setIconModalTabId = null;
     });
@@ -97,6 +116,10 @@ export const {
   pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
+  requestLayoutSelection,
+  clearLayoutSelectionRequest,
+  requestSearchFocus,
+  clearSearchFocusRequest,
   openInfoModal,
   closeInfoModal,
   openHelpModal,

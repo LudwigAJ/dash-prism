@@ -572,9 +572,8 @@ export const TabBar = memo(function TabBar({
     }
   }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached, maxPanels]);
 
-  // The rename request in the store has one consumer: the TabBar of the panel that holds the
-  // tab. That TabBar starts the rename and then clears the request. The TabBars of other panels
-  // ignore it and must not clear it, or the request could vanish before the owner reads it.
+  // Only the TabBar of the panel that holds the tab handles and clears the rename request.
+  // See UiState for why.
   useEffect(() => {
     if (!renamingTabId) return;
 

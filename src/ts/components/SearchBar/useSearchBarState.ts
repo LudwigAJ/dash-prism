@@ -26,11 +26,15 @@ import {
   selectActiveTabIds,
   selectSearchBarsHidden,
   selectFavoriteLayouts,
+  selectLayoutSelectionRequest,
+  selectSearchFocusPanelId,
   updateTabLayout,
   activateTab,
   toggleSearchBars,
   toggleFavoriteLayout,
   setSearchBarMode,
+  clearLayoutSelectionRequest,
+  clearSearchFocusRequest,
 } from '@store';
 
 /**
@@ -370,32 +374,31 @@ export function useSearchBarState(panelId: PanelId) {
 
   // ===== EFFECTS =====
 
-  // Layout selection from external events
-  const handleLayoutSelection = useCallback(
-    (e: CustomEvent) => {
-      // Read fresh activeTabId to avoid stale closure
-      const currentActiveTabId = activeTabIds[panelId];
-      if (e.detail.tabId !== currentActiveTabId) return;
-
-      const layout = registeredLayouts[e.detail.layoutId];
-      if (!layout) return;
-
-      if (searchBarsHidden && (layoutHasParams(layout) || layoutHasOptions(layout))) {
-        dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: e.detail.layoutId });
-        globalDispatch(toggleSearchBars());
-        return;
-      }
-
-      handleLayoutSelect(e.detail.layoutId);
-    },
-    [activeTabIds, panelId, handleLayoutSelect, registeredLayouts, searchBarsHidden, globalDispatch]
-  );
-
+  // Layout the user picked on the empty-tab screen. The search bar of the panel whose active tab
+  // is the target consumes the request (see UiState).
+  const layoutRequest = useAppSelector(selectLayoutSelectionRequest);
   useEffect(() => {
-    window.addEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-    return () =>
-      window.removeEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-  }, [handleLayoutSelection]);
+    if (layoutRequest === null || layoutRequest.tabId !== activeTabId) return;
+    globalDispatch(clearLayoutSelectionRequest());
+
+    const layout = registeredLayouts[layoutRequest.layoutId];
+    if (!layout) return;
+
+    if (searchBarsHidden && (layoutHasParams(layout) || layoutHasOptions(layout))) {
+      dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: layoutRequest.layoutId });
+      globalDispatch(toggleSearchBars());
+      return;
+    }
+
+    handleLayoutSelect(layoutRequest.layoutId);
+  }, [
+    layoutRequest,
+    activeTabId,
+    registeredLayouts,
+    searchBarsHidden,
+    handleLayoutSelect,
+    globalDispatch,
+  ]);
 
   // Handle searchBarsHidden state changes
   useEffect(() => {
@@ -447,23 +450,17 @@ export function useSearchBarState(panelId: PanelId) {
     globalDispatch(setSearchBarMode({ panelId, mode }));
   }, [mode, panelId, globalDispatch]);
 
-  // Focus request from global shortcut
-  const handleFocusSearchbar = useCallback(
-    (event: Event) => {
-      const customEvent = event as CustomEvent<{ panelId?: string }>;
-      if (customEvent.detail?.panelId !== panelId) return;
-      if (searchBarsHidden) return;
-
-      dispatch({ type: 'ENTER_SEARCH_MODE' });
-      focusInput();
-    },
-    [panelId, searchBarsHidden, focusInput]
-  );
-
+  // Focus request from the global shortcut. The search bar of the target panel consumes it (see
+  // UiState).
+  const searchFocusPanelId = useAppSelector(selectSearchFocusPanelId);
   useEffect(() => {
-    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar);
-    return () => window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar);
-  }, [handleFocusSearchbar]);
+    if (searchFocusPanelId !== panelId) return;
+    globalDispatch(clearSearchFocusRequest());
+    if (searchBarsHidden) return;
+
+    dispatch({ type: 'ENTER_SEARCH_MODE' });
+    focusInput();
+  }, [searchFocusPanelId, panelId, searchBarsHidden, focusInput, globalDispatch]);
 
   // Click outside handler
   useEffect(() => {
