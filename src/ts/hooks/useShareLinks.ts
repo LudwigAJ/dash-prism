@@ -4,6 +4,7 @@ import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
 import type { Tab, ShareData } from '@types';
 import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
+import { layoutHasParams } from '@components/SearchBar/searchBarUtils';
 import {
   useAppDispatch,
   useAppSelector,
@@ -197,8 +198,8 @@ export function useShareLink() {
       }
 
       // Pre-validate parameters against the layout's schema (the server re-checks)
-      if (layoutParams && layoutInfo.params?.length) {
-        const errors = checkParams(layoutInfo.params, layoutParams);
+      if (layoutParams && layoutHasParams(layoutInfo)) {
+        const errors = checkParams(layoutInfo.params ?? [], layoutParams);
         if (errors.length) {
           toast.error(
             `Invalid parameters in share link: ${errors[0].field} - ${errors[0].message}`,

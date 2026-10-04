@@ -10,6 +10,7 @@ import {
   CommandGroup,
 } from '../ui/command';
 import type { LayoutMeta } from '@types';
+import { layoutHasOptions, layoutHasParams } from './searchBarUtils';
 
 export type SearchModeProps = {
   searchQuery: string;
@@ -84,8 +85,8 @@ export const SearchMode = ({
             ) : (
               <CommandGroup>
                 {filteredLayouts.map(([id, meta]) => {
-                  const hasOptions = meta.paramOptions && Object.keys(meta.paramOptions).length > 0;
-                  const hasParams = meta.params && meta.params.length > 0;
+                  const hasOptions = layoutHasOptions(meta);
+                  const hasParams = layoutHasParams(meta);
                   const isFavorite = favoriteLayouts.includes(id);
 
                   return (

@@ -16,7 +16,7 @@ import {
   deriveMode,
   type ModeContext,
 } from './searchBarReducer';
-import { filterLayouts } from './searchBarUtils';
+import { filterLayouts, layoutHasOptions, layoutHasParams } from './searchBarUtils';
 import { useDropdownResize } from './useDropdownResize';
 import {
   useAppDispatch,
@@ -81,10 +81,8 @@ export function useSearchBarState(panelId: PanelId) {
     hasCurrentLayout: currentLayout !== null,
     selectedLayout: selectedLayout
       ? {
-          hasParams: (selectedLayout.params?.length ?? 0) > 0,
-          hasOptions:
-            (selectedLayout.paramOptions && Object.keys(selectedLayout.paramOptions).length > 0) ??
-            false,
+          hasParams: layoutHasParams(selectedLayout),
+          hasOptions: layoutHasOptions(selectedLayout),
         }
       : null,
   };
@@ -165,8 +163,8 @@ export function useSearchBarState(panelId: PanelId) {
 
       dispatch({ type: 'SELECT_LAYOUT', layoutId });
 
-      const hasParams = layout.params && layout.params.length > 0;
-      const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
+      const hasParams = layoutHasParams(layout);
+      const hasOptions = layoutHasOptions(layout);
 
       // No params, no options -> apply directly
       if (!hasParams && !hasOptions) {
@@ -383,10 +381,7 @@ export function useSearchBarState(panelId: PanelId) {
       const layout = registeredLayouts[e.detail.layoutId];
       if (!layout) return;
 
-      const hasParams = layout.params && layout.params.length > 0;
-      const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
-
-      if (searchBarsHidden && (hasParams || hasOptions)) {
+      if (searchBarsHidden && (layoutHasParams(layout) || layoutHasOptions(layout))) {
         dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: e.detail.layoutId });
         globalDispatch(toggleSearchBars());
         return;
