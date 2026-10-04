@@ -4,37 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
 import logging
 import sys
-import time
 import warnings
 from typing import Any
 from unittest import mock
 
-import pydantic
 import pytest
 from dash import Dash, html
-from dash.exceptions import PreventUpdate
 
 import dash_prism
 from dash_prism import app_init, layout_tree
-
-
-def test_init_basic(prism_app: Dash) -> None:
-    """Test basic initialization."""
-    # Register a simple layout
-    dash_prism.register_layout(
-        id="test-layout",
-        name="Test Layout",
-        layout=html.Div("Test"),
-    )
-
-    # Initialize should not raise
-    dash_prism.init("test-prism", prism_app)
-
-    # Check that callback was registered
-    assert len(prism_app.callback_map) > 0
 
 
 def test_init_no_layouts_warning(prism_app: Dash) -> None:
@@ -83,35 +63,30 @@ def test_init_warns_and_continues_when_the_layout_function_raises(dash_app: Dash
     assert app_init._is_connected(dash_app, "test-prism")
 
 
-def test_init_with_callback_layout(prism_app: Dash) -> None:
-    """Test initialization with callback-based layout."""
+def _register_static_layouts() -> None:
+    dash_prism.register_layout(id="layout1", name="Layout 1", layout=html.Div("Layout 1"))
+    dash_prism.register_layout(id="layout2", name="Layout 2", layout=html.Div("Layout 2"))
 
+
+def _register_callback_layout() -> None:
     @dash_prism.register_layout(id="callback-layout", name="Callback Layout")
-    def my_layout():
+    def my_layout() -> html.Div:
         return html.Div("From callback")
 
-    dash_prism.init("test-prism", prism_app)
 
-    # Check callback was created
-    assert len(prism_app.callback_map) > 0
-
-
-def test_init_with_async_layout(prism_app: Dash) -> None:
-    """Test initialization with async layout callback."""
-
+def _register_async_layout() -> None:
     @dash_prism.register_layout(id="async-layout", name="Async Layout")
-    async def async_layout():
+    async def async_layout() -> html.Div:
         return html.Div("Async content")
 
-    # Should work even if app is not async (will use asyncio.run internally)
-    dash_prism.init("test-prism", prism_app)
 
-    assert len(prism_app.callback_map) > 0
+def _register_parameterized_layout() -> None:
+    @dash_prism.register_layout(id="multi-param", name="Multi Param")
+    def layout_multi_param(x: int = 1, y: str = "default", z: bool = True) -> html.Div:
+        return html.Div(f"x={x}, y={y}, z={z}")
 
 
-def test_init_with_parameterized_layout(prism_app: Dash) -> None:
-    """Test initialization with parameterized layout."""
-
+def _register_layout_with_options() -> None:
     @dash_prism.register_layout(
         id="param-layout",
         name="Parameterized",
@@ -120,50 +95,64 @@ def test_init_with_parameterized_layout(prism_app: Dash) -> None:
             "opt2": ("Option 2", {"value": "2"}),
         },
     )
-    def param_layout(value: str = "1"):
+    def param_layout(value: str = "1") -> html.Div:
         return html.Div(f"Value: {value}")
 
-    dash_prism.init("test-prism", prism_app)
 
-    assert len(prism_app.callback_map) > 0
+@pytest.mark.parametrize(
+    "register",
+    [
+        _register_static_layouts,
+        _register_callback_layout,
+        _register_async_layout,
+        _register_parameterized_layout,
+        _register_layout_with_options,
+    ],
+    ids=["static", "callback", "async", "parameterized", "options"],
+)
+def test_init_registers_the_render_callback(prism_app: Dash, register: Any) -> None:
+    register()
 
+    # An async layout in a sync app runs through asyncio.run(), and init() warns.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        dash_prism.init("test-prism", prism_app)
 
-def test_init_multiple_static_layouts(prism_app: Dash) -> None:
-    """Test initialization with multiple static layouts."""
-    dash_prism.register_layout(
-        id="layout1",
-        name="Layout 1",
-        layout=html.Div("Layout 1"),
-    )
-    dash_prism.register_layout(
-        id="layout2",
-        name="Layout 2",
-        layout=html.Div("Layout 2"),
-    )
-    dash_prism.register_layout(
-        id="layout3",
-        name="Layout 3",
-        layout=html.Div("Layout 3"),
-    )
-
-    dash_prism.init("test-prism", prism_app)
-
-    # Should have created callback
-    assert len(prism_app.callback_map) > 0
+    assert prism_app.callback_map
 
 
-def test_init_nested_prism_component(dash_app: Dash) -> None:
-    """Test finding Prism component nested in layout."""
-    dash_app.layout = html.Div(
-        [html.Div([html.Div([dash_prism.Prism(id="nested-prism", style={})])])]
-    )
+def _deeply_nested(prism: Any) -> Any:
+    for _ in range(10):
+        prism = html.Div(prism)
+    return prism
 
+
+@pytest.mark.parametrize(
+    "wrap",
+    [
+        lambda prism: html.Div([html.Div([html.Div([prism])])]),
+        lambda prism: html.Div(html.Div(prism)),
+        _deeply_nested,
+        lambda prism: html.Div(
+            [
+                html.Div(children=None),
+                html.Div(["text node", html.Span("span"), html.Div([prism])]),
+            ]
+        ),
+        lambda prism: html.Div(
+            ["String content", 123, None, html.Div([html.Span("Nested list")]), prism]
+        ),
+    ],
+    ids=["nested", "single-child", "deeply-nested", "none-children", "mixed-content"],
+)
+def test_init_finds_the_prism_component_in_any_layout_shape(dash_app: Dash, wrap: Any) -> None:
+    dash_app.layout = wrap(dash_prism.Prism(id="found-prism", style={}))
     dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
 
-    # Should find the nested component
-    dash_prism.init("nested-prism", dash_app)
+    dash_prism.init("found-prism", dash_app)
 
-    assert len(dash_app.callback_map) > 0
+    prism = layout_tree.find_component_by_id(dash_app.layout, "found-prism")
+    assert "test" in prism.registeredLayouts
 
 
 def test_init_with_description_and_keywords(prism_app: Dash) -> None:
@@ -211,71 +200,6 @@ def test_init_error_on_none_prism_id(prism_app: Dash) -> None:
         dash_prism.init(invalid_prism_id, prism_app)
 
 
-# ============================================================================
-# Additional tests for better coverage
-# ============================================================================
-
-
-def test_init_with_complex_nested_layout(dash_app: Dash) -> None:
-    """Test finding Prism in deeply nested layout with None children."""
-    dash_app.layout = html.Div(
-        [
-            html.Div(children=None),  # None children
-            html.Div(
-                [
-                    "text node",  # Text node
-                    html.Span("span"),  # Non-container
-                    html.Div([dash_prism.Prism(id="deep-prism", style={})]),
-                ]
-            ),
-        ]
-    )
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-    dash_prism.init("deep-prism", dash_app)
-    assert len(dash_app.callback_map) > 0
-
-
-def test_init_with_single_child_not_list(dash_app: Dash) -> None:
-    """Test finding Prism when children is not a list."""
-    dash_app.layout = html.Div(
-        html.Div(  # Single child, not wrapped in list
-            dash_prism.Prism(id="single-child-prism", style={})
-        )
-    )
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-    dash_prism.init("single-child-prism", dash_app)
-    assert len(dash_app.callback_map) > 0
-
-
-def test_init_with_callback_with_no_params(prism_app: Dash) -> None:
-    """Test callback layout with no parameters."""
-
-    @dash_prism.register_layout(id="no-params", name="No Params")
-    def layout_no_params():
-        return html.Div("No parameters")
-
-    dash_prism.init("test-prism", prism_app)
-    assert len(prism_app.callback_map) > 0
-
-
-def test_init_with_callback_with_multiple_params(prism_app: Dash) -> None:
-    """Test callback layout with multiple parameters."""
-
-    @dash_prism.register_layout(id="multi-param", name="Multi Param")
-    def layout_multi_param(x: int = 1, y: str = "default", z: bool = True):
-        return html.Div(f"x={x}, y={y}, z={z}")
-
-    metadata = dash_prism.get_registered_layouts_metadata()
-    assert "multi-param" in metadata
-    # Layout with callback should be registered
-    assert metadata["multi-param"]["name"] == "Multi Param"
-
-    dash_prism.init("test-prism", prism_app)
-    assert len(prism_app.callback_map) > 0
-
-
 def test_init_with_async_app() -> None:
     """Test initialization with async Dash app."""
     try:
@@ -292,7 +216,7 @@ def test_init_with_async_app() -> None:
 
     # Should not warn about async mismatch
     dash_prism.init("async-prism", app)
-    assert len(app.callback_map) > 0
+    assert app.callback_map
 
 
 def test_init_registers_metadata_in_component(prism_app: Dash) -> None:
@@ -311,148 +235,12 @@ def test_init_registers_metadata_in_component(prism_app: Dash) -> None:
     # Initialize - this injects metadata
     dash_prism.init("test-prism", prism_app)
 
-    # After init, the component should have registeredLayouts (if supported)
-    # Some versions may not support this property
-    if hasattr(prism_component, "registeredLayouts"):
-        assert prism_component.registeredLayouts is not None
-        assert isinstance(prism_component.registeredLayouts, dict)
-        assert "metadata-test" in prism_component.registeredLayouts
-
-
-def test_init_with_layout_returning_none(prism_app: Dash) -> None:
-    """Test callback that returns None."""
-
-    @dash_prism.register_layout(id="none-layout", name="None Layout")
-    def layout_returns_none():
-        return None
-
-    dash_prism.init("test-prism", prism_app)
-    assert len(prism_app.callback_map) > 0
-
-
-def test_init_with_layout_returning_string(prism_app: Dash) -> None:
-    """Test callback that returns a string."""
-
-    @dash_prism.register_layout(id="string-layout", name="String Layout")
-    def layout_returns_string():
-        return "Just a string"
-
-    dash_prism.init("test-prism", prism_app)
-    assert len(prism_app.callback_map) > 0
-
-
-def test_init_with_layout_returning_list(prism_app: Dash) -> None:
-    """Test callback that returns a list of components."""
-
-    @dash_prism.register_layout(id="list-layout", name="List Layout")
-    def layout_returns_list():
-        return [html.Div("First"), html.Div("Second")]
-
-    dash_prism.init("test-prism", prism_app)
-    assert len(prism_app.callback_map) > 0
-
-
-def test_init_with_deeply_nested_components(dash_app: Dash) -> None:
-    """Test finding component in very deeply nested structure."""
-    # Create a deeply nested structure
-    nested = dash_prism.Prism(id="deeply-nested", style={})
-    for _ in range(10):  # 10 levels deep
-        nested = html.Div(nested)
-
-    dash_app.layout = nested
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-    dash_prism.init("deeply-nested", dash_app)
-    assert len(dash_app.callback_map) > 0
-
-
-def test_init_with_mixed_content(dash_app: Dash) -> None:
-    """Test finding component among mixed content types."""
-    dash_app.layout = html.Div(
-        [
-            "String content",
-            123,  # Number
-            None,  # None
-            html.Div("Div"),
-            html.Div([html.Span("Nested list")]),  # Nested content
-            dash_prism.Prism(id="mixed-prism", style={}),
-        ]
-    )
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-    dash_prism.init("mixed-prism", dash_app)
-    assert len(dash_app.callback_map) > 0
+    assert isinstance(prism_component.registeredLayouts, dict)
+    assert "metadata-test" in prism_component.registeredLayouts
 
 
 # =============================================================================
-# layoutParams Null-Handling Tests
-# =============================================================================
-
-
-def test_zero_arg_layout_with_none_params(prism_app: Dash) -> None:
-    """Regression test: zero-argument layouts work when layoutParams is None.
-
-    This tests the fix for the critical bug where `data.get("layoutParams", {})`
-    returned None (not {}) when layoutParams was explicitly null from JSON,
-    causing `callback(**None)` to raise TypeError.
-    """
-    callback_invoked = []
-
-    @dash_prism.register_layout(id="zero-arg", name="Zero Arg Layout")
-    def zero_arg_layout():
-        callback_invoked.append(True)
-        return html.Div("Zero argument layout")
-
-    dash_prism.init("test-prism", prism_app)
-
-    # Simulate the internal _render_tab_layout call with None params
-    # (this is what happens when frontend sends layoutParams: null)
-    result = app_init._render_tab_layout("tab-1", "zero-arg", None)
-
-    assert result is not None
-    assert len(callback_invoked) == 1
-
-
-def test_layout_with_empty_dict_params(prism_app: Dash) -> None:
-    """Test that layouts work correctly with empty dict params."""
-    callback_invoked = []
-
-    @dash_prism.register_layout(id="empty-params", name="Empty Params Layout")
-    def empty_params_layout():
-        callback_invoked.append(True)
-        return html.Div("Empty params layout")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = app_init._render_tab_layout("tab-1", "empty-params", {})
-
-    assert result is not None
-    assert len(callback_invoked) == 1
-
-
-def test_layout_with_actual_params(prism_app: Dash) -> None:
-    """Test that layouts correctly receive actual parameters."""
-    received_params = {}
-
-    @dash_prism.register_layout(id="with-params", name="With Params Layout")
-    def with_params_layout(user_id: str, count: str = "10"):
-        received_params["user_id"] = user_id
-        received_params["count"] = count
-        return html.Div(f"User: {user_id}, Count: {count}")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = app_init._render_tab_layout(
-        "tab-1", "with-params", {"user_id": "abc123", "count": "5"}
-    )
-
-    assert result is not None
-    assert received_params["user_id"] == "abc123"
-    assert received_params["count"] == "5"
-
-
-# =============================================================================
-# Callable Layout Support Tests (Solution 1)
+# Callable app.layout
 # =============================================================================
 
 
@@ -690,306 +478,7 @@ def test_callable_layout_exception_handling(dash_app: Dash) -> None:
 
 
 # =============================================================================
-# Async Layout Rendering Regression Tests
-# =============================================================================
-
-
-def test_async_render_tab_layout_returns_component_not_coroutine(prism_app: Dash) -> None:
-    """Regression test: _render_tab_layout_async must await the layout callback.
-
-    Previously, _render_tab_layout_async delegated to a sync function that called
-    _run_callback_async without awaiting the returned coroutine. The result was a
-    coroutine object passed to inject_tab_id instead of a Dash component tree.
-    """
-
-    @dash_prism.register_layout(id="async-render-test", name="Async Render Test")
-    async def async_layout():
-        return html.Div("Async rendered content", id="async-rendered")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = asyncio.run(app_init._render_tab_layout_async("tab-1", "async-render-test", None))
-
-    # The result must be a Dash component, NOT a coroutine
-    assert result is not None
-    assert not asyncio.iscoroutine(result), (
-        "_render_tab_layout_async returned a coroutine instead of a component. "
-        "The coroutine of the layout callback was not awaited."
-    )
-    assert hasattr(result, "children"), "Result should be a Dash component with children"
-
-
-def test_async_render_sync_callback_in_async_context(prism_app: Dash) -> None:
-    """Test that sync callbacks work correctly when rendered via async path."""
-
-    invoked = []
-
-    @dash_prism.register_layout(id="sync-in-async", name="Sync In Async")
-    def sync_layout():
-        invoked.append(True)
-        return html.Div("Sync content in async context")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = asyncio.run(app_init._render_tab_layout_async("tab-1", "sync-in-async", None))
-
-    assert result is not None
-    assert len(invoked) == 1, "Sync callback should have been invoked once"
-    assert not asyncio.iscoroutine(result)
-
-
-def test_async_render_with_params(prism_app: Dash) -> None:
-    """Test async layout rendering with parameters."""
-
-    received = {}
-
-    @dash_prism.register_layout(id="async-params", name="Async Params")
-    async def async_param_layout(mode: str = "default"):
-        received["mode"] = mode
-        return html.Div(f"Mode: {mode}")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = asyncio.run(
-        app_init._render_tab_layout_async("tab-1", "async-params", {"mode": "advanced"})
-    )
-
-    assert result is not None
-    assert not asyncio.iscoroutine(result)
-    assert received["mode"] == "advanced"
-
-
-def test_async_render_static_layout(prism_app: Dash) -> None:
-    """Test that static layouts (no callback) work via async path."""
-
-    dash_prism.register_layout(
-        id="async-static",
-        name="Async Static",
-        layout=html.Div("Static in async", id="async-static-content"),
-    )
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = asyncio.run(app_init._render_tab_layout_async("tab-1", "async-static", None))
-
-    assert result is not None
-    assert not asyncio.iscoroutine(result)
-
-
-# =============================================================================
-# layoutTimeout plumbing (01 §1.1 / 02 B-3)
-# =============================================================================
-
-
-def test_coerce_timeout_accepts_positive_numbers_and_numeric_strings() -> None:
-    assert app_init._coerce_timeout(12) == 12.0
-    assert app_init._coerce_timeout(2.5) == 2.5
-    assert app_init._coerce_timeout("7") == 7.0
-    assert app_init._coerce_timeout("0.25") == 0.25
-
-
-@pytest.mark.parametrize(
-    "bad",
-    [None, "abc", "", 0, -1, 0.0, float("inf"), float("nan"), True, False, [], {}, 10**400],
-)
-def test_coerce_timeout_falls_back_to_default(bad: object) -> None:
-    assert app_init._coerce_timeout(bad) == app_init.DEFAULT_LAYOUT_TIMEOUT
-    assert app_init._coerce_timeout(bad, default=5.0) == 5.0
-
-
-@pytest.mark.parametrize(
-    "content_id, data",
-    [
-        (None, {"layoutId": "x"}),
-        ("prism-content", {"layoutId": "x"}),
-        ({"type": "prism-content", "index": "t1"}, None),
-        ({"type": "prism-content", "index": "t1"}, "not-a-dict"),
-        ({"type": "prism-content", "index": "t1"}, {}),
-        ({"type": "prism-content", "index": "t1"}, {"layoutId": ""}),
-        ({"type": "prism-content", "index": "t1"}, {"layoutId": None}),
-        ({"type": "prism-content"}, {"layoutId": "x"}),
-        ({"type": "prism-content", "index": ""}, {"layoutId": "x"}),
-    ],
-)
-def test_parse_content_request_rejects_malformed_inputs(content_id: object, data: object) -> None:
-    with pytest.raises(PreventUpdate):
-        app_init._parse_content_request(content_id, data)
-
-
-def test_parse_content_request_extracts_fields_and_timeout() -> None:
-    content_id = {"type": "prism-content", "index": "t1"}
-
-    assert app_init._parse_content_request(
-        content_id,
-        {"layoutId": "home", "layoutParams": {"a": "1"}, "layoutOption": "", "timeout": 12},
-    ) == ("t1", "home", {"a": "1"}, None, 12.0)
-
-    assert app_init._parse_content_request(content_id, {"layoutId": "home"}) == (
-        "t1",
-        "home",
-        None,
-        None,
-        app_init.DEFAULT_LAYOUT_TIMEOUT,
-    )
-
-    assert app_init._parse_content_request(
-        content_id, {"layoutId": "chart", "layoutOption": "bar", "timeout": None}
-    ) == ("t1", "chart", None, "bar", app_init.DEFAULT_LAYOUT_TIMEOUT)
-
-
-def _error_message(component: Any) -> str:
-    """Text of the ``html.Pre`` inside an error component from ``_create_error_component``."""
-    return str(component.children[1].children)
-
-
-def _sync_prism_app() -> Dash:
-    """A Dash app forced into sync mode.
-
-    On every supported Dash (>= 3.1.1) use_async defaults to True when the async
-    extras are installed, so the sync render callback must be requested explicitly.
-    """
-    app = Dash(__name__, use_async=False, suppress_callback_exceptions=True)
-    app.layout = html.Div([dash_prism.Prism(id="test-prism", style={})])
-    return app
-
-
-def test_sync_callback_honours_client_timeout_for_async_layouts() -> None:
-    """Regression for 01 §1.1: the sync callback used to ignore data["timeout"]."""
-
-    app = _sync_prism_app()
-
-    @dash_prism.register_layout(id="slow-async", name="Slow Async")
-    async def slow_layout():
-        await asyncio.sleep(0.3)
-        return html.Div("done", id="slow-done")
-
-    # Sync mode with an async layout: init() warns, and the callback runs the
-    # layout through asyncio.run(wait_for(...)) with the client's timeout.
-    with pytest.warns(UserWarning, match="async"):
-        dash_prism.init("test-prism", app)
-
-    content_id = {"type": "prism-content", "index": "tab-1"}
-
-    timed_out = app_init._render_content_request(
-        content_id, {"layoutId": "slow-async", "timeout": 0.05}
-    )
-    assert timed_out.className == "prism-error-tab"
-    assert "timed out after 0.05s" in _error_message(timed_out)
-
-    rendered = app_init._render_content_request(
-        content_id, {"layoutId": "slow-async", "timeout": 5}
-    )
-    assert rendered.id == {"type": "slow-done", "index": "tab-1"}
-
-
-def test_sync_callback_uses_default_timeout_when_client_sends_garbage() -> None:
-    app = _sync_prism_app()
-
-    @dash_prism.register_layout(id="quick-async", name="Quick Async")
-    async def quick_layout():
-        await asyncio.sleep(0.01)
-        return html.Div("ok", id="quick-done")
-
-    with pytest.warns(UserWarning, match="async"):
-        dash_prism.init("test-prism", app)
-
-    content_id = {"type": "prism-content", "index": "tab-1"}
-    rendered = app_init._render_content_request(
-        content_id, {"layoutId": "quick-async", "timeout": "abc"}
-    )
-    assert rendered.id == {"type": "quick-done", "index": "tab-1"}
-
-
-def test_async_callback_honours_client_timeout() -> None:
-    app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
-    app.layout = html.Div([dash_prism.Prism(id="async-prism", style={})])
-
-    @dash_prism.register_layout(id="slow-async", name="Slow Async")
-    async def slow_layout():
-        await asyncio.sleep(0.3)
-        return html.Div("done", id="slow-done")
-
-    @dash_prism.register_layout(id="slow-sync", name="Slow Sync")
-    def slow_sync_layout():
-        # The executor branch awaits run_in_executor(...) inside asyncio.timeout().
-        # Keep a wide margin between this sleep and the 0.05 s timeout below.
-        time.sleep(1.0)
-        return html.Div("done", id="slow-sync-done")
-
-    dash_prism.init("async-prism", app)
-
-    content_id = {"type": "prism-content", "index": "tab-1"}
-
-    for layout_id in ("slow-async", "slow-sync"):
-        timed_out = asyncio.run(
-            app_init._render_content_request_async(
-                content_id, {"layoutId": layout_id, "timeout": 0.05}
-            )
-        )
-        assert timed_out.className == "prism-error-tab"
-        assert "timed out after 0.05s" in _error_message(timed_out)
-
-    rendered = asyncio.run(
-        app_init._render_content_request_async(content_id, {"layoutId": "slow-async", "timeout": 5})
-    )
-    assert rendered.id == {"type": "slow-done", "index": "tab-1"}
-
-
-def test_render_content_request_raises_prevent_update_for_bad_input(prism_app: Dash) -> None:
-    with pytest.raises(PreventUpdate):
-        app_init._render_content_request({"type": "prism-content", "index": "t"}, {})
-    with pytest.raises(PreventUpdate):
-        asyncio.run(app_init._render_content_request_async(None, {"layoutId": "x"}))
-
-
-def test_render_callback_is_registered_once(prism_app: Dash) -> None:
-    dash_prism.register_layout(id="static", name="Static", layout=html.Div("s"))
-    dash_prism.init("test-prism", prism_app)
-
-    keys = [k for k in prism_app.callback_map if "prism-content" in k]
-    assert len(keys) == 1
-
-
-def test_registered_sync_callback_passes_client_timeout() -> None:
-    """Regression through the real Dash dispatcher: the registered sync callback
-    must forward data["timeout"] (the wrapper is where 01 §1.1 lived)."""
-
-    app = _sync_prism_app()
-
-    @dash_prism.register_layout(id="slow-async", name="Slow Async")
-    async def slow_layout():
-        await asyncio.sleep(0.3)
-        return html.Div("done", id="slow-done")
-
-    with pytest.warns(UserWarning, match="async"):
-        dash_prism.init("test-prism", app)
-
-    key = next(k for k in app.callback_map if "prism-content" in k)
-    cid = {"type": "prism-content", "index": "tab-1"}
-    sid = json.dumps(cid, sort_keys=True, separators=(",", ":"))
-    body = {
-        "output": key,
-        "outputs": {"id": cid, "property": "children"},
-        "inputs": [
-            {"id": cid, "property": "id", "value": cid},
-            {
-                "id": cid,
-                "property": "data",
-                "value": {"layoutId": "slow-async", "timeout": 0.05},
-            },
-        ],
-        "changedPropIds": [f"{sid}.data"],
-        "state": [],
-    }
-    resp = app.server.test_client().post("/_dash-update-component", json=body)
-    text = resp.get_data(as_text=True)
-    assert resp.status_code == 200
-    assert "timed out after 0.05s" in text
-    assert "slow-done" not in text
-
-
-# =============================================================================
-# serverSessionId (01 §1.3 / 02 B-2)
+# serverSessionId
 # =============================================================================
 
 
@@ -1040,303 +529,6 @@ def test_per_process_server_session_id_constant_is_gone() -> None:
     """The per-process UUID could never match across gunicorn workers or restarts."""
     assert "SERVER_SESSION_ID" not in dash_prism.__all__
     assert not hasattr(dash_prism, "SERVER_SESSION_ID")
-
-
-# =============================================================================
-# Parameter validation in the render paths (doc 04 §3.3)
-# =============================================================================
-
-
-def test_render_invalid_params_returns_validation_component(prism_app: Dash) -> None:
-    @dash_prism.register_layout(id="typed", name="Typed")
-    def layout(n: int = 1):
-        return html.Div(f"n={n}")
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = app_init._render_tab_layout("tab-1", "typed", {"n": "abc"})
-    assert "prism-error-validation" in result.className
-    assert "n" in str(result.children[2].children[0].children[0].children)
-
-
-def test_render_coerces_params_before_callback(prism_app: Dash) -> None:
-    received: dict[str, object] = {}
-
-    @dash_prism.register_layout(id="typed", name="Typed")
-    def layout(n: int = 1, flag: bool = False):
-        received.update(n=n, flag=flag)
-        return html.Div()
-
-    dash_prism.init("test-prism", prism_app)
-
-    app_init._render_tab_layout("tab-1", "typed", {"n": "5", "flag": "false"})
-    assert received == {"n": 5, "flag": False}
-
-
-def test_async_render_validation_error(prism_app: Dash) -> None:
-    @dash_prism.register_layout(id="typed-async", name="Typed async")
-    async def layout(n: int = 1):
-        return html.Div()
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = asyncio.run(app_init._render_tab_layout_async("tab-1", "typed-async", {"n": "x"}))
-    assert "prism-error-validation" in result.className
-
-
-# =============================================================================
-# Error components for a failed layout (sync and async path)
-# =============================================================================
-
-
-def _render_on_path(
-    path: str,
-    layout_id: str,
-    layout_params: dict[str, Any] | None = None,
-    timeout: float = 5.0,
-) -> Any:
-    """Render a tab through the sync path or the async path."""
-    if path == "sync":
-        return app_init._render_tab_layout("tab-1", layout_id, layout_params, timeout=timeout)
-    return asyncio.run(
-        app_init._render_tab_layout_async("tab-1", layout_id, layout_params, timeout=timeout)
-    )
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-@pytest.mark.parametrize(
-    ("error", "expected"),
-    [
-        (TimeoutError("slow backend"), "Layout 'failing' timed out after 5s."),
-        (TypeError("bad type"), "Error rendering layout 'failing': bad type"),
-        (ValueError("bad value"), "bad value"),
-        (RuntimeError("boom"), "Error rendering layout 'failing': boom"),
-    ],
-    ids=["timeout", "type-error", "value-error", "other"],
-)
-def test_failed_layout_shows_error_component(
-    prism_app: Dash, path: str, error: Exception, expected: str
-) -> None:
-    @dash_prism.register_layout(id="failing", name="Failing")
-    def failing():
-        raise error
-
-    dash_prism.init("test-prism", prism_app)
-
-    result = _render_on_path(path, "failing")
-
-    assert result.className == "prism-error-tab"
-    assert expected in _error_message(result)
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-def test_missing_layout_shows_error_component(prism_app: Dash, path: str) -> None:
-    dash_prism.register_layout(id="other", name="Other", layout=html.Div("o"))
-    dash_prism.init("test-prism", prism_app)
-
-    result = _render_on_path(path, "missing")
-
-    assert result.className == "prism-error-tab"
-    assert _error_message(result) == "Layout 'missing' not found"
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-def test_invalid_parameters_show_validation_component(prism_app: Dash, path: str) -> None:
-    @dash_prism.register_layout(id="typed", name="Typed")
-    def typed(n: int = 1):
-        return html.Div(f"n={n}")
-
-    dash_prism.init("test-prism", prism_app)
-
-    if path == "sync":
-        result = app_init._render_tab_layout("tab-1", "typed", {"n": "abc"})
-    else:
-        result = asyncio.run(app_init._render_tab_layout_async("tab-1", "typed", {"n": "abc"}))
-
-    assert "prism-error-validation" in result.className
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-def test_empty_layout_id_renders_nothing(path: str) -> None:
-    assert _render_on_path(path, "") is None
-
-
-# =============================================================================
-# Log lines for a failed layout and for a render request
-# =============================================================================
-
-
-def _prism_records(caplog: pytest.LogCaptureFixture, level: int) -> list[logging.LogRecord]:
-    return [
-        record
-        for record in caplog.records
-        if record.name.startswith("dash_prism") and record.levelno >= level
-    ]
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-@pytest.mark.parametrize(
-    ("error", "level"),
-    [
-        (TimeoutError("slow backend"), logging.WARNING),
-        (TypeError("bad type"), logging.WARNING),
-        (ValueError("bad value"), logging.WARNING),
-        (RuntimeError("boom"), logging.ERROR),
-    ],
-    ids=["timeout", "type-error", "value-error", "other"],
-)
-def test_failed_layout_is_logged_once(
-    prism_app: Dash,
-    caplog: pytest.LogCaptureFixture,
-    path: str,
-    error: Exception,
-    level: int,
-) -> None:
-    @dash_prism.register_layout(id="failing", name="Failing")
-    def failing():
-        raise error
-
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        _render_on_path(path, "failing")
-
-    records = _prism_records(caplog, logging.WARNING)
-    assert [record.levelno for record in records] == [level]
-    assert "failing" in records[0].getMessage()
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-def test_missing_layout_is_logged_once(
-    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str
-) -> None:
-    dash_prism.register_layout(id="other", name="Other", layout=html.Div("o"))
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        _render_on_path(path, "missing")
-
-    records = _prism_records(caplog, logging.WARNING)
-    assert [record.levelno for record in records] == [logging.WARNING]
-
-
-def test_render_request_is_logged_once_without_parameter_values(
-    prism_app: Dash, caplog: pytest.LogCaptureFixture
-) -> None:
-    @dash_prism.register_layout(id="typed", name="Typed")
-    def typed(n: int = 1):
-        return html.Div(f"n={n}")
-
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    content_id = {"type": "prism-content", "index": "tab-1"}
-    data = {"layoutId": "typed", "layoutParams": {"n": "secret-value"}}
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        result = app_init._render_content_request(content_id, data)
-
-    assert "prism-error-validation" in result.className
-    requests = [r for r in _prism_records(caplog, logging.DEBUG) if "Render request" in r.message]
-    assert [(r.levelno, r.getMessage()) for r in requests] == [
-        (logging.DEBUG, "Render request: tab_id='tab-1' layout_id='typed'")
-    ]
-    assert "secret-value" not in caplog.text
-    warnings_logged = _prism_records(caplog, logging.WARNING)
-    assert [r.getMessage() for r in warnings_logged] == ["Layout 'typed' has invalid parameters: n"]
-
-
-def test_render_request_log_keeps_a_line_break_in_an_id_out_of_the_log(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    content_id = {"type": "prism-content", "index": "tab\nFAKE LOG LINE"}
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        app_init._parse_content_request(content_id, {"layoutId": "home\r\nFORGED"})
-
-    [message] = [r.getMessage() for r in caplog.records if "Render request" in r.getMessage()]
-    assert "\n" not in message
-    assert "\r" not in message
-
-
-def _raise_type_error(value: str) -> None:
-    raise TypeError(f"cannot use {value}")
-
-
-def _raise_value_error(value: str) -> None:
-    int(value)
-
-
-def _raise_pydantic_error(value: str) -> None:
-    class Settings(pydantic.BaseModel):
-        count: int
-
-    Settings.model_validate({"count": value})
-
-
-def _raise_runtime_error(value: str) -> None:
-    raise RuntimeError(f"unexpected {value}")
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-@pytest.mark.parametrize(
-    "raiser",
-    [_raise_type_error, _raise_value_error, _raise_pydantic_error, _raise_runtime_error],
-    ids=["type-error", "value-error", "pydantic-error", "unexpected"],
-)
-def test_failed_layout_shows_the_value_but_logs_only_the_class(
-    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str, raiser: Any
-) -> None:
-    @dash_prism.register_layout(id="failing", name="Failing")
-    def failing(value: str = ""):
-        raiser(value)
-
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        result = _render_on_path(path, "failing", {"value": "hunter2"})
-
-    assert "hunter2" in _error_message(result)
-    assert "hunter2" not in caplog.text
-
-
-@pytest.mark.parametrize("path", ["sync", "async"])
-def test_unexpected_exception_log_has_the_class_and_the_frames(
-    prism_app: Dash, caplog: pytest.LogCaptureFixture, path: str
-) -> None:
-    @dash_prism.register_layout(id="failing", name="Failing")
-    def failing(value: str = ""):
-        _raise_runtime_error(value)
-
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        _render_on_path(path, "failing", {"value": "hunter2"})
-
-    [record] = _prism_records(caplog, logging.WARNING)
-    message = record.getMessage()
-    assert record.levelno == logging.ERROR
-    assert record.exc_info is None
-    assert message.startswith("Layout 'failing' failed with RuntimeError")
-    assert "in failing" in message
-    assert "in _raise_runtime_error" in message
-
-
-def test_log_keeps_a_line_break_in_a_layout_id_out_of_the_log(
-    prism_app: Dash, caplog: pytest.LogCaptureFixture
-) -> None:
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home"))
-    dash_prism.init("test-prism", prism_app)
-    caplog.clear()
-
-    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
-        app_init._render_tab_layout("tab-1", "missing\nFORGED", None)
-
-    [record] = _prism_records(caplog, logging.WARNING)
-    assert "\n" not in record.getMessage()
 
 
 # =============================================================================

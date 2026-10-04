@@ -146,22 +146,6 @@ def test_prop_docstrings_match_behaviour() -> None:
     assert "Dash -> Prism" in generated
 
 
-def test_prism_component_empty_tab_view_prop() -> None:
-    """emptyTabView is a first-class prop on the wrapper and the generated class."""
-    prism = dash_prism.Prism(id="test-prism", emptyTabView="none", style={})
-
-    assert prism.emptyTabView == "none"
-    assert "emptyTabView" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["emptyTabView"] == "none"
-
-
-def test_prism_component_empty_tab_view_default_unset() -> None:
-    """Unset props are not serialized, so the TS default ('layouts') applies."""
-    prism = dash_prism.Prism(id="test-prism", style={})
-
-    assert "emptyTabView" not in prism.to_plotly_json()["props"]
-
-
 def test_prism_warns_on_quiet_empty_tab_combination() -> None:
     with pytest.warns(UserWarning, match="emptyTabView='none'"):
         dash_prism.Prism(id="p", emptyTabView="none", newTabOpensDropdown=False, style={})
@@ -174,15 +158,6 @@ def test_prism_does_not_warn_for_other_empty_tab_combinations() -> None:
         dash_prism.Prism(id="p", emptyTabView="none", newTabOpensDropdown=True, style={})
         dash_prism.Prism(id="p", emptyTabView="hint", newTabOpensDropdown=False, style={})
         dash_prism.Prism(id="p", emptyTabView="layouts", newTabOpensDropdown=False, style={})
-
-
-def test_prism_component_show_status_bar_prop() -> None:
-    prism = dash_prism.Prism(id="test-prism", showStatusBar=False, style={})
-
-    assert prism.showStatusBar is False
-    assert "showStatusBar" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["showStatusBar"] is False
-    assert "showStatusBar" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
 
 
 def test_prism_warns_when_actions_are_hidden_by_show_status_bar() -> None:
@@ -198,40 +173,22 @@ def test_prism_warns_when_actions_are_hidden_by_show_status_bar() -> None:
         dash_prism.Prism(id="p", actions=[action], style={})
 
 
-def test_prism_component_status_bar_items_prop() -> None:
-    prism = dash_prism.Prism(id="test-prism", statusBarItems=["count", "updated"], style={})
+@pytest.mark.parametrize(
+    "prop,value",
+    [
+        ("emptyTabView", "none"),
+        ("showStatusBar", False),
+        ("statusBarItems", ["count", "updated"]),
+        ("enableKeyboardShortcuts", False),
+        ("enableShareLinks", False),
+        ("maxPanels", 1),
+    ],
+)
+def test_prism_forwards_a_prop_only_when_it_is_set(prop: str, value: object) -> None:
+    """An unset prop stays out of the JSON, so the TypeScript default applies."""
+    prism = dash_prism.Prism(id="test-prism", style={}, **{prop: value})
 
-    assert list(prism.statusBarItems) == ["count", "updated"]
-    assert "statusBarItems" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["statusBarItems"] == ["count", "updated"]
-    assert "statusBarItems" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
-
-
-def test_prism_component_enable_keyboard_shortcuts_prop() -> None:
-    prism = dash_prism.Prism(id="test-prism", enableKeyboardShortcuts=False, style={})
-
-    assert prism.enableKeyboardShortcuts is False
-    assert "enableKeyboardShortcuts" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["enableKeyboardShortcuts"] is False
-    assert (
-        "enableKeyboardShortcuts"
-        not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
-    )
-
-
-def test_prism_component_enable_share_links_prop() -> None:
-    prism = dash_prism.Prism(id="test-prism", enableShareLinks=False, style={})
-
-    assert prism.enableShareLinks is False
-    assert "enableShareLinks" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["enableShareLinks"] is False
-    assert "enableShareLinks" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
-
-
-def test_prism_component_max_panels_prop() -> None:
-    prism = dash_prism.Prism(id="test-prism", maxPanels=1, style={})
-
-    assert prism.maxPanels == 1
-    assert "maxPanels" in prism.available_properties
-    assert prism.to_plotly_json()["props"]["maxPanels"] == 1
-    assert "maxPanels" not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]
+    assert getattr(prism, prop) == value
+    assert prop in prism.available_properties
+    assert prism.to_plotly_json()["props"][prop] == value
+    assert prop not in dash_prism.Prism(id="p", style={}).to_plotly_json()["props"]

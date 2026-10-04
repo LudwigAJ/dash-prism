@@ -16,7 +16,7 @@ from pydantic_core import core_schema
 
 import dash_prism
 from dash_prism import Param, ParamValidationError
-from dash_prism import params as P
+from dash_prism import params as prism_params
 
 
 class Color(enum.Enum):
@@ -39,22 +39,25 @@ def _annotated(
 
 
 def test_coercion_matrix():
-    v = P.build_validator("plain", P.introspect_callable(_plain))
-    out = v.validate({"country": "SE", "n": "5", "verbose": "true", "ratio": ""})
+    validator = prism_params.build_validator("plain", prism_params.introspect_callable(_plain))
+    out = validator.validate({"country": "SE", "n": "5", "verbose": "true", "ratio": ""})
     assert out == {"country": "SE", "n": 5, "verbose": True, "ratio": None}
 
 
 def test_field_errors_all_reported():
-    v = P.build_validator("plain", P.introspect_callable(_plain))
+    validator = prism_params.build_validator("plain", prism_params.introspect_callable(_plain))
     with pytest.raises(ParamValidationError) as exc:
-        v.validate({"n": "abc", "verbose": "maybe", "zzz": 1})
+        validator.validate({"n": "abc", "verbose": "maybe", "zzz": 1})
     fields = {e.field: e.code for e in exc.value.errors}
     assert set(fields) == {"country", "n", "verbose", "zzz"}
     assert fields["country"] == "missing"
 
 
 def test_layout_parameters_describe_types():
-    params = {p.name: p for p in P.build_layout_parameters(P.introspect_callable(_annotated))}
+    params = {
+        p.name: p
+        for p in prism_params.build_layout_parameters(prism_params.introspect_callable(_annotated))
+    }
     assert params["n"].type == "integer" and params["n"].constraints == {
         "minimum": 1,
         "maximum": 100,
@@ -69,15 +72,17 @@ def test_untyped_params_pass_through():
     def f(a, b="x"):
         return html.Div()
 
-    v = P.build_validator("f", P.introspect_callable(f))
-    assert v.validate({"a": "1", "b": "2"}) == {"a": "1", "b": "2"}
+    validator = prism_params.build_validator("f", prism_params.introspect_callable(f))
+    assert validator.validate({"a": "1", "b": "2"}) == {"a": "1", "b": "2"}
 
 
 def test_var_kwargs_accept_extra():
     def f(a: int, **rest):
         return html.Div()
 
-    assert P.build_validator("f", P.introspect_callable(f)).validate({"a": "1", "x": "y"}) == {
+    assert prism_params.build_validator("f", prism_params.introspect_callable(f)).validate(
+        {"a": "1", "x": "y"}
+    ) == {
         "a": 1,
         "x": "y",
     }
@@ -92,7 +97,7 @@ def test_future_annotations_are_resolved():
     )
     ns: dict = {}
     exec(src, ns)  # test-only: simulates a user module with stringified annotations
-    p = P.build_layout_parameters(P.introspect_callable(ns["f"]))[0]
+    p = prism_params.build_layout_parameters(prism_params.introspect_callable(ns["f"]))[0]
     assert p.type == "integer" and p.constraints == {"minimum": 1}
 
 
@@ -104,13 +109,13 @@ def test_body_model_style():
     def f(params: M):
         return html.Div()
 
-    spec = P.introspect_callable(f)
+    spec = prism_params.introspect_callable(f)
     assert spec.body_param == "params"
-    assert [p.name for p in P.build_layout_parameters(spec)] == ["n", "title"]
-    v = P.build_validator("f", spec)
-    assert v.validate({"title": "T", "n": "3"})["params"] == M(n=3, title="T")
+    assert [p.name for p in prism_params.build_layout_parameters(spec)] == ["n", "title"]
+    validator = prism_params.build_validator("f", spec)
+    assert validator.validate({"title": "T", "n": "3"})["params"] == M(n=3, title="T")
     with pytest.raises(ParamValidationError) as exc:
-        v.validate({"n": "0"})
+        validator.validate({"n": "0"})
     assert {e.field for e in exc.value.errors} == {"n", "title"}
 
 
@@ -122,7 +127,7 @@ def test_body_model_must_be_only_param():
         return html.Div()
 
     with pytest.raises(ValueError, match="only parameter"):
-        P.introspect_callable(f)
+        prism_params.introspect_callable(f)
 
 
 def test_param_options_validated_at_registration():
@@ -168,7 +173,9 @@ def test_unknown_annotation_does_not_break_registration():
     def layout(repo: _AppType, n: int = 1):
         return html.Div()
 
-    validator = P.build_validator("unknown-anno", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "unknown-anno", prism_params.introspect_callable(layout)
+    )
 
     # The value is passed through untouched, as an unannotated parameter is.
     assert validator.validate({"repo": "anything", "n": "2"}) == {"repo": "anything", "n": 2}
@@ -206,7 +213,7 @@ def test_non_string_choices_accept_the_string_the_browser_sends(annotation, sent
         return html.Div()
 
     layout.__annotations__ = {"x": annotation}
-    validator = P.build_validator("choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator("choices", prism_params.introspect_callable(layout))
 
     assert validator.validate({"x": sent}) == {"x": expected}
 
@@ -215,7 +222,9 @@ def test_param_choices_accept_non_string_values():
     def layout(x: Annotated[int, Param(choices=[1, 2])] = 1):
         return html.Div()
 
-    validator = P.build_validator("param-choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "param-choices", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"x": "2"}) == {"x": 2}
 
@@ -226,7 +235,7 @@ def test_parameter_named_with_a_leading_underscore_is_passed_through():
     def layout(_internal: str = "x", n: int = 1):
         return html.Div()
 
-    validator = P.build_validator("underscore", P.introspect_callable(layout))
+    validator = prism_params.build_validator("underscore", prism_params.introspect_callable(layout))
 
     assert validator.validate({"_internal": "y", "n": "2"}) == {"_internal": "y", "n": 2}
 
@@ -237,7 +246,7 @@ def test_constraints_are_json_safe():
     def layout(code: Annotated[str, Param(pattern=re.compile(r"^[a-z]+$"))] = "abc"):
         return html.Div()
 
-    params = P.build_layout_parameters(P.introspect_callable(layout))
+    params = prism_params.build_layout_parameters(prism_params.introspect_callable(layout))
     json.dumps([p.to_dict() for p in params])
 
 
@@ -247,7 +256,7 @@ def test_none_is_accepted_for_an_untyped_parameter():
     def layout(anything=None):
         return html.Div()
 
-    validator = P.build_validator("untyped", P.introspect_callable(layout))
+    validator = prism_params.build_validator("untyped", prism_params.introspect_callable(layout))
 
     assert validator.validate({"anything": None}) == {"anything": None}
 
@@ -273,13 +282,13 @@ def test_optional_param_choices_keep_their_nullability():
     ``Optional``, so that ``None`` was then rejected and the user was left with
     no input that could succeed except picking a choice.
     """
-    spec = P.introspect_callable(_optional_choices)
-    reported = {p.name: p for p in P.build_layout_parameters(spec)}
+    spec = prism_params.introspect_callable(_optional_choices)
+    reported = {p.name: p for p in prism_params.build_layout_parameters(spec)}
     assert reported["ticker"].nullable is True
     assert reported["ticker"].choices == ["BTPS", "FRTR"]
     assert reported["window"].nullable is True
 
-    validator = P.build_validator("optional-choices", spec)
+    validator = prism_params.build_validator("optional-choices", spec)
 
     assert validator.validate({"ticker": "", "window": "none"}) == {
         "ticker": None,
@@ -304,14 +313,18 @@ def test_every_optional_spelling_keeps_its_nullability(optional_str):
         return html.Div()
 
     layout.__annotations__ = {"ticker": Annotated[optional_str, Param(choices=["BTPS", "FRTR"])]}
-    validator = P.build_validator("optional-spelling", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "optional-spelling", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"ticker": ""}) == {"ticker": None}
 
 
 def test_optional_param_choices_still_reject_a_value_outside_the_list():
     """Restoring the nullability must not widen the parameter to anything."""
-    validator = P.build_validator("optional-choices", P.introspect_callable(_optional_choices))
+    validator = prism_params.build_validator(
+        "optional-choices", prism_params.introspect_callable(_optional_choices)
+    )
 
     with pytest.raises(ParamValidationError) as exc:
         validator.validate({"ticker": "DBR"})
@@ -325,11 +338,11 @@ def test_required_param_choices_still_reject_a_blank():
     def layout(ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])]):
         return html.Div()
 
-    spec = P.introspect_callable(layout)
-    assert P.build_layout_parameters(spec)[0].nullable is False
+    spec = prism_params.introspect_callable(layout)
+    assert prism_params.build_layout_parameters(spec)[0].nullable is False
 
     with pytest.raises(ParamValidationError) as exc:
-        P.build_validator("required-choices", spec).validate({"ticker": ""})
+        prism_params.build_validator("required-choices", spec).validate({"ticker": ""})
 
     assert [e.field for e in exc.value.errors] == ["ticker"]
 
@@ -340,7 +353,9 @@ def test_unhashable_choices_on_an_optional_parameter_stay_nullable():
     def layout(rows: Annotated[Optional[list], Param(choices=[[1, 2], [3, 4]])] = None):
         return html.Div()
 
-    validator = P.build_validator("unhashable-choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "unhashable-choices", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
     assert validator.validate({"rows": ""}) == {"rows": None}
@@ -366,7 +381,7 @@ def test_empty_choices_are_rejected_at_registration():
         return html.Div()
 
     with pytest.raises(ValueError, match=r"parameter 'x' declares Param\(choices=\[\]\)"):
-        P.build_validator("empty-choices", P.introspect_callable(layout))
+        prism_params.build_validator("empty-choices", prism_params.introspect_callable(layout))
 
 
 def test_a_parameter_pydantic_cannot_model_does_not_disable_its_siblings():
@@ -380,7 +395,9 @@ def test_a_parameter_pydantic_cannot_model_does_not_disable_its_siblings():
     def layout(cfg: dict[str, _AppType], n: int = 1):
         return html.Div()
 
-    validator = P.build_validator("partly-modelable", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "partly-modelable", prism_params.introspect_callable(layout)
+    )
 
     with pytest.raises(ParamValidationError) as exc:
         validator.validate({"cfg": "anything", "n": "not-an-int"})
@@ -403,9 +420,9 @@ def test_body_model_choices_are_enforced_not_just_advertised():
     def layout(params: Body):
         return html.Div()
 
-    spec = P.introspect_callable(layout)
-    assert P.build_layout_parameters(spec)[0].choices == ["BTPS", "FRTR"]
-    validator = P.build_validator("body-choices", spec)
+    spec = prism_params.introspect_callable(layout)
+    assert prism_params.build_layout_parameters(spec)[0].choices == ["BTPS", "FRTR"]
+    validator = prism_params.build_validator("body-choices", spec)
 
     with pytest.raises(ParamValidationError) as exc:
         validator.validate({"ticker": "DBR"})
@@ -425,7 +442,9 @@ def test_a_blank_still_clears_an_optional_body_model_choice():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-optional-choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "body-optional-choices", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"ticker": ""})["params"].ticker is None
 
@@ -438,7 +457,7 @@ def test_scalar_choices_on_a_collection_parameter_are_rejected():
         return html.Div()
 
     with pytest.raises(ValueError, match="is a collection"):
-        P.build_validator("array-choices", P.introspect_callable(layout))
+        prism_params.build_validator("array-choices", prism_params.introspect_callable(layout))
 
 
 def test_whole_value_choices_on_a_collection_parameter_are_still_allowed():
@@ -447,7 +466,9 @@ def test_whole_value_choices_on_a_collection_parameter_are_still_allowed():
     def layout(rows: Annotated[Optional[list], Param(choices=[[1, 2], [3, 4]])] = None):
         return html.Div()
 
-    validator = P.build_validator("whole-list-choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "whole-list-choices", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"rows": "[1, 2]"}) == {"rows": [1, 2]}
 
@@ -460,7 +481,9 @@ def test_choices_that_contradict_the_annotation_are_rejected():
         return html.Div()
 
     with pytest.raises(ValueError, match="declares its choices twice"):
-        P.build_validator("conflicting-choices", P.introspect_callable(layout))
+        prism_params.build_validator(
+            "conflicting-choices", prism_params.introspect_callable(layout)
+        )
 
 
 def test_choices_that_match_the_annotation_are_allowed():
@@ -469,7 +492,9 @@ def test_choices_that_match_the_annotation_are_allowed():
     def layout(x: Annotated[Literal["a", "b"], Param(choices=["a", "b"])] = "a"):
         return html.Div()
 
-    validator = P.build_validator("agreeing-choices", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "agreeing-choices", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"x": "b"}) == {"x": "b"}
 
@@ -503,7 +528,7 @@ def test_body_model_tuple_choices_survive_pydantic_coercion():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-tuple", P.introspect_callable(layout))
+    validator = prism_params.build_validator("body-tuple", prism_params.introspect_callable(layout))
 
     assert validator.validate({"pair": "[1,2]"})["params"].pair == (1, 2)
 
@@ -531,7 +556,9 @@ def test_a_body_models_own_validator_runs_before_its_choices_are_checked():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-validator", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "body-validator", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({"kind": " a "})["params"].kind == "a"
 
@@ -550,7 +577,7 @@ def test_body_model_enum_choices_accept_the_member_pydantic_builds():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-enum", P.introspect_callable(layout))
+    validator = prism_params.build_validator("body-enum", prism_params.introspect_callable(layout))
 
     assert validator.validate({"color": "red"})["params"].color is Color.RED
 
@@ -568,7 +595,7 @@ def test_an_alias_cannot_route_around_a_body_models_choices():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-alias", P.introspect_callable(layout))
+    validator = prism_params.build_validator("body-alias", prism_params.introspect_callable(layout))
 
     with pytest.raises(ParamValidationError) as exc:
         validator.validate({"t": "DBR"})
@@ -586,7 +613,9 @@ def test_an_unset_body_field_keeps_its_default_unchecked():
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("body-default", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "body-default", prism_params.introspect_callable(layout)
+    )
 
     assert validator.validate({})["params"].ticker == "DBR"
 
@@ -601,11 +630,11 @@ def test_reordered_choices_are_not_a_contradiction():
     def layout(x: Annotated[Literal["a", "b"], Param(choices=["b", "a"])] = "a"):
         return html.Div()
 
-    spec = P.introspect_callable(layout)
-    validator = P.build_validator("reordered-choices", spec)
+    spec = prism_params.introspect_callable(layout)
+    validator = prism_params.build_validator("reordered-choices", spec)
 
     # The declared order is what the search bar offers.
-    assert P.build_layout_parameters(spec)[0].choices == ["b", "a"]
+    assert prism_params.build_layout_parameters(spec)[0].choices == ["b", "a"]
     assert validator.validate({"x": "b"}) == {"x": "b"}
 
 
@@ -616,7 +645,7 @@ def test_a_genuinely_different_choice_list_is_still_a_contradiction():
         return html.Div()
 
     with pytest.raises(ValueError, match="declares its choices twice"):
-        P.build_validator("still-conflicting", P.introspect_callable(layout))
+        prism_params.build_validator("still-conflicting", prism_params.introspect_callable(layout))
 
 
 def test_the_warning_names_the_parameters_that_lost_validation(caplog):
@@ -626,7 +655,7 @@ def test_the_warning_names_the_parameters_that_lost_validation(caplog):
         return html.Div()
 
     caplog.set_level(logging.WARNING, logger="dash_prism")
-    P.build_validator("named-degradation", P.introspect_callable(layout))
+    prism_params.build_validator("named-degradation", prism_params.introspect_callable(layout))
 
     assert any("Parameters without validation: cfg." in m for m in caplog.messages)
 
@@ -643,7 +672,9 @@ def test_a_validator_that_raises_logs_the_class_and_not_the_value(caplog):
     def layout(params: Body):
         return html.Div()
 
-    validator = P.build_validator("raising-validator", P.introspect_callable(layout))
+    validator = prism_params.build_validator(
+        "raising-validator", prism_params.introspect_callable(layout)
+    )
     caplog.set_level(logging.WARNING, logger="dash_prism")
 
     with pytest.raises(ParamValidationError):
@@ -675,7 +706,7 @@ def test_the_last_resort_fallback_gives_up_on_every_field():
         "odd": (_RefusesToBeSchematisedTwice, Field(None)),
         "n": (int, Field(1)),
     }
-    model, degraded = P._model_keeping_what_pydantic_accepts(
+    model, degraded = prism_params._model_keeping_what_pydantic_accepts(
         "LastResort", ConfigDict(extra="forbid"), fields
     )
 
@@ -722,8 +753,8 @@ def test_server_agrees_with_the_shared_input_table(case):
     The search bar mirrors these rules in ``paramValidation.ts``. A change on
     one side that the other side lacks fails this test or the Vitest test.
     """
-    spec = P.introspect_callable(_layout_for_case(case))
-    sent = P.build_layout_parameters(spec)[0].to_dict()
+    spec = prism_params.introspect_callable(_layout_for_case(case))
+    sent = prism_params.build_layout_parameters(spec)[0].to_dict()
     # The Vitest test builds its parameter from the case, so the case has to
     # describe the metadata that the server sends.
     assert sent["type"] == case["type"]
@@ -732,7 +763,7 @@ def test_server_agrees_with_the_shared_input_table(case):
     assert sent["choices"] == case.get("choices")
 
     try:
-        P.build_validator("table", spec).validate({"value": case["input"]})
+        prism_params.build_validator("table", spec).validate({"value": case["input"]})
     except ParamValidationError:
         accepted = False
     else:

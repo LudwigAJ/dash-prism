@@ -184,7 +184,7 @@ known-first-party = ["dash_prism", "tests"]
 "usage.py" = ["E402", "TID251"]
 # The slow layouts under test sleep on purpose.
 "tests/integration/test_layout_timeout.py" = ["TID251"]
-"tests/test_init.py" = ["TID251"]
+"tests/test_render.py" = ["TID251"]
 
 [tool.mypy]
 python_version = "3.11"
