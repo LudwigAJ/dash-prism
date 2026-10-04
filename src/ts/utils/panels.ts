@@ -14,13 +14,6 @@ export function isLeafPanel(root: PanelNode | Draft<PanelNode>): boolean {
 }
 
 /**
- * Checks if a panel is a container (has children)
- */
-export function isContainerPanel(root: PanelNode | Draft<PanelNode>): boolean {
-  return root.children.length > 0;
-}
-
-/**
  * Gets all leaf panel IDs from a panel tree (recursive)
  */
 export function getLeafPanelIds(root: PanelNode | Draft<PanelNode>): PanelId[] {
@@ -54,27 +47,9 @@ export function findPanelById(
 }
 
 /**
- * Finds parent panel (returns just the parent)
- */
-export function findParentPanel(
-  root: PanelNode | Draft<PanelNode>,
-  panelId: PanelId
-): PanelNode | Draft<PanelNode> | null {
-  if (root.id === panelId) return null;
-
-  for (const child of root.children) {
-    if (child.id === panelId) return root;
-    const parent = findParentPanel(child, panelId);
-    if (parent) return parent;
-  }
-
-  return null;
-}
-
-/**
  * Finds parent panel with index (useful for splicing in mutations)
  */
-export function findParentPanelWithIndex(
+function findParentPanelWithIndex(
   root: PanelNode | Draft<PanelNode>,
   panelId: PanelId
 ): { parent: PanelNode | Draft<PanelNode>; index: number } | null {
@@ -86,24 +61,6 @@ export function findParentPanelWithIndex(
     if (found) return found;
   }
   return null;
-}
-
-/**
- * Finds all leaf panels in the tree (recursive)
- */
-export function findAllLeaves(
-  root: PanelNode | Draft<PanelNode>
-): Array<PanelNode | Draft<PanelNode>> {
-  if (isLeafPanel(root)) return [root];
-  return root.children.flatMap(findAllLeaves);
-}
-
-/**
- * Checks if a panel is the last (only) leaf panel in the tree
- */
-export function isLastPanel(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
-  const leafPanels = getLeafPanelIds(root);
-  return leafPanels.length === 1 && leafPanels[0] === panelId;
 }
 
 // =============================================================================

@@ -46,34 +46,6 @@ export function findTabById<T extends TabOrDraft>(
 }
 
 /**
- * Gets all tabs belonging to a specific panel
- * @returns Array of tabs in the panel (empty array if none)
- */
-export function getTabsByPanelId<T extends TabOrDraft>(
-  tabs: T[] | readonly T[],
-  panelId: PanelId
-): T[] {
-  return (tabs as T[]).filter((t) => t.panelId === panelId);
-}
-
-/**
- * Counts tabs in a specific panel
- * @returns Number of tabs in the panel
- */
-export function countTabsInPanel(tabs: TabArrayOrDraft, panelId: PanelId): number {
-  return (tabs as Tab[]).filter((t) => t.panelId === panelId).length;
-}
-
-/**
- * Checks if a tab is locked
- * @returns true if tab exists and is locked
- */
-export function isTabLocked(tabs: TabArrayOrDraft, tabId: TabId): boolean {
-  const tab = findTabById(tabs as Tab[], tabId);
-  return tab?.locked === true;
-}
-
-/**
  * Gets the active tab for a panel
  * @param tabs - All tabs
  * @param activeTabIds - Map of panelId -> activeTabId

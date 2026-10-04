@@ -19,8 +19,8 @@ import {
 } from 'redux-persist';
 import undoable, { excludeAction, ActionCreators as UndoActionCreators } from 'redux-undo';
 
-import { workspaceReducer, createInitialWorkspaceState } from './workspaceSlice';
-import { uiReducer, initialUiState } from './uiSlice';
+import { workspaceReducer } from './workspaceSlice';
+import { uiReducer } from './uiSlice';
 import { createDashSyncMiddleware, validationMiddleware } from './middleware/dashSyncMiddleware';
 import { createReconcileMiddleware } from './middleware/reconcileMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
@@ -208,11 +208,6 @@ export type RootState = {
  */
 export type AppDispatch = ThunkDispatch<RootState, ThunkExtra, UnknownAction>;
 
-/**
- * The present workspace state (unwraps redux-undo).
- */
-export type WorkspacePresent = RootState['workspace']['present'];
-
 // =============================================================================
 // Undo/Redo Action Creators
 // =============================================================================
@@ -223,36 +218,79 @@ export type WorkspacePresent = RootState['workspace']['present'];
  */
 export const undo = UndoActionCreators.undo;
 
-/**
- * Redoes the last undone workspace action.
- * @example dispatch(redo())
- */
-export const redo = UndoActionCreators.redo;
+// Re-exports. The components import the store through this module (`@store`), and src/ts/index.ts
+// re-exports part of it, so each name below has an importer.
 
-/**
- * Clears all undo/redo history.
- * @example dispatch(clearHistory())
- */
-export const clearHistory = UndoActionCreators.clearHistory;
-
-// =============================================================================
-// Re-exports
-// =============================================================================
-
-// Export initial states
-export { createInitialWorkspaceState, initialUiState };
-
-// Export slice actions
-export * from './workspaceSlice';
-export * from './workspaceThunks';
-export * from './uiSlice';
-export * from './persistence';
-
-// Export selectors
-export * from './selectors';
-
-// Export hooks
-export * from './hooks';
-
-// Export types
+export {
+  createInitialWorkspaceState,
+  removeTab,
+  activateTab,
+  renameTab,
+  lockTab,
+  unlockTab,
+  toggleTabLock,
+  updateTabLayout,
+  moveTab,
+  reorderTab,
+  setTabIcon,
+  setTabStyle,
+  refreshTab,
+  setActivePanel,
+  resizePanel,
+  pinPanel,
+  unpinPanel,
+  toggleSearchBars,
+  toggleFavoriteLayout,
+  resetWorkspace,
+  syncWorkspace,
+  switchToOpenTab,
+} from './workspaceSlice';
+export { addTab, duplicateTab, splitPanel, canAddPanel } from './workspaceThunks';
+export {
+  initialUiState,
+  setSearchBarMode,
+  pruneSearchBarModes,
+  startRenameTab,
+  clearRenameTab,
+  requestLayoutSelection,
+  clearLayoutSelectionRequest,
+  requestSearchFocus,
+  clearSearchFocusRequest,
+  openInfoModal,
+  closeInfoModal,
+  openHelpModal,
+  closeHelpModal,
+  openSetIconModal,
+  closeSetIconModal,
+  setLoadNotice,
+  clearLoadNotice,
+} from './uiSlice';
+export {
+  clearPersistedWorkspace,
+  getWorkspaceStorageKey,
+  resolvePersistenceType,
+} from './persistence';
+export {
+  selectTabs,
+  selectPanel,
+  selectPanelTabs,
+  selectActiveTabIds,
+  selectActivePanelId,
+  selectFavoriteLayouts,
+  selectSearchBarsHidden,
+  selectCanUndo,
+  selectSearchBarModes,
+  selectRenamingTabId,
+  selectLayoutSelectionRequest,
+  selectSearchFocusPanelId,
+  selectInfoModalTabId,
+  selectHelpModalOpen,
+  selectSetIconModalTabId,
+  selectLoadNotice,
+  selectTabCount,
+  selectPanelCount,
+  selectIsSingleTabMode,
+  selectWorkspaceSnapshot,
+} from './selectors';
+export { useAppDispatch, useAppSelector } from './hooks';
 export type { WorkspaceState, UiState, SearchBarMode, StoreConfig, ThunkExtra } from './types';

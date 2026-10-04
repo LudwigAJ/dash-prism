@@ -10,7 +10,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   setSearchBarMode,
-  clearSearchBarMode,
   pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
@@ -93,42 +92,6 @@ describe('uiSlice', () => {
         store.dispatch(setSearchBarMode({ panelId: 'panel-1', mode }));
         expect(getUiState(store).searchBarModes['panel-1']).toBe(mode);
       }
-    });
-  });
-
-  describe('clearSearchBarMode', () => {
-    it('removes mode for a panel', () => {
-      const store = createUiStore({
-        searchBarModes: { 'panel-1': 'search' },
-      });
-
-      store.dispatch(clearSearchBarMode({ panelId: 'panel-1' }));
-
-      expect(getUiState(store).searchBarModes['panel-1']).toBeUndefined();
-    });
-
-    it('preserves other panels when clearing one', () => {
-      const store = createUiStore({
-        searchBarModes: {
-          'panel-1': 'search',
-          'panel-2': 'display',
-        },
-      });
-
-      store.dispatch(clearSearchBarMode({ panelId: 'panel-1' }));
-
-      expect(getUiState(store).searchBarModes['panel-1']).toBeUndefined();
-      expect(getUiState(store).searchBarModes['panel-2']).toBe('display');
-    });
-
-    it('is a no-op for non-existent panel', () => {
-      const store = createUiStore({
-        searchBarModes: { 'panel-1': 'search' },
-      });
-
-      store.dispatch(clearSearchBarMode({ panelId: 'panel-nonexistent' }));
-
-      expect(getUiState(store).searchBarModes['panel-1']).toBe('search');
     });
   });
 

@@ -134,14 +134,14 @@ export const tabStyleVariants = cva('', {
   },
 });
 
-export type TabStyleVariantProps = VariantProps<typeof tabStyleVariants>;
+type TabStyleVariantProps = VariantProps<typeof tabStyleVariants>;
 export type TabStyleColor = NonNullable<TabStyleVariantProps['color']>;
 
 /**
  * Migration map from old Catppuccin color names to new semantic colors.
  * Used when loading tabs from storage that may have old style names.
  */
-export const TAB_STYLE_MIGRATION_MAP: Record<string, TabStyleColor> = {
+const TAB_STYLE_MIGRATION_MAP: Record<string, TabStyleColor> = {
   // Direct mappings (colors that exist in both systems)
   red: 'red',
   yellow: 'yellow',

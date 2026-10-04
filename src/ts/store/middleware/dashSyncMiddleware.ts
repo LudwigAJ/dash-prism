@@ -127,8 +127,8 @@ export function createDashSyncMiddleware(
       }
 
       // Drop search-bar modes of panels that disappeared in this change, whatever
-      // removed them (collapsePanel, removeTab/moveTab/splitPanel collapsing an
-      // empty panel, reconciliation, rehydration).
+      // removed them (removeTab/moveTab/splitPanel collapsing an empty panel,
+      // reconciliation, rehydration).
       const leafPanelIds = getLeafPanelIds(workspace.panel);
       const leafSet = new Set<string>(leafPanelIds);
       const stale = Object.keys(state.ui.searchBarModes).some((id) => !leafSet.has(id));

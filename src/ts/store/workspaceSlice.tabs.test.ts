@@ -15,7 +15,6 @@ import {
   setTabIcon,
   setTabStyle,
   refreshTab,
-  collapsePanel,
   MAX_TAB_NAME_LENGTH,
   detachTab,
   attachTab,
@@ -640,7 +639,7 @@ describe('state invariants', () => {
 });
 
 describe('complex workflows', () => {
-  it('handles split -> move -> collapse workflow', async () => {
+  it('handles split -> move back -> collapse workflow', async () => {
     const store = createTestStore(makeWorkspace());
 
     // Add second tab to enable split
@@ -660,8 +659,8 @@ describe('complex workflows', () => {
     const newPanelId = getTab(store, tab2Id)?.panelId ?? '';
     expect(newPanelId).not.toBe(PANEL_1);
 
-    // Collapse the new panel back
-    store.dispatch(collapsePanel({ panelId: newPanelId }));
+    // Moving the only tab back empties the new panel, which collapses
+    store.dispatch(moveTab({ tabId: tab2Id, targetPanelId: PANEL_1 }));
 
     expect(countLeafPanels(getWorkspace(store).panel)).toBe(1);
     expect(getWorkspace(store).tabs.length).toBe(2);

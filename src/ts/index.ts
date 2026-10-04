@@ -27,8 +27,6 @@ export {
   useAppSelector,
   // Undo/redo
   undo,
-  redo,
-  clearHistory,
   // Selectors
   selectTabs,
   selectPanel,
@@ -38,7 +36,6 @@ export {
   selectFavoriteLayouts,
   selectSearchBarsHidden,
   selectCanUndo,
-  selectCanRedo,
   selectTabCount,
   selectPanelCount,
   selectWorkspaceSnapshot,
@@ -68,14 +65,12 @@ export {
   pinPanel,
   unpinPanel,
   splitPanel,
-  collapsePanel,
   toggleSearchBars,
   toggleFavoriteLayout,
   resetWorkspace,
   syncWorkspace,
   // UI actions
   setSearchBarMode,
-  clearSearchBarMode,
   pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
@@ -104,7 +99,7 @@ export type {
 } from './store';
 
 // Hooks
-export { usePrism, useActiveTab, usePanelTabs } from './hooks/usePrism';
+export { usePrism, useActiveTab } from './hooks/usePrism';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useLastChangeTime } from './hooks/useLastChangeTime';
 export { useShareLink, useShareLinkListener } from './hooks/useShareLinks';

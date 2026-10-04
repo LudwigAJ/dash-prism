@@ -7,9 +7,6 @@ import { getLeafPanelIds } from '@utils/panels';
 // Workspace Selectors (access .present for redux-undo wrapped state)
 // =============================================================================
 
-/** Accesses the present workspace state (unwraps redux-undo) */
-export const selectWorkspacePresent = (state: RootState) => state.workspace.present;
-
 export const selectTabs = (state: RootState) => state.workspace.present.tabs;
 export const selectPanel = (state: RootState) => state.workspace.present.panel;
 export const selectPanelTabs = (state: RootState) => state.workspace.present.panelTabs;
@@ -19,24 +16,12 @@ export const selectFavoriteLayouts = (state: RootState) => state.workspace.prese
 export const selectSearchBarsHidden = (state: RootState) =>
   state.workspace.present.searchBarsHidden;
 
-// Note: selectTheme is NOT here - theme comes from ConfigContext (Dash props)
-// Note: selectUndoStack is NOT here - undo state is managed by redux-undo (see selectors below)
-
 // =============================================================================
 // Redux-Undo History Selectors
 // =============================================================================
 
 /** Checks if undo is available (has past states) */
 export const selectCanUndo = (state: RootState) => state.workspace.past.length > 0;
-
-/** Checks if redo is available (has future states) */
-export const selectCanRedo = (state: RootState) => state.workspace.future.length > 0;
-
-/** Gets the number of undo steps available */
-export const selectUndoCount = (state: RootState) => state.workspace.past.length;
-
-/** Gets the number of redo steps available */
-export const selectRedoCount = (state: RootState) => state.workspace.future.length;
 
 // =============================================================================
 // UI Selectors
@@ -57,7 +42,7 @@ export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 
-export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
+const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(
   selectLeafPanelIds,
@@ -70,9 +55,6 @@ export const selectIsSingleTabMode = createSelector(
   selectPanelCount,
   (tabCount, panelCount) => tabCount === 1 && panelCount === 1
 );
-
-// Note: selectCanUndo is defined above in Redux-Undo History Selectors
-// It uses state.workspace.past.length > 0 (redux-undo approach)
 
 /**
  * Selects workspace snapshot for Dash sync

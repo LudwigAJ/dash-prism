@@ -1,7 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-
-export type { LucideIcon };
-
 // =============================================================================
 // Namespace Types
 // =============================================================================
@@ -9,7 +5,7 @@ export type { LucideIcon };
 export type TabId = string;
 export type PanelId = string;
 export type LayoutId = string;
-export type PanelOrder = 0 | 1;
+type PanelOrder = 0 | 1;
 export type PanelDirection = 'vertical' | 'horizontal';
 export type PersistenceType = 'memory' | 'session' | 'local';
 export type Theme = 'light' | 'dark';
@@ -72,7 +68,7 @@ export type ParamConstraints = {
 
 // `null` here is a JSON scalar that a default or a choice can hold. It does not
 // mean that the value is absent.
-export type ParamScalar = string | number | boolean | null;
+type ParamScalar = string | number | boolean | null;
 
 /** Mirrors dash_prism.params.LayoutParameter.to_dict() */
 export interface LayoutParam {
@@ -129,19 +125,6 @@ export interface Workspace {
 }
 
 // =============================================================================
-// Actions Prop Types (Developer-defined buttons in StatusBar)
-// =============================================================================
-
-export type PrismActionDef = {
-  id: string;
-  label: string;
-  icon?: string;
-  variant?: string;
-  tooltip?: string;
-  disabled?: boolean;
-};
-
-// =============================================================================
 // Share Link Types (URL-based tab sharing)
 // =============================================================================
 
@@ -171,7 +154,7 @@ export type ShareData = {
 /**
  * Dash component specification format (from https://github.com/plotly/dash)
  */
-export type BaseDashProps = {
+type BaseDashProps = {
   id?: string | Record<string, string>;
   [propName: string]: unknown;
 };
@@ -205,12 +188,12 @@ export function isDashComponent(value: unknown): value is DashComponent {
 }
 
 /** The keys and indexes that lead to one component in the Dash layout tree. */
-export type DashPath = Array<string | number>;
+type DashPath = Array<string | number>;
 
 /**
  * Props for ExternalWrapper component
  */
-export type ExternalWrapperProps = {
+type ExternalWrapperProps = {
   component: DashComponent;
   componentPath: DashPath;
   temp?: boolean;
@@ -219,7 +202,7 @@ export type ExternalWrapperProps = {
 /**
  * Dash context type returned by useDashContext
  */
-export type DashContextType = {
+type DashContextType = {
   componentPath: DashPath;
   useLoading: (options?: {
     extraPath?: DashPath;

@@ -100,8 +100,6 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
  */
 export const TAB_ICON_NAMES: readonly string[] = iconsConfig.icons;
 
-export type TabIconName = (typeof TAB_ICON_NAMES)[number];
-
 /**
  * Gets a lucide-react icon component by name.
  * Returns undefined if the icon name is not found or empty.

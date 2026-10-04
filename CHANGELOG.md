@@ -91,6 +91,12 @@ All notable changes to Dash Prism are recorded here. The project follows
   stale entry left in the other storage after a `persistence_type` switch is
   never read and stays until cleared by hand.
 
+### Removed
+
+- The bundle no longer re-exports internal store helpers (`redo`,
+  `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
+  `usePanelTabs`). They were never documented.
+
 ### Fixed
 
 - `dash_prism.init()` no longer warns that it cannot find the Prism component

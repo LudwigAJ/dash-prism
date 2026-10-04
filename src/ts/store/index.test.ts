@@ -16,6 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Storage } from 'redux-persist';
 import { toast } from 'sonner';
+import { ActionCreators } from 'redux-undo';
 import {
   createPrismStore,
   getWorkspaceStorageKey,
@@ -24,9 +25,7 @@ import {
   removeTab,
   renameTab,
   undo,
-  redo,
   selectCanUndo,
-  selectCanRedo,
   requestLayoutSelection,
   requestSearchFocus,
   startRenameTab,
@@ -181,7 +180,6 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(0);
       expect(history(created).future).toHaveLength(0);
       expect(selectCanUndo(created.store.getState())).toBe(false);
-      expect(selectCanRedo(created.store.getState())).toBe(false);
       expect(persistMeta(created)?.rehydrated).toBe(true);
       expect(present(created).tabs).toHaveLength(1);
 
@@ -249,12 +247,12 @@ describe('createPrismStore', () => {
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
       expect(present(created).activeTabIds).toEqual(saved.activeTabIds);
       expect(selectCanUndo(created.store.getState())).toBe(false);
-      expect(selectCanRedo(created.store.getState())).toBe(true);
+      expect(history(created).future).toHaveLength(1);
       // Rehydration completed. `_persist` now sits outside the undo history, so
       // an undo can no longer clear this marker and stop all further writes.
       expect(persistMeta(created)?.rehydrated).toBe(true);
 
-      created.store.dispatch(redo());
+      created.store.dispatch(ActionCreators.redo());
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a']);
       created.store.dispatch(undo());
 
@@ -389,7 +387,7 @@ describe('createPrismStore', () => {
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a', 'tab-b']);
 
-      created.store.dispatch(redo());
+      created.store.dispatch(ActionCreators.redo());
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a']);
 

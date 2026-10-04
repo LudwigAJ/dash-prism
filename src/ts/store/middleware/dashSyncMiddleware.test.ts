@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isAction, type Middleware } from '@reduxjs/toolkit';
 import { ActionCreators, ActionTypes } from 'redux-undo';
 import { PERSIST, REHYDRATE } from 'redux-persist';
-import { activateTab, removeTab, collapsePanel } from '../workspaceSlice';
+import { activateTab, removeTab } from '../workspaceSlice';
 import { addTab, splitPanel } from '../workspaceThunks';
 import { setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware, isWorkspaceChange } from './dashSyncMiddleware';
@@ -267,8 +267,7 @@ describe('dashSyncMiddleware', () => {
     });
   });
 
-  // Stale search-bar modes go after any workspace change that removes a panel, not only after
-  // collapsePanel.
+  // Any workspace change that removes a panel also removes the stale search-bar modes.
   describe('search-bar mode cleanup', () => {
     async function splitIntoTwoPanels(store: TestStore) {
       const rootPanelId = store.getState().workspace.present.panel.id;
@@ -293,23 +292,11 @@ describe('dashSyncMiddleware', () => {
         [rootPanelId, newPanelId].sort()
       );
 
-      // removeTab collapses the now-empty panel internally; no collapsePanel
-      // action is ever dispatched.
+      // removeTab collapses the now-empty panel internally.
       store.dispatch(removeTab({ tabId: tabB.id }));
 
       expect(store.getState().ui.searchBarModes[newPanelId]).toBeUndefined();
       expect(store.getState().ui.searchBarModes[rootPanelId]).toBe('search');
-    });
-
-    it('still prunes after an explicit collapsePanel', async () => {
-      const { store } = createSyncedStore(vi.fn());
-      const { rootPanelId, newPanelId } = await splitIntoTwoPanels(store);
-      store.dispatch(setSearchBarMode({ panelId: newPanelId, mode: 'search' }));
-
-      store.dispatch(collapsePanel({ panelId: newPanelId }));
-
-      expect(store.getState().ui.searchBarModes[newPanelId]).toBeUndefined();
-      expect(store.getState().ui.searchBarModes[rootPanelId]).toBeUndefined();
     });
 
     it('does not dispatch prune actions when nothing is stale', async () => {

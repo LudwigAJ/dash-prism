@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { PanelId, Tab } from '@types';
-import { findTabById, getActiveTabForPanel, getTabsByPanelId } from '@utils/tabs';
+import { findTabById, getActiveTabForPanel } from '@utils/tabs';
 import { usePortal } from '@context/PortalContext';
 import { useConfig } from '@context/ConfigContext';
 import {
@@ -171,15 +171,4 @@ export function useActiveTab(panelId: PanelId) {
   const tabs = useAppSelector(selectTabs);
   const activeTabIds = useAppSelector(selectActiveTabIds);
   return getActiveTabForPanel(tabs, activeTabIds, panelId) ?? null;
-}
-
-/**
- * Returns all tabs belonging to a specific panel.
- *
- * @param panelId - The panel ID to get tabs for
- * @returns Array of Tab objects in the panel
- */
-export function usePanelTabs(panelId: PanelId) {
-  const tabs = useAppSelector(selectTabs);
-  return getTabsByPanelId(tabs, panelId);
 }

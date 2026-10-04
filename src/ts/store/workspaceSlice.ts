@@ -412,50 +412,6 @@ const workspaceSlice = createSlice({
       if (panel) panel.pinned = false;
     },
 
-    collapsePanel(state, action: PayloadAction<{ panelId: PanelId }>) {
-      const { panelId } = action.payload;
-
-      const leafPanels = getLeafPanelIds(state.panel).filter((id) => id !== panelId);
-      if (leafPanels.length === 0) return;
-
-      // Remove the panel first. This leaves the tree unchanged for a panel that is not a leaf.
-      if (!removePanelFromTree(state.panel, panelId)) return;
-
-      const targetPanelId = leafPanels[0];
-
-      // Move all tabs to target panel
-      const tabsToMove = [...(state.panelTabs[panelId] ?? [])];
-      for (const tid of tabsToMove) {
-        const tab = findTabById(state.tabs, tid);
-        if (tab) {
-          // Remove from source
-          const idx = state.panelTabs[panelId]?.indexOf(tid);
-          if (idx !== undefined && idx !== -1) {
-            state.panelTabs[panelId].splice(idx, 1);
-          }
-          // Add to target
-          if (!state.panelTabs[targetPanelId]) state.panelTabs[targetPanelId] = [];
-          state.panelTabs[targetPanelId].push(tid);
-          tab.panelId = targetPanelId;
-        }
-      }
-
-      // Clean up state
-      delete state.activeTabIds[panelId];
-      delete state.panelTabs[panelId];
-
-      // Update active states
-      if (tabsToMove.length > 0) {
-        const hasActiveTab =
-          state.activeTabIds[targetPanelId] &&
-          state.panelTabs[targetPanelId]?.includes(state.activeTabIds[targetPanelId]);
-        if (!hasActiveTab) {
-          state.activeTabIds[targetPanelId] = tabsToMove[0];
-        }
-      }
-      state.activePanelId = targetPanelId;
-    },
-
     // Workspace actions
 
     toggleSearchBars(state) {
@@ -534,7 +490,6 @@ export const {
   resizePanel,
   pinPanel,
   unpinPanel,
-  collapsePanel,
   toggleSearchBars,
   toggleFavoriteLayout,
   resetWorkspace,

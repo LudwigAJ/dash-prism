@@ -1,12 +1,10 @@
 // Tests for the panel reducers of workspaceSlice. The splitPanel thunk has its tests in
-// workspaceThunks.test.ts.
+// workspaceThunks.test.ts. A panel closes when its last tab leaves, so the tab tests cover that.
 
-import { describe, it, expect, vi } from 'vitest';
-import { setActivePanel, resizePanel, pinPanel, unpinPanel, collapsePanel } from './workspaceSlice';
-import { countLeafPanels } from '@utils/panels';
+import { describe, it, expect } from 'vitest';
+import { setActivePanel, resizePanel, pinPanel, unpinPanel } from './workspaceSlice';
 import {
   createTestStore,
-  getTab,
   getWorkspace,
   makeWorkspace,
   PANEL_1,
@@ -46,64 +44,6 @@ describe('setActivePanel', () => {
 
     // Should not change since container-1 is not a leaf
     expect(getWorkspace(store).activePanelId).toBe(originalPanelId);
-  });
-});
-
-describe('collapsePanel', () => {
-  it('moves all tabs to remaining panel', () => {
-    const store = createTestStore(makeWorkspace([[TAB_1, TAB_2], [TAB_3]]));
-
-    store.dispatch(collapsePanel({ panelId: PANEL_2 }));
-
-    expect(getTab(store, TAB_3)?.panelId).toBe(PANEL_1);
-    expect(getWorkspace(store).panelTabs[PANEL_1]).toContain(TAB_3);
-  });
-
-  it('cleans up collapsed panel state', () => {
-    const store = createTestStore(makeWorkspace([[TAB_1, TAB_2], [TAB_3]]));
-
-    store.dispatch(collapsePanel({ panelId: PANEL_2 }));
-
-    expect(getWorkspace(store).panelTabs[PANEL_2]).toBeUndefined();
-    expect(getWorkspace(store).activeTabIds[PANEL_2]).toBeUndefined();
-  });
-
-  it('does not collapse last remaining panel', () => {
-    const store = createTestStore(makeWorkspace());
-
-    store.dispatch(collapsePanel({ panelId: PANEL_1 }));
-
-    expect(countLeafPanels(getWorkspace(store).panel)).toBe(1);
-  });
-
-  it('does nothing for a panel that does not exist', () => {
-    const notify = vi.fn();
-    const store = createTestStore(makeWorkspace([[TAB_1, TAB_2], [TAB_3]]), { notify });
-    const before = getWorkspace(store);
-
-    store.dispatch(collapsePanel({ panelId: 'missing' }));
-
-    expect(getWorkspace(store)).toBe(before);
-    expect(notify).not.toHaveBeenCalled();
-  });
-
-  it('does not toast when it refuses to close the last panel', () => {
-    const notify = vi.fn();
-    const store = createTestStore(makeWorkspace(), { notify });
-
-    store.dispatch(collapsePanel({ panelId: PANEL_1 }));
-
-    expect(notify).not.toHaveBeenCalled();
-  });
-
-  it('updates activePanelId to remaining panel', () => {
-    const state = makeWorkspace([[TAB_1, TAB_2], [TAB_3]]);
-    state.activePanelId = PANEL_2;
-    const store = createTestStore(state);
-
-    store.dispatch(collapsePanel({ panelId: PANEL_2 }));
-
-    expect(getWorkspace(store).activePanelId).toBe(PANEL_1);
   });
 });
 
