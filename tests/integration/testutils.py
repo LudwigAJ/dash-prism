@@ -36,9 +36,6 @@ PRISM_ROOT = ".prism-root"
 # Note: Actual DOM uses data-testid="prism-drop-zone-{edge}-{panelId}"
 # so we use ^= (starts-with) prefix matching
 DROP_ZONE_LEFT = "[data-testid^='prism-drop-zone-left']"
-DROP_ZONE_RIGHT = "[data-testid^='prism-drop-zone-right']"
-DROP_ZONE_TOP = "[data-testid^='prism-drop-zone-top']"
-DROP_ZONE_BOTTOM = "[data-testid^='prism-drop-zone-bottom']"
 
 
 def get_free_port() -> int:
@@ -310,28 +307,6 @@ def get_tab_order_in_panel(dash_duo, panel_index: int = 0) -> list[str]:
     return tab_ids
 
 
-def verify_tab_in_panel(dash_duo, tab_id: str, panel_index: int = 0) -> bool:
-    """
-    Verify a specific tab is in a specific panel.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_id : str
-        Tab ID to find.
-    panel_index : int
-        Panel index to check.
-
-    Returns
-    -------
-    bool
-        True if tab is in the panel.
-    """
-    tab_ids = get_tab_order_in_panel(dash_duo, panel_index)
-    return tab_id in tab_ids
-
-
 def are_drop_zones_present(dash_duo) -> bool:
     """
     Check if drop zone elements are currently present in the DOM.
@@ -553,71 +528,6 @@ def create_tabs_for_dnd_test(dash_duo, count: int = 3) -> list[str]:
 # =============================================================================
 # Drag-and-Drop Helpers - for @dnd-kit testing with ActionChains
 # =============================================================================
-def perform_drag_and_drop(
-    dash_duo,
-    source_element,
-    target_element,
-    offset_x: int = 0,
-    offset_y: int = 0,
-    initial_offset: int = 15,
-) -> bool:
-    """
-    Perform a drag-and-drop operation compatible with @dnd-kit.
-
-    @dnd-kit's PointerSensor requires >8px initial movement to activate drag.
-    This function uses ActionChains chaining with .pause() for reliable event processing.
-    Uses incremental "wiggle" motion to ensure multiple pointermove events fire,
-    which helps headless Chrome reliably exceed the activation threshold.
-
-    Per DASH_TESTING_GUIDELINES.md:
-    - Use ActionChains chaining (not time.sleep)
-    - Use .pause() between actions for dnd-kit event processing
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    source_element : WebElement
-        The element to drag.
-    target_element : WebElement
-        The drop target element.
-    offset_x : int
-        X offset from target center (default 0).
-    offset_y : int
-        Y offset from target center (default 0).
-    initial_offset : int
-        Initial movement to trigger drag (must be >8px, default 15).
-        Note: Now uses incremental 5px moves regardless of this value.
-
-    Returns
-    -------
-    bool
-        True if drag completed without error.
-    """
-    # Scroll source element into view to prevent MoveTargetOutOfBoundsException
-    dash_duo.driver.execute_script(
-        "arguments[0].scrollIntoView({block: 'center'});", source_element
-    )
-
-    actions = ActionChains(dash_duo.driver)
-
-    # Grab the element
-    actions.click_and_hold(source_element).pause(0.2)
-
-    # Incremental "wiggle" movement to reliably exceed 8px activation threshold
-    # Multiple small moves generate multiple mousemove/pointermove events
-    actions.move_by_offset(5, 0).pause(0.1)
-    actions.move_by_offset(5, 0).pause(0.1)
-    actions.move_by_offset(5, 0).pause(0.1)
-
-    # Move to target with optional offset
-    actions.move_to_element_with_offset(target_element, offset_x, offset_y).pause(0.3)
-
-    # Release
-    actions.release().perform()
-    return True
-
-
 def drag_tab_to_position(
     dash_duo,
     source_tab_index: int,
@@ -790,69 +700,6 @@ def drag_tab_to_panel_edge(
     # Wait for React to process the drop action and re-render
     # This explicit wait is critical for parallel test execution
     wait_for_panel_layout_stable(dash_duo, timeout=10.0)
-
-    return True
-
-
-def drag_tab_to_other_panel(
-    dash_duo,
-    tab_index: int,
-    source_panel_index: int,
-    target_panel_index: int,
-) -> bool:
-    """
-    Drag a tab from one panel to another panel (cross-panel move).
-
-    The cross-panel drop zone only becomes active when dragging from a
-    different panel. We need to:
-    1. Start the drag from source panel
-    2. Move to a tab in the target panel (triggers MOVE_TAB action)
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_index : int
-        Index of tab within source panel.
-    source_panel_index : int
-        Index of source panel.
-    target_panel_index : int
-        Index of target panel.
-
-    Returns
-    -------
-    bool
-        True if operation completed.
-    """
-    panels = get_panels(dash_duo)
-    if source_panel_index >= len(panels) or target_panel_index >= len(panels):
-        return False
-
-    source_panel = panels[source_panel_index]
-    target_panel = panels[target_panel_index]
-
-    source_tabs = source_panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-    if tab_index >= len(source_tabs):
-        return False
-
-    source_tab = source_tabs[tab_index]
-
-    # Find a tab in the target panel to drop onto
-    target_tabs = target_panel.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-
-    # Use ActionChains for the drag operation
-    actions = ActionChains(dash_duo.driver)
-    actions.click_and_hold(source_tab).pause(0.5).move_by_offset(15, 15).pause(1.0)
-
-    if target_tabs:
-        # Drop onto the first tab in target panel
-        actions.move_to_element(target_tabs[0]).pause(1.0).release().pause(1.0).perform()
-    else:
-        # No tabs in target panel - drop on the panel itself (upper area)
-        target_panel_rect = target_panel.rect
-        actions.move_to_element_with_offset(
-            target_panel, 0, -target_panel_rect["height"] // 3
-        ).pause(1.0).release().pause(1.0).perform()
 
     return True
 

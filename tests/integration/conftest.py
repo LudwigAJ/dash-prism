@@ -63,7 +63,7 @@ def clear_registry_integration():
     dash_prism.clear_registry()
 
 
-def _start_prism_app(dash_duo, *, size: str = "md"):
+def _start_prism_app(dash_duo):
     """
     Start a Dash app with Prism component and registered test layouts.
 
@@ -71,8 +71,6 @@ def _start_prism_app(dash_duo, *, size: str = "md"):
     ----------
     dash_duo : DashComposite
         The dash[testing] fixture combining Dash server + browser.
-    size : str
-        Prism size variant ('sm', 'md', or 'lg').
 
     Returns
     -------
@@ -114,7 +112,6 @@ def _start_prism_app(dash_duo, *, size: str = "md"):
             dash_prism.Prism(
                 id="prism",
                 theme="light",
-                size=size,
                 maxTabs=10,
                 persistence=False,
                 persistence_type="memory",
@@ -220,14 +217,4 @@ def prism_app_with_layouts(dash_duo):
     DashComposite
         The dash_duo instance with app already started and loaded.
     """
-    return _start_prism_app(dash_duo, size="md")
-
-
-@pytest.fixture
-def prism_app_factory(dash_duo):
-    """Factory fixture to start Prism apps with different size variants."""
-
-    def _factory(size: str = "md"):
-        return _start_prism_app(dash_duo, size=size)
-
-    return _factory
+    return _start_prism_app(dash_duo)
