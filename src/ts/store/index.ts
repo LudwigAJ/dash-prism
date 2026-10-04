@@ -27,9 +27,7 @@ import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
 import { prismToast } from '@utils/prismToast';
 import { PERSIST_VERSION, getStorage, getWorkspacePersistKey, migrations } from './persistence';
 
-// =============================================================================
 // Redux-Undo Configuration
-// =============================================================================
 
 /**
  * Actions that should NOT create undo history entries.
@@ -53,9 +51,7 @@ const UNDO_EXCLUDED_ACTIONS = [
   REGISTER,
 ];
 
-// =============================================================================
 // Store Factory
-// =============================================================================
 
 /**
  * Creates a configured Redux store with persistence, undo/redo, and middleware.
@@ -184,9 +180,7 @@ export function createPrismStore(config: StoreConfig) {
   return { store, persistor, cleanup };
 }
 
-// =============================================================================
 // Type Exports
-// =============================================================================
 
 /**
  * Root state type - manually defined to match redux-undo wrapped workspace
@@ -208,9 +202,7 @@ export interface RootState {
  */
 export type AppDispatch = ThunkDispatch<RootState, ThunkExtra, UnknownAction>;
 
-// =============================================================================
 // Undo/Redo Action Creators
-// =============================================================================
 
 /**
  * Undoes the last workspace action.

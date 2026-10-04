@@ -3,9 +3,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { getLeafPanelIds } from '@utils/panels';
 
-// =============================================================================
 // Workspace Selectors (access .present for redux-undo wrapped state)
-// =============================================================================
 
 export const selectTabs = (state: RootState) => state.workspace.present.tabs;
 export const selectPanel = (state: RootState) => state.workspace.present.panel;
@@ -16,16 +14,12 @@ export const selectFavoriteLayouts = (state: RootState) => state.workspace.prese
 export const selectSearchBarsHidden = (state: RootState) =>
   state.workspace.present.searchBarsHidden;
 
-// =============================================================================
 // Redux-Undo History Selectors
-// =============================================================================
 
 /** Checks if undo is available (has past states) */
 export const selectCanUndo = (state: RootState) => state.workspace.past.length > 0;
 
-// =============================================================================
 // UI Selectors
-// =============================================================================
 
 export const selectSearchBarModes = (state: RootState) => state.ui.searchBarModes;
 export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
@@ -36,9 +30,7 @@ export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
 export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
 export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
-// =============================================================================
 // Derived Selectors (memoized)
-// =============================================================================
 
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
 

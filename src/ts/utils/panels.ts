@@ -4,9 +4,7 @@ import { generateShortId } from '@utils/uuid';
 // The reducers pass immer drafts. A draft of a PanelNode has the same fields, so `PanelNode`
 // takes it, and a function can change the draft in place.
 
-// =============================================================================
 // Query Functions (Read-only)
-// =============================================================================
 
 /**
  * Checks if a panel is a leaf panel (can hold tabs)
@@ -62,9 +60,7 @@ function findParentPanelWithIndex(
   return null;
 }
 
-// =============================================================================
 // Mutation Functions (In-place, for use inside produce() blocks)
-// =============================================================================
 
 /**
  * Updates a panel in the tree by ID (in-place mutation)
@@ -126,9 +122,7 @@ export function removePanelFromTree(root: PanelNode, panelId: PanelId): boolean 
   return true;
 }
 
-// =============================================================================
 // Complex Panel Operations (Panel Tree Transformations)
-// =============================================================================
 
 /**
  * Splits a leaf panel into a container with two children.
