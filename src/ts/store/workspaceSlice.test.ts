@@ -610,6 +610,43 @@ describe('workspaceSlice', () => {
       expect(getWorkspace(store).panelTabs['test-panel-1']).not.toContain(tab2Id);
     });
 
+    it('rejects a split of a panel that is not in the tree and tells the user', async () => {
+      const store = createTestStore(createTestState());
+      await store.dispatch(addTab({ panelId: 'test-panel-1' }));
+      const before = getWorkspace(store);
+      const events: ToastEvent[] = [];
+      const unsubscribe = subscribeToToasts((event) => events.push(event));
+
+      const result = await store.dispatch(
+        splitPanel({ panelId: 'missing', direction: 'horizontal', tabId: before.tabs[1].id })
+      );
+      unsubscribe();
+
+      expect(splitPanel.rejected.match(result)).toBe(true);
+      expect(getWorkspace(store)).toBe(before);
+      expect(events).toEqual([
+        expect.objectContaining({ type: 'error', message: 'Cannot split: panel not found' }),
+      ]);
+    });
+
+    it('rejects a split of a panel that is not a leaf and tells the user', async () => {
+      const store = createTestStore(createTwoPanelState());
+      const before = getWorkspace(store);
+      const events: ToastEvent[] = [];
+      const unsubscribe = subscribeToToasts((event) => events.push(event));
+
+      const result = await store.dispatch(
+        splitPanel({ panelId: before.panel.id, direction: 'horizontal', tabId: 'tab-1' })
+      );
+      unsubscribe();
+
+      expect(splitPanel.rejected.match(result)).toBe(true);
+      expect(getWorkspace(store)).toBe(before);
+      expect(events).toEqual([
+        expect.objectContaining({ type: 'error', message: 'Cannot split a non-leaf panel' }),
+      ]);
+    });
+
     it('does not split panel with only one tab', async () => {
       const store = createTestStore(createTestState());
 
@@ -673,6 +710,30 @@ describe('workspaceSlice', () => {
       store.dispatch(collapsePanel({ panelId: 'test-panel-1' }));
 
       expect(countLeafPanels(getWorkspace(store).panel)).toBe(1);
+    });
+
+    it('does nothing for a panel that does not exist', () => {
+      const store = createTestStore(createTwoPanelState());
+      const before = getWorkspace(store);
+      const events: ToastEvent[] = [];
+      const unsubscribe = subscribeToToasts((event) => events.push(event));
+
+      store.dispatch(collapsePanel({ panelId: 'missing' }));
+      unsubscribe();
+
+      expect(getWorkspace(store)).toBe(before);
+      expect(events).toEqual([]);
+    });
+
+    it('does not toast when it refuses to close the last panel', () => {
+      const store = createTestStore(createTestState());
+      const events: ToastEvent[] = [];
+      const unsubscribe = subscribeToToasts((event) => events.push(event));
+
+      store.dispatch(collapsePanel({ panelId: 'test-panel-1' }));
+      unsubscribe();
+
+      expect(events).toEqual([]);
     });
 
     it('updates activePanelId to remaining panel', () => {

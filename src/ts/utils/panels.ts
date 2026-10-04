@@ -131,12 +131,19 @@ export function updatePanelInTree(
 }
 
 /**
- * Removes a panel from tree with bubble-up behavior (in-place)
+ * Removes a leaf panel from the tree with bubble-up behavior (in-place)
  * If parent has only one child after removal, child replaces parent
+ *
+ * Returns a boolean and does not throw, because the panel ID can come from a state that Dash
+ * or the browser storage provided. A caller treats false as "nothing to remove". A throw would
+ * make a reducer fail on corrupt input.
+ *
+ * @returns true if the panel was removed, false if the panel is not in the tree or is a container
  */
 export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
   const result = findParentPanelWithIndex(root, panelId);
   if (!result) return false;
+  if (!isLeafPanel(result.parent.children[result.index])) return false;
 
   const { parent, index } = result;
   parent.children.splice(index, 1);
@@ -168,16 +175,6 @@ export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId:
 // =============================================================================
 
 /**
- * Result of a panel split operation
- */
-export type SplitPanelResult = {
-  success: boolean;
-  newPanelId?: PanelId;
-  containerId?: PanelId;
-  error?: string;
-};
-
-/**
  * Splits a leaf panel into a container with two children.
  *
  * This transforms a leaf panel at the given location into a container panel
@@ -186,7 +183,10 @@ export type SplitPanelResult = {
  *
  * @param rootPanel - The root panel of the tree (Immer draft or plain)
  * @param options - Split configuration
- * @returns Result indicating success/failure and new panel IDs
+ * @returns The ID of the new sibling panel
+ * @throws Error if the panel is not in the tree or is not a leaf panel. The caller gets the
+ * panel ID from the rendered tree, so this is a programming error and not user input. A throw
+ * in a reducer also makes Immer discard the draft, so the tree stays unchanged.
  */
 export function splitPanel(
   rootPanel: PanelNode | Draft<PanelNode>,
@@ -195,24 +195,17 @@ export function splitPanel(
     direction: PanelDirection;
     position: 'before' | 'after';
   }
-): SplitPanelResult {
+): PanelId {
   const { panelId, direction, position } = options;
 
-  // Find the panel to split
   const panelToSplit = findPanelById(rootPanel, panelId);
   if (!panelToSplit) {
-    return {
-      success: false,
-      error: `Panel '${panelId}' not found`,
-    };
+    throw new Error(`Panel '${panelId}' not found`);
   }
-
-  // Verify it's a leaf panel
   if (!isLeafPanel(panelToSplit)) {
-    return {
-      success: false,
-      error: `Panel '${panelId}' is not a leaf panel (has ${panelToSplit.children.length} children)`,
-    };
+    throw new Error(
+      `Panel '${panelId}' is not a leaf panel (has ${panelToSplit.children.length} children)`
+    );
   }
 
   // Generate new IDs
@@ -258,58 +251,5 @@ export function splitPanel(
     delete panelToSplit.size;
   }
 
-  return {
-    success: true,
-    newPanelId,
-    containerId,
-  };
-}
-
-/**
- * Result of a panel collapse operation
- */
-export type CollapsePanelResult = {
-  success: boolean;
-  removedPanelId?: PanelId;
-  error?: string;
-};
-
-/**
- * Collapses a panel by removing it from the tree.
- *
- * This function only handles the tree manipulation. The caller is responsible for:
- * - Moving tabs from the collapsed panel to another panel
- * - Updating activeTabIds and panelTabs state
- * - Ensuring at least one panel remains
- *
- * @param rootPanel - The root panel of the tree
- * @param panelId - ID of panel to collapse
- * @returns Result indicating success/failure
- */
-export function collapsePanel(
-  rootPanel: PanelNode | Draft<PanelNode>,
-  panelId: PanelId
-): CollapsePanelResult {
-  // Verify panel exists
-  const panelExists = getLeafPanelIds(rootPanel).includes(panelId);
-  if (!panelExists) {
-    return {
-      success: false,
-      error: `Panel '${panelId}' not found in tree`,
-    };
-  }
-
-  // Attempt to remove from tree
-  const removed = removePanelFromTree(rootPanel, panelId);
-  if (!removed) {
-    return {
-      success: false,
-      error: `Failed to remove panel '${panelId}' from tree`,
-    };
-  }
-
-  return {
-    success: true,
-    removedPanelId: panelId,
-  };
+  return newPanelId;
 }

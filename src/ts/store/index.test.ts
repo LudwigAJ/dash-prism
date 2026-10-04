@@ -626,6 +626,34 @@ describe('createPrismStore', () => {
 
       created.cleanup();
     });
+
+    it('skips a split whose panel an earlier split in the same tick removed', async () => {
+      const created = createStore();
+      await settle(created);
+      const firstPanelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId: firstPanelId }));
+      await created.store.dispatch(addTab({ panelId: firstPanelId }));
+      const [, tabB, tabC] = present(created).tabs;
+      await created.store.dispatch(
+        splitPanel({ panelId: firstPanelId, direction: 'horizontal', tabId: tabB.id })
+      );
+      const secondPanelId = present(created).activePanelId;
+
+      // The first split moves the only tab out of the second panel, so the second panel closes.
+      await Promise.all([
+        created.store.dispatch(
+          splitPanel({ panelId: firstPanelId, direction: 'horizontal', tabId: tabB.id })
+        ),
+        created.store.dispatch(
+          splitPanel({ panelId: secondPanelId, direction: 'horizontal', tabId: tabC.id })
+        ),
+      ]);
+
+      expect(present(created).panelTabs[secondPanelId]).toBeUndefined();
+      expect(present(created).panelTabs[firstPanelId]).toContain(tabC.id);
+
+      created.cleanup();
+    });
   });
 
   describe('Dash sync on load', () => {
