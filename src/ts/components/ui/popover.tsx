@@ -1,7 +1,14 @@
+/**
+ * @fileoverview Popover primitives from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix. The content renders in the portal
+ * container of the Prism root, so that it takes the theme of its own Prism instance.
+ * `PopoverAnchor` stays although Prism does not use it. It carries the `@public` tag, so knip does
+ * not report it.
+ */
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { usePortalContainer } from '../../context/PortalContainerContext';
-import { cn } from '../../utils/cn';
+import { usePortalContainer } from '@context/PortalContainerContext';
+import { cn } from '@utils/cn';
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -34,8 +41,9 @@ function PopoverContent({
   );
 }
 
-function PopoverAnchor({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+/** @public */
+export function PopoverAnchor({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor };
+export { Popover, PopoverTrigger, PopoverContent };

@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Command menu primitives from shadcn/ui, built on cmdk.
+ * Local changes: each utility class has the `tw:` prefix, and the components use `forwardRef` so
+ * that the search bar can focus the input. `CommandDialog` is removed, because Prism shows the
+ * command menu only in the search bar. `CommandShortcut` stays although Prism does not use it. It
+ * carries the `@public` tag, so knip does not report it.
+ */
 import * as React from 'react';
 import { Command as CommandPrimitive } from 'cmdk';
 import { ChevronRight } from 'lucide-react';
-import { cn } from '../../utils/cn';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
+import { cn } from '@utils/cn';
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -19,40 +25,6 @@ const Command = React.forwardRef<
   />
 ));
 Command.displayName = 'Command';
-
-type CommandDialogProps = React.ComponentProps<typeof Dialog> & {
-  title?: string;
-  description?: string;
-  className?: string;
-  showCloseButton?: boolean;
-};
-
-const CommandDialog = ({
-  title = 'Command Palette',
-  description = 'Search for a command to run...',
-  children,
-  className,
-  showCloseButton = true,
-  ...props
-}: CommandDialogProps) => {
-  return (
-    <Dialog {...props}>
-      <DialogHeader className="tw:sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent
-        className={cn('tw:overflow-hidden tw:p-0', className)}
-        showCloseButton={showCloseButton}
-      >
-        <Command className="tw:**:data-[slot=command-input-wrapper]:h-12 tw:[&_[cmdk-group-heading]]:px-2 tw:[&_[cmdk-group-heading]]:font-medium tw:[&_[cmdk-group-heading]]:text-muted-foreground tw:[&_[cmdk-group]]:px-2 tw:[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 tw:[&_[cmdk-input-wrapper]_svg]:h-5 tw:[&_[cmdk-input-wrapper]_svg]:w-5 tw:[&_[cmdk-input]]:h-12 tw:[&_[cmdk-item]]:px-2 tw:[&_[cmdk-item]]:py-3 tw:[&_[cmdk-item]_svg]:h-5 tw:[&_[cmdk-item]_svg]:w-5">
-          {children}
-        </Command>
-      </DialogContent>
-    </Dialog>
-  );
-};
-CommandDialog.displayName = 'CommandDialog';
 
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
@@ -150,7 +122,8 @@ const CommandItem = React.forwardRef<
 ));
 CommandItem.displayName = 'CommandItem';
 
-const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
+/** @public */
+export const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
   <span
     data-slot="command-shortcut"
     className={cn('tw:ml-auto tw:text-xs tw:tracking-widest tw:text-muted-foreground', className)}
@@ -161,12 +134,10 @@ CommandShortcut.displayName = 'CommandShortcut';
 
 export {
   Command,
-  CommandDialog,
   CommandInput,
   CommandList,
   CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandSeparator,
-  CommandShortcut,
 };

@@ -3,10 +3,10 @@
  * Local changes: each utility class has the `tw:` prefix. `CardTitle` renders an `h3` element, so a
  * screen reader announces a card title as a heading. `CardTitle` passes its children explicitly,
  * so that the jsx-a11y heading rule can see them. `CardAction` and `CardFooter` stay although
- * Prism does not use them.
+ * Prism does not use them. They carry the `@public` tag, so knip does not report them.
  */
 import * as React from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
@@ -56,7 +56,8 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
+/** @public */
+export function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-action"
@@ -73,7 +74,8 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return <div data-slot="card-content" className={cn('tw:px-6', className)} {...props} />;
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
+/** @public */
+export function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-footer"
@@ -83,4 +85,4 @@ function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+export { Card, CardHeader, CardTitle, CardDescription, CardContent };

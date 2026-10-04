@@ -147,7 +147,7 @@ export const TabItem = memo(function TabItem({
             }}
             onKeyDown={handleTriggerKeyDown}
             className={cn(
-              'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none tw:data-[state=inactive]:opacity-100',
+              'tw:h-full tw:border-none tw:shadow-none tw:data-[state=active]:shadow-none',
               tabStyleVariants({ color: styleColor, theme }),
               isPinned && 'tw:flex-1',
               isDefaultStyle && 'prism-tab-default'

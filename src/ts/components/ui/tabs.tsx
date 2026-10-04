@@ -1,6 +1,14 @@
+/**
+ * @fileoverview Tab primitives from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix. `TabsTrigger` takes `isLocked` and
+ * `isLoading` and writes them as `data-locked` and `data-loading`, and it has the compact look of
+ * the Prism tab bar. The tab bar dims an inactive tab itself, so the trigger has no opacity rule.
+ * `TabsContent` hides an inactive tab with `visibility`, not `display: none`, so that the Dash
+ * content keeps its size.
+ */
 import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 /**
  * Tabs Root
@@ -43,7 +51,7 @@ TabsList.displayName = 'TabsList';
  *
  * Individual tab button. Supports locked and loading states via data attributes.
  */
-export type TabsTriggerProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
+type TabsTriggerProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
   /** Whether this tab is locked (prevents closing/editing) */
   isLocked?: boolean;
   /** Whether this tab is in a loading state */
@@ -60,8 +68,7 @@ const TabsTrigger = React.forwardRef<
     data-locked={isLocked || undefined}
     data-loading={isLoading || undefined}
     className={cn(
-      'tw:inline-flex tw:h-[calc(100%-1px)] tw:flex-1 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-none tw:border tw:border-transparent tw:bg-secondary tw:px-2 tw:py-1 tw:text-sm tw:font-medium tw:whitespace-nowrap tw:text-secondary-foreground tw:transition-[color,box-shadow,opacity] tw:focus-visible:border-ring tw:focus-visible:ring-[3px] tw:focus-visible:ring-ring/50 tw:focus-visible:outline-1 tw:focus-visible:outline-ring tw:disabled:pointer-events-none tw:disabled:opacity-50 tw:data-[state=active]:bg-secondary tw:data-[state=active]:text-secondary-foreground tw:data-[state=active]:opacity-100 tw:data-[state=active]:shadow-sm tw:data-[state=inactive]:opacity-50 tw:dark:data-[state=active]:border-input tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
-      'tw:data-[loading=true]:opacity-80 tw:data-[locked=true]:opacity-80',
+      'tw:inline-flex tw:h-[calc(100%-1px)] tw:flex-1 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-none tw:border tw:border-transparent tw:bg-secondary tw:px-2 tw:py-1 tw:text-sm tw:font-medium tw:whitespace-nowrap tw:text-secondary-foreground tw:transition-[color,box-shadow,opacity] tw:focus-visible:border-ring tw:focus-visible:ring-[3px] tw:focus-visible:ring-ring/50 tw:focus-visible:outline-1 tw:focus-visible:outline-ring tw:disabled:pointer-events-none tw:disabled:opacity-50 tw:data-[state=active]:bg-secondary tw:data-[state=active]:text-secondary-foreground tw:data-[state=active]:shadow-sm tw:dark:data-[state=active]:border-input tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
       className
     )}
     {...props}
