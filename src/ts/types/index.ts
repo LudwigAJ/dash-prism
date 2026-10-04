@@ -70,10 +70,12 @@ export type ParamConstraints = {
   pattern?: string;
 };
 
+// `null` here is a JSON scalar that a default or a choice can hold. It does not
+// mean that the value is absent.
 export type ParamScalar = string | number | boolean | null;
 
 /** Mirrors dash_prism.params.LayoutParameter.to_dict() */
-export type LayoutParam = {
+export interface LayoutParam {
   name: string;
   hasDefault: boolean;
   /** JSON-safe default (was typed `string` before 1.0, but was always `Any`). */
@@ -89,23 +91,25 @@ export type LayoutParam = {
   title?: string | null;
   examples?: ParamScalar[] | null;
   placeholder?: string | null;
-};
+}
 
-export type LayoutOption = {
+/** One entry of `paramOptions`: a named set of parameter values for a layout. */
+export interface LayoutOption {
   description?: string;
-  params: Record<string, string>;
-};
+  // A preset can hold any JSON value, such as an object for a dict parameter.
+  params: Record<string, unknown>;
+}
 
-export type LayoutMeta = {
+/** Mirrors dash_prism.registry.LayoutRegistration.to_metadata() */
+export interface LayoutMeta {
   name: string;
   description?: string;
   keywords?: string[];
   allowMultiple?: boolean;
   params?: LayoutParam[];
-  paramOptions?: Record<string, LayoutOption>;
-  /** JSON Schema for the params (pydantic only), otherwise null/undefined. */
-  schema?: Record<string, unknown> | null;
-};
+  // Python sends null, not an absent key, for a layout without options.
+  paramOptions?: Record<string, LayoutOption> | null;
+}
 
 export type RegisteredLayouts = Record<string, LayoutMeta>;
 
@@ -113,7 +117,8 @@ export type RegisteredLayouts = Record<string, LayoutMeta>;
 // Workspace Types (Persistence)
 // =============================================================================
 
-export type Workspace = {
+/** The workspace as Dash sees it: the shape of the `readWorkspace` and `updateWorkspace` props. */
+export interface Workspace {
   tabs: Tab[];
   panel: PanelNode;
   panelTabs: Record<PanelId, TabId[]>; // Order per panel
@@ -121,7 +126,7 @@ export type Workspace = {
   activePanelId: PanelId;
   favoriteLayouts?: string[];
   searchBarsHidden?: boolean;
-};
+}
 
 // =============================================================================
 // Actions Prop Types (Developer-defined buttons in StatusBar)
@@ -168,7 +173,7 @@ export type ShareData = {
  */
 export type BaseDashProps = {
   id?: string | Record<string, string>;
-  [key: string]: unknown;
+  [propName: string]: unknown;
 };
 
 /**
@@ -199,12 +204,15 @@ export function isDashComponent(value: unknown): value is DashComponent {
   );
 }
 
+/** The keys and indexes that lead to one component in the Dash layout tree. */
+export type DashPath = Array<string | number>;
+
 /**
  * Props for ExternalWrapper component
  */
 export type ExternalWrapperProps = {
   component: DashComponent;
-  componentPath: Array<string | number>;
+  componentPath: DashPath;
   temp?: boolean;
 };
 
@@ -212,10 +220,10 @@ export type ExternalWrapperProps = {
  * Dash context type returned by useDashContext
  */
 export type DashContextType = {
-  componentPath: Array<string | number>;
+  componentPath: DashPath;
   useLoading: (options?: {
-    extraPath?: Array<string | number>;
-    rawPath?: Array<string | number>; // fix a bug in Dash
+    extraPath?: DashPath;
+    rawPath?: DashPath; // fix a bug in Dash
     filterFunc?: (loading: unknown) => boolean;
   }) => boolean;
   useStore: () => unknown;
@@ -229,7 +237,7 @@ export type DashComponentApi = {
   ExternalWrapper: React.ComponentType<ExternalWrapperProps>;
   useDashContext: () => DashContextType;
   DashContext: React.Context<DashContextType | undefined>;
-  getLayout: (path: Array<string | number> | string) => Record<string, unknown> | null;
+  getLayout: (path: DashPath | string) => Record<string, unknown> | null;
   stringifyId: (id: string | Record<string, unknown>) => string;
 };
 

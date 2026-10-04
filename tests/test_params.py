@@ -3,6 +3,8 @@
 # function-local classes cannot be resolved by typing.get_type_hints().
 
 import enum
+import json
+from pathlib import Path
 from typing import Annotated, Literal, Optional
 
 import pytest
@@ -105,7 +107,6 @@ def test_body_model_style():
     assert [p.name for p in P.build_layout_parameters(spec)] == ["n", "title"]
     v = P.build_validator("f", spec)
     assert v.validate({"title": "T", "n": "3"})["params"] == M(n=3, title="T")
-    assert v.json_schema()["properties"]["n"]["minimum"] == 1
     with pytest.raises(ParamValidationError) as exc:
         v.validate({"n": "0"})
     assert {e.field for e in exc.value.errors} == {"n", "title"}
@@ -136,17 +137,16 @@ def test_param_options_validated_at_registration():
             return html.Div()
 
 
-def test_registry_metadata_has_schema_and_typed_params():
+def test_registry_metadata_has_typed_params_and_no_schema():
     @dash_prism.register_layout(id="typed", name="Typed")
     def layout(n: int = 1, kind: Literal["a", "b"] = "a"):
         return html.Div()
 
     meta = dash_prism.get_registered_layouts_metadata()["typed"]
-    assert "schema" in meta
+    assert "schema" not in meta
     by_name = {p["name"]: p for p in meta["params"]}
     assert by_name["n"]["type"] == "integer"
     assert by_name["kind"]["choices"] == ["a", "b"]
-    assert meta["schema"]["properties"]["n"]["type"] == "integer"
 
 
 # =============================================================================
@@ -680,3 +680,60 @@ def test_the_last_resort_fallback_gives_up_on_every_field():
     assert degraded == ["odd", "n"]
     # Everything is Any now, so even the sibling stops being checked.
     assert model.model_validate({"n": "not-an-int"}).n == "not-an-int"
+
+
+# =============================================================================
+# Client and server accept the same input
+# =============================================================================
+
+# src/ts/components/SearchBar/paramValidation.test.ts reads the same file.
+PARAM_INPUT_CASES = json.loads(
+    (Path(__file__).parent / "fixtures" / "param_inputs.json").read_text(encoding="utf-8")
+)
+
+_SCALAR_TYPES = {"string": str, "integer": int, "number": float, "boolean": bool}
+
+
+def _layout_for_case(case):
+    """Make a callback with one required parameter of the type that the case names."""
+    if case["type"] == "array":
+        item_type = _SCALAR_TYPES[case["items"]]
+        annotation = list[item_type]
+    elif case["type"] == "enum":
+        annotation = Literal[tuple(case["choices"])]
+    else:
+        annotation = _SCALAR_TYPES[case["type"]]
+    if case.get("nullable"):
+        annotation = Optional[annotation]
+
+    def layout(value):
+        return html.Div()
+
+    layout.__annotations__ = {"value": annotation}
+    return layout
+
+
+@pytest.mark.parametrize("case", PARAM_INPUT_CASES, ids=lambda case: json.dumps(case))
+def test_server_agrees_with_the_shared_input_table(case):
+    """The server accepts or rejects each input as the table says.
+
+    The search bar mirrors these rules in ``paramValidation.ts``. A change on
+    one side that the other side lacks fails this test or the Vitest test.
+    """
+    spec = P.introspect_callable(_layout_for_case(case))
+    sent = P.build_layout_parameters(spec)[0].to_dict()
+    # The Vitest test builds its parameter from the case, so the case has to
+    # describe the metadata that the server sends.
+    assert sent["type"] == case["type"]
+    assert sent["nullable"] == case.get("nullable", False)
+    assert sent["items"] == case.get("items")
+    assert sent["choices"] == case.get("choices")
+
+    try:
+        P.build_validator("table", spec).validate({"value": case["input"]})
+    except ParamValidationError:
+        accepted = False
+    else:
+        accepted = True
+
+    assert accepted == case["ok"]

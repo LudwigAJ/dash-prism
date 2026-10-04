@@ -4,10 +4,26 @@ Tests for dash_prism layout registry functionality.
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+from typing import Annotated, Literal
+
 import pytest
 from dash import html
+from pydantic import BaseModel, Field
 
 import dash_prism
+from dash_prism import Param
+
+LAYOUT_META_FIXTURE = Path(__file__).parent / "fixtures" / "layout_meta.json"
+
+
+# This class is at module level because the annotations of this file are
+# strings, and Prism resolves a string with the globals of the module.
+class ChartParams(BaseModel):
+    chart_type: Literal["bar", "line"] = "bar"
+    rows: int = Field(20, ge=1, le=100)
 
 
 def test_register_static_layout(sample_layout) -> None:
@@ -104,54 +120,80 @@ def test_clear_registry(sample_layout) -> None:
     assert len(dash_prism.registry) == 0
 
 
-def test_layout_metadata_contract_with_frontend() -> None:
-    """
-    Contract test ensuring to_metadata() returns exact field names expected by frontend.
+def _register_reference_layouts() -> None:
+    """Register one layout of each kind that the metadata can describe."""
 
-    Frontend TypeScript types (src/ts/types/index.ts):
-    - LayoutMeta: { name, description?, keywords?, allowMultiple?, params?, paramOptions? }
-    - LayoutParam: { name, hasDefault, default? }
-    - LayoutOption: { description?, params }
-    """
+    dash_prism.register_layout(
+        id="static",
+        name="Static Layout",
+        description="A layout with no callback",
+        keywords=["fixed", "page"],
+        layout=html.Div("Static"),
+    )
+
+    @dash_prism.register_layout(id="plain", name="Plain Params", allow_multiple=True)
+    def plain_layout(
+        label: str,
+        rows: int = 10,
+        ratio: float = 0.5,
+        enabled: bool = False,
+        mode: Literal["fast", "slow"] = "fast",
+        note: str | None = None,
+        tags: list[str] | None = None,
+    ):
+        return html.Div(label)
+
+    @dash_prism.register_layout(id="annotated", name="Annotated Params")
+    def annotated_layout(
+        rows: Annotated[
+            int,
+            Param(
+                ge=1,
+                le=100,
+                description="Rows to show",
+                title="Row count",
+                examples=[10, 50],
+                placeholder="10",
+            ),
+        ] = 10,
+        code: Annotated[str, Param(min_length=2, max_length=8, pattern=r"^[a-z]+$")] = "ab",
+        ratio: Annotated[float, Param(gt=0, lt=1)] = 0.5,
+        tier: Annotated[str, Param(choices=["gold", "silver"])] = "gold",
+    ):
+        return html.Div(code)
+
+    @dash_prism.register_layout(id="body-model", name="Body Model")
+    def body_model_layout(params: ChartParams):
+        return html.Div(params.chart_type)
 
     @dash_prism.register_layout(
-        id="contract-test",
-        name="Contract Test Layout",
-        description="Test description",
-        keywords=["test", "contract"],
-        allow_multiple=True,
+        id="options",
+        name="Parameter Options",
         param_options={
-            "option1": ("Option 1 Description", {"chart_type": "bar"}),
+            "bar": ("Bar chart", {"chart_type": "bar"}),
+            "small": ("Five rows", {"rows": 5}),
+            "tagged": ("Two tags", {"tags": ["a", "b"]}),
         },
     )
-    def contract_layout(chart_type: str = "bar"):
+    def options_layout(chart_type: str = "bar", rows: int = 10, tags: list[str] | None = None):
         return html.Div(chart_type)
 
-    metadata = dash_prism.get_registered_layouts_metadata()
-    layout_meta = metadata["contract-test"]
-    assert "schema" in layout_meta  # JSON Schema (pydantic) or None
 
-    # Verify exact field names (not 'parameters', 'parameterOptions', etc.)
-    assert "name" in layout_meta
-    assert "description" in layout_meta
-    assert "keywords" in layout_meta
-    assert "allowMultiple" in layout_meta  # camelCase
-    assert "params" in layout_meta  # NOT 'parameters'
-    assert "paramOptions" in layout_meta  # NOT 'parameterOptions'
+def test_layout_metadata_matches_the_fixture_of_the_frontend() -> None:
+    """The metadata of the reference layouts equals ``tests/fixtures/layout_meta.json``.
 
-    # Verify params structure matches LayoutParam type
-    assert isinstance(layout_meta["params"], list)
-    if layout_meta["params"]:
-        param = layout_meta["params"][0]
-        assert "name" in param
-        assert "hasDefault" in param  # camelCase
-        # 'default' and 'annotation' are optional
+    A Vitest test checks the same file against the ``RegisteredLayouts`` type. A
+    change to ``to_metadata()`` thus fails this test, and a change to the
+    TypeScript type fails the Vitest test. To write the file again, run pytest
+    with ``PRISM_WRITE_FIXTURES=1``.
+    """
+    _register_reference_layouts()
+    text = json.dumps(dash_prism.get_registered_layouts_metadata(), indent=2) + "\n"
 
-    # Verify paramOptions structure matches LayoutOption type
-    assert layout_meta["paramOptions"] is not None
-    option = layout_meta["paramOptions"]["option1"]
-    assert "description" in option  # NOT 'label'
-    assert "params" in option
+    if os.environ.get("PRISM_WRITE_FIXTURES"):
+        LAYOUT_META_FIXTURE.write_text(text, encoding="utf-8")
+
+    assert text == LAYOUT_META_FIXTURE.read_text(encoding="utf-8")
 
 
 def test_layout_parameter_to_dict_contract() -> None:

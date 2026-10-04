@@ -1,0 +1,52 @@
+[
+  {"type": "boolean", "input": "true", "ok": true},
+  {"type": "boolean", "input": "False", "ok": true},
+  {"type": "boolean", "input": "1", "ok": true},
+  {"type": "boolean", "input": "0", "ok": true},
+  {"type": "boolean", "input": "yes", "ok": true},
+  {"type": "boolean", "input": "no", "ok": true},
+  {"type": "boolean", "input": "on", "ok": true},
+  {"type": "boolean", "input": "off", "ok": true},
+  {"type": "boolean", "input": "y", "ok": true},
+  {"type": "boolean", "input": "n", "ok": true},
+  {"type": "boolean", "input": "t", "ok": true},
+  {"type": "boolean", "input": "f", "ok": true},
+  {"type": "boolean", "input": "maybe", "ok": false},
+  {"type": "boolean", "input": "2", "ok": false},
+
+  {"type": "integer", "input": "5", "ok": true},
+  {"type": "integer", "input": "-3", "ok": true},
+  {"type": "integer", "input": "+7", "ok": true},
+  {"type": "integer", "input": "2.5", "ok": false},
+  {"type": "integer", "input": "abc", "ok": false},
+
+  {"type": "number", "input": "3.14", "ok": true},
+  {"type": "number", "input": "-2", "ok": true},
+  {"type": "number", "input": "1e3", "ok": true},
+  {"type": "number", "input": "abc", "ok": false},
+
+  {"type": "string", "input": "hello", "ok": true},
+  {"type": "string", "input": "none", "ok": true},
+
+  {"type": "enum", "choices": ["a", "b"], "input": "a", "ok": true},
+  {"type": "enum", "choices": ["a", "b"], "input": "A", "ok": true},
+  {"type": "enum", "choices": ["a", "b"], "input": "c", "ok": false},
+
+  {"type": "integer", "nullable": true, "input": "5", "ok": true},
+  {"type": "integer", "nullable": true, "input": "none", "ok": true},
+  {"type": "integer", "nullable": true, "input": "None", "ok": true},
+  {"type": "integer", "nullable": true, "input": "null", "ok": true},
+  {"type": "integer", "nullable": true, "input": "abc", "ok": false},
+  {"type": "integer", "input": "none", "ok": false},
+  {"type": "boolean", "nullable": true, "input": "null", "ok": true},
+
+  {"type": "array", "items": "integer", "input": "1,2,3", "ok": true},
+  {"type": "array", "items": "integer", "input": "1, 2, 3", "ok": true},
+  {"type": "array", "items": "integer", "input": "[1, 2, 3]", "ok": true},
+  {"type": "array", "items": "integer", "input": "[]", "ok": true},
+  {"type": "array", "items": "integer", "input": "1,x", "ok": false},
+  {"type": "array", "items": "integer", "input": "[1, \"x\"]", "ok": false},
+  {"type": "array", "items": "integer", "input": "[1,", "ok": false},
+  {"type": "array", "items": "string", "input": "a,b", "ok": true},
+  {"type": "array", "items": "string", "input": "[\"a\", \"b\"]", "ok": true}
+]

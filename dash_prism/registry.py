@@ -121,10 +121,6 @@ class LayoutRegistration:
         sends into the type that the callback declares. It is ``None`` for a
         static layout.
     :type validator: LayoutValidator | None
-    :ivar schema: The JSON Schema of the parameters. It is ``None`` for a static
-        layout, and also for a callback layout whose types pydantic cannot put
-        into a schema.
-    :type schema: dict[str, Any] | None
     :ivar body_param: The name of the one pydantic ``BaseModel`` parameter, if
         the callback declares such a parameter. If not, it is ``None``.
     :type body_param: str | None
@@ -141,7 +137,6 @@ class LayoutRegistration:
     parameters: list[LayoutParameter] = field(default_factory=list)
     param_options: dict[str, tuple[str, dict[str, Any]]] | None = None
     validator: LayoutValidator | None = field(default=None, repr=False, compare=False)
-    schema: dict[str, Any] | None = field(default=None, repr=False, compare=False)
     body_param: str | None = None
 
     @property
@@ -185,7 +180,6 @@ class LayoutRegistration:
             "allowMultiple": self.allow_multiple,
             "params": params,
             "paramOptions": None,
-            "schema": self.schema,  # JSON Schema of the parameters, or None
         }
 
         if self.param_options:
@@ -546,10 +540,9 @@ def register_layout(
 
     For a callback layout the function reads the signature of the callback.
     From that signature the function makes the parameter metadata that the
-    search bar shows, a validator for the values that the browser sends back,
-    and the JSON Schema of the parameters. The function registers the layout immediately,
-    thus your application must register every layout before it calls
-    :func:`dash_prism.init`.
+    search bar shows, and a validator for the values that the browser sends back.
+    The function registers the layout immediately, thus your application must
+    register every layout before it calls :func:`dash_prism.init`.
 
     :param id: The identifier for this layout. You must give this argument,
         and no other registered layout can have the same identifier.
@@ -667,7 +660,6 @@ def register_layout(
                 parameters=parameters,
                 param_options=param_options,
                 validator=validator,
-                schema=validator.json_schema(),
                 body_param=spec.body_param,
             )
         )

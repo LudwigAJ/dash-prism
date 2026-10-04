@@ -57,18 +57,19 @@ class Prism(PrismComponent):
         the component mounts. A later change of the ID remounts the workspace
         and starts a new undo history.
     :type id: str or None
-    :param serverSessionId: The fingerprint of the server-side layout registry,
-        stored with the persisted workspace. When the workspace loads, Prism
-        closes each tab whose layout is not in ``registeredLayouts`` any more.
-        Prism keeps the rest of the workspace and records the new fingerprint. A
-        closed tab shows no "Layout not found" error, but a toast tells the user
-        how many tabs Prism closed. :func:`dash_prism.init` computes the
-        fingerprint from the registered layout IDs, thus the value is the same
-        on every worker and after each restart. The tabs that Prism closes
-        depend only on ``registeredLayouts``, and Prism closes no tab while that
-        registry is empty. If you set this prop yourself,
-        :func:`dash_prism.init` keeps your value, and only the recorded
-        fingerprint changes.
+    :param serverSessionId: The fingerprint of the registered layout IDs. It is
+        a hash of the sorted IDs, thus it is the same on every worker and after
+        each restart for the same set of layouts. Prism stores it with the
+        persisted workspace. When the workspace loads, Prism closes each tab
+        whose layout is not in ``registeredLayouts`` any more. Prism keeps the
+        rest of the workspace and records the new fingerprint. A closed tab
+        shows no "Layout not found" error, but a toast tells the user how many
+        tabs Prism closed. The tabs that Prism closes depend only on
+        ``registeredLayouts``, and Prism closes no tab while that registry is
+        empty. :func:`dash_prism.init` sets this prop unless you set it
+        yourself. If you set it yourself, :func:`dash_prism.init` keeps your
+        value, and only the recorded fingerprint changes. Prism reads the prop
+        one time, when the component mounts.
     :type serverSessionId: str or None
     :param theme: The visual theme of the workspace, ``'light'`` (the default)
         or ``'dark'``. The theme applies to the Prism root element and to the menus

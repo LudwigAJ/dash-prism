@@ -34,6 +34,15 @@ All notable changes to Dash Prism are recorded here. The project follows
   layout meets a Prism rule. A host that styled the inside of Prism with the old
   Tailwind class names must use the new names. These names were never public
   API. The class `scrollbar-none` is now `prism-scrollbar-none`.
+- **Prism no longer builds or sends a JSON Schema for a layout.** The
+  `LayoutRegistration.schema` attribute and the `schema` key of
+  `get_registered_layouts_metadata()` are removed, so the `registeredLayouts`
+  prop has no `schema` key either. The `json_schema()` method of the layout
+  validator is removed too. The browser never read the schema. The search bar
+  checks input with the `params` list of the layout, and the server checks it
+  with pydantic. The metadata of a layout is now smaller, most of all for a
+  layout that takes a pydantic model. Code that read the schema must build it
+  from its own pydantic model.
 
 ### Changed
 
@@ -61,9 +70,16 @@ All notable changes to Dash Prism are recorded here. The project follows
   `dash_prism.init` and the other public names are the same. Code that wrote
   `from dash_prism.init import ...` must import the public names from
   `dash_prism`.
+- The `data` prop of `PrismContent` no longer has the key `tabId`. The render
+  callback always read the tab ID from the `index` of the component `id`, so the
+  key was never used.
 
 ### Fixed
 
+- The search bar accepts `none` and `null` for an optional parameter, and a JSON
+  array such as `[1, 2]` for a list parameter. The server already accepted both,
+  but the search bar showed an error for them. A shared table of inputs now
+  fails a test if the search bar and the server disagree.
 - A second `dash_prism.init()` with another `prism_id` now gives that Prism
   component its layout metadata, and the app keeps one render callback. Before,
   the second call registered a second callback for the same output, which Dash

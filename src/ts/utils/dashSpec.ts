@@ -41,7 +41,6 @@ export function buildDashSpec(
       id: { type: 'prism-content', index: id },
       layoutTimeout: effectiveTimeout,
       data: {
-        tabId: id,
         layoutId,
         // Keep undefined for absent values (consistent with Tab type)
         layoutParams,

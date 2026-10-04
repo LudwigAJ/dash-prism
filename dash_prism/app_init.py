@@ -95,10 +95,8 @@ def _compute_server_session_id(layout_ids: Iterable[str]) -> str:
     identical on every worker and after a restart, for the same set of layouts.
     The fingerprint changes when you add a layout or remove a layout.
 
-    The frontend stores the fingerprint with the persisted workspace. On load,
-    the frontend closes the tabs whose layouts are not in ``registeredLayouts``,
-    and then records the new fingerprint. For more data, see the
-    ``serverSessionId`` prop of :class:`dash_prism.Prism`.
+    The ``serverSessionId`` prop of :class:`dash_prism.Prism` says what the
+    frontend does with the fingerprint.
 
     :param layout_ids: The registered layout IDs. The order does not matter.
     :type layout_ids: Iterable[str]
@@ -982,10 +980,8 @@ def init(prism_id: str, app: Dash, background: bool = False) -> None:
     1. It validates the setup and raises clear error messages.
     2. It finds the Prism component in ``app.layout`` by its ID.
     3. It injects the ``registeredLayouts`` metadata from the layout registry.
-       It also injects a ``serverSessionId`` fingerprint of the registered
-       layout IDs, but only if you did not set that prop yourself. With the
-       fingerprint, a persisted workspace can close the tabs whose layouts were
-       removed.
+       It also injects the ``serverSessionId`` prop, but only if you did not
+       set that prop yourself. See :class:`dash_prism.Prism` for the prop.
     4. It makes the Dash callback that renders the contents of the tabs.
 
     ``init`` selects the type of the callback automatically:

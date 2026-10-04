@@ -22,7 +22,7 @@ describe('buildDashSpec', () => {
     const spec = buildDashSpec('tab-1', 'home', undefined, undefined, 45);
 
     expect(spec.props.layoutTimeout).toBe(45);
-    expect(spec.props.data).toMatchObject({ tabId: 'tab-1', layoutId: 'home', timeout: 45 });
+    expect(spec.props.data).toMatchObject({ layoutId: 'home', timeout: 45 });
   });
 
   it('normalises unusable timeouts to the default on both the prop and data', () => {
@@ -38,7 +38,6 @@ describe('buildDashSpec', () => {
     const spec = buildDashSpec('tab-2', 'chart', params, 'bar', 10);
 
     expect(spec.props.data).toEqual({
-      tabId: 'tab-2',
       layoutId: 'chart',
       layoutParams: params,
       layoutOption: 'bar',

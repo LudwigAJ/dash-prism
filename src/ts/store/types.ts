@@ -1,9 +1,10 @@
 // src/ts/store/types.ts
-import type { Tab, PanelNode, PanelId, TabId, RegisteredLayouts } from '@types';
+import type { PanelId, TabId, RegisteredLayouts, Workspace } from '@types';
 import type { Storage } from 'redux-persist';
 
 /**
- * Persisted workspace state - saved to localStorage/sessionStorage
+ * Holds the persisted workspace slice: the `Workspace` that Dash sees, with the
+ * bookkeeping that stays in the browser.
  *
  * Note: `theme` is NOT included here - it's controlled by Dash via props
  * and accessed through ConfigContext. This keeps workspace state focused
@@ -12,21 +13,15 @@ import type { Storage } from 'redux-persist';
  * Note: Undo/redo is handled by redux-undo wrapping this slice.
  * The undo history is ephemeral (not persisted) and resets on page reload.
  */
-export type WorkspaceState = {
-  tabs: Tab[];
-  panel: PanelNode;
-  panelTabs: Record<PanelId, TabId[]>;
-  activeTabIds: Record<PanelId, TabId>;
-  activePanelId: PanelId;
+export interface WorkspaceState extends Workspace {
   favoriteLayouts: string[];
   searchBarsHidden: boolean;
   /**
-   * Fingerprint of the server-side layout registry this workspace was last
-   * reconciled against (the Prism `serverSessionId` prop). Compared on
-   * rehydrate; see `reconcileWithServer`.
+   * The `serverSessionId` that this workspace was last reconciled against.
+   * Compared on rehydrate; see `reconcileWithServer`.
    */
   serverSessionId?: string;
-};
+}
 
 /**
  * Ephemeral UI state - never persisted

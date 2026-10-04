@@ -1,6 +1,6 @@
 // src/ts/store/workspaceSlice.ts
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import type { Tab, PanelId, TabId, LayoutId, PanelDirection } from '@types';
+import type { Tab, PanelId, TabId, LayoutId, PanelDirection, Workspace } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
 import { findTabById, findTabIndex } from '@utils/tabs';
@@ -327,12 +327,10 @@ const workspaceSlice = createSlice({
      * Reconciles a (re)hydrated workspace with the server it is now talking to.
      *
      * Dispatched once after redux-persist's REHYDRATE. `serverSessionId` is the
-     * fingerprint of the server's layout registry (Prism prop of the same name,
-     * derived by dash_prism.init() from the registered layout IDs). When it
-     * differs from the one stored with the workspace, or when any tab references
-     * a layout the server no longer knows, those tabs are closed (locked or not)
-     * instead of rendering a "Layout not found" error, and the new fingerprint
-     * is recorded. Nothing else is touched: the workspace is never wiped.
+     * Prism prop of the same name. Each tab whose layout the server no longer
+     * knows is closed (locked or not) instead of rendering a "Layout not found"
+     * error, and the new fingerprint is recorded. Nothing else is touched: the
+     * workspace is never wiped.
      *
      * An empty `registeredLayoutIds` list disables pruning, because it cannot be
      * told apart from metadata that has not been injected.
@@ -762,7 +760,7 @@ const workspaceSlice = createSlice({
      *
      * Auto-heals inconsistencies when possible to prevent crashes.
      */
-    syncWorkspace(state, action: PayloadAction<Partial<WorkspaceState>>) {
+    syncWorkspace(state, action: PayloadAction<Partial<Workspace>>) {
       const update = action.payload;
 
       // Apply updates

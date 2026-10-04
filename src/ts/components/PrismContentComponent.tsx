@@ -2,18 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
-import type { TabId, LayoutId } from '@types';
+import type { LayoutId } from '@types';
 import { type DashComponentProps } from 'props';
 import { normalizeLayoutTimeout } from '@utils/dashSpec';
 
-type ContentData = {
-  tabId?: TabId;
+interface ContentData {
   layoutId?: LayoutId;
   layoutParams?: Record<string, string>;
   layoutOption?: string;
   /** Server-side render timeout in seconds (the Prism layoutTimeout prop). */
   timeout?: number;
-};
+}
 
 type PrismContentProps = {
   /**
@@ -21,8 +20,9 @@ type PrismContentProps = {
    */
   children?: React.ReactNode;
   /**
-   * Tab request passed to the render callback (tabId, layoutId, layoutParams,
-   * layoutOption, timeout). Set by Prism; not meant to be edited by hand.
+   * Tab request passed to the render callback (layoutId, layoutParams,
+   * layoutOption, timeout). The tab ID is not in it: the callback reads the
+   * tab ID from the `index` of `id`. Set by Prism; not meant to be edited by hand.
    */
   data?: ContentData;
   /**

@@ -44,9 +44,10 @@ class PrismContent(PrismContentComponent):
         that the render callback matches.
     :type id: str | dict | None
     :param data: Tab request that Prism passes to the render callback. Keys:
-        ``tabId``, ``layoutId``, ``layoutParams``, ``layoutOption`` and
-        ``timeout`` (seconds, mirrors ``layoutTimeout``). The callback stops if
-        ``data`` gives neither a tab ID nor a layout ID.
+        ``layoutId``, ``layoutParams``, ``layoutOption`` and ``timeout``
+        (seconds, mirrors ``layoutTimeout``). The tab ID is not in ``data``. The
+        callback reads the tab ID from the ``index`` of ``id``. The callback
+        stops if the ``index`` is empty or if ``layoutId`` is empty.
     :type data: dict or None
     :param layoutTimeout: Client-side timeout in seconds for layout loading.
         Prism sets it from its own ``layoutTimeout`` prop. A value that is not

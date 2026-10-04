@@ -18,10 +18,7 @@ import type {
 type ConfigContextValue = {
   /** Component ID for namespacing persistence storage */
   componentId?: string;
-  /**
-   * Fingerprint of the server's layout registry, stored with the persisted
-   * workspace; read once when the store is created (see reconcileWithServer).
-   */
+  /** The `serverSessionId` prop of Prism. The store reads it one time, when it is created. */
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   /** Tab content specs from Dash callback - keyed by tab ID */

@@ -3,11 +3,10 @@ Layout Parameters
 =================
 
 This module reads the signature of a layout callback. From that signature it
-makes three things:
+makes two things:
 
 - The parameter metadata that the search bar shows to the user.
 - A pydantic model that validates the values the browser sends back.
-- A JSON Schema of that model, which the frontend receives as ``meta.schema``.
 
 A layout declares its parameters in one of three styles::
 
@@ -690,6 +689,30 @@ def check_choice_declarations(layout_id: str, spec: CallableSpec) -> None:
 # BASIC (STDLIB) COERCION
 # =============================================================================
 
+# The search bar checks the same input in the browser, in
+# src/ts/components/SearchBar/paramValidation.ts. That file mirrors the rules in
+# this section, thus the user sees an error before a tab opens. The server is
+# the authority. The table tests/fixtures/param_inputs.json holds the inputs
+# that both sides must accept or reject in the same way. A test on each side
+# reads the table. When you change a rule in this section, change
+# paramValidation.ts and the table too.
+#
+# The client does not replicate these server rules:
+# - A number that pydantic reads and the client does not: "5.0" for an integer,
+#   "1_000", "nan" and "inf". The client accepts only plain decimal text.
+# - The checks of a pydantic model, and a type that the client does not know.
+#   The client lets those pass.
+# - The choices of the items of a list[Literal[...]].
+# - The JSON type of the items of a JSON array. The client reads each item as
+#   text. Thus it accepts [true] and [null] for a list[str] and [[1]] for a
+#   list[int], and it rejects [true] for a list[int]. The server rejects the
+#   first three and accepts the last.
+# - An empty string. A required parameter is "Required" in the search bar, but
+#   the server accepts "" for a string. A parameter with a default leaves out
+#   an empty input, so the server applies the default.
+# - The regular-expression syntax. The client uses a JavaScript RegExp, and it
+#   lets a pattern pass if JavaScript cannot read it.
+
 _TRUE = {"true", "1", "yes", "on", "y", "t"}
 _FALSE = {"false", "0", "no", "off", "n", "f"}
 
@@ -800,10 +823,6 @@ class LayoutValidator(typing.Protocol):
 
     def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
         """Return coerced kwargs for the callback or raise :class:`ParamValidationError`."""
-        ...
-
-    def json_schema(self) -> dict[str, Any] | None:
-        """Return a JSON Schema for the parameters, or ``None`` if unavailable."""
         ...
 
 
@@ -1026,14 +1045,6 @@ class PydanticValidator:
         ]
         if errors:
             raise ParamValidationError(self.layout_id, errors)
-
-    def json_schema(self) -> dict[str, Any] | None:
-        try:
-            schema: dict[str, Any] = self.model.model_json_schema()
-            return schema
-        except Exception as exc:  # noqa: BLE001 - unschematizable custom types
-            logger.debug("No JSON schema for layout '%s': %s", self.layout_id, exc)
-            return None
 
 
 def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
