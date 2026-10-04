@@ -1,5 +1,6 @@
 import React from 'react';
-import { Star, List } from 'lucide-react';
+import { List } from 'lucide-react';
+import { FavoriteStar } from '@components/FavoriteStar';
 import { cn } from '@utils/cn';
 import {
   Command,
@@ -89,7 +90,6 @@ export function SearchMode({
                 {filteredLayouts.map(([id, meta]) => {
                   const hasOptions = layoutHasOptions(meta);
                   const hasParams = layoutHasParams(meta);
-                  const isFavorite = favoriteLayouts.includes(id);
 
                   return (
                     <CommandItem
@@ -98,33 +98,12 @@ export function SearchMode({
                       value={`${meta.name} ${meta.keywords?.join(' ') ?? ''}`}
                       onSelect={() => onLayoutSelect(id)}
                     >
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFavorite(id);
-                        }}
-                        className={cn(
-                          'tw:mr-2 tw:shrink-0 tw:rounded tw:p-0.5 tw:transition-colors',
-                          'tw:hover:bg-muted tw:focus-visible:ring-1 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
-                          isFavorite
-                            ? 'tw:text-primary'
-                            : 'tw:text-muted-foreground tw:hover:text-primary'
-                        )}
-                        aria-label={
-                          isFavorite
-                            ? `Remove ${meta.name} from favorites`
-                            : `Add ${meta.name} to favorites`
-                        }
-                      >
-                        <Star
-                          className={cn(
-                            'tw:size-[1em] tw:text-current',
-                            isFavorite && 'tw:fill-current'
-                          )}
-                        />
-                      </button>
+                      <FavoriteStar
+                        layoutName={meta.name}
+                        isFavorite={favoriteLayouts.includes(id)}
+                        onToggle={() => onToggleFavorite(id)}
+                        className="tw:mr-2 tw:shrink-0 tw:rounded tw:p-0.5 tw:focus-visible:ring-1"
+                      />
                       <div className="tw:flex tw:flex-1 tw:items-center tw:gap-3 tw:overflow-hidden">
                         <span className="tw:shrink-0 tw:font-medium">{meta.name}</span>
                         {meta.description && (

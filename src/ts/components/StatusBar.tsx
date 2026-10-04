@@ -13,6 +13,7 @@ import {
 import { cn } from '@utils/cn';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import { resolveStatusBarItems } from '@constants/statusBar';
+import { TabInfoRows } from '@components/TabInfoRows';
 import type { StatusBarItem } from '@types';
 import type { DashComponent, DashComponentApi } from '@types';
 import { isDashComponent } from '@types';
@@ -201,15 +202,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
             align="start"
           >
             <div className="tw:space-y-0">
-              <InfoRow label="Name" value={activeTab.name} />
-              <InfoRow label="Tab ID" value={activeTab.id} mono />
-              <InfoRow label="Panel ID" value={activeTab.panelId} mono />
-              <InfoRow label="Created" value={new Date(activeTab.createdAt).toLocaleString()} />
-              <InfoRow label="Layout" value={activeTab.layoutId || 'None'} />
-              <InfoRow label="Locked" value={activeTab.locked ? 'Yes' : 'No'} />
-              {activeTab.layoutParams && (
-                <InfoRow label="Params" value={JSON.stringify(activeTab.layoutParams)} />
-              )}
+              <TabInfoRows tab={activeTab} variant="popover" />
             </div>
           </PopoverContent>
         )}
@@ -301,21 +294,4 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 /** Thin vertical separator between status bar segments. */
 function Sep() {
   return <Separator orientation="vertical" className="tw:h-3" />;
-}
-
-// Helper component for info rows
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="tw:flex tw:items-center tw:justify-between tw:gap-4 tw:border-b tw:border-border/50 tw:py-2 tw:last:border-0">
-      <span className="tw:text-xs tw:text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          'tw:text-xs tw:font-medium tw:text-foreground',
-          mono && 'tw:font-mono tw:text-muted-foreground'
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
 }
