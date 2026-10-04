@@ -157,16 +157,18 @@ select = [
     "BLE001",  # blind "except Exception"
     "PLC1802", # len() as a condition
     "SIM118",  # "in dict.keys()"
-    "S110",    # "except: pass" with no exception type or with Exception
+    "S110",    # "except: pass" with any exception type (see flake8-bandit below)
+    "PLC0415", # import inside a function
+    "TID251",  # banned API (time.sleep, configured below)
     "RUF100",  # noqa comment that suppresses nothing
 ]
 # registry.py has noqa comments for A002, a rule that this project does not select.
 external = ["A002"]
-# Enable "PLC0415" (import inside a function) when no function-local import is left.
 # Enable "N818" (exception name without "Error") when the exception classes follow the suffix rule.
-# Set "check-typed-exception = true" in a "[tool.ruff.lint.flake8-bandit]" table when the
-# integration tests do not swallow exceptions. S110 then also reports "except SomeError: pass".
-# Enable "TID251" (banned time.sleep, configured below) when the integration tests use explicit waits only.
+
+[tool.ruff.lint.flake8-bandit]
+# S110 also reports "except SomeError: pass", not only a bare or blind except.
+check-typed-exception = true
 
 [tool.ruff.lint.isort]
 known-first-party = ["dash_prism", "tests"]
@@ -178,8 +180,15 @@ known-first-party = ["dash_prism", "tests"]
 # The public API imports follow the definitions in the same module. Move the imports to the top
 # of the module to remove this entry.
 "dash_prism/__init__.py" = ["E402"]
-# Move the pydantic import to the top of the module to remove this entry.
-"usage.py" = ["E402"]
+# Move the pydantic import to the top of the module to remove the E402 part of this entry.
+# The slow demo layout sleeps on purpose.
+"usage.py" = ["E402", "TID251"]
+# params.py imports pydantic inside four functions. Move the imports to the top of the module
+# to remove this entry.
+"dash_prism/params.py" = ["PLC0415"]
+# The slow layouts under test sleep on purpose.
+"tests/integration/test_layout_timeout.py" = ["TID251"]
+"tests/test_init.py" = ["TID251"]
 
 [tool.mypy]
 python_version = "3.11"
