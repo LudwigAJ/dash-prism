@@ -619,24 +619,38 @@ def test_a_genuinely_different_choice_list_is_still_a_contradiction():
         P.build_validator("still-conflicting", P.introspect_callable(layout))
 
 
-def test_the_warning_names_the_parameters_that_lost_validation():
+def test_the_warning_names_the_parameters_that_lost_validation(caplog):
     """A log line saying "its parameters" hid which one actually degraded."""
 
     def layout(cfg: dict[str, _AppType], n: int = 1):
         return html.Div()
 
-    records: list[str] = []
-    handler = logging.Handler()
-    handler.emit = lambda record: records.append(record.getMessage())  # type: ignore[method-assign]
-    logger = logging.getLogger("dash_prism")
-    logger.addHandler(handler)
-    try:
-        P.build_validator("named-degradation", P.introspect_callable(layout))
-    finally:
-        logger.removeHandler(handler)
+    caplog.set_level(logging.WARNING, logger="dash_prism")
+    P.build_validator("named-degradation", P.introspect_callable(layout))
 
-    assert any("parameter cfg" in message for message in records)
-    assert not any("parameter cfg, n" in message for message in records)
+    assert any("Parameters without validation: cfg." in m for m in caplog.messages)
+
+
+def test_a_validator_that_raises_logs_the_class_and_not_the_value(caplog):
+    class Body(BaseModel):
+        code: str
+
+        @field_validator("code")
+        @classmethod
+        def _refuse(cls, value):
+            raise RuntimeError(f"refused {value}")
+
+    def layout(params: Body):
+        return html.Div()
+
+    validator = P.build_validator("raising-validator", P.introspect_callable(layout))
+    caplog.set_level(logging.WARNING, logger="dash_prism")
+
+    with pytest.raises(ParamValidationError):
+        validator.validate({"code": "secret-value"})
+
+    assert "RuntimeError" in caplog.text
+    assert "secret-value" not in caplog.text
 
 
 def test_the_last_resort_fallback_gives_up_on_every_field():

@@ -77,6 +77,12 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Changed
 
+- The parameter validation logs with the logger `dash_prism.params`, so a
+  handler on `dash_prism` still receives the records. Its messages no longer
+  start with `dash_prism:`. When a custom validator of a layout raises an
+  exception that is not a validation error, the log names the class of the
+  exception and the stack frames, but not the message, because the message can
+  hold a value that the user typed.
 - `AVAILABLE_ICONS` is a real `frozenset`, so the set operations work too.
   The package reads `icons.json` when Python imports it. Before, a proxy read
   the file at the first use and had only the membership test, iteration and

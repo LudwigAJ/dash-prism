@@ -33,6 +33,7 @@ import inspect
 import json
 import logging
 import re
+import traceback
 import types
 import typing
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -52,7 +53,7 @@ from typing import (
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 
-logger = logging.getLogger("dash_prism")
+logger = logging.getLogger(__name__)
 
 
 def _is_base_model(tp: Any) -> TypeGuard[type[BaseModel]]:
@@ -985,12 +986,14 @@ class PydanticValidator:
         except Exception as exc:  # noqa: BLE001 - a custom validator or type raising on its own
             # Callers catch ParamValidationError and render the panel for
             # invalid parameters. Any other error becomes a server error,
-            # which tells the user nothing.
+            # which tells the user nothing. The message of the exception can
+            # hold a parameter value, so the log gets the frames and not exc_info.
+            frames = "".join(traceback.format_tb(exc.__traceback__))
             logger.warning(
-                "dash_prism: validating parameters for layout '%s' raised %s: %s",
+                "Validation of the parameters of layout %r raised %s\n%s",
                 self.layout_id,
                 type(exc).__name__,
-                exc,
+                frames,
             )
             raise ParamValidationError(
                 self.layout_id,
@@ -1128,11 +1131,11 @@ def _from_signature(layout_id: str, spec: SignatureSpec) -> PydanticValidator:
         # without validation.
         model, degraded = _model_keeping_what_pydantic_accepts(model_name, config, fields)
         logger.warning(
-            "dash_prism: could not build a validation model for layout '%s' (%s); "
-            "%s passed through without validation.",
+            "Layout %r: pydantic raised %s for the parameter model. "
+            "Parameters without validation: %s.",
             layout_id,
-            exc,
-            ("parameter " + ", ".join(sorted(degraded)) if degraded else "its parameters are"),
+            type(exc).__name__,
+            ", ".join(sorted(degraded)) or "none",
         )
     plan = _plan_for(spec.params, passthrough=passthrough)
     return PydanticValidator(layout_id, model, None, plan)
