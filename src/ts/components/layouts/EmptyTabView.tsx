@@ -4,9 +4,9 @@ import { NewLayout } from '@components/layouts/NewLayout';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import type { TabId, EmptyTabView as EmptyTabViewKind } from '@types';
 
-type EmptyTabViewProps = {
+interface EmptyTabViewProps {
   tabId: TabId;
-};
+}
 
 /**
  * Normalises the `emptyTabView` prop. Dash props are untyped at runtime, so an

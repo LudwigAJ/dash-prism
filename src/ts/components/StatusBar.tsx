@@ -31,13 +31,13 @@ import {
   clearPersistedWorkspace,
 } from '@store';
 
-type StatusBarProps = {
+interface StatusBarProps {
   /** Array of PrismAction component specs to render */
   actions?: JSX.Element[];
   /** The time of the last workspace change, in ms since the epoch */
   lastSyncTime: number;
   onOpenHelp?: () => void;
-};
+}
 
 /**
  * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,

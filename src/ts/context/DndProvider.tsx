@@ -29,9 +29,9 @@ import {
   reorderTab,
 } from '@store';
 
-type DndProviderProps = {
+interface DndProviderProps {
   children: React.ReactNode;
-};
+}
 
 export function DndProvider({ children }: DndProviderProps) {
   const dispatch = useAppDispatch();

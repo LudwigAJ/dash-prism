@@ -41,7 +41,7 @@ import { type DashComponentProps } from 'props';
  * It provides dynamic layout management with drag-and-drop tab organization,
  * multi-panel splits, and persistent workspace state across sessions.
  */
-export type PrismProps = {
+export interface PrismProps extends DashComponentProps {
   /**
    * Unique ID to identify this component in Dash callbacks. Also scopes the
    * persisted workspace (storage key), so it is read when the component mounts;
@@ -242,7 +242,7 @@ export type PrismProps = {
    * Inline CSS styles for the root container.
    */
   style?: Record<string, string>;
-} & DashComponentProps;
+}
 
 /**
  * Inner component that uses ConfigContext to create the Redux store.

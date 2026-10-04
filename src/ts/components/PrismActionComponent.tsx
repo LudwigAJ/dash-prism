@@ -33,7 +33,7 @@ function getContrastColor(hex: string): string {
   return luminance > 0.5 ? '#000' : '#fff';
 }
 
-type PrismActionProps = {
+interface PrismActionProps extends DashComponentProps {
   /**
    * Button label text displayed in the StatusBar.
    */
@@ -69,7 +69,7 @@ type PrismActionProps = {
    * Use as Input in Dash callbacks to respond to clicks.
    */
   n_clicks?: number;
-} & DashComponentProps;
+}
 
 /**
  * A clickable action button for the Prism StatusBar.

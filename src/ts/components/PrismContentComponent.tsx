@@ -14,7 +14,7 @@ interface ContentData {
   timeout?: number;
 }
 
-type PrismContentProps = {
+interface PrismContentProps extends DashComponentProps {
   /**
    * Child Dash Components.
    */
@@ -31,7 +31,7 @@ type PrismContentProps = {
    * time after a layout is selected, a timeout card is shown. Default is 30.
    */
   layoutTimeout?: number;
-} & DashComponentProps;
+}
 
 /**
  * Renders Dash component content within Prism tabs.

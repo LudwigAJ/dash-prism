@@ -24,9 +24,9 @@ import {
 import type { AppDispatch } from '@store';
 import { usePortal } from '@context/PortalContext';
 
-type PanelProps = {
+interface PanelProps {
   panel: PanelNode;
-};
+}
 
 // =============================================================================
 // useNativePanelFocus — Native pointerdown (capture) listener
@@ -60,9 +60,9 @@ function useNativePanelFocus(panelId: PanelId, activePanelId: PanelId, dispatch:
 // LeafPanel - Renders a leaf panel with tabs
 // =============================================================================
 
-type LeafPanelProps = {
+interface LeafPanelProps {
   panel: PanelNode;
-};
+}
 
 const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
   const dispatch = useAppDispatch();
