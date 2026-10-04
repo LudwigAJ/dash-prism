@@ -3,19 +3,24 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '@utils/cn';
 import type { Tab } from '@types';
 
-export type DisplayModeProps = {
+/** Holds the props of `DisplayMode`. */
+export interface DisplayModeProps {
   currentLayoutName: string;
   activeTab: Tab | null;
   onDisplayClick: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-};
+}
 
-export const DisplayMode = ({
+/**
+ * Renders the search bar of a tab that shows a layout: the layout name with its option or
+ * parameter values. A click or a typed character starts a new search.
+ */
+export function DisplayMode({
   currentLayoutName,
   activeTab,
   onDisplayClick,
   onKeyDown,
-}: DisplayModeProps) => {
+}: DisplayModeProps) {
   const params = activeTab?.layoutParams;
   const option = activeTab?.layoutOption;
   const hasParams = params && Object.keys(params).length > 0;
@@ -45,6 +50,4 @@ export const DisplayMode = ({
         ))}
     </button>
   );
-};
-
-DisplayMode.displayName = 'DisplayMode';
+}

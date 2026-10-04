@@ -8,11 +8,12 @@ import {
   CommandItem,
   CommandEmpty,
   CommandGroup,
-} from '../ui/command';
+} from '@components/ui/command';
 import type { LayoutMeta } from '@types';
 import { layoutHasOptions, layoutHasParams } from './searchBarUtils';
 
-export type SearchModeProps = {
+/** Holds the props of `SearchMode`. */
+export interface SearchModeProps {
   searchQuery: string;
   filteredLayouts: Array<[string, LayoutMeta]>;
   favoriteLayouts: string[];
@@ -29,9 +30,10 @@ export type SearchModeProps = {
   onResizeStart: (e: React.MouseEvent) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   commandRef: React.RefObject<HTMLDivElement>;
-};
+}
 
-export const SearchMode = ({
+/** Renders the search bar with the layout search and its dropdown of layouts. */
+export function SearchMode({
   searchQuery,
   filteredLayouts,
   favoriteLayouts,
@@ -48,7 +50,7 @@ export const SearchMode = ({
   onResizeStart,
   inputRef,
   commandRef,
-}: SearchModeProps) => {
+}: SearchModeProps) {
   return (
     // The input opens the dropdown on focus, so a keyboard user needs no key handler here.
     <div
@@ -160,6 +162,4 @@ export const SearchMode = ({
       </Command>
     </div>
   );
-};
-
-SearchMode.displayName = 'SearchMode';
+}

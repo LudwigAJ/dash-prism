@@ -4,7 +4,8 @@ import { cn } from '@utils/cn';
 import type { LayoutParam } from '@types';
 import { formatParamHint } from './paramValidation';
 
-export type ParamsModeProps = {
+/** Holds the props of `ParamsMode`. */
+export interface ParamsModeProps {
   selectedLayoutName: string;
   currentParam: LayoutParam;
   currentParamIndex: number;
@@ -25,14 +26,18 @@ export type ParamsModeProps = {
   onBlur: (e: React.FocusEvent) => void;
   onCancel: () => void;
   inputRef: React.RefObject<HTMLInputElement>;
-};
+}
 
 function formatDefault(value: LayoutParam['default']): string {
   if (Array.isArray(value)) return value.map(String).join(', ');
   return String(value);
 }
 
-export const ParamsMode = ({
+/**
+ * Renders the search bar while the user types the parameters of the selected layout, one at a
+ * time, with the choice list of an enum parameter.
+ */
+export function ParamsMode({
   selectedLayoutName,
   currentParam,
   currentParamIndex,
@@ -48,7 +53,7 @@ export const ParamsMode = ({
   onBlur,
   onCancel,
   inputRef,
-}: ParamsModeProps) => {
+}: ParamsModeProps) {
   // Falsy defaults (0, false, '') are real defaults too.
   const hasDefault =
     currentParam.hasDefault && currentParam.default !== undefined && currentParam.default !== null;
@@ -190,6 +195,4 @@ export const ParamsMode = ({
       </button>
     </div>
   );
-};
-
-ParamsMode.displayName = 'ParamsMode';
+}
