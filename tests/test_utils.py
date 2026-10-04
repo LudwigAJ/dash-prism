@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 from dash import dcc, html
 
 import dash_prism
+from dash_prism import utils
 
 
 def test_walk_layout_simple() -> None:
@@ -89,10 +92,19 @@ def test_validate_workspace_missing_key() -> None:
         # Missing 'panel', 'panelTabs', etc.
     }
 
-    with pytest.raises(dash_prism.InvalidWorkspace) as exc_info:
+    with pytest.raises(dash_prism.InvalidWorkspaceError) as exc_info:
         dash_prism.validate_workspace(workspace)
 
     assert "Missing required key" in str(exc_info.value)
+
+
+def test_validate_workspace_rejects_a_value_that_is_not_a_dict(caplog) -> None:
+    with pytest.raises(dash_prism.InvalidWorkspaceError, match="Workspace must be a dict, got str"):
+        dash_prism.validate_workspace("nope")
+
+    caplog.set_level(logging.ERROR, logger="dash_prism")
+    assert dash_prism.validate_workspace("nope", errors="ignore") == "nope"
+    assert "Workspace must be a dict, got str" in caplog.text
 
 
 def test_validate_workspace_ignore_errors() -> None:
@@ -123,6 +135,23 @@ def test_find_component_by_id() -> None:
 
     not_found = dash_prism.find_component_by_id(layout, "nonexistent")
     assert not_found is None
+
+
+def test_find_component_by_id_returns_the_first_match() -> None:
+    outer = html.Div([html.P("inner", id="same")], id="same")
+
+    assert dash_prism.find_component_by_id(html.Div([outer]), "same") is outer
+
+
+def test_the_old_exception_name_is_an_alias() -> None:
+    assert dash_prism.InvalidWorkspace is dash_prism.InvalidWorkspaceError
+    with pytest.raises(dash_prism.InvalidWorkspace):
+        dash_prism.validate_workspace({})
+
+
+def test_the_utils_module_still_gives_the_moved_names() -> None:
+    for name in utils.__all__:
+        assert getattr(utils, name) is getattr(dash_prism, name)
 
 
 def test_update_component_props() -> None:

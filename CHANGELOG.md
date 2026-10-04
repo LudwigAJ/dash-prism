@@ -77,6 +77,16 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Changed
 
+- The exception of `validate_workspace` is now `InvalidWorkspaceError`, so all
+  three public exceptions end in `Error`. `InvalidWorkspace` stays as an alias
+  of the same class.
+- `find_component_by_id` returns the first component with the ID, in the order
+  of the walk (a component before its children). Before, it returned the last
+  one.
+- The component tree helpers are in the module `dash_prism.layout_tree`, and
+  `validate_workspace` is in `dash_prism.workspace`. The names on `dash_prism`
+  are the same. `validate_workspace(errors='ignore')` logs with the logger
+  `dash_prism.workspace`, and its messages no longer start with `[Prism]`.
 - The module `dash_prism.registry` no longer re-exports `LayoutParameter` and
   has no `__all__`. Import `LayoutParameter` from `dash_prism`.
 - `resolve_layout_params` in `dash_prism.registry` reads the layout ID from the
@@ -146,6 +156,11 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Deprecated
 
+- `InvalidWorkspace` is an alias of `InvalidWorkspaceError`. Catch the new name.
+  The alias goes away in 2.0.
+- The module `dash_prism.utils` only gives the names of `dash_prism.layout_tree`
+  and `dash_prism.workspace`. Import the names from `dash_prism`. The module goes
+  away in 2.0.
 - `LayoutRegistration.body_param` is always `None`. Registration no longer sets
   it, because nothing read it. The field goes away in 2.0.
 

@@ -161,10 +161,10 @@ select = [
     "PLC0415", # import inside a function
     "TID251",  # banned API (time.sleep, configured below)
     "RUF100",  # noqa comment that suppresses nothing
+    "N818",    # exception name without "Error"
 ]
 # registry.py has noqa comments for A002, a rule that this project does not select.
 external = ["A002"]
-# Enable "N818" (exception name without "Error") when the exception classes follow the suffix rule.
 
 [tool.ruff.lint.flake8-bandit]
 # S110 also reports "except SomeError: pass", not only a bare or blind except.
@@ -200,11 +200,13 @@ files = [
     "dash_prism/Action.py",
     "dash_prism/icons.py",
     "dash_prism/app_init.py",
+    "dash_prism/layout_tree.py",
     "dash_prism/params.py",
     "dash_prism/Prism.py",
     "dash_prism/PrismContent.py",
     "dash_prism/registry.py",
     "dash_prism/utils.py",
+    "dash_prism/workspace.py",
     "scripts/check_wheel.py",
 ]
 

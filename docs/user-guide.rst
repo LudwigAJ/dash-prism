@@ -505,7 +505,7 @@ Use ``validate_workspace`` to check workspace data before you write it:
 
 .. code-block:: python
 
-   from dash_prism.utils import validate_workspace, InvalidWorkspace
+   from dash_prism import InvalidWorkspaceError, validate_workspace
 
    @app.callback(
        Output('workspace', 'updateWorkspace'),
@@ -518,7 +518,7 @@ Use ``validate_workspace`` to check workspace data before you write it:
        try:
            validate_workspace(workspace)
            return workspace, ''
-       except InvalidWorkspace as e:
+       except InvalidWorkspaceError as e:
            return dash.no_update, f'Invalid workspace: {e.errors}'
 
 ``validate_workspace`` first checks that the workspace holds the five keys
@@ -534,9 +534,9 @@ or ``'vertical'``. Last, it checks that the keys agree with each other:
 - Each entry in ``activeTabIds`` names a panel in ``panelTabs`` and a tab that
   is in that panel.
 
-The function raises :exc:`dash_prism.InvalidWorkspace` with one message for each
-problem in ``e.errors``. Pass ``errors='ignore'`` to write the messages to the
-log and get the workspace back.
+The function raises :exc:`dash_prism.InvalidWorkspaceError` with one message for
+each problem in ``e.errors``. Pass ``errors='ignore'`` to write the messages to
+the log and get the workspace back.
 
 Configuration
 -------------

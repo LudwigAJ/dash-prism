@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 import dash_prism
+from dash_prism import utils
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -88,7 +89,7 @@ def test_api_reference_documents_exactly_the_public_api() -> None:
 def test_removed_public_helpers_are_gone() -> None:
     """render_layout_for_tab could not render async layouts and duplicated init.py."""
     assert not hasattr(dash_prism, "render_layout_for_tab")
-    assert not hasattr(dash_prism.utils, "render_layout_for_tab")
+    assert not hasattr(utils, "render_layout_for_tab")
 
 
 def _pyproject_version() -> str:

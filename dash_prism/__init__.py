@@ -159,9 +159,10 @@ Utilities
   in which the component with the given ID has the new property values.
 - :func:`dash_prism.validate_workspace`: Validates a workspace dictionary. The
   function makes sure that the tabs, the panels, and the active IDs agree.
-- :exc:`dash_prism.InvalidWorkspace`: The error that
+- :exc:`dash_prism.InvalidWorkspaceError`: The error that
   :func:`dash_prism.validate_workspace` raises for a workspace that is not
-  valid. Its ``errors`` attribute lists each problem.
+  valid. Its ``errors`` attribute lists each problem. ``InvalidWorkspace`` is
+  an alias of this class, kept through the 1.x releases.
 
 Icons
 ~~~~~
@@ -301,6 +302,9 @@ from .app_init import InitializationError, init
 # Icons
 from .icons import AVAILABLE_ICONS, get_available_icons
 
+# Component tree helpers
+from .layout_tree import find_component_by_id, inject_tab_id, update_component_props, walk_layout
+
 # Parameter validation
 from .params import (
     FieldError,
@@ -320,15 +324,8 @@ from .registry import (
     registry,
 )
 
-# Utilities
-from .utils import (
-    InvalidWorkspace,
-    find_component_by_id,
-    inject_tab_id,
-    update_component_props,
-    validate_workspace,
-    walk_layout,
-)
+# Workspace validation
+from .workspace import InvalidWorkspace, InvalidWorkspaceError, validate_workspace
 
 # The names that ``from dash_prism import *`` gives, and the documented public
 # API of the package.
@@ -354,7 +351,8 @@ __all__ = [
     "find_component_by_id",
     "update_component_props",
     "validate_workspace",
-    "InvalidWorkspace",
+    "InvalidWorkspaceError",
+    "InvalidWorkspace",  # Alias of InvalidWorkspaceError, kept through the 1.x releases
     # Parameter validation
     "Param",
     "FieldError",
