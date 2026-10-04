@@ -162,7 +162,7 @@ export type ShareData = {
 
 // Notifications are managed by Sonner library, not Redux.
 // See: Reversibility Philosophy section
-// Usage: import { toast } from 'sonner'; toast.success('Message');
+// Usage: import { prismToast } from '@utils/toastEmitter'; prismToast('success', 'Message');
 
 // =============================================================================
 // Dash Component API Types (for ExternalWrapper and loading states)

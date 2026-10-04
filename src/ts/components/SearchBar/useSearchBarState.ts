@@ -6,10 +6,9 @@ import {
   stepActiveChoice,
   type ParamCheck,
 } from './paramValidation';
-import { toast } from 'sonner';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
-import { logger } from '@utils/logger';
+import { prismToast } from '@utils/toastEmitter';
 import { findOpenTabForLayout } from '@utils/tabs';
 import {
   searchBarReducer,
@@ -122,15 +121,17 @@ export function useSearchBarState(panelId: PanelId) {
       // Read fresh activeTabId to avoid stale closure
       const currentActiveTabId = activeTabIds[panelId];
       if (!currentActiveTabId) {
-        logger.error('Cannot apply layout: no active tab in panel', { panelId, layoutId });
-        toast.error('Unable to apply layout: no active tab');
+        prismToast('error', 'Unable to apply layout: no active tab', {
+          logDetails: `Cannot apply layout '${layoutId}': no active tab in panel '${panelId}'`,
+        });
         return;
       }
 
       // Validate layout still exists
       if (!registeredLayouts[layoutId]) {
-        logger.error('Cannot apply layout: layout no longer exists', { panelId, layoutId });
-        toast.error('Layout is no longer available');
+        prismToast('error', 'Layout is no longer available', {
+          logDetails: `Cannot apply layout '${layoutId}' in panel '${panelId}': layout no longer exists`,
+        });
         dispatch({ type: 'RESET' });
         dispatch({ type: 'RETURN_TO_IDLE', showDropdown: currentLayout === null });
         return;
@@ -154,10 +155,7 @@ export function useSearchBarState(panelId: PanelId) {
       // Check allowMultiple constraint
       const existingTab = findOpenTabForLayout(tabs, layoutId, layout);
       if (existingTab) {
-        logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
-        toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
-          cancel: { label: 'Dismiss', onClick: () => {} },
-        });
+        prismToast('info', `Layout "${layout.name}" is already open. Switching to it.`);
         globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
         dispatch({ type: 'RESET' });
         dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });

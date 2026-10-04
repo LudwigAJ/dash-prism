@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
+import { prismToast } from '@utils/toastEmitter';
 import { findOpenTabForLayout } from '@utils/tabs';
 import type { Tab, ShareData } from '@types';
 import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
@@ -140,9 +140,7 @@ export function useShareLink() {
       if (!tab) return;
 
       if (!tab.layoutId) {
-        toast.error('Cannot share a tab without a layout', {
-          cancel: { label: 'Dismiss', onClick: () => {} },
-        });
+        prismToast('error', 'Cannot share a tab without a layout', { logLevel: 'warn' });
         return;
       }
 
@@ -151,14 +149,10 @@ export function useShareLink() {
         navigator.clipboard
           .writeText(shareLink)
           .then(() => {
-            toast.success('Link copied to clipboard', {
-              cancel: { label: 'Dismiss', onClick: () => {} },
-            });
+            prismToast('success', 'Link copied to clipboard');
           })
           .catch(() => {
-            toast.error('Failed to copy link', {
-              cancel: { label: 'Dismiss', onClick: () => {} },
-            });
+            prismToast('error', 'Failed to copy link', { logLevel: 'warn' });
           });
       }
     },
@@ -174,9 +168,7 @@ export function useShareLink() {
 
       // Validate layout exists
       if (!registeredLayouts?.[layoutId]) {
-        toast.error(`Layout "${layoutId}" not found`, {
-          cancel: { label: 'Dismiss', onClick: () => {} },
-        });
+        prismToast('error', `Layout "${layoutId}" not found`, { logLevel: 'warn' });
         return false;
       }
 
@@ -185,9 +177,7 @@ export function useShareLink() {
       // Check allowMultiple constraint
       const existing = findOpenTabForLayout(tabs, layoutId, layoutInfo);
       if (existing) {
-        toast.info(`Layout "${layoutInfo.name}" is already open. Switching to it.`, {
-          cancel: { label: 'Dismiss', onClick: () => {} },
-        });
+        prismToast('info', `Layout "${layoutInfo.name}" is already open. Switching to it.`);
         dispatch(activateTab({ tabId: existing.id, panelId: existing.panelId }));
         return false;
       }
@@ -196,9 +186,10 @@ export function useShareLink() {
       if (layoutParams && layoutHasParams(layoutInfo)) {
         const errors = checkParams(layoutInfo.params ?? [], layoutParams);
         if (errors.length) {
-          toast.error(
+          prismToast(
+            'error',
             `Invalid parameters in share link: ${errors[0].field} - ${errors[0].message}`,
-            { cancel: { label: 'Dismiss', onClick: () => {} } }
+            { logLevel: 'warn' }
           );
           return false;
         }
@@ -223,9 +214,7 @@ export function useShareLink() {
       // The thunk tells the user why it refused, for example when the tab limit is reached.
       if (!addTab.fulfilled.match(result)) return false;
 
-      toast.success(`Opened shared tab: ${name || layoutInfo.name}`, {
-        cancel: { label: 'Dismiss', onClick: () => {} },
-      });
+      prismToast('success', `Opened shared tab: ${name || layoutInfo.name}`);
       return true;
     },
     [registeredLayouts, tabs, activePanelId, dispatch]
@@ -243,9 +232,7 @@ export function useShareLink() {
     // Validate and decode
     const decoded = decodeShareData(encoded);
     if (!decoded) {
-      toast.error('Invalid share link: decoding failed', {
-        cancel: { label: 'Dismiss', onClick: () => {} },
-      });
+      prismToast('error', 'Invalid share link: decoding failed', { logLevel: 'warn' });
       return;
     }
 
@@ -253,17 +240,13 @@ export function useShareLink() {
     try {
       shareData = JSON.parse(decoded);
     } catch {
-      toast.error('Invalid share link: malformed data', {
-        cancel: { label: 'Dismiss', onClick: () => {} },
-      });
+      prismToast('error', 'Invalid share link: malformed data', { logLevel: 'warn' });
       return;
     }
 
     // Type-safe validation
     if (!isValidShareData(shareData)) {
-      toast.error('Invalid share link: missing or invalid fields', {
-        cancel: { label: 'Dismiss', onClick: () => {} },
-      });
+      prismToast('error', 'Invalid share link: missing or invalid fields', { logLevel: 'warn' });
       return;
     }
 

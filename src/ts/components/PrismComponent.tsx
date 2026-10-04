@@ -21,9 +21,8 @@ import {
   resolvePersistenceType,
 } from '@store';
 import { cn } from '@utils/cn';
-import { subscribeToToasts } from '@utils/toastEmitter';
+import { prismToast, subscribeToToasts } from '@utils/toastEmitter';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
-import { toast } from 'sonner';
 import type {
   RegisteredLayouts,
   Theme,
@@ -314,14 +313,8 @@ function PrismInner({
 
   // Subscribe to toast events
   useEffect(() => {
-    const unsubscribe = subscribeToToasts(({ type, message, description }) => {
-      toast[type](message, {
-        description,
-        cancel: {
-          label: 'Dismiss',
-          onClick: () => {},
-        },
-      });
+    const unsubscribe = subscribeToToasts(({ type, message, description, logDetails }) => {
+      prismToast(type, message, { description, logDetails });
     });
     return unsubscribe;
   }, []);
@@ -356,9 +349,7 @@ function LoadNotice() {
   useEffect(() => {
     if (!notice) return;
     const n = notice.closedTabs;
-    toast.info(`Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`, {
-      cancel: { label: 'Dismiss', onClick: () => {} },
-    });
+    prismToast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`);
     dispatch(clearLoadNotice());
   }, [notice, dispatch]);
 
