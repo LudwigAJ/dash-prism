@@ -89,4 +89,6 @@ export type ThunkExtra = {
   /** Live panel limit, read at dispatch time like the tab limit. */
   getMaxPanels: () => number;
   getRegisteredLayouts: () => RegisteredLayouts;
+  /** Shows a toast in the Toaster of this Prism instance, and logs `logDetails` or the message. */
+  notify: (level: 'info' | 'warning' | 'error', message: string, logDetails?: string) => void;
 };

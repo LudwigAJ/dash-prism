@@ -29,6 +29,7 @@ import { createDashSyncMiddleware, validationMiddleware } from './middleware/das
 import { createReconcileMiddleware } from './middleware/reconcileMiddleware';
 import type { StoreConfig, ThunkExtra, WorkspaceState, UiState } from './types';
 import { generateShortId } from '@utils/uuid';
+import { prismToast } from '@utils/prismToast';
 
 // =============================================================================
 // Persistence Key Helpers
@@ -239,6 +240,9 @@ export function createPrismStore(config: StoreConfig) {
     getMaxTabs: typeof maxTabs === 'function' ? maxTabs : () => maxTabs,
     getMaxPanels: typeof maxPanels === 'function' ? maxPanels : () => maxPanels,
     getRegisteredLayouts: getRegisteredLayouts ?? (() => ({})),
+    notify: (level, message, logDetails) => {
+      prismToast(level, message, { logDetails, toasterId: componentId });
+    },
   };
 
   // Create dash sync middleware (returns middleware + cleanup function)

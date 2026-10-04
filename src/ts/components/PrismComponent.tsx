@@ -21,7 +21,7 @@ import {
   resolvePersistenceType,
 } from '@store';
 import { cn } from '@utils/cn';
-import { prismToast, subscribeToToasts } from '@utils/toastEmitter';
+import { usePrismToast } from '@hooks/usePrismToast';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import type {
   RegisteredLayouts,
@@ -317,14 +317,6 @@ function PrismInner({
     };
   }, [cleanup]);
 
-  // Subscribe to toast events
-  useEffect(() => {
-    const unsubscribe = subscribeToToasts(({ type, message, description, logDetails }) => {
-      prismToast(type, message, { description, logDetails });
-    });
-    return unsubscribe;
-  }, []);
-
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
@@ -351,13 +343,14 @@ function PrismInner({
 function LoadNotice() {
   const notice = useAppSelector(selectLoadNotice);
   const dispatch = useAppDispatch();
+  const toast = usePrismToast();
 
   useEffect(() => {
     if (!notice) return;
     const n = notice.closedTabs;
-    prismToast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`);
+    toast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`);
     dispatch(clearLoadNotice());
-  }, [notice, dispatch]);
+  }, [notice, dispatch, toast]);
 
   return null;
 }

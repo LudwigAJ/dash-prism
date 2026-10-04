@@ -8,7 +8,7 @@ import {
 } from './paramValidation';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
-import { prismToast } from '@utils/toastEmitter';
+import { usePrismToast } from '@hooks/usePrismToast';
 import {
   searchBarReducer,
   createInitialState,
@@ -41,6 +41,7 @@ import {
  */
 export function useSearchBarState(panelId: PanelId) {
   const globalDispatch = useAppDispatch();
+  const toast = usePrismToast();
   const tabs = useAppSelector(selectTabs);
   const activeTabIds = useAppSelector(selectActiveTabIds);
   const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
@@ -120,7 +121,7 @@ export function useSearchBarState(panelId: PanelId) {
       // Read fresh activeTabId to avoid stale closure
       const currentActiveTabId = activeTabIds[panelId];
       if (!currentActiveTabId) {
-        prismToast('error', 'Unable to apply layout: no active tab', {
+        toast('error', 'Unable to apply layout: no active tab', {
           logDetails: `Cannot apply layout '${layoutId}': no active tab in panel '${panelId}'`,
         });
         return;
@@ -128,7 +129,7 @@ export function useSearchBarState(panelId: PanelId) {
 
       // Validate layout still exists
       if (!registeredLayouts[layoutId]) {
-        prismToast('error', 'Layout is no longer available', {
+        toast('error', 'Layout is no longer available', {
           logDetails: `Cannot apply layout '${layoutId}' in panel '${panelId}': layout no longer exists`,
         });
         dispatch({ type: 'RESET' });
@@ -143,7 +144,7 @@ export function useSearchBarState(panelId: PanelId) {
       dispatch({ type: 'RESET' });
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
     },
-    [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
+    [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout, toast]
   );
 
   const handleLayoutSelect = useCallback(

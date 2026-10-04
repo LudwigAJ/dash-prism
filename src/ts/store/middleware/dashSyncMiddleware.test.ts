@@ -36,6 +36,7 @@ function createTestStore(setProps?: (props: Record<string, unknown>) => void, ma
     getMaxTabs: () => maxTabs,
     getMaxPanels: () => MAX_LEAF_PANELS,
     getRegisteredLayouts: () => ({}),
+    notify: () => {},
   };
 
   const undoableWorkspaceReducer = undoable(workspaceReducer, {

@@ -19,7 +19,6 @@ import {
   splitPanel as splitPanelTree,
   removePanelFromTree,
 } from '@utils/panels';
-import { notifyUser } from '@utils/toastEmitter';
 import { logger } from '@utils/logger';
 import { canAddPanel, canAddTab } from './selectors';
 
@@ -280,7 +279,7 @@ export const addTab = createAsyncThunk<
 
   // Validate maxTabs limit using shared canAddTab helper
   if (!canAddTab(tabs.length, extra.getMaxTabs())) {
-    notifyUser(
+    extra.notify(
       'warning',
       `Maximum tabs limit reached (${extra.getMaxTabs()})`,
       `Cannot add tab: maximum of ${extra.getMaxTabs()} tabs reached.`
@@ -292,7 +291,7 @@ export const addTab = createAsyncThunk<
   if (payload.layoutId) {
     const layoutMeta = extra.getRegisteredLayouts()[payload.layoutId];
     if (layoutMeta && findOpenTabForLayout(tabs, payload.layoutId, layoutMeta)) {
-      notifyUser(
+      extra.notify(
         'info',
         `"${layoutMeta.name}" is already open`,
         `This layout does not allow multiple instances.`
@@ -329,7 +328,7 @@ export const duplicateTab = createAsyncThunk<
 
   // Validate maxTabs limit using shared canAddTab helper
   if (!canAddTab(tabs.length, extra.getMaxTabs())) {
-    notifyUser(
+    extra.notify(
       'warning',
       `Cannot duplicate: maximum tabs limit reached (${extra.getMaxTabs()})`,
       `DUPLICATE_TAB blocked: workspace at maxTabs limit (${extra.getMaxTabs()})`
@@ -347,7 +346,7 @@ export const duplicateTab = createAsyncThunk<
   if (originalTab.layoutId) {
     const layoutMeta = extra.getRegisteredLayouts()[originalTab.layoutId];
     if (layoutMeta && findOpenTabForLayout(tabs, originalTab.layoutId, layoutMeta)) {
-      notifyUser(
+      extra.notify(
         'info',
         `"${layoutMeta.name}" does not allow duplicates`,
         `This layout does not allow multiple instances.`
@@ -382,7 +381,7 @@ export const splitPanel = createAsyncThunk<
   const { panel } = getState().workspace.present;
   const maxPanels = extra.getMaxPanels();
   if (!canAddPanel(countLeafPanels(panel), maxPanels)) {
-    notifyUser(
+    extra.notify(
       'warning',
       `Cannot split: maximum of ${maxPanels} panels reached`,
       `Cannot split panel: maximum of ${maxPanels} panels reached.`
@@ -394,11 +393,11 @@ export const splitPanel = createAsyncThunk<
   // throw in the reducer would reject the dispatch and no caller catches that.
   const target = findPanelById(panel, payload.panelId);
   if (!target) {
-    notifyUser('error', 'Cannot split: panel not found');
+    extra.notify('error', 'Cannot split: panel not found');
     return rejectWithValue(`Panel '${payload.panelId}' not found`);
   }
   if (!isLeafPanel(target)) {
-    notifyUser('error', 'Cannot split a non-leaf panel');
+    extra.notify('error', 'Cannot split a non-leaf panel');
     return rejectWithValue(`Panel '${payload.panelId}' is not a leaf panel`);
   }
 
@@ -916,7 +915,7 @@ export const switchToOpenTab =
     const openTab = findOpenTabForLayout(getState().workspace.present.tabs, layoutId, layout);
     if (!openTab) return false;
 
-    notifyUser('info', `Layout "${layout.name}" is already open. Switching to it.`);
+    extra.notify('info', `Layout "${layout.name}" is already open. Switching to it.`);
     dispatch(activateTab({ tabId: openTab.id, panelId: openTab.panelId }));
     return true;
   };

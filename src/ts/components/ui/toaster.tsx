@@ -12,10 +12,11 @@ import { useConfig } from '../../context/ConfigContext';
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useConfig();
+  const { theme, componentId } = useConfig();
 
   return (
     <Sonner
+      id={componentId}
       theme={theme}
       position="top-center"
       className="toaster tw:group"

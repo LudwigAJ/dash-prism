@@ -9,7 +9,7 @@
  * - Workspace actions: toggleSearchBars, toggleFavoriteLayout, resetWorkspace, syncWorkspace
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
 import {
@@ -45,7 +45,6 @@ import {
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
 import type { Tab, PanelNode, PanelId, TabId } from '@types';
-import { subscribeToToasts, type ToastEvent } from '@utils/toastEmitter';
 import { MAX_LEAF_PANELS } from '@constants/panels';
 
 // =============================================================================
@@ -56,6 +55,18 @@ import { MAX_LEAF_PANELS } from '@constants/panels';
  * Creates a test store with optional preloaded state and maxTabs config.
  * Wraps workspace reducer with undoable() to match real store structure.
  */
+/** The toasts that the thunks of the current test raised. */
+interface ToastCall {
+  level: 'info' | 'warning' | 'error';
+  message: string;
+  logDetails?: string;
+}
+let toasts: ToastCall[] = [];
+
+beforeEach(() => {
+  toasts = [];
+});
+
 function createTestStore(
   preloadedState?: WorkspaceState,
   maxTabs = 16,
@@ -66,6 +77,9 @@ function createTestStore(
     getMaxTabs: () => maxTabs,
     getMaxPanels: () => maxPanels,
     getRegisteredLayouts: () => registeredLayouts,
+    notify: (level, message, logDetails) => {
+      toasts.push({ level, message, logDetails });
+    },
   };
 
   // Wrap workspace reducer with undoable to match real store structure
@@ -614,36 +628,30 @@ describe('workspaceSlice', () => {
       const store = createTestStore(createTestState());
       await store.dispatch(addTab({ panelId: 'test-panel-1' }));
       const before = getWorkspace(store);
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((event) => events.push(event));
 
       const result = await store.dispatch(
         splitPanel({ panelId: 'missing', direction: 'horizontal', tabId: before.tabs[1].id })
       );
-      unsubscribe();
 
       expect(splitPanel.rejected.match(result)).toBe(true);
       expect(getWorkspace(store)).toBe(before);
-      expect(events).toEqual([
-        expect.objectContaining({ type: 'error', message: 'Cannot split: panel not found' }),
+      expect(toasts).toEqual([
+        expect.objectContaining({ level: 'error', message: 'Cannot split: panel not found' }),
       ]);
     });
 
     it('rejects a split of a panel that is not a leaf and tells the user', async () => {
       const store = createTestStore(createTwoPanelState());
       const before = getWorkspace(store);
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((event) => events.push(event));
 
       const result = await store.dispatch(
         splitPanel({ panelId: before.panel.id, direction: 'horizontal', tabId: 'tab-1' })
       );
-      unsubscribe();
 
       expect(splitPanel.rejected.match(result)).toBe(true);
       expect(getWorkspace(store)).toBe(before);
-      expect(events).toEqual([
-        expect.objectContaining({ type: 'error', message: 'Cannot split a non-leaf panel' }),
+      expect(toasts).toEqual([
+        expect.objectContaining({ level: 'error', message: 'Cannot split a non-leaf panel' }),
       ]);
     });
 
@@ -715,25 +723,19 @@ describe('workspaceSlice', () => {
     it('does nothing for a panel that does not exist', () => {
       const store = createTestStore(createTwoPanelState());
       const before = getWorkspace(store);
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((event) => events.push(event));
 
       store.dispatch(collapsePanel({ panelId: 'missing' }));
-      unsubscribe();
 
       expect(getWorkspace(store)).toBe(before);
-      expect(events).toEqual([]);
+      expect(toasts).toEqual([]);
     });
 
     it('does not toast when it refuses to close the last panel', () => {
       const store = createTestStore(createTestState());
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((event) => events.push(event));
 
       store.dispatch(collapsePanel({ panelId: 'test-panel-1' }));
-      unsubscribe();
 
-      expect(events).toEqual([]);
+      expect(toasts).toEqual([]);
     });
 
     it('updates activePanelId to remaining panel', () => {
@@ -1252,12 +1254,6 @@ describe('workspaceSlice', () => {
       return state;
     }
 
-    function collectToasts() {
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((e) => events.push(e));
-      return { events, unsubscribe };
-    }
-
     it('is a no-op (same reference) when the id matches and every layout is known', () => {
       const state = createStaleState();
       state.serverSessionId = 'same';
@@ -1283,12 +1279,10 @@ describe('workspaceSlice', () => {
 
     it('closes tabs whose layout is no longer registered, locked ones included, without toasting from the reducer', () => {
       const store = createTestStore(createStaleState());
-      const { events, unsubscribe } = collectToasts();
 
       store.dispatch(
         reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: ['home'] })
       );
-      unsubscribe();
 
       const ws = getWorkspace(store);
       expect(ws.tabs.map((t) => t.id)).toEqual(['tab-2']);
@@ -1300,7 +1294,7 @@ describe('workspaceSlice', () => {
       expect(ws.serverSessionId).toBe('new');
       // The toast is raised later by <LoadNotice /> from ui.loadNotice (set by the
       // reconcile middleware): during REHYDRATE nobody is subscribed yet.
-      expect(events).toHaveLength(0);
+      expect(toasts).toHaveLength(0);
     });
 
     it('keeps the saved active panel when a different panel collapses', () => {
@@ -1370,14 +1364,12 @@ describe('workspaceSlice', () => {
 
     it('never prunes when the registry is empty (metadata may not be injected)', () => {
       const store = createTestStore(createStaleState());
-      const { events, unsubscribe } = collectToasts();
 
       store.dispatch(reconcileWithServer({ serverSessionId: 'new', registeredLayoutIds: [] }));
-      unsubscribe();
 
       expect(getWorkspace(store).tabs).toHaveLength(3);
       expect(getWorkspace(store).serverSessionId).toBe('new');
-      expect(events).toHaveLength(0);
+      expect(toasts).toHaveLength(0);
     });
   });
 
@@ -1577,18 +1569,15 @@ describe('workspaceSlice', () => {
         state.activePanelId = 'panel-2';
         const layouts = { analytics: { name: 'Analytics', allowMultiple: false } };
         const store = createTestStore(state, 16, layouts);
-        const events: ToastEvent[] = [];
-        const unsubscribe = subscribeToToasts((event) => events.push(event));
 
         const switched = store.dispatch(switchToOpenTab('analytics'));
-        unsubscribe();
 
         expect(switched).toBe(true);
         expect(getWorkspace(store).activePanelId).toBe('panel-1');
         expect(getWorkspace(store).activeTabIds['panel-1']).toBe('tab-1');
-        expect(events).toEqual([
+        expect(toasts).toEqual([
           expect.objectContaining({
-            type: 'info',
+            level: 'info',
             message: 'Layout "Analytics" is already open. Switching to it.',
           }),
         ]);
@@ -2041,19 +2030,16 @@ describe('workspaceSlice', () => {
     it('rejects a split at the panel limit and tells the user', async () => {
       const store = createTestStore(createStateWithManyPanels(MAX_LEAF_PANELS));
       const before = getWorkspace(store);
-      const events: ToastEvent[] = [];
-      const unsubscribe = subscribeToToasts((event) => events.push(event));
 
       const result = await store.dispatch(
         splitPanel({ panelId: 'panel-0', direction: 'horizontal', tabId: 'extra-tab' })
       );
-      unsubscribe();
 
       expect(splitPanel.rejected.match(result)).toBe(true);
       expect(getWorkspace(store)).toBe(before);
-      expect(events).toEqual([
+      expect(toasts).toEqual([
         expect.objectContaining({
-          type: 'warning',
+          level: 'warning',
           message: `Cannot split: maximum of ${MAX_LEAF_PANELS} panels reached`,
         }),
       ]);

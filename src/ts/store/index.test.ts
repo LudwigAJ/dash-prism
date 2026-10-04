@@ -15,6 +15,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Storage } from 'redux-persist';
+import { toast } from 'sonner';
 import {
   createPrismStore,
   getWorkspaceStorageKey,
@@ -110,8 +111,15 @@ function savedWorkspace(overrides: Partial<Persisted> = {}): Persisted {
   };
 }
 
+// A thunk toast reaches sonner through prismToast. The mock keeps the tests quiet and shows which
+// Toaster each store addresses.
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
+
 function createStore(
   options: {
+    componentId?: string;
     storage?: Storage;
     setProps?: () => void;
     serverSessionId?: string;
@@ -122,7 +130,7 @@ function createStore(
 ) {
   const setProps = options.setProps ?? vi.fn();
   const result = createPrismStore({
-    componentId: COMPONENT_ID,
+    componentId: options.componentId ?? COMPONENT_ID,
     serverSessionId: options.serverSessionId,
     persistenceType: options.storage ? 'local' : 'memory',
     maxTabs: options.maxTabs ?? 16,
@@ -707,6 +715,27 @@ describe('createPrismStore', () => {
     it('allows a panel only below the limit', () => {
       expect(canAddPanel(1, 2)).toBe(true);
       expect(canAddPanel(2, 2)).toBe(false);
+    });
+  });
+
+  describe('toasts of two stores', () => {
+    it('sends the toast of a thunk to the Toaster of its own Prism instance', async () => {
+      vi.mocked(toast.warning).mockClear();
+      const first = createStore({ componentId: 'prism-a', maxTabs: 1 });
+      const second = createStore({ componentId: 'prism-b', maxTabs: 1 });
+      await settle(first);
+      await settle(second);
+
+      await second.store.dispatch(addTab({ panelId: present(second).activePanelId }));
+
+      expect(toast.warning).toHaveBeenCalledTimes(1);
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Maximum tabs limit reached (1)',
+        expect.objectContaining({ toasterId: 'prism-b' })
+      );
+
+      first.cleanup();
+      second.cleanup();
     });
   });
 

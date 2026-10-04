@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useConfig } from '@context/ConfigContext';
 import { logger } from '@utils/logger';
-import { prismToast } from '@utils/toastEmitter';
+import { usePrismToast } from '@hooks/usePrismToast';
 import type { Tab, ShareData } from '@types';
 import { checkParams, stringifyParams } from '@components/SearchBar/paramValidation';
 import { layoutHasParams } from '@components/SearchBar/searchBarUtils';
@@ -96,6 +96,7 @@ function isValidShareData(data: unknown): data is ShareData {
  */
 export function useShareLink() {
   const dispatch = useAppDispatch();
+  const toast = usePrismToast();
   const activePanelId = useAppSelector(selectActivePanelId);
   const { registeredLayouts } = useConfig();
 
@@ -137,7 +138,7 @@ export function useShareLink() {
       if (!tab) return;
 
       if (!tab.layoutId) {
-        prismToast('error', 'Cannot share a tab without a layout', { logLevel: 'warn' });
+        toast('error', 'Cannot share a tab without a layout', { logLevel: 'warn' });
         return;
       }
 
@@ -146,14 +147,14 @@ export function useShareLink() {
         navigator.clipboard
           .writeText(shareLink)
           .then(() => {
-            prismToast('success', 'Link copied to clipboard');
+            toast('success', 'Link copied to clipboard');
           })
           .catch(() => {
-            prismToast('error', 'Failed to copy link', { logLevel: 'warn' });
+            toast('error', 'Failed to copy link', { logLevel: 'warn' });
           });
       }
     },
-    [generateShareLink]
+    [generateShareLink, toast]
   );
 
   // =========================================================================
@@ -165,7 +166,7 @@ export function useShareLink() {
 
       // Validate layout exists
       if (!registeredLayouts?.[layoutId]) {
-        prismToast('error', `Layout "${layoutId}" not found`, { logLevel: 'warn' });
+        toast('error', `Layout "${layoutId}" not found`, { logLevel: 'warn' });
         return false;
       }
 
@@ -178,7 +179,7 @@ export function useShareLink() {
       if (layoutParams && layoutHasParams(layoutInfo)) {
         const errors = checkParams(layoutInfo.params ?? [], layoutParams);
         if (errors.length) {
-          prismToast(
+          toast(
             'error',
             `Invalid parameters in share link: ${errors[0].field} - ${errors[0].message}`,
             { logLevel: 'warn' }
@@ -206,10 +207,10 @@ export function useShareLink() {
       // The thunk tells the user why it refused, for example when the tab limit is reached.
       if (!addTab.fulfilled.match(result)) return false;
 
-      prismToast('success', `Opened shared tab: ${name || layoutInfo.name}`);
+      toast('success', `Opened shared tab: ${name || layoutInfo.name}`);
       return true;
     },
-    [registeredLayouts, activePanelId, dispatch]
+    [registeredLayouts, activePanelId, dispatch, toast]
   );
 
   // =========================================================================
@@ -224,7 +225,7 @@ export function useShareLink() {
     // Validate and decode
     const decoded = decodeShareData(encoded);
     if (!decoded) {
-      prismToast('error', 'Invalid share link: decoding failed', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: decoding failed', { logLevel: 'warn' });
       return;
     }
 
@@ -232,13 +233,13 @@ export function useShareLink() {
     try {
       shareData = JSON.parse(decoded);
     } catch {
-      prismToast('error', 'Invalid share link: malformed data', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: malformed data', { logLevel: 'warn' });
       return;
     }
 
     // Type-safe validation
     if (!isValidShareData(shareData)) {
-      prismToast('error', 'Invalid share link: missing or invalid fields', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: missing or invalid fields', { logLevel: 'warn' });
       return;
     }
 
@@ -247,7 +248,7 @@ export function useShareLink() {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
     void spawnSharedTab(shareData);
-  }, [spawnSharedTab]);
+  }, [spawnSharedTab, toast]);
 
   return {
     generateShareLink,
