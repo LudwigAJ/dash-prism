@@ -1,13 +1,13 @@
 /**
- * Regression tests for the keyboard chord matchers (02 G-1).
+ * Regression tests for the keyboard chord matchers.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
   createRootRegistry,
   isEditableTarget,
-  isNewTabChord,
   isOverlayOpen,
+  matchShortcut,
   originWorkspace,
   type KeyChordEvent,
 } from './keyboardChords';
@@ -24,21 +24,61 @@ function ev(overrides: Partial<KeyChordEvent>): KeyChordEvent {
   };
 }
 
-describe('isNewTabChord', () => {
-  it('matches Ctrl+Alt+N and Cmd+Option+N', () => {
-    expect(isNewTabChord(ev({ ctrlKey: true, altKey: true, code: 'KeyN', key: 'n' }))).toBe(true);
+describe('matchShortcut', () => {
+  it('matches New tab on Ctrl+Alt+N and Cmd+Option+N', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, altKey: true, code: 'KeyN', key: 'n' }))).toBe(
+      'newTab'
+    );
     // macOS reports a dead key in `key` when Option is held; `code` is what counts.
-    expect(isNewTabChord(ev({ metaKey: true, altKey: true, code: 'KeyN', key: '˜' }))).toBe(true);
+    expect(matchShortcut(ev({ metaKey: true, altKey: true, code: 'KeyN', key: '˜' }))).toBe(
+      'newTab'
+    );
   });
 
-  it('does not match the browser-reserved Ctrl+N or other combinations', () => {
-    expect(isNewTabChord(ev({ ctrlKey: true, code: 'KeyN', key: 'n' }))).toBe(false);
-    expect(isNewTabChord(ev({ metaKey: true, code: 'KeyN', key: 'n' }))).toBe(false);
-    expect(isNewTabChord(ev({ altKey: true, code: 'KeyN', key: 'n' }))).toBe(false);
-    expect(isNewTabChord(ev({ ctrlKey: true, altKey: true, shiftKey: true, code: 'KeyN' }))).toBe(
-      false
+  it('does not match the browser-reserved Ctrl+N or other New tab variants', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyN', key: 'n' }))).toBeNull();
+    expect(matchShortcut(ev({ metaKey: true, code: 'KeyN', key: 'n' }))).toBeNull();
+    expect(matchShortcut(ev({ altKey: true, code: 'KeyN', key: 'n' }))).toBeNull();
+    expect(
+      matchShortcut(ev({ ctrlKey: true, altKey: true, shiftKey: true, code: 'KeyN' }))
+    ).toBeNull();
+    expect(matchShortcut(ev({ ctrlKey: true, altKey: true, code: 'KeyM', key: 'm' }))).toBeNull();
+  });
+
+  it('matches a letter with Ctrl or Cmd, whatever its case', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyD', key: 'd' }))).toBe('closeTab');
+    expect(matchShortcut(ev({ metaKey: true, code: 'KeyD', key: 'd' }))).toBe('closeTab');
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyJ', key: 'J' }))).toBe('previousTab');
+  });
+
+  it('tells Rename from Refresh by Shift', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyR', key: 'r' }))).toBe('renameTab');
+    expect(matchShortcut(ev({ ctrlKey: true, shiftKey: true, code: 'KeyR', key: 'R' }))).toBe(
+      'refreshTab'
     );
-    expect(isNewTabChord(ev({ ctrlKey: true, altKey: true, code: 'KeyM', key: 'm' }))).toBe(false);
+  });
+
+  it('matches a letter on `key`, so a shortcut follows the keyboard layout', () => {
+    // On a German QWERTZ keyboard, the key in the QWERTY position of Z gives 'y'.
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyZ', key: 'y' }))).toBe('toggleSearchBars');
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyY', key: 'z' }))).toBeNull();
+  });
+
+  it('does not match a letter without Ctrl or Cmd, or with an extra modifier', () => {
+    expect(matchShortcut(ev({ code: 'KeyD', key: 'd' }))).toBeNull();
+    expect(matchShortcut(ev({ ctrlKey: true, shiftKey: true, code: 'KeyD', key: 'D' }))).toBeNull();
+    expect(matchShortcut(ev({ ctrlKey: true, altKey: true, code: 'KeyD', key: '∂' }))).toBeNull();
+  });
+
+  it('matches Focus search on Ctrl+Space only', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'Space', key: ' ' }))).toBe('focusSearch');
+    expect(matchShortcut(ev({ metaKey: true, code: 'Space', key: ' ' }))).toBeNull();
+    expect(matchShortcut(ev({ code: 'Space', key: ' ' }))).toBeNull();
+  });
+
+  it('ignores keys that are not shortcuts', () => {
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'KeyC', key: 'c' }))).toBeNull();
+    expect(matchShortcut(ev({ ctrlKey: true, code: 'ControlLeft', key: 'Control' }))).toBeNull();
   });
 });
 

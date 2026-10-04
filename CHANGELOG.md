@@ -90,6 +90,13 @@ All notable changes to Dash Prism are recorded here. The project follows
 - Reset workspace clears the storage of the active `persistence_type` only. A
   stale entry left in the other storage after a `persistence_type` switch is
   never read and stays until cleared by hand.
+- A keyboard shortcut works only with exactly its keys. An extra Shift or Alt
+  stops it, so `Ctrl+Shift+D` and `Ctrl+Alt+D` no longer close a tab. The
+  legacy `'Spacebar'` key value of old browsers is no longer read.
+- The context menu, the undo tooltip and the empty-tab hint write the shortcut
+  keys for the platform, as the help dialog already did: `Ctrl+R` on Windows and
+  Linux, `⌃R` on macOS. Before, the context menu showed `⌃R` on every platform.
+  The help dialog lists Previous tab and Next tab as two rows.
 
 ### Removed
 

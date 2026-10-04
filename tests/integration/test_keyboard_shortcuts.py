@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -119,3 +120,45 @@ def test_keyboard_shortcuts_can_be_disabled(dash_duo):
     dialog_text = duo.find_element("[role='dialog']").text.lower()
     assert "tab management" in dialog_text
     assert "keyboard shortcuts" not in dialog_text
+
+
+@pytest.mark.parametrize(
+    ("platform", "rename", "refresh"),
+    [
+        ("MacIntel", ["⌃", "R"], ["⌃", "⇧", "R"]),
+        ("Win32", ["Ctrl", "R"], ["Ctrl", "Shift", "R"]),
+    ],
+)
+def test_help_and_context_menu_show_the_keys_of_the_platform(
+    prism_app_with_layouts, platform, rename, refresh
+):
+    """The help modal and the tab context menu read one shortcut table.
+
+    macOS shows the menu symbols and the other platforms show words, in both places.
+    """
+    duo = prism_app_with_layouts
+    user_agent = duo.driver.execute_script("return navigator.userAgent;")
+    duo.driver.execute_cdp_cmd(
+        "Emulation.setUserAgentOverride", {"userAgent": user_agent, "platform": platform}
+    )
+    duo.driver.refresh()
+    testutils.wait_for_tab_count(duo, 1)
+    assert duo.driver.execute_script("return navigator.platform;") == platform
+
+    duo.find_element(testutils.HELP_BUTTON).click()
+    rows = duo.wait_for_element("[data-testid='prism-help-shortcuts']", timeout=5)
+    keys_by_label = {
+        row.find_element(By.CSS_SELECTOR, "span").text: [
+            kbd.text for kbd in row.find_elements(By.CSS_SELECTOR, "kbd")
+        ]
+        for row in rows.find_elements(By.XPATH, "./div")
+    }
+    assert keys_by_label["Rename tab"] == rename
+    assert keys_by_label["Refresh tab"] == refresh
+
+    duo.find_element("body").send_keys(Keys.ESCAPE)
+    testutils.wait_for_element_invisible(duo, "[role='dialog']", timeout=3)
+    testutils.open_context_menu(duo, testutils.get_tabs(duo)[0])
+    rename_item = duo.find_element("[data-testid='prism-context-menu-rename']")
+    separator = "" if platform == "MacIntel" else "+"
+    assert rename_item.text.splitlines()[-1] == separator.join(rename)

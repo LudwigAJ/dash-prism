@@ -647,7 +647,8 @@ Control on every platform, because ``Cmd`` + ``Space`` belongs to Spotlight. The
 help dialog in the app shows the same bindings, and writes them with the ``⌃``
 ``⌥`` ``⇧`` symbols on macOS. The shortcuts apply to the Prism workspace that
 the user touched last. Prism ignores them while the user types in an input, and
-while a context menu or a dialog is open.
+while a context menu or a dialog is open. A shortcut works only with exactly its
+keys: with an extra ``Shift`` or ``Alt``, it does nothing.
 
 ============================  ===========================================
 Shortcut                      Action
@@ -661,7 +662,8 @@ Shortcut                      Action
 ``Ctrl`` + ``Shift`` + ``R``  Refresh tab
 ``Ctrl`` + ``I``              Pin / unpin panel
 ``Ctrl`` + ``Y``              Toggle search bars
-``Ctrl`` + ``J`` / ``K``      Previous / next tab
+``Ctrl`` + ``J``              Previous tab
+``Ctrl`` + ``K``              Next tab
 ``Ctrl`` + ``Space``          Focus the layout search
 ============================  ===========================================
 

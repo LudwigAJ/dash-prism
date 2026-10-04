@@ -10,6 +10,12 @@ import {
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
 } from '@components/ui';
+import {
+  SHORTCUTS,
+  formatShortcut,
+  isMacPlatform,
+  type ShortcutAction,
+} from '@constants/shortcuts';
 import { TAB_STYLE_LABELS, migrateTabStyle } from '@constants/tab-styles';
 import { useConfig } from '@context/ConfigContext';
 import { useShareLink } from '@hooks/useShareLinks';
@@ -47,7 +53,7 @@ interface TabContextMenuProps {
 export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuProps) {
   const dispatch = useAppDispatch();
   const tabCount = useAppSelector(selectTabCount);
-  const { maxTabs, enableKeyboardShortcuts, enableShareLinks } = useConfig();
+  const { maxTabs, enableShareLinks } = useConfig();
   const { shareTab } = useShareLink();
   const isLocked = tab.locked ?? false;
   const tabId = tab.id;
@@ -77,7 +83,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
         }}
       >
         Rename
-        {enableKeyboardShortcuts && <ContextMenuShortcut>⌃R</ContextMenuShortcut>}
+        <MenuShortcut action="renameTab" />
       </ContextMenuItem>
 
       <ContextMenuItem
@@ -86,7 +92,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
         onSelect={() => dispatch(duplicateTab({ tabId }))}
       >
         Duplicate
-        {enableKeyboardShortcuts && <ContextMenuShortcut>⌃B</ContextMenuShortcut>}
+        <MenuShortcut action="duplicateTab" />
       </ContextMenuItem>
 
       <ContextMenuItem
@@ -110,7 +116,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
           onSelect={() => dispatch(refreshTab({ tabId }))}
         >
           Refresh
-          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃⇧R</ContextMenuShortcut>}
+          <MenuShortcut action="refreshTab" />
         </ContextMenuItem>
       )}
 
@@ -149,7 +155,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
           onSelect={() => dispatch(lockTab({ tabId }))}
         >
           Lock Tab
-          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃O</ContextMenuShortcut>}
+          <MenuShortcut action="toggleLock" />
         </ContextMenuItem>
       )}
       {isLocked && !isPinned && (
@@ -158,7 +164,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
           onSelect={() => dispatch(unlockTab({ tabId }))}
         >
           Unlock Tab
-          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃O</ContextMenuShortcut>}
+          <MenuShortcut action="toggleLock" />
         </ContextMenuItem>
       )}
 
@@ -168,7 +174,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
           onSelect={() => dispatch(unpinPanel({ panelId: tab.panelId }))}
         >
           Unpin Panel
-          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃I</ContextMenuShortcut>}
+          <MenuShortcut action="togglePin" />
         </ContextMenuItem>
       ) : (
         <ContextMenuItem
@@ -176,7 +182,7 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
           onSelect={() => dispatch(pinPanel({ panelId: tab.panelId }))}
         >
           Pin Panel
-          {enableKeyboardShortcuts && <ContextMenuShortcut>⌃I</ContextMenuShortcut>}
+          <MenuShortcut action="togglePin" />
         </ContextMenuItem>
       )}
 
@@ -189,8 +195,22 @@ export function TabContextMenu({ tab, isPinned, onStartRename }: TabContextMenuP
         onSelect={() => dispatch(removeTab({ tabId }))}
       >
         Close Tab
-        {enableKeyboardShortcuts && <ContextMenuShortcut>⌃D</ContextMenuShortcut>}
+        <MenuShortcut action="closeTab" />
       </ContextMenuItem>
     </ContextMenuContent>
+  );
+}
+
+/** Holds the props of `MenuShortcut`. */
+interface MenuShortcutProps {
+  action: ShortcutAction;
+}
+
+/** Renders the keys of the shortcut of a menu item, when the keyboard shortcuts are on. */
+function MenuShortcut({ action }: MenuShortcutProps) {
+  const { enableKeyboardShortcuts } = useConfig();
+  if (!enableKeyboardShortcuts) return null;
+  return (
+    <ContextMenuShortcut>{formatShortcut(SHORTCUTS[action], isMacPlatform())}</ContextMenuShortcut>
   );
 }

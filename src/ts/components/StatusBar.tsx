@@ -11,6 +11,7 @@ import {
   Separator,
 } from '@components/ui';
 import { cn } from '@utils/cn';
+import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import { resolveStatusBarItems } from '@constants/statusBar';
 import type { StatusBarItem } from '@types';
 import type { DashComponent, DashComponentApi } from '@types';
@@ -155,7 +156,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipContent>
           {canUndo
             ? enableKeyboardShortcuts
-              ? 'Undo last change (Ctrl+U)'
+              ? `Undo last change (${formatShortcut(SHORTCUTS.undo, isMacPlatform())})`
               : 'Undo last change'
             : 'Nothing to undo'}
         </TooltipContent>

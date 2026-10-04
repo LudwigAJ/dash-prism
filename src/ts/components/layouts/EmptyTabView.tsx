@@ -1,6 +1,7 @@
 import React from 'react';
 import { useConfig } from '@context/ConfigContext';
 import { NewLayout } from '@components/layouts/NewLayout';
+import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import type { TabId, EmptyTabView as EmptyTabViewKind } from '@types';
 
 type EmptyTabViewProps = {
@@ -38,7 +39,11 @@ export function EmptyTabView({ tabId }: EmptyTabViewProps) {
           Use the search bar to open a layout
           {enableKeyboardShortcuts && (
             <span className="tw:ml-2 tw:opacity-70">
-              (<kbd className="tw:font-mono">Ctrl</kbd>+<kbd className="tw:font-mono">Space</kbd>)
+              (
+              <kbd className="tw:font-mono">
+                {formatShortcut(SHORTCUTS.focusSearch, isMacPlatform())}
+              </kbd>
+              )
             </span>
           )}
         </p>
