@@ -12,7 +12,6 @@ import {
 } from '@components/ui';
 import { cn } from '@utils/cn';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
-import { resolveStatusBarItems } from '@constants/statusBar';
 import { TabInfoRows } from '@components/TabInfoRows';
 import type { StatusBarItem } from '@types';
 import type { DashComponent, DashComponentApi } from '@types';
@@ -35,7 +34,8 @@ import {
 type StatusBarProps = {
   /** Array of PrismAction component specs to render */
   actions?: JSX.Element[];
-  lastSyncTime?: number;
+  /** The time of the last workspace change, in ms since the epoch */
+  lastSyncTime: number;
   onOpenHelp?: () => void;
 };
 
@@ -43,7 +43,7 @@ type StatusBarProps = {
  * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,
  * then the PrismAction components of the `actions` prop.
  */
-export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
+export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =
     useConfig();
@@ -98,9 +98,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     }
   }, [componentId, persistenceType, dispatch]);
 
-  const items = resolveStatusBarItems(statusBarItems);
-  const leftItems = items.filter((item) => item !== 'updated');
-  const showUpdated = items.includes('updated');
+  const leftItems = statusBarItems.filter((item) => item !== 'updated');
+  const showUpdated = statusBarItems.includes('updated');
 
   const segments: Record<Exclude<StatusBarItem, 'updated'>, React.ReactNode> = {
     reset: (
