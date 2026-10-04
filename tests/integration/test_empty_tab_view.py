@@ -9,15 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    PRISM_ROOT,
-    SEARCHBAR_INPUT,
-    check_browser_errors,
-    get_free_port,
-    press_key,
-    tab_to,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -46,8 +38,8 @@ def _app(empty_tab_view: str) -> Dash:
 
 
 def test_empty_tab_view_none_renders_blank_pane(dash_duo):
-    dash_duo.start_server(_app("none"), port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(_app("none"), port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     dash_duo.wait_for_element(BLANK, timeout=10)
 
     assert dash_duo.find_elements(HINT) == []
@@ -55,22 +47,22 @@ def test_empty_tab_view_none_renders_blank_pane(dash_duo):
     # text would pass whatever the grid does, since that div has no children.
     assert dash_duo.find_elements(LAYOUTS) == []
     # The search bar is still the way in
-    dash_duo.wait_for_element(SEARCHBAR_INPUT, timeout=5)
-    assert check_browser_errors(dash_duo) == []
+    dash_duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=5)
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_empty_tab_view_hint_renders_hint(dash_duo):
-    dash_duo.start_server(_app("hint"), port=get_free_port())
+    dash_duo.start_server(_app("hint"), port=testutils.get_free_port())
     dash_duo.wait_for_element(HINT, timeout=10)
 
     assert "search bar" in dash_duo.find_element(HINT).text.lower()
     assert dash_duo.find_elements(BLANK) == []
     assert dash_duo.find_elements(LAYOUTS) == []
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_empty_tab_view_layouts_keeps_the_layout_grid(dash_duo):
-    dash_duo.start_server(_app("layouts"), port=get_free_port())
+    dash_duo.start_server(_app("layouts"), port=testutils.get_free_port())
     # Assert on the grid itself: the layout name alone also appears in the
     # search dropdown, which opens on a fresh tab whatever emptyTabView says.
     dash_duo.wait_for_element(LAYOUTS, timeout=10)
@@ -78,7 +70,7 @@ def test_empty_tab_view_layouts_keeps_the_layout_grid(dash_duo):
     assert dash_duo.find_elements(HINT) == []
     assert dash_duo.find_elements(BLANK) == []
     assert "Home" in dash_duo.find_element(LAYOUTS).text
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 CARD = "[data-testid='prism-layout-card-home']"
@@ -89,7 +81,7 @@ KEYS = pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "s
 
 
 def _start_layout_grid(dash_duo):
-    dash_duo.start_server(_app("layouts"), port=get_free_port())
+    dash_duo.start_server(_app("layouts"), port=testutils.get_free_port())
     dash_duo.wait_for_element(CARD, timeout=10)
 
 
@@ -114,11 +106,11 @@ def test_layout_card_opens_its_layout_from_the_keyboard(dash_duo, key):
     _start_layout_grid(dash_duo)
     assert dash_duo.find_element(CARD_OPEN).tag_name == "button"
 
-    tab_to(dash_duo, CARD_OPEN)
-    press_key(dash_duo, key)
+    testutils.tab_to(dash_duo, CARD_OPEN)
+    testutils.press_key(dash_duo, key)
 
     _wait_for_grid_to_close(dash_duo)
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_a_click_anywhere_on_a_layout_card_opens_its_layout(dash_duo):
@@ -128,7 +120,7 @@ def test_a_click_anywhere_on_a_layout_card_opens_its_layout(dash_duo):
     dash_duo.find_element(CARD).click()
 
     _wait_for_grid_to_close(dash_duo)
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_the_favourite_star_of_a_card_does_not_open_the_layout(dash_duo):
@@ -144,14 +136,14 @@ def test_the_favourite_star_of_a_card_does_not_open_the_layout(dash_duo):
         message="The star should mark the layout as a favourite",
     )
     assert len(dash_duo.find_elements(LAYOUTS)) == 1
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_the_star_follows_the_title_in_the_tab_order(dash_duo):
     _start_layout_grid(dash_duo)
 
-    tab_to(dash_duo, CARD_OPEN)
-    press_key(dash_duo, Keys.TAB)
+    testutils.tab_to(dash_duo, CARD_OPEN)
+    testutils.press_key(dash_duo, Keys.TAB)
 
     assert dash_duo.driver.switch_to.active_element.get_attribute("data-testid") == (
         "prism-layout-card-favorite-home"
@@ -162,8 +154,8 @@ def test_the_star_follows_the_title_in_the_tab_order(dash_duo):
 def test_the_favourite_star_of_a_card_toggles_from_the_keyboard(dash_duo, key):
     _start_layout_grid(dash_duo)
 
-    tab_to(dash_duo, CARD_STAR)
-    press_key(dash_duo, key)
+    testutils.tab_to(dash_duo, CARD_STAR)
+    testutils.press_key(dash_duo, key)
 
     WebDriverWait(dash_duo.driver, 5).until(
         lambda driver: driver.find_element(By.CSS_SELECTOR, CARD_STAR).get_attribute("aria-label")
@@ -179,10 +171,10 @@ def test_the_favourite_star_of_a_card_toggles_from_the_keyboard(dash_duo, key):
         == "prism-layout-card-favorite-home",
         message="The star should keep the focus after its card moved",
     )
-    press_key(dash_duo, key)
+    testutils.press_key(dash_duo, key)
     WebDriverWait(dash_duo.driver, 5).until(
         lambda driver: driver.find_element(By.CSS_SELECTOR, CARD_STAR).get_attribute("aria-label")
         == "Add Home to favorites",
         message="A second press should remove the favourite again",
     )
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []

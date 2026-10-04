@@ -18,15 +18,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
-from conftest import (
-    SEARCHBAR_INPUT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_tabs,
-    press_key,
-    tab_to,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -34,15 +26,15 @@ pytestmark = pytest.mark.integration
 def test_select_layout_from_search(prism_app_with_layouts):
     """Test selecting a layout from search results opens the correct tab."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Open SearchBar
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
 
     # Search for "Test Static Layout"
-    search_input = duo.find_element(SEARCHBAR_INPUT)
+    search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
     search_input.send_keys("Static")
 
     # Wait for layout item to appear in dropdown
@@ -53,7 +45,7 @@ def test_select_layout_from_search(prism_app_with_layouts):
 
     # Verify tab name updated to the layout name
     def tab_shows_layout(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Test Static Layout" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 10).until(
@@ -63,22 +55,22 @@ def test_select_layout_from_search(prism_app_with_layouts):
     # Verify the layout content was rendered
     duo.wait_for_element("[id*='static-content']", timeout=10)
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_select_layout_with_callback_content(prism_app_with_layouts):
     """Test selecting the callback layout renders the callback content."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Open SearchBar
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
 
     # Search for "Callback"
-    search_input = duo.find_element(SEARCHBAR_INPUT)
+    search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
     search_input.send_keys("Callback")
 
     # Wait for layout item to appear
@@ -89,7 +81,7 @@ def test_select_layout_with_callback_content(prism_app_with_layouts):
 
     # Verify tab name
     def tab_shows_callback(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Test Callback Layout" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 10).until(
@@ -99,22 +91,22 @@ def test_select_layout_with_callback_content(prism_app_with_layouts):
     # Verify the callback layout content is rendered
     duo.wait_for_element("[id*='test-button']", timeout=10)
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_search_filters_layouts(prism_app_with_layouts):
     """Test that typing in search bar filters the layout list."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Open SearchBar
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
 
     # Type a query that matches only the static layout
-    search_input = duo.find_element(SEARCHBAR_INPUT)
+    search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
     search_input.send_keys("Static")
 
     # The static layout item should appear
@@ -126,40 +118,40 @@ def test_search_filters_layouts(prism_app_with_layouts):
         len(callback_items) == 0
     ), "Callback layout should be filtered out when searching 'Static'"
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
     """Test that selecting a layout on a new tab replaces the 'New Tab' content."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # The initial tab should be "New Tab"
-    tabs = get_tabs(duo)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) == 1, "Should start with 1 tab"
 
     # Select a layout
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("Static")
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
     duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-test-static']").click()
 
     # Should still have 1 tab (layout opens in the current tab, not a new one)
-    wait_for_tab_count(duo, 1)
-    tabs = get_tabs(duo)
+    testutils.wait_for_tab_count(duo, 1)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) == 1, "Should still have 1 tab after selecting layout"
 
     # But the tab name should have changed
     def tab_renamed(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Test Static Layout" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 10).until(tab_renamed, message="Tab should show layout name")
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
@@ -170,8 +162,8 @@ def _open_static_layout(duo) -> None:
     """Open the static layout in the first tab, so the search bar shows its display mode."""
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("Static")
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
     duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-test-static']").click()
     duo.wait_for_element(DISPLAY_BAR, timeout=10)
@@ -184,21 +176,21 @@ def test_display_bar_opens_search_from_the_keyboard(prism_app_with_layouts, key)
     _open_static_layout(duo)
     assert duo.find_element(DISPLAY_BAR).tag_name == "button"
 
-    tab_to(duo, DISPLAY_BAR)
-    press_key(duo, key)
+    testutils.tab_to(duo, DISPLAY_BAR)
+    testutils.press_key(duo, key)
 
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    assert duo.find_element(SEARCHBAR_INPUT).get_attribute("value") == ""
-    assert check_browser_errors(duo) == []
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    assert duo.find_element(testutils.SEARCHBAR_INPUT).get_attribute("value") == ""
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_typing_on_the_display_bar_starts_a_search(prism_app_with_layouts):
     duo = prism_app_with_layouts
     _open_static_layout(duo)
 
-    tab_to(duo, DISPLAY_BAR)
-    press_key(duo, "c")
+    testutils.tab_to(duo, DISPLAY_BAR)
+    testutils.press_key(duo, "c")
 
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    assert duo.find_element(SEARCHBAR_INPUT).get_attribute("value") == "c"
-    assert check_browser_errors(duo) == []
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    assert duo.find_element(testutils.SEARCHBAR_INPUT).get_attribute("value") == "c"
+    assert testutils.check_browser_errors(duo) == []

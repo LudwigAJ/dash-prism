@@ -10,16 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    ADD_TAB_BUTTON,
-    PRISM_ROOT,
-    check_browser_errors,
-    get_free_port,
-    press_key,
-    tab_to,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -53,22 +44,22 @@ def _app(show_status_bar: bool, items: list[str] | None = None) -> Dash:
 
 
 def test_status_bar_hidden(dash_duo):
-    dash_duo.start_server(_app(False), port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-    dash_duo.wait_for_element(ADD_TAB_BUTTON, timeout=10)
+    dash_duo.start_server(_app(False), port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    dash_duo.wait_for_element(testutils.ADD_TAB_BUTTON, timeout=10)
 
     assert dash_duo.find_elements(HELP_BUTTON) == []
     assert dash_duo.find_elements(UNDO_BUTTON) == []
     assert dash_duo.find_elements(ACTION_BUTTON) == []
 
     # The workspace itself keeps working
-    dash_duo.find_element(ADD_TAB_BUTTON).click()
-    wait_for_tab_count(dash_duo, 2)
-    assert check_browser_errors(dash_duo) == []
+    dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(dash_duo, 2)
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
-    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.start_server(_app(True), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     # The buttons show only an icon, so the name is the only text a screen reader gets.
@@ -79,15 +70,15 @@ def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
 
 @pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "space"])
 def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, key):
-    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.start_server(_app(True), port=testutils.get_free_port())
     dash_duo.wait_for_element(TAB_SEGMENT, timeout=10)
 
     segment = dash_duo.find_element(TAB_SEGMENT)
     assert segment.tag_name == "button"
     assert segment.get_attribute("aria-expanded") == "false"
 
-    tab_to(dash_duo, TAB_SEGMENT)
-    press_key(dash_duo, key)
+    testutils.tab_to(dash_duo, TAB_SEGMENT)
+    testutils.press_key(dash_duo, key)
 
     WebDriverWait(dash_duo.driver, 5).until(
         lambda driver: driver.find_element("css selector", TAB_SEGMENT).get_attribute(
@@ -97,11 +88,11 @@ def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, ke
         message="The popover should open when Enter or Space presses the segment",
     )
     assert "Tab ID" in dash_duo.find_element(POPOVER).text
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
-    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.start_server(_app(True), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     dash_duo.find_element(HELP_BUTTON).click()
@@ -116,7 +107,7 @@ def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
 
 
 def test_status_bar_dividers_are_decoration_not_text(dash_duo):
-    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.start_server(_app(True), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     # A literal "|" in the text would be read aloud between every pair of segments.
@@ -137,14 +128,14 @@ def _segment_order(dash_duo) -> list[str]:
 
 
 def test_status_bar_shown_by_default(dash_duo):
-    dash_duo.start_server(_app(True), port=get_free_port())
+    dash_duo.start_server(_app(True), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_selects_segments(dash_duo):
-    dash_duo.start_server(_app(True, ["count", "help"]), port=get_free_port())
+    dash_duo.start_server(_app(True, ["count", "help"]), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element("[data-testid='prism-statusbar-count']", timeout=10)
 
@@ -154,31 +145,31 @@ def test_status_bar_items_selects_segments(dash_duo):
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
     assert _segment_order(dash_duo) == ["count", "help"]
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_follows_the_listed_order(dash_duo):
     """The prop is an ordered subset: reversing the list reverses the bar."""
-    dash_duo.start_server(_app(True, ["help", "count"]), port=get_free_port())
+    dash_duo.start_server(_app(True, ["help", "count"]), port=testutils.get_free_port())
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     assert _segment_order(dash_duo) == ["help", "count"]
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
     """'updated' is pinned right whatever position it is listed in."""
-    dash_duo.start_server(_app(True, ["updated", "count", "reset"]), port=get_free_port())
+    dash_duo.start_server(_app(True, ["updated", "count", "reset"]), port=testutils.get_free_port())
     dash_duo.wait_for_element("[data-testid='prism-statusbar-updated']", timeout=10)
 
     assert _segment_order(dash_duo) == ["count", "reset", "updated"]
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_empty_leaves_only_actions(dash_duo):
-    dash_duo.start_server(_app(True, []), port=get_free_port())
+    dash_duo.start_server(_app(True, []), port=testutils.get_free_port())
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
     for hidden in ("reset", "help", "undo", "mode", "panels", "tab", "count", "updated"):
         assert dash_duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
-    assert check_browser_errors(dash_duo) == []
+    assert testutils.check_browser_errors(dash_duo) == []

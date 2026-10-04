@@ -22,15 +22,7 @@ import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 
-from conftest import (
-    CONTEXT_MENU,
-    TAB_SELECTOR,
-    get_modifier_key,
-    get_tabs,
-    open_context_menu,
-    wait_for_element_invisible,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -41,8 +33,8 @@ def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):
     duo = prism_app_with_layouts
 
     # Right-click tab (initial tab has no layout)
-    tab = duo.find_element(TAB_SELECTOR)
-    open_context_menu(duo, tab)
+    tab = duo.find_element(testutils.TAB_SELECTOR)
+    testutils.open_context_menu(duo, tab)
 
     # Refresh should NOT be visible for tabs without layout
     refresh_items = duo.find_elements("[data-testid='prism-context-menu-refresh']")
@@ -50,7 +42,7 @@ def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):
 
     # Close menu
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-    wait_for_element_invisible(duo, CONTEXT_MENU, timeout=2)
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
 
 def test_context_menu_has_core_items(prism_app_with_layouts):
@@ -58,8 +50,8 @@ def test_context_menu_has_core_items(prism_app_with_layouts):
     duo = prism_app_with_layouts
 
     # Right-click tab
-    tab = duo.find_element(TAB_SELECTOR)
-    open_context_menu(duo, tab)
+    tab = duo.find_element(testutils.TAB_SELECTOR)
+    testutils.open_context_menu(duo, tab)
 
     # Verify core menu items exist (these are always present)
     core_items = [
@@ -73,7 +65,7 @@ def test_context_menu_has_core_items(prism_app_with_layouts):
 
     # Close menu
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-    wait_for_element_invisible(duo, CONTEXT_MENU, timeout=2)
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
 
 def test_keyboard_shortcut_refresh_no_error(prism_app_with_layouts):
@@ -81,12 +73,12 @@ def test_keyboard_shortcut_refresh_no_error(prism_app_with_layouts):
     duo = prism_app_with_layouts
 
     # Verify we have at least 1 tab
-    tabs = get_tabs(duo)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) >= 1, "Should have at least 1 tab"
 
     # Press Ctrl+Shift+R (refresh shortcut)
     # For tabs without layout, this should be a no-op (guarded in reducer)
-    modifier = get_modifier_key()
+    modifier = testutils.get_modifier_key()
 
     # Use ActionChains for modifier combination
     actions = ActionChains(duo.driver)
@@ -95,8 +87,8 @@ def test_keyboard_shortcut_refresh_no_error(prism_app_with_layouts):
     ).perform()
 
     # Tab count should remain the same (refresh doesn't close tab)
-    wait_for_tab_count(duo, len(tabs), timeout=3)
+    testutils.wait_for_tab_count(duo, len(tabs), timeout=3)
 
     # Verify no console errors from refresh action
-    tabs_after = get_tabs(duo)
+    tabs_after = testutils.get_tabs(duo)
     assert len(tabs_after) == len(tabs), "Refresh should not change tab count"

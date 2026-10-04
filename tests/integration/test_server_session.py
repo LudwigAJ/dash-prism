@@ -17,14 +17,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
 from dash_prism.app_init import _compute_server_session_id
-
-from conftest import (
-    PRISM_ROOT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -87,8 +80,8 @@ def _start_app(dash_duo):
         style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
@@ -146,7 +139,7 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     )
     assert _stored_session_id(duo) == "stale", "the seed was overwritten before reload"
     duo.driver.refresh()
-    duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # The user is told what happened (the toast is raised after mount, not from
     # the reducer during rehydration where nothing is listening yet).
@@ -154,11 +147,11 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     # the text rather than reading it once.
     duo.wait_for_contains_text(TOAST_SELECTOR, "Closed 1 tab", timeout=10)
 
-    wait_for_tab_count(duo, 1, timeout=10)
-    tabs = duo.find_elements(TAB_SELECTOR)
+    testutils.wait_for_tab_count(duo, 1, timeout=10)
+    tabs = duo.find_elements(testutils.TAB_SELECTOR)
     assert [t.text for t in tabs] == ["Home"]
     duo.wait_for_element("[id*='home-content']", timeout=10)
-    assert "not found" not in duo.find_element(PRISM_ROOT).text.lower()
+    assert "not found" not in duo.find_element(testutils.PRISM_ROOT).text.lower()
 
     # The registry change is recorded: the stored fingerprint is now the one
     # derived from the current registry, not the seeded one.
@@ -167,4 +160,4 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
         lambda _: _stored_session_id(duo) == expected,
         message="expected the derived serverSessionId to be persisted",
     )
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []

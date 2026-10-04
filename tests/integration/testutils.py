@@ -11,6 +11,9 @@ in integration tests. These utilities follow Dash testing best practices:
 
 from __future__ import annotations
 
+import platform
+import socket
+
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -36,6 +39,19 @@ DROP_ZONE_LEFT = "[data-testid^='prism-drop-zone-left']"
 DROP_ZONE_RIGHT = "[data-testid^='prism-drop-zone-right']"
 DROP_ZONE_TOP = "[data-testid^='prism-drop-zone-top']"
 DROP_ZONE_BOTTOM = "[data-testid^='prism-drop-zone-bottom']"
+
+
+def get_free_port() -> int:
+    """
+    Find and return an available port by binding to port 0.
+
+    This is thread-safe and avoids port conflicts in parallel test execution.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+    return port
 
 
 # =============================================================================
@@ -899,8 +915,6 @@ def get_modifier_key():
 
     Returns Keys.COMMAND on macOS, Keys.CONTROL elsewhere.
     """
-    import platform
-
     return Keys.COMMAND if platform.system() == "Darwin" else Keys.CONTROL
 
 

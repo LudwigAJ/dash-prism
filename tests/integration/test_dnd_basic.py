@@ -16,21 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import (
-    ADD_TAB_BUTTON,
-    DROP_ZONE_LEFT,
-    are_drop_zones_present,
-    cancel_drag_with_escape,
-    check_browser_errors,
-    create_tabs_for_dnd_test,
-    get_panels,
-    get_tab_order_in_panel,
-    get_tabs,
-    start_drag_without_drop,
-    wait_for_drop_zones_visible,
-    wait_for_element_invisible,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -47,18 +33,18 @@ class TestDropZoneBehavior:
         duo = prism_app_with_layouts
 
         # Verify single tab mode
-        assert len(get_tabs(duo)) == 1, "Should start with 1 tab"
-        assert not are_drop_zones_present(duo), "No drop zones in single-tab mode"
+        assert len(testutils.get_tabs(duo)) == 1, "Should start with 1 tab"
+        assert not testutils.are_drop_zones_present(duo), "No drop zones in single-tab mode"
 
         # Even during drag attempt, no drop zones
         try:
-            start_drag_without_drop(duo, 0)
-            zones_appeared = wait_for_drop_zones_visible(duo, timeout=2.0)
+            testutils.start_drag_without_drop(duo, 0)
+            zones_appeared = testutils.wait_for_drop_zones_visible(duo, timeout=2.0)
             assert not zones_appeared, "Drop zones should not appear in single-tab mode"
         finally:
-            cancel_drag_with_escape(duo)
+            testutils.cancel_drag_with_escape(duo)
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"
 
     def test_multi_tab_drop_zones_appear(self, prism_app_with_layouts):
@@ -68,22 +54,24 @@ class TestDropZoneBehavior:
         duo = prism_app_with_layouts
 
         # Add second tab to exit single-tab mode
-        duo.find_element(ADD_TAB_BUTTON).click()
-        wait_for_tab_count(duo, 2, timeout=10.0)
+        duo.find_element(testutils.ADD_TAB_BUTTON).click()
+        testutils.wait_for_tab_count(duo, 2, timeout=10.0)
 
-        assert not are_drop_zones_present(duo), "No drop zones before drag"
+        assert not testutils.are_drop_zones_present(duo), "No drop zones before drag"
 
         try:
-            start_drag_without_drop(duo, 0)
-            assert wait_for_drop_zones_visible(duo, timeout=5.0), "Drop zones should appear"
+            testutils.start_drag_without_drop(duo, 0)
+            assert testutils.wait_for_drop_zones_visible(
+                duo, timeout=5.0
+            ), "Drop zones should appear"
         finally:
-            cancel_drag_with_escape(duo)
+            testutils.cancel_drag_with_escape(duo)
 
         # Drop zones disappear after cancel
-        wait_for_element_invisible(duo, DROP_ZONE_LEFT, timeout=5.0)
-        assert not are_drop_zones_present(duo), "Drop zones should disappear"
+        testutils.wait_for_element_invisible(duo, testutils.DROP_ZONE_LEFT, timeout=5.0)
+        assert not testutils.are_drop_zones_present(duo), "Drop zones should disappear"
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
@@ -96,20 +84,20 @@ class TestDragCancellation:
         """
         duo = prism_app_with_layouts
 
-        create_tabs_for_dnd_test(duo, 3)
-        initial_order = get_tab_order_in_panel(duo, 0)
+        testutils.create_tabs_for_dnd_test(duo, 3)
+        initial_order = testutils.get_tab_order_in_panel(duo, 0)
 
         try:
-            start_drag_without_drop(duo, 0)
+            testutils.start_drag_without_drop(duo, 0)
         finally:
-            cancel_drag_with_escape(duo)
+            testutils.cancel_drag_with_escape(duo)
 
-        wait_for_element_invisible(duo, DROP_ZONE_LEFT, timeout=5.0)
+        testutils.wait_for_element_invisible(duo, testutils.DROP_ZONE_LEFT, timeout=5.0)
 
         # Tab order unchanged
-        final_order = get_tab_order_in_panel(duo, 0)
+        final_order = testutils.get_tab_order_in_panel(duo, 0)
         assert final_order == initial_order, "Order should be unchanged after cancel"
-        assert len(get_panels(duo)) == 1, "Panel count unchanged"
+        assert len(testutils.get_panels(duo)) == 1, "Panel count unchanged"
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"

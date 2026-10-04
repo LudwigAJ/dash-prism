@@ -13,61 +13,12 @@ Utility functions are defined in testutils.py.
 
 from __future__ import annotations
 
-import socket
-
 import pytest
 from dash import Dash, Input, Output, html
 from selenium.webdriver.chrome.options import Options
 
 import dash_prism
-
-# The test modules import these helpers from this module.
-from testutils import (
-    ADD_TAB_BUTTON,
-    CONTEXT_MENU,
-    DROP_ZONE_LEFT,
-    PRISM_ROOT,
-    SEARCHBAR_INPUT,
-    SPLIT_PANEL_BUTTON,
-    TAB_SELECTOR,
-    are_drop_zones_present,
-    cancel_drag_with_escape,
-    check_browser_errors,
-    create_tabs_for_dnd_test,
-    drag_tab_to_panel_edge,
-    drag_tab_to_position,
-    get_modifier_key,
-    get_panel_id,
-    get_panels,
-    get_tab_id,
-    get_tab_order_in_panel,
-    get_tabs,
-    open_context_menu,
-    press_enter_on_element,
-    press_key,
-    set_input_value_react,
-    start_drag_without_drop,
-    tab_to,
-    trigger_rename_mode,
-    wait_for_drop_zones_visible,
-    wait_for_element_invisible,
-    wait_for_panel_count,
-    wait_for_panel_layout_stable,
-    wait_for_tab_count,
-)
-
-
-def get_free_port() -> int:
-    """
-    Find and return an available port by binding to port 0.
-
-    This is thread-safe and avoids port conflicts in parallel test execution.
-    """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-    return port
+from tests.integration import testutils
 
 
 # =============================================================================
@@ -177,7 +128,7 @@ def _start_prism_app(dash_duo, *, size: str = "md"):
     dash_prism.init("prism", app)
 
     # Get a free port to avoid conflicts in parallel test execution
-    port = get_free_port()
+    port = testutils.get_free_port()
 
     # CRITICAL: Inject ResizeObserver patch BEFORE app mount via Chrome DevTools Protocol
     # This ensures all observers created during React mount use the patched implementation.

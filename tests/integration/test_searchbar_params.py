@@ -14,15 +14,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    PRISM_ROOT,
-    SEARCHBAR_INPUT,
-    check_browser_errors,
-    get_free_port,
-    set_input_value_react,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -50,15 +42,15 @@ def _start(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
 def _enter_params_mode(duo, search: str = "Typed", layout_id: str = "typed") -> None:
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys(search)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(search)
     duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)
     duo.find_element(f"[data-testid='prism-layout-item-{layout_id}']").click()
     duo.wait_for_element(PARAM_INPUT, timeout=5)
@@ -74,21 +66,21 @@ def test_invalid_input_is_flagged_inline_and_valid_input_advances(dash_duo):
     _enter_params_mode(duo)
 
     # n: int -> "abc" is rejected before the tab is created
-    set_input_value_react(duo, PARAM_INPUT, "abc")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "abc")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
     duo.wait_for_element(PARAM_ERROR, timeout=5)
     assert "whole number" in duo.find_element(PARAM_ERROR).text
     assert duo.find_elements("[id*='typed-content']") == []
 
     # A valid value advances to the enum parameter, which offers a choice list
-    set_input_value_react(duo, PARAM_INPUT, "5")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "5")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
     duo.wait_for_element(CHOICE.format("line"), timeout=5)
     duo.find_element(CHOICE.format("line")).click()
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_empty_input_uses_the_callback_default(dash_duo):
@@ -101,7 +93,7 @@ def test_empty_input_uses_the_callback_default(dash_duo):
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=1 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_parameters_are_validated(dash_duo):
@@ -110,11 +102,11 @@ def test_share_link_parameters_are_validated(dash_duo):
 
     duo.driver.get(base + _share_hash({"n": "x"}))
     with pytest.raises(TimeoutException):
-        wait_for_tab_count(duo, 2, timeout=2.0)
+        testutils.wait_for_tab_count(duo, 2, timeout=2.0)
     assert "Invalid parameters" in duo.find_element("body").text
 
     duo.driver.get(base + _share_hash({"n": "5", "kind": "bar"}))
-    wait_for_tab_count(duo, 2, timeout=10)
+    testutils.wait_for_tab_count(duo, 2, timeout=10)
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=5 kind='bar'" in duo.find_element("[id*='typed-content']").text
 
@@ -141,8 +133,8 @@ def _start_optional(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
@@ -164,7 +156,7 @@ def test_blank_is_accepted_for_an_optional_parameter_with_choices(dash_duo):
     duo.wait_for_element("[id*='optional-content']", timeout=10)
     assert duo.find_element("[id*='optional-content']").text == "ticker=None"
     assert "Invalid parameters" not in duo.find_element("body").text
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
@@ -182,7 +174,7 @@ def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
 
     duo.wait_for_element("[id*='optional-content']", timeout=10)
     assert duo.find_element("[id*='optional-content']").text == "ticker='FRTR'"
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def _start_items(dash_duo):
@@ -205,8 +197,8 @@ def _start_items(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
@@ -221,12 +213,12 @@ def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
     duo = _start_items(dash_duo)
     _enter_params_mode(duo, search="Items", layout_id="items")
 
-    set_input_value_react(duo, PARAM_INPUT, "a,b")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "a,b")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
 
     duo.wait_for_element("[id*='items-content']", timeout=10)
     assert duo.find_element("[id*='items-content']").text == "tags=['a', 'b']"
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
@@ -234,7 +226,7 @@ def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
     duo = _start_items(dash_duo)
     _enter_params_mode(duo, search="Items", layout_id="items")
 
-    set_input_value_react(duo, PARAM_INPUT, "a,zzz")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "a,zzz")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
 
     duo.wait_for_element("[data-testid='prism-validation-error']", timeout=10)
@@ -274,7 +266,7 @@ def _wait_for_active_choice(duo, choice: str) -> None:
 def _to_the_choice_list(duo) -> None:
     """Answer the integer parameter so that the input offers the choices of the enum one."""
     _enter_params_mode(duo)
-    set_input_value_react(duo, PARAM_INPUT, "5")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "5")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
     duo.wait_for_element(CHOICE.format("line"), timeout=5)
 
@@ -288,7 +280,7 @@ def test_choice_input_is_a_combobox_that_controls_the_list(dash_duo):
     assert number_input.aria_role == "textbox"
     assert number_input.get_attribute("aria-expanded") is None
 
-    set_input_value_react(duo, PARAM_INPUT, "5")
+    testutils.set_input_value_react(duo, PARAM_INPUT, "5")
     number_input.send_keys(Keys.ENTER)
     duo.wait_for_element(CHOICE_LIST, timeout=5)
 
@@ -328,7 +320,7 @@ def test_arrow_keys_move_the_active_choice_and_enter_selects_it(dash_duo):
 
     duo.wait_for_element("[id*='typed-content']", timeout=10)
     assert "n=5 kind='line'" in duo.find_element("[id*='typed-content']").text
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_arrow_up_starts_at_the_last_choice(dash_duo):
@@ -380,7 +372,7 @@ def test_escape_clears_the_marked_choice_before_it_leaves_the_prompt(dash_duo):
         lambda driver: driver.find_elements("css selector", PARAM_INPUT) == [],
         message="The second Escape should leave the prompt",
     )
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
 
 
 def test_hovering_a_choice_marks_it_and_the_arrow_keys_continue_from_there(dash_duo):
@@ -406,7 +398,7 @@ def test_the_cancel_button_has_a_label_and_returns_to_the_layouts(dash_duo):
     cancel = duo.find_element("button[aria-label='Cancel']")
     cancel.click()
 
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     assert duo.find_elements(PARAM_INPUT) == []
 
 
@@ -441,8 +433,8 @@ def _start_many(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 

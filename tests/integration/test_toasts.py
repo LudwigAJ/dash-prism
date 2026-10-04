@@ -17,8 +17,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import TAB_SELECTOR, get_free_port, get_modifier_key
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -52,13 +51,13 @@ def test_a_toast_shows_only_in_the_instance_that_raised_it(dash_duo):
     app.layout = html.Div([_prism("prism-first"), _prism("prism-second")])
     dash_prism.init("prism-first", app)
     dash_duo.driver.set_window_size(1280, 900)
-    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.start_server(app, port=testutils.get_free_port())
     for prism_id in ("prism-first", "prism-second"):
-        dash_duo.wait_for_element(f"#{prism_id} {TAB_SELECTOR}", timeout=10)
+        dash_duo.wait_for_element(f"#{prism_id} {testutils.TAB_SELECTOR}", timeout=10)
 
     # The shortcuts belong to the instance that the user touched last.
-    dash_duo.find_element(f"#prism-second {TAB_SELECTOR}").click()
-    dash_duo.find_element("body").send_keys(get_modifier_key(), Keys.ALT, "n")
+    dash_duo.find_element(f"#prism-second {testutils.TAB_SELECTOR}").click()
+    dash_duo.find_element("body").send_keys(testutils.get_modifier_key(), Keys.ALT, "n")
 
     WebDriverWait(dash_duo.driver, 10).until(
         lambda driver: _toast_count(driver, "prism-second", LIMIT_MESSAGE) >= 1,

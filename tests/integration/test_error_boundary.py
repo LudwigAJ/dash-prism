@@ -12,7 +12,7 @@ import pytest
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
-from conftest import PRISM_ROOT, press_key, tab_to
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -47,8 +47,8 @@ KEYS = pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "s
 
 
 def _mount_boundary(duo, level: str) -> None:
-    duo.wait_for_element(PRISM_ROOT, timeout=10)
-    duo.driver.execute_script(_MOUNT_BOUNDARY, level, PRISM_ROOT)
+    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    duo.driver.execute_script(_MOUNT_BOUNDARY, level, testutils.PRISM_ROOT)
 
 
 def _wait_for_reload(duo) -> None:
@@ -56,7 +56,7 @@ def _wait_for_reload(duo) -> None:
         lambda driver: driver.execute_script("return window.__beforeReload === undefined;"),
         message="The page should reload",
     )
-    duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
 
 @KEYS
@@ -65,9 +65,9 @@ def test_try_again_renders_the_content_again(prism_app_with_layouts, key):
     _mount_boundary(duo, "panel")
     assert duo.find_element(RETRY).tag_name == "button"
 
-    tab_to(duo, RETRY)
+    testutils.tab_to(duo, RETRY)
     duo.driver.execute_script("window.__prismThrow = false;")
-    press_key(duo, key)
+    testutils.press_key(duo, key)
 
     duo.wait_for_element("#recovered", timeout=5)
     assert duo.find_elements(RETRY) == []
@@ -78,8 +78,8 @@ def test_refresh_page_reloads_the_page(prism_app_with_layouts, key):
     duo = prism_app_with_layouts
     _mount_boundary(duo, "workspace")
 
-    tab_to(duo, REFRESH)
-    press_key(duo, key)
+    testutils.tab_to(duo, REFRESH)
+    testutils.press_key(duo, key)
 
     _wait_for_reload(duo)
 
@@ -89,8 +89,8 @@ def test_clear_storage_runs_the_callback_and_reloads_the_page(prism_app_with_lay
     duo = prism_app_with_layouts
     _mount_boundary(duo, "workspace")
 
-    tab_to(duo, CLEAR_STORAGE)
-    press_key(duo, key)
+    testutils.tab_to(duo, CLEAR_STORAGE)
+    testutils.press_key(duo, key)
 
     _wait_for_reload(duo)
     assert duo.driver.execute_script("return sessionStorage.getItem('cleared');") == "yes"

@@ -18,15 +18,7 @@ import pytest
 from dash import Dash, html
 
 import dash_prism
-
-# Import helpers from conftest
-from conftest import (
-    ADD_TAB_BUTTON,
-    check_browser_errors,
-    get_free_port,
-    get_tabs,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -72,27 +64,27 @@ def test_static_layout_integration(dash_duo):
     assert not callable(app.layout), "Static layout should not be callable after init"
 
     # Start the app
-    port = get_free_port()
+    port = testutils.get_free_port()
     dash_duo.start_server(app, port=port)
 
     # Wait for initial tab to appear (Prism always starts with a "New Layout" tab)
-    wait_for_tab_count(dash_duo, 1)
+    testutils.wait_for_tab_count(dash_duo, 1)
 
     # Verify initial tab exists
-    initial_tabs = get_tabs(dash_duo)
+    initial_tabs = testutils.get_tabs(dash_duo)
     assert len(initial_tabs) == 1, "Should start with 1 initial tab"
 
     # Create a second tab by clicking add button to verify functionality
-    add_button = dash_duo.find_element(ADD_TAB_BUTTON)
+    add_button = dash_duo.find_element(testutils.ADD_TAB_BUTTON)
     add_button.click()
-    wait_for_tab_count(dash_duo, 2)
+    testutils.wait_for_tab_count(dash_duo, 2)
 
     # Verify we now have 2 tabs
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 2, "Should have 2 tabs after clicking add"
 
     # Check for browser console errors
-    errors = check_browser_errors(dash_duo)
+    errors = testutils.check_browser_errors(dash_duo)
     assert len(errors) == 0, f"Browser console should have no errors: {errors}"
 
 
@@ -141,25 +133,25 @@ def test_callable_layout_integration(dash_duo):
     assert hasattr(app.layout, "__wrapped__"), "app.layout should be marked as wrapped"
 
     # Start the app
-    port = get_free_port()
+    port = testutils.get_free_port()
     dash_duo.start_server(app, port=port)
 
     # Wait for initial tab to appear
-    wait_for_tab_count(dash_duo, 1)
+    testutils.wait_for_tab_count(dash_duo, 1)
 
     # Verify initial tab exists
-    initial_tabs = get_tabs(dash_duo)
+    initial_tabs = testutils.get_tabs(dash_duo)
     assert len(initial_tabs) == 1, "Should start with 1 initial tab"
 
     # Create a second tab by clicking add button to verify functionality
-    add_button = dash_duo.find_element(ADD_TAB_BUTTON)
+    add_button = dash_duo.find_element(testutils.ADD_TAB_BUTTON)
     add_button.click()
-    wait_for_tab_count(dash_duo, 2)
+    testutils.wait_for_tab_count(dash_duo, 2)
 
     # Verify we now have 2 tabs
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 2, "Should have 2 tabs after clicking add"
 
     # Check for browser console errors
-    errors = check_browser_errors(dash_duo)
+    errors = testutils.check_browser_errors(dash_duo)
     assert len(errors) == 0, f"Browser console should have no errors: {errors}"

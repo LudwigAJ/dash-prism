@@ -16,8 +16,7 @@ from dash import Dash, html
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import PRISM_ROOT, SEARCHBAR_INPUT, check_browser_errors, get_free_port
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -56,27 +55,31 @@ def _start_app(dash_duo):
     with pytest.warns(UserWarning, match="async"):
         dash_prism.init("prism", app)
 
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
 def _select_layout(duo, layout_id: str) -> None:
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys(layout_id)
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(layout_id)
     duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)
     duo.find_element(f"[data-testid='prism-layout-item-{layout_id}']").click()
 
 
 def _root_text(duo) -> str:
-    return duo.find_element(PRISM_ROOT).text
+    return duo.find_element(testutils.PRISM_ROOT).text
 
 
 def _unexpected_browser_errors(duo) -> list:
     """Console errors other than PrismContent's own 'timed out' log line."""
-    return [e for e in check_browser_errors(duo) if "timed out" not in str(e.get("message", ""))]
+    return [
+        e
+        for e in testutils.check_browser_errors(duo)
+        if "timed out" not in str(e.get("message", ""))
+    ]
 
 
 def test_server_enforces_layout_timeout_for_async_layouts_in_sync_app(dash_duo):

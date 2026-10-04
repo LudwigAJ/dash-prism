@@ -16,16 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import (
-    ADD_TAB_BUTTON,
-    check_browser_errors,
-    create_tabs_for_dnd_test,
-    drag_tab_to_position,
-    get_panels,
-    get_tab_order_in_panel,
-    get_tabs,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -52,20 +43,20 @@ class TestTabReorder:
         """
         duo = prism_app_with_layouts
 
-        create_tabs_for_dnd_test(duo, 3)
-        initial_order = get_tab_order_in_panel(duo, 0)
+        testutils.create_tabs_for_dnd_test(duo, 3)
+        initial_order = testutils.get_tab_order_in_panel(duo, 0)
 
-        result = drag_tab_to_position(duo, source_idx, target_idx)
+        result = testutils.drag_tab_to_position(duo, source_idx, target_idx)
         assert result, "Drag operation should complete"
 
-        new_order = get_tab_order_in_panel(duo, 0)
+        new_order = testutils.get_tab_order_in_panel(duo, 0)
 
         # All tabs preserved
         assert set(new_order) == set(initial_order), "All tabs should exist"
-        assert len(get_tabs(duo)) == 3, "Still 3 tabs"
-        assert len(get_panels(duo)) == 1, "Still 1 panel"
+        assert len(testutils.get_tabs(duo)) == 3, "Still 3 tabs"
+        assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"
 
     def test_reorder_with_two_tabs(self, prism_app_with_layouts):
@@ -74,19 +65,19 @@ class TestTabReorder:
         """
         duo = prism_app_with_layouts
 
-        duo.find_element(ADD_TAB_BUTTON).click()
-        wait_for_tab_count(duo, 2, timeout=10.0)
+        duo.find_element(testutils.ADD_TAB_BUTTON).click()
+        testutils.wait_for_tab_count(duo, 2, timeout=10.0)
 
-        initial_order = get_tab_order_in_panel(duo, 0)
+        initial_order = testutils.get_tab_order_in_panel(duo, 0)
 
-        result = drag_tab_to_position(duo, 0, 1)
+        result = testutils.drag_tab_to_position(duo, 0, 1)
         assert result, "Drag operation should complete"
 
-        new_order = get_tab_order_in_panel(duo, 0)
+        new_order = testutils.get_tab_order_in_panel(duo, 0)
         assert len(new_order) == 2, "Still 2 tabs"
         assert set(new_order) == set(initial_order), "Same tabs exist"
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"
 
     def test_multiple_sequential_reorders(self, prism_app_with_layouts):
@@ -95,18 +86,18 @@ class TestTabReorder:
         """
         duo = prism_app_with_layouts
 
-        create_tabs_for_dnd_test(duo, 4)
-        initial_tabs = set(get_tab_order_in_panel(duo, 0))
+        testutils.create_tabs_for_dnd_test(duo, 4)
+        initial_tabs = set(testutils.get_tab_order_in_panel(duo, 0))
 
         # Perform 3 reorders
-        drag_tab_to_position(duo, 0, 2)
-        drag_tab_to_position(duo, 3, 1)
-        drag_tab_to_position(duo, 1, 3)
+        testutils.drag_tab_to_position(duo, 0, 2)
+        testutils.drag_tab_to_position(duo, 3, 1)
+        testutils.drag_tab_to_position(duo, 1, 3)
 
-        final_order = get_tab_order_in_panel(duo, 0)
+        final_order = testutils.get_tab_order_in_panel(duo, 0)
 
         assert set(final_order) == initial_tabs, "All tabs preserved"
-        assert len(get_panels(duo)) == 1, "Still 1 panel"
+        assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
-        errors = check_browser_errors(duo)
+        errors = testutils.check_browser_errors(duo)
         assert len(errors) == 0, f"No browser errors expected: {errors}"

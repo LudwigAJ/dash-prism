@@ -26,14 +26,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    ADD_TAB_BUTTON,
-    CONTEXT_MENU,
-    get_free_port,
-    open_context_menu,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -111,7 +104,7 @@ def _start_app(dash_duo, layout, layouts: Mapping[str, Component] | None = None)
     app.layout = layout
     dash_prism.init("prism-first", app)
     dash_duo.driver.set_window_size(1280, 900)
-    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.start_server(app, port=testutils.get_free_port())
 
 
 def _prism(
@@ -206,13 +199,15 @@ def test_context_menu_and_dialog_use_the_theme_of_their_instance(dash_duo):
     driver = dash_duo.driver
 
     # Context menu of the dark instance
-    open_context_menu(dash_duo, dash_duo.find_element(f"#prism-second {TAB}"))
-    menu = dash_duo.find_element(CONTEXT_MENU)
+    testutils.open_context_menu(dash_duo, dash_duo.find_element(f"#prism-second {TAB}"))
+    menu = dash_duo.find_element(testutils.CONTEXT_MENU)
     owner = driver.execute_script("return arguments[0].closest('.prism-root')?.id ?? null;", menu)
     assert owner == "prism-second", "The context menu is outside the instance that opened it"
     assert max(_rgb(driver, menu)) < 80, "The context menu of a dark instance is not dark"
     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-    WebDriverWait(driver, 5).until(lambda d: not d.find_elements(By.CSS_SELECTOR, CONTEXT_MENU))
+    WebDriverWait(driver, 5).until(
+        lambda d: not d.find_elements(By.CSS_SELECTOR, testutils.CONTEXT_MENU)
+    )
 
     # Help dialog of the light instance
     dash_duo.find_element(f"#prism-first {HELP_BUTTON}").click()
@@ -260,8 +255,8 @@ def test_print_hides_the_chrome_of_prism_only(dash_duo):
 
 def _open_layout_in_new_tab(dash_duo, layout_id: str, tab_count: int) -> None:
     """Add a tab and open the layout in it through the dropdown that a new tab opens."""
-    dash_duo.find_element(ADD_TAB_BUTTON).click()
-    wait_for_tab_count(dash_duo, tab_count)
+    dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(dash_duo, tab_count)
     item = f"[data-testid='prism-layout-item-{layout_id}']"
     dash_duo.wait_for_element(item, timeout=5)
     dash_duo.find_element(item).click()

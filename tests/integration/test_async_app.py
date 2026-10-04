@@ -20,16 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    ADD_TAB_BUTTON,
-    SEARCHBAR_INPUT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    get_tabs,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -97,7 +88,7 @@ def _start_async_prism_app(dash_duo):
 
     dash_prism.init("prism", app)
 
-    port = get_free_port()
+    port = testutils.get_free_port()
 
     # CRITICAL: Same ResizeObserver CDP patch as conftest._start_prism_app.
     # Without this, headless Chrome panels get 0x0 dimensions and content never renders.
@@ -165,25 +156,25 @@ def test_async_app_renders_initial_tab(dash_duo):
     """Test that a use_async=True Prism app renders its initial tab."""
     duo = _start_async_prism_app(dash_duo)
 
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    tabs = get_tabs(duo)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) == 1, "Should start with 1 tab in async mode"
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors in async mode: {errors}"
 
 
 def test_async_app_static_layout_works(dash_duo):
     """Test that static layouts work in an async Dash app."""
     duo = _start_async_prism_app(dash_duo)
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Open SearchBar and select the static layout
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("Static")
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
 
     duo.wait_for_element("[data-testid='prism-layout-item-static-async']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-static-async']").click()
@@ -192,25 +183,25 @@ def test_async_app_static_layout_works(dash_duo):
     duo.wait_for_element("[id*='static-async-content']", timeout=10)
 
     def tab_shows_name(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Static Async Layout" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(tab_shows_name)
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors: {errors}"
 
 
 def test_async_callback_layout_renders(dash_duo):
     """Test that an async callback layout renders correctly in async mode."""
     duo = _start_async_prism_app(dash_duo)
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Open SearchBar and select the async greeting layout
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("Async Greeting")
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Async Greeting")
 
     duo.wait_for_element("[data-testid='prism-layout-item-async-greeting']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-async-greeting']").click()
@@ -219,27 +210,27 @@ def test_async_callback_layout_renders(dash_duo):
     duo.wait_for_element("[id*='async-greeting-content']", timeout=10)
 
     def tab_shows_name(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Async Greeting" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(tab_shows_name)
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors: {errors}"
 
 
 def test_async_app_tab_creation(dash_duo):
     """Test that tab creation works normally in async mode."""
     duo = _start_async_prism_app(dash_duo)
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
     # Create a second tab
-    add_button = duo.find_element(ADD_TAB_BUTTON)
+    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
     add_button.click()
-    wait_for_tab_count(duo, 2)
+    testutils.wait_for_tab_count(duo, 2)
 
-    tabs = get_tabs(duo)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) == 2, "Should have 2 tabs in async mode"
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors: {errors}"

@@ -10,16 +10,7 @@ from dash import Dash, html
 from selenium.common.exceptions import TimeoutException
 
 import dash_prism
-
-from conftest import (
-    PRISM_ROOT,
-    SEARCHBAR_INPUT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    open_context_menu,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -54,15 +45,15 @@ def _start(dash_duo, enable_share_links: bool, *, allow_multiple: bool = True, *
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
     return dash_duo
 
 
 def _open_home(duo) -> None:
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("home")
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("home")
     duo.wait_for_element("[data-testid='prism-layout-item-home']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-home']").click()
     duo.wait_for_element("[id*='home-content']", timeout=10)
@@ -72,32 +63,32 @@ def test_share_links_enabled_by_default(dash_duo):
     duo = _start(dash_duo, True)
     _open_home(duo)
 
-    open_context_menu(duo, duo.find_element(TAB_SELECTOR))
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
     duo.wait_for_element(SHARE_ITEM, timeout=3)
     duo.find_element("body").send_keys("\ue00c")  # Escape closes the menu
 
     # A share hash opens the layout in a new tab
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Shared"))
-    wait_for_tab_count(duo, 2, timeout=10)
-    assert check_browser_errors(duo) == []
+    testutils.wait_for_tab_count(duo, 2, timeout=10)
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_links_disabled(dash_duo):
     duo = _start(dash_duo, False)
     _open_home(duo)
 
-    open_context_menu(duo, duo.find_element(TAB_SELECTOR))
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
     assert duo.find_elements(SHARE_ITEM) == []
     duo.find_element("body").send_keys("\ue00c")
 
     # A share hash is ignored
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Shared"))
     with pytest.raises(TimeoutException):
-        wait_for_tab_count(duo, 2, timeout=2.0)
-    assert len(duo.find_elements(TAB_SELECTOR)) == 1
+        testutils.wait_for_tab_count(duo, 2, timeout=2.0)
+    assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
     # ...and left in the URL rather than consumed
     assert "#p:" in duo.driver.current_url
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def _load_with_hash(duo, share_hash: str) -> None:
@@ -110,7 +101,7 @@ def _load_with_hash(duo, share_hash: str) -> None:
     """
     base = duo.driver.current_url.split("#")[0].split("?")[0]
     duo.driver.get(f"{base}?reload=1{share_hash}")
-    duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
 
 def test_share_link_opens_on_a_cold_load(dash_duo):
@@ -119,9 +110,9 @@ def test_share_link_opens_on_a_cold_load(dash_duo):
     _load_with_hash(duo, _share_hash("home", "Shared"))
 
     # A fresh workspace starts with one empty tab; the shared one is the second.
-    wait_for_tab_count(duo, 2, timeout=10)
-    assert "Shared" in duo.find_element(PRISM_ROOT).text
-    assert check_browser_errors(duo) == []
+    testutils.wait_for_tab_count(duo, 2, timeout=10)
+    assert "Shared" in duo.find_element(testutils.PRISM_ROOT).text
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
@@ -130,10 +121,10 @@ def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
     _load_with_hash(duo, _share_hash("home", "Shared"))
 
     with pytest.raises(TimeoutException):
-        wait_for_tab_count(duo, 2, timeout=2.0)
-    assert len(duo.find_elements(TAB_SELECTOR)) == 1
+        testutils.wait_for_tab_count(duo, 2, timeout=2.0)
+    assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
     assert "#p:" in duo.driver.current_url
-    assert check_browser_errors(duo) == []
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
@@ -142,15 +133,15 @@ def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
     _open_home(duo)
 
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "First"))
-    wait_for_tab_count(duo, 2, timeout=10)
+    testutils.wait_for_tab_count(duo, 2, timeout=10)
 
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Second"))
     duo.wait_for_contains_text(TOAST_SELECTOR, "Maximum tabs limit reached (2)", timeout=10)
 
     toast_text = " ".join(t.text for t in duo.find_elements(TOAST_SELECTOR))
     assert "Opened shared tab: Second" not in toast_text
-    assert len(duo.find_elements(TAB_SELECTOR)) == 2
-    assert check_browser_errors(duo) == []
+    assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 2
+    assert testutils.check_browser_errors(duo) == []
 
 
 def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
@@ -161,5 +152,5 @@ def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Again"))
     duo.wait_for_contains_text(TOAST_SELECTOR, "is already open. Switching to it.", timeout=10)
 
-    assert len(duo.find_elements(TAB_SELECTOR)) == 1
-    assert check_browser_errors(duo) == []
+    assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
+    assert testutils.check_browser_errors(duo) == []

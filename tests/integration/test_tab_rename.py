@@ -19,22 +19,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from conftest import (
-    CONTEXT_MENU,
-    SPLIT_PANEL_BUTTON,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_modifier_key,
-    get_tab_id,
-    get_tabs,
-    open_context_menu,
-    press_enter_on_element,
-    set_input_value_react,
-    trigger_rename_mode,
-    wait_for_element_invisible,
-    wait_for_panel_count,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
@@ -56,7 +41,7 @@ def _click_context_menu_rename(duo, tab_id: str) -> str:
     rename_item.click()
 
     # Wait for context menu to close (Radix animation completes, onSelect fires)
-    wait_for_element_invisible(duo, CONTEXT_MENU, timeout=3)
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=3)
 
     # Wait for rename input to appear (React renders after state update)
     rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
@@ -70,46 +55,46 @@ def _click_context_menu_rename(duo, tab_id: str) -> str:
 def test_rename_via_context_menu(prism_app_with_layouts):
     """Test renaming a tab via the context menu Rename option."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    tab_id = get_tab_id(duo, 0)
+    tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None, "Tab ID should not be None"
 
     # Right-click tab to open context menu
-    tab = get_tabs(duo)[0]
-    open_context_menu(duo, tab)
+    tab = testutils.get_tabs(duo)[0]
+    testutils.open_context_menu(duo, tab)
 
     # Click rename and wait for input
     rename_input_selector = _click_context_menu_rename(duo, tab_id)
 
     # Type new name (use React-compatible setter to avoid stale element from re-render)
-    set_input_value_react(duo, rename_input_selector, "My Custom Tab")
-    press_enter_on_element(duo, rename_input_selector)
+    testutils.set_input_value_react(duo, rename_input_selector, "My Custom Tab")
+    testutils.press_enter_on_element(duo, rename_input_selector)
 
     # Wait for rename input to disappear (commit)
-    wait_for_element_invisible(duo, rename_input_selector, timeout=3)
+    testutils.wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
     # Verify tab text changed
     def tab_has_new_name(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("My Custom Tab" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(
         tab_has_new_name, message="Tab should be renamed to 'My Custom Tab'"
     )
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
     """The rename input has no visible label, so its name must come from aria-label."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    tab_id = get_tab_id(duo, 0)
+    tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None, "Tab ID should not be None"
-    assert trigger_rename_mode(duo, tab_id), "Should be able to trigger rename mode"
+    assert testutils.trigger_rename_mode(duo, tab_id), "Should be able to trigger rename mode"
 
     rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
     WebDriverWait(duo.driver, 5).until(
@@ -123,13 +108,13 @@ def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
 def test_rename_via_double_click(prism_app_with_layouts):
     """Test renaming a tab by double-clicking it."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    tab_id = get_tab_id(duo, 0)
+    tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None, "Tab ID should not be None"
 
     # Double-click the tab's inner trigger (button) to enter rename mode
-    result = trigger_rename_mode(duo, tab_id)
+    result = testutils.trigger_rename_mode(duo, tab_id)
     assert result, "Should be able to trigger rename mode"
 
     # Wait for rename input (allow time for React state + render cycle)
@@ -140,57 +125,57 @@ def test_rename_via_double_click(prism_app_with_layouts):
     )
 
     # Set new name using React-compatible input setter
-    set_input_value_react(duo, rename_input_selector, "Renamed Tab")
+    testutils.set_input_value_react(duo, rename_input_selector, "Renamed Tab")
 
     # Press Enter to confirm
-    press_enter_on_element(duo, rename_input_selector)
+    testutils.press_enter_on_element(duo, rename_input_selector)
 
     # Wait for rename input to disappear
-    wait_for_element_invisible(duo, rename_input_selector, timeout=3)
+    testutils.wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
     # Verify the tab shows the new name
     def tab_has_new_name(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tabs = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         return any("Renamed Tab" in t.text for t in tabs)
 
     WebDriverWait(duo.driver, 5).until(
         tab_has_new_name, message="Tab should be renamed to 'Renamed Tab'"
     )
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
 def test_rename_cancel_with_escape(prism_app_with_layouts):
     """Test that pressing Escape cancels a rename operation."""
     duo = prism_app_with_layouts
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    tab_id = get_tab_id(duo, 0)
+    tab_id = testutils.get_tab_id(duo, 0)
     assert tab_id is not None
 
     # Get original tab name
-    original_name = get_tabs(duo)[0].text
+    original_name = testutils.get_tabs(duo)[0].text
 
     # Open context menu and click rename
-    tab = get_tabs(duo)[0]
-    open_context_menu(duo, tab)
+    tab = testutils.get_tabs(duo)[0]
+    testutils.open_context_menu(duo, tab)
 
     # Click rename and wait for input
     rename_input_selector = _click_context_menu_rename(duo, tab_id)
 
     # Type a new name but press Escape to cancel
-    set_input_value_react(duo, rename_input_selector, "This should not stick")
+    testutils.set_input_value_react(duo, rename_input_selector, "This should not stick")
     duo.find_element(rename_input_selector).send_keys(Keys.ESCAPE)
 
     # Wait for rename input to disappear
-    wait_for_element_invisible(duo, rename_input_selector, timeout=3)
+    testutils.wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
     # Verify original name is preserved
-    tab_text = get_tabs(duo)[0].text
+    tab_text = testutils.get_tabs(duo)[0].text
     assert tab_text == original_name, f"Escape should keep '{original_name}', got '{tab_text}'"
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
@@ -201,15 +186,15 @@ def test_rename_shortcut_starts_in_the_panel_that_owns_the_tab(prism_app_with_la
     the tab may start the rename and clear the request.
     """
     duo = prism_app_with_layouts
-    duo.find_element(SPLIT_PANEL_BUTTON).click()
-    wait_for_panel_count(duo, 2)
-    wait_for_tab_count(duo, 2)
+    duo.find_element(testutils.SPLIT_PANEL_BUTTON).click()
+    testutils.wait_for_panel_count(duo, 2)
+    testutils.wait_for_tab_count(duo, 2)
 
-    modifier = get_modifier_key()
+    modifier = testutils.get_modifier_key()
     for index in (1, 0):
-        tab_id = get_tab_id(duo, index)
+        tab_id = testutils.get_tab_id(duo, index)
         assert tab_id is not None
-        get_tabs(duo)[index].click()
+        testutils.get_tabs(duo)[index].click()
 
         duo.find_element("body").send_keys(modifier, "r")
         rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
@@ -220,7 +205,7 @@ def test_rename_shortcut_starts_in_the_panel_that_owns_the_tab(prism_app_with_la
         assert len(duo.find_elements("[data-testid^='prism-tab-rename-']")) == 1
 
         duo.find_element(rename_input_selector).send_keys(Keys.ESCAPE)
-        wait_for_element_invisible(duo, rename_input_selector, timeout=3)
+        testutils.wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
-    errors = check_browser_errors(duo)
+    errors = testutils.check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"

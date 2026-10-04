@@ -161,8 +161,6 @@ external = ["A002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dash_prism", "tests"]
-# The test modules import the helper modules next to them by bare name.
-known-local-folder = ["conftest", "testutils"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "time.sleep".msg = "Use the explicit waits in tests/integration/testutils.py."
@@ -173,9 +171,6 @@ known-local-folder = ["conftest", "testutils"]
 "dash_prism/__init__.py" = ["E402"]
 # Move the pydantic import to the top of the module to remove this entry.
 "usage.py" = ["E402"]
-# The test modules import the helpers of testutils.py through this module. Import them from
-# testutils.py directly to remove this entry.
-"tests/integration/conftest.py" = ["F401"]
 
 [tool.mypy]
 python_version = "3.11"

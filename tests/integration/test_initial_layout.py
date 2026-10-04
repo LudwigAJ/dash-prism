@@ -20,16 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
-
-from conftest import (
-    ADD_TAB_BUTTON,
-    PRISM_ROOT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    get_tabs,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -70,17 +61,17 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # The first tab should have the "Home Dashboard" layout loaded,
     # not be an empty "New Tab"
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 1, "Should have 1 tab"
 
     # Wait for the tab name to update from "New Tab" to "Home Dashboard"
     def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tab_elements = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         if not tab_elements:
             return False
         return "Home Dashboard" in tab_elements[0].text
@@ -95,7 +86,7 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     # like {"type":"home-content","index":"<tabId>"}, so use attribute-contains selector
     dash_duo.wait_for_element("[id*='home-content']", timeout=10)
 
-    errors = check_browser_errors(dash_duo)
+    errors = testutils.check_browser_errors(dash_duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
@@ -130,12 +121,12 @@ def test_initial_layout_ignored_with_persistence(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # With memory persistence (fresh workspace), initialLayout should apply
     def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tab_elements = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         if not tab_elements:
             return False
         return "Home Dashboard" in tab_elements[0].text
@@ -170,11 +161,11 @@ def test_initial_layout_without_prop_shows_new_tab(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # The first tab should be "New Tab" (no layout loaded)
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 1, "Should have 1 tab"
 
     # Tab should say "New Tab", not "Home Dashboard"
@@ -182,7 +173,7 @@ def test_initial_layout_without_prop_shows_new_tab(dash_duo):
         "New Tab" in tabs[0].text
     ), f"Without initialLayout, tab should be 'New Tab', got '{tabs[0].text}'"
 
-    errors = check_browser_errors(dash_duo)
+    errors = testutils.check_browser_errors(dash_duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"
 
 
@@ -210,12 +201,12 @@ def test_initial_layout_new_tabs_still_empty(dash_duo):
     )
 
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    dash_duo.start_server(app, port=testutils.get_free_port())
+    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # Wait for first tab to get the initial layout
     def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        tab_elements = driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)
         if not tab_elements:
             return False
         return "Home Dashboard" in tab_elements[0].text
@@ -223,12 +214,12 @@ def test_initial_layout_new_tabs_still_empty(dash_duo):
     WebDriverWait(dash_duo.driver, 10).until(tab_has_layout_name)
 
     # Add a second tab
-    add_button = dash_duo.find_element(ADD_TAB_BUTTON)
+    add_button = dash_duo.find_element(testutils.ADD_TAB_BUTTON)
     add_button.click()
-    wait_for_tab_count(dash_duo, 2)
+    testutils.wait_for_tab_count(dash_duo, 2)
 
     # The second tab should be "New Tab", not "Home Dashboard"
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(dash_duo)
     assert len(tabs) == 2
 
     # The second (newer) tab should be "New Tab"
