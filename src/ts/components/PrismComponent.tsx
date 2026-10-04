@@ -17,7 +17,7 @@ import {
   useAppSelector,
   selectLoadNotice,
   clearLoadNotice,
-  getWorkspaceStorageKey,
+  clearPersistedWorkspace,
   resolvePersistenceType,
 } from '@store';
 import { cn } from '@utils/cn';
@@ -35,17 +35,6 @@ import type {
 } from '@types';
 import '../global.css';
 import { type DashComponentProps } from 'props';
-
-/** Clears workspace from storage (used by workspace-level error boundary) */
-function clearWorkspaceStorage(persistenceType: PersistenceType, componentId?: string): void {
-  const key = getWorkspaceStorageKey(componentId);
-  try {
-    if (persistenceType === 'local') localStorage.removeItem(key);
-    else if (persistenceType === 'session') sessionStorage.removeItem(key);
-  } catch {
-    // Ignore storage errors
-  }
-}
 
 /**
  * Prism is an advanced multi-panel workspace manager for Plotly Dash.
@@ -460,7 +449,7 @@ export function Prism({
 
   // Create stable callback for clearing storage from error boundary
   const handleClearStorage = useCallback(() => {
-    clearWorkspaceStorage(persistenceType, id);
+    clearPersistedWorkspace(id, persistenceType);
   }, [persistenceType, id]);
 
   return (

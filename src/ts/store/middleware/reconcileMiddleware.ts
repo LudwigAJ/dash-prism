@@ -34,7 +34,7 @@ export function createReconcileMiddleware(
       store.dispatch(
         reconcileWithServer({
           serverSessionId: getServerSessionId(),
-          registeredLayoutIds: Object.keys(getRegisteredLayouts() ?? {}),
+          registeredLayoutIds: Object.keys(getRegisteredLayouts()),
         })
       );
       const after = new Set(store.getState().workspace.present.tabs.map((tab) => tab.id));

@@ -1,69 +1,44 @@
-import type { Draft } from 'immer';
 import type { Tab, TabId, PanelId, LayoutId, LayoutMeta } from '@types';
+import { generateShortId } from '@utils/uuid';
 
-// Support both regular Tab arrays and Immer Draft arrays
-type TabOrDraft = Tab | Draft<Tab>;
-type TabArrayOrDraft = Tab[] | Array<Draft<Tab>> | readonly Tab[] | ReadonlyArray<Draft<Tab>>;
+/** Gives the name of a tab that the user did not name. */
+export const NEW_TAB_NAME = 'New Tab';
 
 /**
- * Finds the index of a tab by ID
- * @returns Index of tab, or -1 if not found
+ * Builds a new tab in `panelId`. The tab gets the default name when `fields` has no name.
+ *
+ * The tab always gets a fresh `id`, `mountKey` and `createdAt`, also when `fields` holds them,
+ * so a copy of a tab can pass the original as `fields`.
  */
-export function findTabIndex(tabs: TabArrayOrDraft, tabId: TabId): number {
-  return (tabs as Tab[]).findIndex((t) => t.id === tabId);
+export function createTab(panelId: PanelId, fields: Partial<Tab> = {}): Tab {
+  return {
+    ...fields,
+    id: generateShortId(),
+    name: fields.name ?? NEW_TAB_NAME,
+    panelId,
+    createdAt: Date.now(),
+    mountKey: generateShortId(),
+  };
 }
 
-/**
- * Finds a tab by ID
- * @returns Tab if found, undefined otherwise
- */
-export function findTabById<T extends TabOrDraft>(
-  tabs: T[] | readonly T[],
-  tabId: TabId
-): T | undefined {
-  return (tabs as T[]).find((t) => t.id === tabId);
+// The reducers pass immer drafts. A draft of a Tab has the same fields, so `readonly Tab[]` takes it.
+
+/** Finds the index of a tab, or -1. */
+export function findTabIndex(tabs: readonly Tab[], tabId: TabId): number {
+  return tabs.findIndex((t) => t.id === tabId);
 }
 
-/**
- * Gets all tabs belonging to a specific panel
- * @returns Array of tabs in the panel (empty array if none)
- */
-export function getTabsByPanelId<T extends TabOrDraft>(
-  tabs: T[] | readonly T[],
-  panelId: PanelId
-): T[] {
-  return (tabs as T[]).filter((t) => t.panelId === panelId);
+/** Finds a tab by id, or undefined. */
+export function findTabById(tabs: readonly Tab[], tabId: TabId): Tab | undefined {
+  return tabs.find((t) => t.id === tabId);
 }
 
-/**
- * Counts tabs in a specific panel
- * @returns Number of tabs in the panel
- */
-export function countTabsInPanel(tabs: TabArrayOrDraft, panelId: PanelId): number {
-  return (tabs as Tab[]).filter((t) => t.panelId === panelId).length;
-}
-
-/**
- * Checks if a tab is locked
- * @returns true if tab exists and is locked
- */
-export function isTabLocked(tabs: TabArrayOrDraft, tabId: TabId): boolean {
-  const tab = findTabById(tabs as Tab[], tabId);
-  return tab?.locked === true;
-}
-
-/**
- * Gets the active tab for a panel
- * @param tabs - All tabs
- * @param activeTabIds - Map of panelId -> activeTabId
- * @param panelId - The panel to get active tab for
- * @returns The active tab, or undefined if not found
- */
-export function getActiveTabForPanel<T extends TabOrDraft>(
-  tabs: T[] | readonly T[],
+/** Finds the active tab of a panel, or undefined. */
+export function getActiveTabForPanel(
+  tabs: readonly Tab[],
   activeTabIds: Record<PanelId, TabId>,
   panelId: PanelId
-): T | undefined {
+): Tab | undefined {
   const activeTabId = activeTabIds[panelId];
   if (!activeTabId) return undefined;
   return findTabById(tabs, activeTabId);

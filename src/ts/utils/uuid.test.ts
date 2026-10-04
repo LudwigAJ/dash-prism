@@ -1,7 +1,7 @@
 /**
  * Unit tests for generateShortId.
  *
- * Regression coverage for 02 A-1: `crypto.randomUUID` only exists in secure
+ * Regression coverage: `crypto.randomUUID` only exists in secure
  * contexts, so the generator must degrade gracefully instead of throwing.
  */
 

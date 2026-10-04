@@ -87,6 +87,15 @@ All notable changes to Dash Prism are recorded here. The project follows
   the toast. A toast about bad user input, such as an invalid share link, is a
   warning. A production build writes only warnings and errors. Before, only the
   toasts of the store were logged.
+- Reset workspace clears the storage of the active `persistence_type` only. A
+  stale entry left in the other storage after a `persistence_type` switch is
+  never read and stays until cleared by hand.
+
+### Removed
+
+- The bundle no longer re-exports internal store helpers (`redo`,
+  `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
+  `usePanelTabs`). They were never documented.
 
 ### Fixed
 

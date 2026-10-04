@@ -4,6 +4,7 @@ import type { LayoutId, PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';
 import { removeTab } from './workspaceSlice';
 
+/** Holds the ui state of a new store: no modal, no request and no search-bar mode. */
 export const initialUiState: UiState = {
   searchBarModes: {},
   renamingTabId: null,
@@ -23,15 +24,10 @@ const uiSlice = createSlice({
       state.searchBarModes[action.payload.panelId] = action.payload.mode;
     },
 
-    clearSearchBarMode(state, action: PayloadAction<{ panelId: PanelId }>) {
-      delete state.searchBarModes[action.payload.panelId];
-    },
-
     /**
-     * Drops search-bar modes for panels that no longer exist. Dispatched by
-     * dashSyncMiddleware after any workspace change, so internal collapses
-     * (removeTab, moveTab, splitPanel, reconcileWithServer, rehydrate) are
-     * covered as well as the explicit collapsePanel action.
+     * Drops search-bar modes for panels that no longer exist. dashSyncMiddleware dispatches it
+     * after any workspace change, so every collapse is covered: removeTab, moveTab, splitPanel,
+     * reconcileWithServer and the rehydration.
      */
     pruneSearchBarModes(state, action: PayloadAction<{ leafPanelIds: PanelId[] }>) {
       const keep = new Set<string>(action.payload.leafPanelIds);
@@ -112,7 +108,6 @@ const uiSlice = createSlice({
 
 export const {
   setSearchBarMode,
-  clearSearchBarMode,
   pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,

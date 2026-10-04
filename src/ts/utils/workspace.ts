@@ -1,59 +1,64 @@
-import type { PanelNode, Tab, Workspace } from '@types';
+import { getLeafPanelIds } from '@utils/panels';
+import type { PanelNode, Tab } from '@types';
 
-type ValidationSuccess = { ok: true; workspace: Workspace };
-type ValidationFailure = { ok: false; errors: string[] };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-export type WorkspaceValidationResult = ValidationSuccess | ValidationFailure;
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
-const isString = (value: unknown): value is string => typeof value === 'string';
+function isOptionalString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === 'string';
+}
 
-const isNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value);
+function isOptionalBoolean(value: unknown): value is boolean | null | undefined {
+  return value === undefined || value === null || typeof value === 'boolean';
+}
 
-const isOptionalString = (value: unknown): value is string | null | undefined =>
-  value === undefined || value === null || typeof value === 'string';
+function isOptionalStringArray(value: unknown): value is string[] | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+  );
+}
 
-const isOptionalBoolean = (value: unknown): value is boolean | null | undefined =>
-  value === undefined || value === null || typeof value === 'boolean';
-
-const isOptionalStringArray = (value: unknown): value is string[] | null | undefined =>
-  value === undefined ||
-  value === null ||
-  (Array.isArray(value) && value.every((item) => typeof item === 'string'));
-
-const isOptionalRecordOfStrings = (
+function isOptionalRecordOfStrings(
   value: unknown
-): value is Record<string, string> | null | undefined =>
-  value === undefined ||
-  value === null ||
-  (isRecord(value) && Object.values(value).every((item) => typeof item === 'string'));
+): value is Record<string, string> | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (isRecord(value) && Object.values(value).every((item) => typeof item === 'string'))
+  );
+}
 
-const isOptionalStringOrNumber = (value: unknown): value is string | number | null | undefined =>
-  value === undefined ||
-  value === null ||
-  typeof value === 'string' ||
-  (typeof value === 'number' && Number.isFinite(value));
+function isOptionalStringOrNumber(value: unknown): value is string | number | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    typeof value === 'string' ||
+    (typeof value === 'number' && Number.isFinite(value))
+  );
+}
 
-const normalizeOptional = <T>(value: T | null | undefined): T | undefined => value ?? undefined;
-
-function validateTab(value: unknown, index: number, errors: string[]): Tab | null {
+/** Adds an error for each field of a tab that has the wrong type. */
+function checkTab(value: unknown, index: number, errors: string[]): void {
   if (!isRecord(value)) {
     errors.push(`tabs[${index}]: expected object`);
-    return null;
+    return;
   }
 
-  const id = value.id;
-  const name = value.name;
-  const panelId = value.panelId;
-  const createdAt = value.createdAt;
-
-  if (!isString(id)) errors.push(`tabs[${index}].id: expected string`);
-  if (!isString(name)) errors.push(`tabs[${index}].name: expected string`);
-  if (!isString(panelId)) errors.push(`tabs[${index}].panelId: expected string`);
-  if (!isNumber(createdAt)) errors.push(`tabs[${index}].createdAt: expected number`);
+  if (!isString(value.id)) errors.push(`tabs[${index}].id: expected string`);
+  if (!isString(value.name)) errors.push(`tabs[${index}].name: expected string`);
+  if (!isString(value.panelId)) errors.push(`tabs[${index}].panelId: expected string`);
+  if (!isNumber(value.createdAt)) errors.push(`tabs[${index}].createdAt: expected number`);
 
   if (!isOptionalString(value.layoutId)) {
     errors.push(`tabs[${index}].layoutId: expected string or null`);
@@ -76,132 +81,95 @@ function validateTab(value: unknown, index: number, errors: string[]): Tab | nul
   if (!isOptionalString(value.style)) {
     errors.push(`tabs[${index}].style: expected string or null`);
   }
-
-  if (!isString(id) || !isString(name) || !isString(panelId) || !isNumber(createdAt)) {
-    return null;
-  }
-
-  return {
-    id,
-    name,
-    panelId,
-    createdAt,
-    layoutId: normalizeOptional(value.layoutId as string | null | undefined),
-    layoutOption: normalizeOptional(value.layoutOption as string | null | undefined),
-    layoutParams: normalizeOptional(
-      value.layoutParams as Record<string, string> | null | undefined
-    ),
-    locked: normalizeOptional(value.locked as boolean | null | undefined),
-    mountKey: normalizeOptional(value.mountKey as string | null | undefined),
-    icon: normalizeOptional(value.icon as string | null | undefined),
-    style: normalizeOptional(value.style as string | null | undefined),
-  };
 }
 
-function validatePanel(value: unknown, path: string, errors: string[]): PanelNode | null {
+// Each check below adds an error for each problem it finds, and tells if it found none. Its
+// type guard lets the cross-key checks of validateWorkspace read the checked value.
+
+function checkTabs(value: unknown, errors: string[]): value is Tab[] {
+  if (!Array.isArray(value)) {
+    errors.push('tabs: expected array');
+    return false;
+  }
+  const errorCount = errors.length;
+  value.forEach((tab, index) => {
+    checkTab(tab, index, errors);
+  });
+  return errors.length === errorCount;
+}
+
+function checkPanel(value: unknown, path: string, errors: string[]): value is PanelNode {
   if (!isRecord(value)) {
     errors.push(`${path}: expected object`);
-    return null;
+    return false;
   }
 
-  const id = value.id;
-  const order = value.order;
-  const direction = value.direction;
-  const children = value.children;
-
-  if (!isString(id)) errors.push(`${path}.id: expected string`);
-  if (order !== 0 && order !== 1) errors.push(`${path}.order: expected 0 or 1`);
-  if (direction !== 'horizontal' && direction !== 'vertical') {
+  const errorCount = errors.length;
+  if (!isString(value.id)) errors.push(`${path}.id: expected string`);
+  if (value.order !== 0 && value.order !== 1) errors.push(`${path}.order: expected 0 or 1`);
+  if (value.direction !== 'horizontal' && value.direction !== 'vertical') {
     errors.push(`${path}.direction: expected 'horizontal' or 'vertical'`);
   }
-  if (!Array.isArray(children)) errors.push(`${path}.children: expected array`);
   if (!isOptionalBoolean(value.pinned)) errors.push(`${path}.pinned: expected boolean or null`);
   if (!isOptionalStringOrNumber(value.size)) {
     errors.push(`${path}.size: expected string, number, or null`);
   }
-
-  if (
-    !isString(id) ||
-    (order !== 0 && order !== 1) ||
-    (direction !== 'horizontal' && direction !== 'vertical') ||
-    !Array.isArray(children)
-  ) {
-    return null;
+  if (Array.isArray(value.children)) {
+    value.children.forEach((child, index) => {
+      checkPanel(child, `${path}.children[${index}]`, errors);
+    });
+  } else {
+    errors.push(`${path}.children: expected array`);
   }
-
-  const normalizedChildren: PanelNode[] = [];
-  children.forEach((child, index) => {
-    const childPanel = validatePanel(child, `${path}.children[${index}]`, errors);
-    if (childPanel) normalizedChildren.push(childPanel);
-  });
-
-  return {
-    id,
-    order,
-    direction,
-    children: normalizedChildren,
-    pinned: normalizeOptional(value.pinned as boolean | null | undefined),
-    size: normalizeOptional(value.size as string | number | null | undefined),
-  };
+  return errors.length === errorCount;
 }
 
-function validatePanelTabs(value: unknown, errors: string[]): Record<string, string[]> | null {
+function checkPanelTabs(value: unknown, errors: string[]): value is Record<string, string[]> {
   if (!isRecord(value)) {
     errors.push('panelTabs: expected object');
-    return null;
+    return false;
   }
-
-  const result: Record<string, string[]> = {};
+  const errorCount = errors.length;
   for (const [panelId, tabIds] of Object.entries(value)) {
-    if (!Array.isArray(tabIds) || !tabIds.every(isString)) {
+    if (!Array.isArray(tabIds) || !tabIds.every((tabId) => isString(tabId))) {
       errors.push(`panelTabs['${panelId}']: expected string[]`);
-      continue;
     }
-    result[panelId] = tabIds;
   }
-  return result;
+  return errors.length === errorCount;
 }
 
-function validateActiveTabIds(value: unknown, errors: string[]): Record<string, string> | null {
+function checkActiveTabIds(value: unknown, errors: string[]): value is Record<string, string> {
   if (!isRecord(value)) {
     errors.push('activeTabIds: expected object');
-    return null;
+    return false;
   }
-
-  const result: Record<string, string> = {};
+  const errorCount = errors.length;
   for (const [panelId, tabId] of Object.entries(value)) {
-    if (!isString(tabId)) {
-      errors.push(`activeTabIds['${panelId}']: expected string`);
-      continue;
-    }
-    result[panelId] = tabId;
+    if (!isString(tabId)) errors.push(`activeTabIds['${panelId}']: expected string`);
   }
-  return result;
+  return errors.length === errorCount;
 }
 
-function collectLeafPanelIds(panel: PanelNode): string[] {
-  if (panel.children.length === 0) return [panel.id];
-  return panel.children.flatMap(collectLeafPanelIds);
-}
+/**
+ * Checks a workspace from storage or from the store against the shape of `Workspace` and the
+ * invariants that the reducers keep: each tab is in exactly one leaf panel list, each list
+ * belongs to a leaf panel, and the active panel and the active tabs exist.
+ *
+ * A legacy key such as `theme` is ignored. Optional fields may be null, because a payload that
+ * went through JSON has null where the store had undefined.
+ *
+ * @returns one message for each problem, or an empty list for a valid workspace
+ */
+export function validateWorkspace(value: unknown): string[] {
+  if (!isRecord(value)) return ['workspace: expected object'];
 
-export function validateWorkspace(value: unknown): WorkspaceValidationResult {
   const errors: string[] = [];
-
-  if (!isRecord(value)) {
-    return { ok: false, errors: ['workspace: expected object'] };
-  }
-
-  const tabsValue = value.tabs;
-  const panelValue = value.panel;
-  const panelTabsValue = value.panelTabs;
-  const activeTabIdsValue = value.activeTabIds;
-  const activePanelIdValue = value.activePanelId;
-
-  if (!Array.isArray(tabsValue)) errors.push('tabs: expected array');
-  if (!isRecord(panelValue)) errors.push('panel: expected object');
-  if (!isRecord(panelTabsValue)) errors.push('panelTabs: expected object');
-  if (!isRecord(activeTabIdsValue)) errors.push('activeTabIds: expected object');
-  if (!isString(activePanelIdValue)) errors.push('activePanelId: expected string');
+  const { tabs, panel, panelTabs, activeTabIds, activePanelId } = value;
+  const tabsValid = checkTabs(tabs, errors);
+  const panelValid = checkPanel(panel, 'panel', errors);
+  const panelTabsValid = checkPanelTabs(panelTabs, errors);
+  const activeTabIdsValid = checkActiveTabIds(activeTabIds, errors);
+  if (!isString(activePanelId)) errors.push('activePanelId: expected string');
 
   if (!isOptionalStringArray(value.favoriteLayouts)) {
     errors.push('favoriteLayouts: expected string[] or null');
@@ -213,63 +181,33 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     errors.push('serverSessionId: expected string or null');
   }
 
-  if (!Array.isArray(tabsValue) || !isRecord(panelValue)) {
-    return { ok: false, errors };
-  }
-
-  const normalizedTabs: Tab[] = [];
-  tabsValue.forEach((tab, index) => {
-    const normalized = validateTab(tab, index, errors);
-    if (normalized) normalizedTabs.push(normalized);
-  });
-
-  const normalizedPanel = validatePanel(panelValue, 'panel', errors);
-  const normalizedPanelTabs = validatePanelTabs(panelTabsValue, errors);
-  const normalizedActiveTabIds = validateActiveTabIds(activeTabIdsValue, errors);
-
   if (
-    !normalizedPanel ||
-    !normalizedPanelTabs ||
-    !normalizedActiveTabIds ||
-    !isString(activePanelIdValue)
+    !tabsValid ||
+    !panelValid ||
+    !panelTabsValid ||
+    !activeTabIdsValid ||
+    !isString(activePanelId)
   ) {
-    return { ok: false, errors };
+    return errors;
   }
 
-  const activePanelId = activePanelIdValue;
-  const favoriteLayouts = normalizeOptional(value.favoriteLayouts as string[] | null | undefined);
-  const searchBarsHidden = normalizeOptional(value.searchBarsHidden as boolean | null | undefined);
-
-  const workspace: Workspace = {
-    tabs: normalizedTabs,
-    panel: normalizedPanel,
-    panelTabs: normalizedPanelTabs,
-    activeTabIds: normalizedActiveTabIds,
-    activePanelId,
-    favoriteLayouts,
-    searchBarsHidden,
-  };
-
-  // --------------------------------------------------------------------------
-  // Cross-key invariants
-  // --------------------------------------------------------------------------
-
-  const leafPanelIds = new Set(collectLeafPanelIds(normalizedPanel));
-  const tabIds = new Set(normalizedTabs.map((tab) => tab.id));
+  const leafPanelIds = new Set(getLeafPanelIds(panel));
+  const tabIds = new Set(tabs.map((tab) => tab.id));
   const tabToPanels: Record<string, string[]> = {};
 
-  for (const [panelId, tabIdsForPanel] of Object.entries(normalizedPanelTabs)) {
+  for (const [panelId, tabIdsForPanel] of Object.entries(panelTabs)) {
     if (!leafPanelIds.has(panelId)) {
       errors.push(`panelTabs key '${panelId}' is not a leaf panel`);
     }
-
     for (const tabId of tabIdsForPanel) {
-      if (!tabToPanels[tabId]) tabToPanels[tabId] = [];
-      tabToPanels[tabId].push(panelId);
+      (tabToPanels[tabId] ??= []).push(panelId);
+      if (!tabIds.has(tabId)) {
+        errors.push(`Tab '${tabId}' in panelTabs['${panelId}'] not found in tabs`);
+      }
     }
   }
 
-  for (const tab of normalizedTabs) {
+  for (const tab of tabs) {
     const panels = tabToPanels[tab.id] ?? [];
     if (panels.length === 0) {
       errors.push(`Tab '${tab.id}' exists in tabs but not in any panelTabs list`);
@@ -278,16 +216,8 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     }
   }
 
-  for (const [panelId, tabIdsForPanel] of Object.entries(normalizedPanelTabs)) {
-    for (const tabId of tabIdsForPanel) {
-      if (!tabIds.has(tabId)) {
-        errors.push(`Tab '${tabId}' in panelTabs['${panelId}'] not found in tabs`);
-      }
-    }
-  }
-
   for (const leafId of leafPanelIds) {
-    if (!normalizedPanelTabs[leafId]) {
+    if (!panelTabs[leafId]) {
       errors.push(`Leaf panel '${leafId}' missing from panelTabs`);
     }
   }
@@ -296,8 +226,8 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     errors.push(`activePanelId '${activePanelId}' is not a valid leaf panel`);
   }
 
-  for (const [panelId, tabId] of Object.entries(normalizedActiveTabIds)) {
-    const tabsForPanel = normalizedPanelTabs[panelId];
+  for (const [panelId, tabId] of Object.entries(activeTabIds)) {
+    const tabsForPanel = panelTabs[panelId];
     if (!tabsForPanel) {
       errors.push(`activeTabIds references unknown panel '${panelId}'`);
     } else if (!tabsForPanel.includes(tabId)) {
@@ -305,9 +235,5 @@ export function validateWorkspace(value: unknown): WorkspaceValidationResult {
     }
   }
 
-  if (errors.length > 0) {
-    return { ok: false, errors };
-  }
-
-  return { ok: true, workspace };
+  return errors;
 }

@@ -1,5 +1,7 @@
 // src/ts/store/middleware/dashSyncMiddleware.ts
-import { isAction, type Middleware } from '@reduxjs/toolkit';
+import { isAction, type Action, type Middleware } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
+import { ActionTypes as UndoActionTypes } from 'redux-undo';
 import type { RootState } from '../index';
 import type { Workspace } from '@types';
 import { pruneSearchBarModes } from '../uiSlice';
@@ -11,12 +13,33 @@ import { logger } from '@utils/logger';
 
 const DEBOUNCE_MS = 500;
 
-/** Return type for createDashSyncMiddleware - includes cleanup function */
-export type DashSyncMiddlewareResult = {
+/** Holds the redux-undo actions that move the present workspace through the history. */
+const HISTORY_MOVES = new Set([
+  UndoActionTypes.UNDO,
+  UndoActionTypes.REDO,
+  UndoActionTypes.JUMP,
+  UndoActionTypes.JUMP_TO_PAST,
+  UndoActionTypes.JUMP_TO_FUTURE,
+]);
+
+/**
+ * Tells if an action can change the present workspace: a workspace action, a move through the
+ * undo history, or the rehydration from storage.
+ */
+export function isWorkspaceChange(action: Action): boolean {
+  return (
+    action.type.startsWith('workspace/') ||
+    HISTORY_MOVES.has(action.type) ||
+    action.type === REHYDRATE
+  );
+}
+
+/** Holds the Dash sync middleware and the function that stops it. */
+export interface DashSyncMiddlewareResult {
   middleware: Middleware<object, RootState>;
   /** Cleans up the event listeners and pending timeouts. */
   cleanup: () => void;
-};
+}
 
 /**
  * Middleware that syncs workspace state to Dash via setProps callback.
@@ -87,16 +110,7 @@ export function createDashSyncMiddleware(
     const result = next(action);
     if (!isAction(action)) return result;
 
-    // Sync on workspace actions, undo/redo actions, AND after persistence rehydration
-    const isWorkspaceAction =
-      typeof action.type === 'string' &&
-      (action.type.startsWith('workspace/') ||
-        action.type === '@@redux-undo/UNDO' ||
-        action.type === '@@redux-undo/REDO' ||
-        action.type === '@@redux-undo/JUMP' ||
-        action.type === 'persist/REHYDRATE');
-
-    if (isWorkspaceAction) {
+    if (isWorkspaceChange(action)) {
       const state = store.getState();
       const workspace = selectWorkspaceSnapshot(state);
 
@@ -113,8 +127,8 @@ export function createDashSyncMiddleware(
       }
 
       // Drop search-bar modes of panels that disappeared in this change, whatever
-      // removed them (collapsePanel, removeTab/moveTab/splitPanel collapsing an
-      // empty panel, reconciliation, rehydration).
+      // removed them (removeTab/moveTab/splitPanel collapsing an empty panel,
+      // reconciliation, rehydration).
       const leafPanelIds = getLeafPanelIds(workspace.panel);
       const leafSet = new Set<string>(leafPanelIds);
       const stale = Object.keys(state.ui.searchBarModes).some((id) => !leafSet.has(id));
@@ -129,46 +143,28 @@ export function createDashSyncMiddleware(
   return { middleware, cleanup };
 }
 
-// =============================================================================
-// Validation Middleware
-// =============================================================================
-
 /**
- * Middleware that validates state after workspace actions.
- * In development: validates on all workspace actions.
- * In production: validates only after rehydration (corrupted localStorage protection).
- * If rehydration produces invalid state, dispatches resetWorkspace() to recover.
+ * Checks the present workspace after each change and logs each broken invariant. After the
+ * rehydration, a workspace that fails the check is replaced by a fresh one, because a corrupt
+ * stored workspace would otherwise crash the first render.
+ *
+ * In development the check runs after every workspace change, so a broken invariant shows up at
+ * the action that broke it. In production it runs after the rehydration only, because a walk of
+ * the whole tree on each action costs time and the reducers keep the invariants.
  */
 export const validationMiddleware: Middleware<object, RootState> =
   (store) => (next) => (action: unknown) => {
     const result = next(action);
-    if (!isAction(action)) return result;
+    if (!isAction(action) || !isWorkspaceChange(action)) return result;
 
-    const isRehydrate = typeof action.type === 'string' && action.type === 'persist/REHYDRATE';
-
-    // In production, only validate after rehydration
+    const isRehydrate = action.type === REHYDRATE;
     if (process.env.NODE_ENV === 'production' && !isRehydrate) return result;
 
-    // Validate on workspace actions, undo/redo, and rehydration
-    const shouldValidate =
-      isRehydrate ||
-      (typeof action.type === 'string' &&
-        (action.type.startsWith('workspace/') || action.type.startsWith('@@redux-undo/')));
-
-    if (shouldValidate) {
-      const state = store.getState();
-      // Access .present because workspace is wrapped with redux-undo
-      const workspace = state.workspace.present;
-      const validation = validateWorkspace(workspace);
-
-      if (!validation.ok) {
-        const { errors } = validation;
-        logger.validation(errors);
-
-        // On rehydration failure, reset to clean state to prevent crash
-        if (isRehydrate) {
-          store.dispatch(resetWorkspace());
-        }
+    const errors = validateWorkspace(store.getState().workspace.present);
+    if (errors.length > 0) {
+      logger.validation(errors);
+      if (isRehydrate) {
+        store.dispatch(resetWorkspace());
       }
     }
 

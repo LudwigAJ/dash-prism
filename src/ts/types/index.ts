@@ -1,15 +1,12 @@
-import type { LucideIcon } from 'lucide-react';
-
-export type { LucideIcon };
-
 // =============================================================================
 // Namespace Types
 // =============================================================================
 
+// TabId, PanelId and LayoutId are plain strings. The names only tell which id a value holds.
 export type TabId = string;
 export type PanelId = string;
 export type LayoutId = string;
-export type PanelOrder = 0 | 1;
+type PanelOrder = 0 | 1;
 export type PanelDirection = 'vertical' | 'horizontal';
 export type PersistenceType = 'memory' | 'session' | 'local';
 export type Theme = 'light' | 'dark';
@@ -25,6 +22,7 @@ export type StatusBarItem =
 // Core Types
 // =============================================================================
 
+/** Holds one tab: its name, its panel and the layout that it shows. */
 export type Tab = {
   id: TabId;
   name: string;
@@ -43,6 +41,7 @@ export type Tab = {
   style?: string;
 };
 
+/** Holds one node of the panel tree. A node without children is a leaf panel that holds tabs. */
 export type PanelNode = {
   id: PanelId;
   order: PanelOrder;
@@ -72,7 +71,7 @@ export type ParamConstraints = {
 
 // `null` here is a JSON scalar that a default or a choice can hold. It does not
 // mean that the value is absent.
-export type ParamScalar = string | number | boolean | null;
+type ParamScalar = string | number | boolean | null;
 
 /** Mirrors dash_prism.params.LayoutParameter.to_dict() */
 export interface LayoutParam {
@@ -111,6 +110,7 @@ export interface LayoutMeta {
   paramOptions?: Record<string, LayoutOption> | null;
 }
 
+/** Maps each layout id to its metadata, as dash_prism.init sends it. */
 export type RegisteredLayouts = Record<string, LayoutMeta>;
 
 // =============================================================================
@@ -127,19 +127,6 @@ export interface Workspace {
   favoriteLayouts?: string[];
   searchBarsHidden?: boolean;
 }
-
-// =============================================================================
-// Actions Prop Types (Developer-defined buttons in StatusBar)
-// =============================================================================
-
-export type PrismActionDef = {
-  id: string;
-  label: string;
-  icon?: string;
-  variant?: string;
-  tooltip?: string;
-  disabled?: boolean;
-};
 
 // =============================================================================
 // Share Link Types (URL-based tab sharing)
@@ -171,7 +158,7 @@ export type ShareData = {
 /**
  * Dash component specification format (from https://github.com/plotly/dash)
  */
-export type BaseDashProps = {
+type BaseDashProps = {
   id?: string | Record<string, string>;
   [propName: string]: unknown;
 };
@@ -196,21 +183,21 @@ export function isDashComponent(value: unknown): value is DashComponent {
     'type' in value &&
     'namespace' in value &&
     'props' in value &&
-    typeof (value as DashComponent).type === 'string' &&
-    typeof (value as DashComponent).namespace === 'string' &&
-    typeof (value as DashComponent).props === 'object' &&
-    (value as DashComponent).props !== null &&
-    !Array.isArray((value as DashComponent).props)
+    typeof value.type === 'string' &&
+    typeof value.namespace === 'string' &&
+    typeof value.props === 'object' &&
+    value.props !== null &&
+    !Array.isArray(value.props)
   );
 }
 
 /** The keys and indexes that lead to one component in the Dash layout tree. */
-export type DashPath = Array<string | number>;
+type DashPath = Array<string | number>;
 
 /**
  * Props for ExternalWrapper component
  */
-export type ExternalWrapperProps = {
+type ExternalWrapperProps = {
   component: DashComponent;
   componentPath: DashPath;
   temp?: boolean;
@@ -219,7 +206,7 @@ export type ExternalWrapperProps = {
 /**
  * Dash context type returned by useDashContext
  */
-export type DashContextType = {
+type DashContextType = {
   componentPath: DashPath;
   useLoading: (options?: {
     extraPath?: DashPath;

@@ -138,9 +138,11 @@ export default [
     files: ['src/ts/utils/logger.ts'],
     rules: { 'no-console': 'off' },
   },
+  // knip (`pnpm run lint:exports`) reports an unused export. import/no-unused-modules needs an
+  // .eslintrc file under flat config and an alias resolver, so it is not used.
+
   // Rules that wait for later work, so that this config reports zero findings:
   // - Enable `@typescript-eslint/consistent-type-definitions` with 'interface' when the object
   //   shapes are interfaces.
   // - Enable `jsdoc/require-jsdoc` with `publicOnly` when every exported symbol has a doc comment.
-  // - Enable `import/no-unused-modules` with `unusedExports` when no export is unused.
 ];

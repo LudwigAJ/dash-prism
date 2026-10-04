@@ -4,7 +4,7 @@
  * redux-undo's `present` slice is persisted, so the undo history never reaches
  * storage and `_persist` lives beside it on `state.workspace`.
  *
- * Regression coverage for 02 A-2: redux-persist's PERSIST/REHYDRATE actions used
+ * Regression coverage: redux-persist's PERSIST/REHYDRATE actions used
  * to be recorded in the undo history. Every fresh page load therefore started
  * with Undo enabled, and one undo replaced the restored workspace with the empty
  * pre-persist state, whose `_persist.rehydrated === false` also stopped
@@ -16,6 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Storage } from 'redux-persist';
 import { toast } from 'sonner';
+import { ActionCreators } from 'redux-undo';
 import {
   createPrismStore,
   getWorkspaceStorageKey,
@@ -24,9 +25,7 @@ import {
   removeTab,
   renameTab,
   undo,
-  redo,
   selectCanUndo,
-  selectCanRedo,
   requestLayoutSelection,
   requestSearchFocus,
   startRenameTab,
@@ -34,19 +33,21 @@ import {
   selectSearchFocusPanelId,
   selectIsSingleTabMode,
   splitPanel,
-  canAddPanel,
 } from './index';
 import type { WorkspaceState } from './types';
 import { MAX_LEAF_PANELS } from '@constants/panels';
-import type { PanelId, TabId, RegisteredLayouts } from '@types';
+import type { RegisteredLayouts } from '@types';
+import { makeTab, makeWorkspace, PANEL_1 } from './testing';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
+interface PersistMeta {
+  version: number;
+  rehydrated: boolean;
+}
 
-type PersistMeta = { version: number; rehydrated: boolean };
-/** A legacy (persist version 1) payload: the flat workspace plus redux-persist's marker. */
-type Persisted = WorkspaceState & { _persist?: PersistMeta };
+/** Holds a legacy (persist version 1) payload: the flat workspace plus redux-persist's marker. */
+interface Persisted extends WorkspaceState {
+  _persist?: PersistMeta;
+}
 
 const COMPONENT_ID = 'test-prism';
 const STORAGE_KEY = getWorkspaceStorageKey(COMPONENT_ID);
@@ -92,23 +93,15 @@ function storedTabIds(data: Map<string, string>): string[] {
 
 /** A valid two-tab workspace as a user would have left it on the previous visit. */
 function savedWorkspace(overrides: Partial<Persisted> = {}): Persisted {
-  const panelId = 'saved-panel' as PanelId;
-  const tabA = 'tab-a' as TabId;
-  const tabB = 'tab-b' as TabId;
-  return {
+  const workspace = makeWorkspace([['tab-a', 'tab-b']], {
     tabs: [
-      { id: tabA, name: 'Alpha', panelId, layoutId: 'home', createdAt: 1, mountKey: 'ma' },
-      { id: tabB, name: 'Beta', panelId, layoutId: 'about', createdAt: 2, mountKey: 'mb' },
+      makeTab('tab-a', PANEL_1, { name: 'Alpha', layoutId: 'home' }),
+      makeTab('tab-b', PANEL_1, { name: 'Beta', layoutId: 'about' }),
     ],
-    panel: { id: panelId, order: 0, direction: 'horizontal', children: [], size: '100%' },
-    panelTabs: { [panelId]: [tabA, tabB] },
-    activeTabIds: { [panelId]: tabB },
-    activePanelId: panelId,
+    activeTabIds: { [PANEL_1]: 'tab-b' },
     favoriteLayouts: ['home'],
-    searchBarsHidden: false,
-    _persist: { version: 1, rehydrated: true },
-    ...overrides,
-  };
+  });
+  return { ...workspace, _persist: { version: 1, rehydrated: true }, ...overrides };
 }
 
 // A thunk toast reaches sonner through prismToast. The mock keeps the tests quiet and shows which
@@ -146,10 +139,22 @@ const LAYOUTS: RegisteredLayouts = { home: { name: 'Home' }, about: { name: 'Abo
 
 type Created = ReturnType<typeof createStore>;
 
-/** Waits until redux-persist completes the rehydration (the PersistGate condition). */
-async function settle({ persistor }: Created): Promise<void> {
-  await vi.waitFor(() => {
-    expect(persistor.getState().bootstrapped).toBe(true);
+/**
+ * Waits until redux-persist completes the rehydration (the PersistGate condition). The persistor
+ * notifies its subscribers before it calls the bootstrap callback of createPrismStore, and the
+ * promise continues after that callback, so the undo history is clear by then.
+ */
+function settle({ persistor }: Created): Promise<void> {
+  // A subscription waits for the bootstrap itself. A poll with vi.waitFor gave up after its own
+  // timeout on a busy machine.
+  return new Promise((resolve) => {
+    const resolveWhenBootstrapped = () => {
+      if (!persistor.getState().bootstrapped) return;
+      unsubscribe();
+      resolve();
+    };
+    const unsubscribe = persistor.subscribe(resolveWhenBootstrapped);
+    resolveWhenBootstrapped();
   });
 }
 
@@ -166,12 +171,8 @@ function history({ store }: Created) {
   return { past, future };
 }
 
-// =============================================================================
-// Tests
-// =============================================================================
-
 describe('createPrismStore', () => {
-  describe('undo history after rehydration (02 A-2)', () => {
+  describe('undo history after rehydration', () => {
     it('starts with an empty undo history and persistence armed (memory storage)', async () => {
       const created = createStore();
       await settle(created);
@@ -179,7 +180,6 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(0);
       expect(history(created).future).toHaveLength(0);
       expect(selectCanUndo(created.store.getState())).toBe(false);
-      expect(selectCanRedo(created.store.getState())).toBe(false);
       expect(persistMeta(created)?.rehydrated).toBe(true);
       expect(present(created).tabs).toHaveLength(1);
 
@@ -210,7 +210,7 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(0);
       expect(selectCanUndo(created.store.getState())).toBe(false);
 
-      // The A-2 symptom: undo straight after load used to land on the pre-persist
+      // The old symptom: undo straight after load used to land on the pre-persist
       // state, wiping the restored tabs...
       created.store.dispatch(undo());
       created.store.dispatch(undo());
@@ -247,12 +247,12 @@ describe('createPrismStore', () => {
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
       expect(present(created).activeTabIds).toEqual(saved.activeTabIds);
       expect(selectCanUndo(created.store.getState())).toBe(false);
-      expect(selectCanRedo(created.store.getState())).toBe(true);
+      expect(history(created).future).toHaveLength(1);
       // Rehydration completed. `_persist` now sits outside the undo history, so
       // an undo can no longer clear this marker and stop all further writes.
       expect(persistMeta(created)?.rehydrated).toBe(true);
 
-      created.store.dispatch(redo());
+      created.store.dispatch(ActionCreators.redo());
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a']);
       created.store.dispatch(undo());
 
@@ -387,7 +387,7 @@ describe('createPrismStore', () => {
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a', 'tab-b']);
 
-      created.store.dispatch(redo());
+      created.store.dispatch(ActionCreators.redo());
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a']);
 
@@ -443,7 +443,7 @@ describe('createPrismStore', () => {
     });
   });
 
-  describe('server session reconciliation on load (02 B-2)', () => {
+  describe('server session reconciliation on load', () => {
     it('closes tabs whose layouts are gone when the persisted session id differs', async () => {
       const saved = savedWorkspace({ serverSessionId: 'old' });
       saved.tabs[1].layoutId = 'gone';
@@ -557,7 +557,7 @@ describe('createPrismStore', () => {
     });
   });
 
-  describe('maxTabs read through a getter (02 A-8)', () => {
+  describe('maxTabs read through a getter', () => {
     it('applies a limit changed after the store was created', async () => {
       let limit = 1;
       const created = createStore({ maxTabs: () => limit });
@@ -703,18 +703,6 @@ describe('createPrismStore', () => {
       expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
 
       created.cleanup();
-    });
-  });
-
-  describe('canAddPanel', () => {
-    it('treats a limit below 1 as unlimited', () => {
-      expect(canAddPanel(5, 0)).toBe(true);
-      expect(canAddPanel(5, -1)).toBe(true);
-    });
-
-    it('allows a panel only below the limit', () => {
-      expect(canAddPanel(1, 2)).toBe(true);
-      expect(canAddPanel(2, 2)).toBe(false);
     });
   });
 
