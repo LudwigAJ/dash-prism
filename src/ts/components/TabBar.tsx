@@ -53,6 +53,7 @@ import {
   clearRenameTab,
   splitPanel,
   selectPanelCount,
+  canAddPanel,
 } from '@store';
 
 // =============================================================================
@@ -554,7 +555,7 @@ export const TabBar = memo(function TabBar({
   }, [isMaxTabsReached, panelId, dispatch]);
 
   const panelCount = useAppSelector(selectPanelCount);
-  const isMaxPanelsReached = maxPanels >= 1 && panelCount >= maxPanels;
+  const isMaxPanelsReached = !canAddPanel(panelCount, maxPanels);
 
   const handleSplitPanel = useCallback(async () => {
     if (isMaxPanelsReached || isMaxTabsReached) return;
@@ -562,7 +563,6 @@ export const TabBar = memo(function TabBar({
     if (addTab.fulfilled.match(result)) {
       dispatch(
         splitPanel({
-          maxPanels,
           panelId,
           direction: 'horizontal',
           tabId: result.payload.tab.id,
@@ -570,7 +570,7 @@ export const TabBar = memo(function TabBar({
         })
       );
     }
-  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached, maxPanels]);
+  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached]);
 
   // Only the TabBar of the panel that holds the tab handles and clears the rename request.
   // See UiState for why.

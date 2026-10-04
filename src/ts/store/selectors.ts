@@ -69,6 +69,17 @@ export function canAddTab(tabCount: number, maxTabs: number): boolean {
   return maxTabs < 1 || tabCount < maxTabs;
 }
 
+/**
+ * Checks if a panel can be added based on the maxPanels limit.
+ *
+ * @param panelCount - Current number of leaf panels
+ * @param maxPanels - Maximum panels allowed (0 or negative means unlimited)
+ * @returns true if a new panel can be added
+ */
+export function canAddPanel(panelCount: number, maxPanels: number): boolean {
+  return maxPanels < 1 || panelCount < maxPanels;
+}
+
 export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(

@@ -29,10 +29,12 @@ import {
   requestLayoutSelection,
   requestSearchFocus,
   startRenameTab,
+  splitPanel,
   selectLayoutSelectionRequest,
   selectSearchFocusPanelId,
 } from './index';
 import type { WorkspaceState } from './types';
+import { MAX_LEAF_PANELS } from '@constants/panels';
 import type { PanelId, TabId, RegisteredLayouts } from '@types';
 
 // =============================================================================
@@ -113,6 +115,7 @@ function createStore(
     serverSessionId?: string;
     registeredLayouts?: RegisteredLayouts;
     maxTabs?: number | (() => number);
+    maxPanels?: number | (() => number);
   } = {}
 ) {
   const setProps = options.setProps ?? vi.fn();
@@ -121,6 +124,7 @@ function createStore(
     serverSessionId: options.serverSessionId,
     persistenceType: options.storage ? 'local' : 'memory',
     maxTabs: options.maxTabs ?? 16,
+    maxPanels: options.maxPanels ?? MAX_LEAF_PANELS,
     setProps,
     getRegisteredLayouts: () => options.registeredLayouts ?? {},
     storage: options.storage,
@@ -571,6 +575,54 @@ describe('createPrismStore', () => {
 
       const rejected = await created.store.dispatch(addTab({ panelId }));
       expect(addTab.rejected.match(rejected)).toBe(true);
+
+      created.cleanup();
+    });
+  });
+
+  describe('splitPanel in the undo history', () => {
+    it('records one entry for a split, none for a refused split, and undoes to the old panel', async () => {
+      const created = createStore({ maxPanels: 2 });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      await created.store.dispatch(addTab({ panelId }));
+      const [, tabB, tabC] = present(created).tabs;
+      const pastBefore = history(created).past.length;
+
+      await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId: tabB.id })
+      );
+      expect(history(created).past).toHaveLength(pastBefore + 1);
+
+      // The workspace is at the limit of two panels now.
+      const refused = await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId: tabC.id })
+      );
+      expect(splitPanel.rejected.match(refused)).toBe(true);
+      expect(history(created).past).toHaveLength(pastBefore + 1);
+
+      created.store.dispatch(undo());
+      expect(present(created).panelTabs[panelId]).toContain(tabB.id);
+      expect(present(created).tabs.find((t) => t.id === tabB.id)?.panelId).toBe(panelId);
+
+      created.cleanup();
+    });
+
+    it('lets only one of two splits in the same tick pass the limit', async () => {
+      const created = createStore({ maxPanels: 2 });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      await created.store.dispatch(addTab({ panelId }));
+      const [, tabB, tabC] = present(created).tabs;
+
+      await Promise.all([
+        created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId: tabB.id })),
+        created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId: tabC.id })),
+      ]);
+
+      expect(Object.keys(present(created).panelTabs)).toHaveLength(2);
 
       created.cleanup();
     });

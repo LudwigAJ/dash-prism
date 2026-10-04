@@ -275,7 +275,7 @@ function PrismInner({
   // later prop changes reach it without a rebuild:
   //  - setProps: Dash hands out a new reference after every sync
   //  - registeredLayouts: injected/updated by dash_prism.init and callbacks
-  //  - maxTabs: may be changed from a callback at any time
+  //  - maxTabs and maxPanels: may be changed from a callback at any time
   // componentId and persistenceType are baked into the persist key/engine, so
   // Prism remounts PrismInner (via `key`) when either changes.
   const setPropsRef = useRef(config.setProps);
@@ -293,12 +293,18 @@ function PrismInner({
     maxTabsRef.current = config.maxTabs;
   }, [config.maxTabs]);
 
+  const maxPanelsRef = useRef(config.maxPanels);
+  useEffect(() => {
+    maxPanelsRef.current = config.maxPanels;
+  }, [config.maxPanels]);
+
   const [{ store, persistor, cleanup }] = useState(() =>
     createPrismStore({
       componentId: config.componentId,
       serverSessionId: config.serverSessionId,
       persistenceType: config.persistenceType,
       maxTabs: () => maxTabsRef.current,
+      maxPanels: () => maxPanelsRef.current,
       setProps: (props: Record<string, unknown>) => setPropsRef.current?.(props),
       getRegisteredLayouts: () => registeredLayoutsRef.current,
     })

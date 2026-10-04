@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { resolveMaxPanels } from '@store/workspaceSlice';
+import { resolveMaxPanels } from '@constants/panels';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
 import type {
   RegisteredLayouts,

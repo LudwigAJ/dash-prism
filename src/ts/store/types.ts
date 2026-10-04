@@ -67,6 +67,8 @@ export type StoreConfig = {
    * store (and lose the undo history) the way re-creating it would.
    */
   maxTabs: number | (() => number);
+  /** Panel limit for the whole workspace, resolved from the prop (values below 1 mean unlimited). Accepts a getter like `maxTabs`. */
+  maxPanels: number | (() => number);
   setProps?: (props: Record<string, unknown>) => void;
   /** Getter for registered layouts — used by thunks to check constraints like allowMultiple */
   getRegisteredLayouts?: () => RegisteredLayouts;
@@ -84,5 +86,7 @@ export type StoreConfig = {
 export type ThunkExtra = {
   /** Live tab limit, read at dispatch time so prop changes apply immediately. */
   getMaxTabs: () => number;
+  /** Live panel limit, read at dispatch time like the tab limit. */
+  getMaxPanels: () => number;
   getRegisteredLayouts: () => RegisteredLayouts;
 };

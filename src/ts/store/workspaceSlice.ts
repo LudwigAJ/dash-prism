@@ -12,6 +12,7 @@ import { generateShortId } from '@utils/uuid';
 import { findOpenTabForLayout, findTabById, findTabIndex } from '@utils/tabs';
 import {
   getLeafPanelIds,
+  countLeafPanels,
   findPanelById,
   updatePanelInTree,
   isLeafPanel,
@@ -20,29 +21,13 @@ import {
 } from '@utils/panels';
 import { notifyUser } from '@utils/toastEmitter';
 import { logger } from '@utils/logger';
-import { canAddTab } from './selectors';
+import { canAddPanel, canAddTab } from './selectors';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 export const MAX_TAB_NAME_LENGTH = 24;
-/** Default for the maxPanels prop: the most leaf panels a workspace may be split into. */
-export const MAX_LEAF_PANELS = 20;
-
-/**
- * Normalises the `maxPanels` prop into the number the split guard expects.
- *
- * An omitted prop (`undefined`) means the default limit, while an explicit
- * `None` from Python arrives as `null` and means "no limit" — the same reading
- * `maxTabs` gives it. Without this the UI treated `null` as unlimited and the
- * reducer as 20, so the split button stayed enabled and then refused to work.
- */
-export function resolveMaxPanels(value: number | null | undefined): number {
-  if (value === undefined) return MAX_LEAF_PANELS;
-  if (value === null) return 0; // 0 (like any value below 1) means unlimited
-  return value;
-}
 
 // =============================================================================
 // Helpers
@@ -138,6 +123,100 @@ function removeTabFromState(
     state.activeTabIds[panelId] = newTabId;
   }
   return true;
+}
+
+/** Arguments of the splitPanel thunk. */
+interface SplitPanelPayload {
+  panelId: PanelId;
+  direction: PanelDirection;
+  tabId: TabId;
+  position?: 'before' | 'after';
+}
+
+/** The splitPanel thunk adds the panel limit for the race condition guard in the reducer. */
+interface SplitPanelResult extends SplitPanelPayload {
+  maxPanels: number;
+}
+
+/**
+ * Splits a panel to create a new panel with the specified tab.
+ * Handles both same-panel splits (tab moves to new sibling) and
+ * cross-panel splits (tab from another panel creates new panel here).
+ */
+function splitPanelInState(state: WorkspaceState, payload: SplitPanelPayload): void {
+  const { panelId, direction, tabId, position = 'after' } = payload;
+
+  // Step 1: Find the panel to split
+  const panelToSplit = findPanelById(state.panel, panelId);
+  if (!panelToSplit) {
+    notifyUser('error', 'Cannot split: panel not found');
+    return;
+  }
+
+  if (!isLeafPanel(panelToSplit)) {
+    notifyUser('error', 'Cannot split a non-leaf panel');
+    return;
+  }
+
+  const tabToMove = findTabById(state.tabs, tabId);
+  if (!tabToMove) return;
+
+  const sourcePanelId = tabToMove.panelId;
+  const sourcePanelTabs = state.panelTabs[sourcePanelId] ?? [];
+  const isSamePanelSplit = sourcePanelId === panelId;
+
+  // Block same-panel split if panel only has one tab
+  if (isSamePanelSplit && sourcePanelTabs.length <= 1) return;
+
+  // Step 2: Perform tree split operation
+  const splitResult = splitPanelTree(state.panel, { panelId, direction, position });
+  if (!splitResult.success || !splitResult.newPanelId) {
+    notifyUser('error', `Cannot split: ${splitResult.error}`);
+    return;
+  }
+
+  const { newPanelId } = splitResult;
+
+  // Step 3: Move tab to new panel
+  state.panelTabs[newPanelId] = [];
+
+  const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
+  if (sourceIdx !== undefined && sourceIdx !== -1) {
+    state.panelTabs[sourcePanelId].splice(sourceIdx, 1);
+  }
+
+  state.panelTabs[newPanelId].push(tabId);
+  tabToMove.panelId = newPanelId;
+
+  // Step 4: Update active states
+  state.activeTabIds[newPanelId] = tabId;
+  state.activePanelId = newPanelId;
+
+  if (state.activeTabIds[panelId] === tabId) {
+    const remaining = state.panelTabs[panelId] ?? [];
+    const lastTab = remaining[remaining.length - 1];
+    if (lastTab) {
+      state.activeTabIds[panelId] = lastTab;
+    } else {
+      delete state.activeTabIds[panelId];
+    }
+  }
+
+  if (!isSamePanelSplit && state.activeTabIds[sourcePanelId] === tabId) {
+    const remaining = state.panelTabs[sourcePanelId] ?? [];
+    const lastTab = remaining[remaining.length - 1];
+    if (lastTab) {
+      state.activeTabIds[sourcePanelId] = lastTab;
+    } else {
+      delete state.activeTabIds[sourcePanelId];
+    }
+  }
+
+  // Step 5: Clean up source panel if empty (for cross-panel splits).
+  // Return value ignored: new panel already received focus above.
+  if (!isSamePanelSplit) {
+    collapseEmptyPanel(state, sourcePanelId);
+  }
 }
 
 // =============================================================================
@@ -308,6 +387,42 @@ export const duplicateTab = createAsyncThunk<
 
   // Pass maxTabs through for race condition guard in reducer
   return { tab: newTab, maxTabs: extra.getMaxTabs() };
+});
+
+/**
+ * Async thunk for splitting a panel with maxPanels validation.
+ * Uses the thunk extra argument to read the limit, like addTab does for maxTabs.
+ */
+export const splitPanel = createAsyncThunk<
+  SplitPanelResult,
+  SplitPanelPayload,
+  { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
+>('workspace/splitPanel', async (payload, { getState, extra, rejectWithValue }) => {
+  const { panel } = getState().workspace.present;
+  const maxPanels = extra.getMaxPanels();
+  if (!canAddPanel(countLeafPanels(panel), maxPanels)) {
+    notifyUser(
+      'warning',
+      `Cannot split: maximum of ${maxPanels} panels reached`,
+      `Cannot split panel: maximum of ${maxPanels} panels reached.`
+    );
+    return rejectWithValue(`Maximum panels limit reached (${maxPanels})`);
+  }
+
+  // The UI only offers a leaf panel, so these two are faults. The thunk reports them, because a
+  // throw in the reducer would reject the dispatch and no caller catches that.
+  const target = findPanelById(panel, payload.panelId);
+  if (!target) {
+    notifyUser('error', 'Cannot split: panel not found');
+    return rejectWithValue(`Panel '${payload.panelId}' not found`);
+  }
+  if (!isLeafPanel(target)) {
+    notifyUser('error', 'Cannot split a non-leaf panel');
+    return rejectWithValue(`Panel '${payload.panelId}' is not a leaf panel`);
+  }
+
+  // Pass maxPanels through for race condition guard in reducer
+  return { ...payload, maxPanels };
 });
 
 // =============================================================================
@@ -555,108 +670,6 @@ const workspaceSlice = createSlice({
       if (panel) panel.pinned = false;
     },
 
-    /**
-     * Splits a panel to create a new panel with the specified tab.
-     * Handles both same-panel splits (tab moves to new sibling) and
-     * cross-panel splits (tab from another panel creates new panel here).
-     */
-    splitPanel(
-      state,
-      action: PayloadAction<{
-        panelId: PanelId;
-        direction: PanelDirection;
-        tabId: TabId;
-        position?: 'before' | 'after';
-        /** Panel limit from the maxPanels prop; values below 1 mean unlimited. */
-        maxPanels?: number;
-      }>
-    ) {
-      const { panelId, direction, tabId, position = 'after' } = action.payload;
-      const maxPanels = action.payload.maxPanels ?? MAX_LEAF_PANELS;
-
-      // Step 1: Validate split is allowed
-      const currentLeafCount = getLeafPanelIds(state.panel).length;
-      if (maxPanels >= 1 && currentLeafCount >= maxPanels) {
-        notifyUser(
-          'warning',
-          `Cannot split: maximum of ${maxPanels} panels reached`,
-          `Cannot split panel: maximum of ${maxPanels} panels reached.`
-        );
-        return;
-      }
-
-      const panelToSplit = findPanelById(state.panel, panelId);
-      if (!panelToSplit) {
-        notifyUser('error', 'Cannot split: panel not found');
-        return;
-      }
-
-      if (!isLeafPanel(panelToSplit)) {
-        notifyUser('error', 'Cannot split a non-leaf panel');
-        return;
-      }
-
-      const tabToMove = findTabById(state.tabs, tabId);
-      if (!tabToMove) return;
-
-      const sourcePanelId = tabToMove.panelId;
-      const sourcePanelTabs = state.panelTabs[sourcePanelId] ?? [];
-      const isSamePanelSplit = sourcePanelId === panelId;
-
-      // Block same-panel split if panel only has one tab
-      if (isSamePanelSplit && sourcePanelTabs.length <= 1) return;
-
-      // Step 2: Perform tree split operation
-      const splitResult = splitPanelTree(state.panel, { panelId, direction, position });
-      if (!splitResult.success || !splitResult.newPanelId) {
-        notifyUser('error', `Cannot split: ${splitResult.error}`);
-        return;
-      }
-
-      const { newPanelId } = splitResult;
-
-      // Step 3: Move tab to new panel
-      state.panelTabs[newPanelId] = [];
-
-      const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
-      if (sourceIdx !== undefined && sourceIdx !== -1) {
-        state.panelTabs[sourcePanelId].splice(sourceIdx, 1);
-      }
-
-      state.panelTabs[newPanelId].push(tabId);
-      tabToMove.panelId = newPanelId;
-
-      // Step 4: Update active states
-      state.activeTabIds[newPanelId] = tabId;
-      state.activePanelId = newPanelId;
-
-      if (state.activeTabIds[panelId] === tabId) {
-        const remaining = state.panelTabs[panelId] ?? [];
-        const lastTab = remaining[remaining.length - 1];
-        if (lastTab) {
-          state.activeTabIds[panelId] = lastTab;
-        } else {
-          delete state.activeTabIds[panelId];
-        }
-      }
-
-      if (!isSamePanelSplit && state.activeTabIds[sourcePanelId] === tabId) {
-        const remaining = state.panelTabs[sourcePanelId] ?? [];
-        const lastTab = remaining[remaining.length - 1];
-        if (lastTab) {
-          state.activeTabIds[sourcePanelId] = lastTab;
-        } else {
-          delete state.activeTabIds[sourcePanelId];
-        }
-      }
-
-      // Step 5: Clean up source panel if empty (for cross-panel splits).
-      // Return value ignored: new panel already received focus above.
-      if (!isSamePanelSplit) {
-        collapseEmptyPanel(state, sourcePanelId);
-      }
-    },
-
     collapsePanel(state, action: PayloadAction<{ panelId: PanelId }>) {
       const { panelId } = action.payload;
 
@@ -874,6 +887,12 @@ const workspaceSlice = createSlice({
         state.activeTabIds[newTab.panelId] = newTab.id;
         state.activePanelId = newTab.panelId;
       })
+      .addCase(splitPanel.fulfilled, (state, action) => {
+        // Guard: Re-check maxPanels limit to prevent race condition, as addTab does for maxTabs.
+        if (!canAddPanel(countLeafPanels(state.panel), action.payload.maxPanels)) return;
+
+        splitPanelInState(state, action.payload);
+      })
       .addCase(duplicateTab.fulfilled, (state, action) => {
         const { tab: newTab, maxTabs } = action.payload;
 
@@ -913,7 +932,6 @@ export const {
   resizePanel,
   pinPanel,
   unpinPanel,
-  splitPanel,
   collapsePanel,
   toggleSearchBars,
   toggleFavoriteLayout,

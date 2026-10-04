@@ -187,6 +187,7 @@ export function createPrismStore(config: StoreConfig) {
     serverSessionId,
     persistenceType,
     maxTabs,
+    maxPanels,
     setProps,
     getRegisteredLayouts,
     storage,
@@ -236,6 +237,7 @@ export function createPrismStore(config: StoreConfig) {
   // Create thunk extra argument
   const thunkExtra: ThunkExtra = {
     getMaxTabs: typeof maxTabs === 'function' ? maxTabs : () => maxTabs,
+    getMaxPanels: typeof maxPanels === 'function' ? maxPanels : () => maxPanels,
     getRegisteredLayouts: getRegisteredLayouts ?? (() => ({})),
   };
 

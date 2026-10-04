@@ -25,13 +25,18 @@ import { uiReducer, setSearchBarMode, openHelpModal } from '../uiSlice';
 import { createDashSyncMiddleware } from './dashSyncMiddleware';
 import type { WorkspaceState, ThunkExtra } from '../types';
 import type { PanelId } from '@types';
+import { MAX_LEAF_PANELS } from '@constants/panels';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
 function createTestStore(setProps?: (props: Record<string, unknown>) => void, maxTabs = 16) {
-  const thunkExtra: ThunkExtra = { getMaxTabs: () => maxTabs, getRegisteredLayouts: () => ({}) };
+  const thunkExtra: ThunkExtra = {
+    getMaxTabs: () => maxTabs,
+    getMaxPanels: () => MAX_LEAF_PANELS,
+    getRegisteredLayouts: () => ({}),
+  };
 
   const undoableWorkspaceReducer = undoable(workspaceReducer, {
     limit: 50,
@@ -342,7 +347,9 @@ describe('dashSyncMiddleware', () => {
       await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab A' }));
       await store.dispatch(addTab({ panelId: rootPanelId, name: 'Tab B' }));
       const [tabA, tabB] = store.getState().workspace.present.tabs;
-      store.dispatch(splitPanel({ panelId: rootPanelId, direction: 'horizontal', tabId: tabB.id }));
+      await store.dispatch(
+        splitPanel({ panelId: rootPanelId, direction: 'horizontal', tabId: tabB.id })
+      );
       const leafIds = store
         .getState()
         .workspace.present.panel.children.map((child: { id: string }) => child.id);
