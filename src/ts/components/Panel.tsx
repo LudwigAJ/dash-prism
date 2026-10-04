@@ -21,6 +21,7 @@ import {
   setActivePanel,
   resizePanel,
 } from '@store';
+import type { AppDispatch } from '@store';
 import { usePortal } from '@context/PortalContext';
 
 type PanelProps = {
@@ -33,11 +34,7 @@ type PanelProps = {
 // root prevents synthetic events from reaching Prism's tree.
 // =============================================================================
 
-function useNativePanelFocus(
-  panelId: PanelId,
-  activePanelId: PanelId,
-  dispatch: ReturnType<typeof useAppDispatch>
-) {
+function useNativePanelFocus(panelId: PanelId, activePanelId: PanelId, dispatch: AppDispatch) {
   const panelRef = useRef<HTMLDivElement>(null);
   const activePanelIdRef = useRef(activePanelId);
   activePanelIdRef.current = activePanelId;
@@ -150,8 +147,6 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
     </div>
   );
 });
-
-LeafPanel.displayName = 'LeafPanel';
 
 /**
  * Renders a node of the panel tree. A leaf panel shows its tab bar, its search bar and its tab

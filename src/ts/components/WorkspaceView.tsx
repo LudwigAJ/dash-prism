@@ -38,7 +38,7 @@ import {
  * UI-only properties like `locked`, `name`, `icon`, `style` do NOT trigger re-renders.
  */
 const DashContentRenderer = memo(
-  ({ tab }: { tab: Tab }) => {
+  function DashContentRenderer({ tab }: { tab: Tab }) {
     const api: DashComponentApi | undefined = window.dash_component_api;
     const { componentId = 'prism', layoutTimeout } = useConfig();
 
@@ -80,8 +80,6 @@ const DashContentRenderer = memo(
     );
   }
 );
-
-DashContentRenderer.displayName = 'DashContentRenderer';
 
 type WorkspaceViewProps = {
   /** Array of PrismAction component specs */
