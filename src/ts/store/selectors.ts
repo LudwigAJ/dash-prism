@@ -44,6 +44,8 @@ export const selectRedoCount = (state: RootState) => state.workspace.future.leng
 
 export const selectSearchBarModes = (state: RootState) => state.ui.searchBarModes;
 export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
+export const selectLayoutSelectionRequest = (state: RootState) => state.ui.layoutSelectionRequest;
+export const selectSearchFocusPanelId = (state: RootState) => state.ui.searchFocusPanelId;
 export const selectInfoModalTabId = (state: RootState) => state.ui.infoModalTabId;
 export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
 export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
@@ -67,11 +69,29 @@ export function canAddTab(tabCount: number, maxTabs: number): boolean {
   return maxTabs < 1 || tabCount < maxTabs;
 }
 
+/**
+ * Checks if a panel can be added based on the maxPanels limit.
+ *
+ * @param panelCount - Current number of leaf panels
+ * @param maxPanels - Maximum panels allowed (0 or negative means unlimited)
+ * @returns true if a new panel can be added
+ */
+export function canAddPanel(panelCount: number, maxPanels: number): boolean {
+  return maxPanels < 1 || panelCount < maxPanels;
+}
+
 export const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 
 export const selectPanelCount = createSelector(
   selectLeafPanelIds,
   (leafPanels) => leafPanels.length
+);
+
+/** True while the workspace has one tab in one panel, so no drag-and-drop operation can apply. */
+export const selectIsSingleTabMode = createSelector(
+  selectTabCount,
+  selectPanelCount,
+  (tabCount, panelCount) => tabCount === 1 && panelCount === 1
 );
 
 // Note: selectCanUndo is defined above in Redux-Undo History Selectors

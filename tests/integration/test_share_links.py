@@ -24,6 +24,7 @@ from conftest import (
 pytestmark = pytest.mark.integration
 
 SHARE_ITEM = "[data-testid='prism-context-menu-share']"
+TOAST_SELECTOR = "[data-sonner-toast]"
 
 
 def _share_hash(layout_id: str, name: str) -> str:
@@ -31,10 +32,13 @@ def _share_hash(layout_id: str, name: str) -> str:
     return "#p:" + base64.b64encode(payload.encode("utf-8")).decode("ascii")
 
 
-def _start(dash_duo, enable_share_links: bool):
+def _start(dash_duo, enable_share_links: bool, *, allow_multiple: bool = True, **prism_props):
     app = Dash(__name__, suppress_callback_exceptions=True)
     dash_prism.register_layout(
-        id="home", name="Home", allow_multiple=True, layout=html.Div("Home", id="home-content")
+        id="home",
+        name="Home",
+        allow_multiple=allow_multiple,
+        layout=html.Div("Home", id="home-content"),
     )
     app.layout = html.Div(
         [
@@ -44,6 +48,7 @@ def _start(dash_duo, enable_share_links: bool):
                 persistence=False,
                 persistence_type="memory",
                 style={"height": "100vh"},
+                **prism_props,
             )
         ],
         style={"height": "100vh"},
@@ -128,4 +133,33 @@ def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
         wait_for_tab_count(duo, 2, timeout=2.0)
     assert len(duo.find_elements(TAB_SELECTOR)) == 1
     assert "#p:" in duo.driver.current_url
+    assert check_browser_errors(duo) == []
+
+
+def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
+    """The tab limit refuses the share link, and the thunk tells the user why."""
+    duo = _start(dash_duo, True, maxTabs=2)
+    _open_home(duo)
+
+    duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "First"))
+    wait_for_tab_count(duo, 2, timeout=10)
+
+    duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Second"))
+    duo.wait_for_contains_text(TOAST_SELECTOR, "Maximum tabs limit reached (2)", timeout=10)
+
+    toast_text = " ".join(t.text for t in duo.find_elements(TOAST_SELECTOR))
+    assert "Opened shared tab: Second" not in toast_text
+    assert len(duo.find_elements(TAB_SELECTOR)) == 2
+    assert check_browser_errors(duo) == []
+
+
+def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
+    """A layout with allow_multiple=False is not opened twice by a share link."""
+    duo = _start(dash_duo, True, allow_multiple=False)
+    _open_home(duo)
+
+    duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Again"))
+    duo.wait_for_contains_text(TOAST_SELECTOR, "is already open. Switching to it.", timeout=10)
+
+    assert len(duo.find_elements(TAB_SELECTOR)) == 1
     assert check_browser_errors(duo) == []

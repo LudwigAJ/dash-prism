@@ -21,9 +21,8 @@ import {
   resolvePersistenceType,
 } from '@store';
 import { cn } from '@utils/cn';
-import { subscribeToToasts } from '@utils/toastEmitter';
+import { usePrismToast } from '@hooks/usePrismToast';
 import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
-import { toast } from 'sonner';
 import type {
   RegisteredLayouts,
   Theme,
@@ -276,7 +275,7 @@ function PrismInner({
   // later prop changes reach it without a rebuild:
   //  - setProps: Dash hands out a new reference after every sync
   //  - registeredLayouts: injected/updated by dash_prism.init and callbacks
-  //  - maxTabs: may be changed from a callback at any time
+  //  - maxTabs and maxPanels: may be changed from a callback at any time
   // componentId and persistenceType are baked into the persist key/engine, so
   // Prism remounts PrismInner (via `key`) when either changes.
   const setPropsRef = useRef(config.setProps);
@@ -294,12 +293,18 @@ function PrismInner({
     maxTabsRef.current = config.maxTabs;
   }, [config.maxTabs]);
 
+  const maxPanelsRef = useRef(config.maxPanels);
+  useEffect(() => {
+    maxPanelsRef.current = config.maxPanels;
+  }, [config.maxPanels]);
+
   const [{ store, persistor, cleanup }] = useState(() =>
     createPrismStore({
       componentId: config.componentId,
       serverSessionId: config.serverSessionId,
       persistenceType: config.persistenceType,
       maxTabs: () => maxTabsRef.current,
+      maxPanels: () => maxPanelsRef.current,
       setProps: (props: Record<string, unknown>) => setPropsRef.current?.(props),
       getRegisteredLayouts: () => registeredLayoutsRef.current,
     })
@@ -311,20 +316,6 @@ function PrismInner({
       cleanup();
     };
   }, [cleanup]);
-
-  // Subscribe to toast events
-  useEffect(() => {
-    const unsubscribe = subscribeToToasts(({ type, message, description }) => {
-      toast[type](message, {
-        description,
-        cancel: {
-          label: 'Dismiss',
-          onClick: () => {},
-        },
-      });
-    });
-    return unsubscribe;
-  }, []);
 
   return (
     <Provider store={store}>
@@ -352,15 +343,14 @@ function PrismInner({
 function LoadNotice() {
   const notice = useAppSelector(selectLoadNotice);
   const dispatch = useAppDispatch();
+  const toast = usePrismToast();
 
   useEffect(() => {
     if (!notice) return;
     const n = notice.closedTabs;
-    toast.info(`Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`, {
-      cancel: { label: 'Dismiss', onClick: () => {} },
-    });
+    toast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`);
     dispatch(clearLoadNotice());
-  }, [notice, dispatch]);
+  }, [notice, dispatch, toast]);
 
   return null;
 }

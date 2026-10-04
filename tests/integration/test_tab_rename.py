@@ -21,8 +21,10 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from conftest import (
     CONTEXT_MENU,
+    SPLIT_PANEL_BUTTON,
     TAB_SELECTOR,
     check_browser_errors,
+    get_modifier_key,
     get_tab_id,
     get_tabs,
     open_context_menu,
@@ -30,6 +32,7 @@ from conftest import (
     set_input_value_react,
     trigger_rename_mode,
     wait_for_element_invisible,
+    wait_for_panel_count,
     wait_for_tab_count,
 )
 
@@ -186,6 +189,38 @@ def test_rename_cancel_with_escape(prism_app_with_layouts):
     # Verify original name is preserved
     tab_text = get_tabs(duo)[0].text
     assert tab_text == original_name, f"Escape should keep '{original_name}', got '{tab_text}'"
+
+    errors = check_browser_errors(duo)
+    assert len(errors) == 0, f"No browser errors expected: {errors}"
+
+
+def test_rename_shortcut_starts_in_the_panel_that_owns_the_tab(prism_app_with_layouts):
+    """Ctrl/Cmd+R renames the active tab of whichever panel is active.
+
+    Every panel sees the rename request in the store. Only the panel that holds
+    the tab may start the rename and clear the request.
+    """
+    duo = prism_app_with_layouts
+    duo.find_element(SPLIT_PANEL_BUTTON).click()
+    wait_for_panel_count(duo, 2)
+    wait_for_tab_count(duo, 2)
+
+    modifier = get_modifier_key()
+    for index in (1, 0):
+        tab_id = get_tab_id(duo, index)
+        assert tab_id is not None
+        get_tabs(duo)[index].click()
+
+        duo.find_element("body").send_keys(modifier, "r")
+        rename_input_selector = f"[data-testid='prism-tab-rename-{tab_id}']"
+        WebDriverWait(duo.driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, rename_input_selector)),
+            message=f"Rename input should appear for tab {index} after Ctrl/Cmd+R",
+        )
+        assert len(duo.find_elements("[data-testid^='prism-tab-rename-']")) == 1
+
+        duo.find_element(rename_input_selector).send_keys(Keys.ESCAPE)
+        wait_for_element_invisible(duo, rename_input_selector, timeout=3)
 
     errors = check_browser_errors(duo)
     assert len(errors) == 0, f"No browser errors expected: {errors}"

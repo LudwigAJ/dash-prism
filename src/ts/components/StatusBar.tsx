@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Info, Undo2, Lock, Trash2 } from 'lucide-react';
-import { countLeafPanels } from '@utils/panels';
 import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import {
@@ -21,7 +20,8 @@ import {
   useAppDispatch,
   useAppSelector,
   selectTabs,
-  selectPanel,
+  selectPanelCount,
+  selectTabCount,
   selectActiveTabIds,
   selectActivePanelId,
   selectSearchBarModes,
@@ -45,7 +45,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 
   // Select state from Redux
   const tabs = useAppSelector(selectTabs);
-  const panel = useAppSelector(selectPanel);
+  const tabCount = useAppSelector(selectTabCount);
+  const panelCount = useAppSelector(selectPanelCount);
   const activeTabIds = useAppSelector(selectActiveTabIds);
   const activePanelId = useAppSelector(selectActivePanelId);
   const searchBarModes = useAppSelector(selectSearchBarModes);
@@ -56,12 +57,8 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 
   // Get active tab and search bar mode for active panel
   const activeTabId = activeTabIds[activePanelId];
-  const activeTab = tabs?.find((t) => t.id === activeTabId);
+  const activeTab = tabs.find((t) => t.id === activeTabId);
   const searchBarMode = searchBarModes[activePanelId] ?? 'display';
-
-  // Counts
-  const tabCount = tabs?.length ?? 0;
-  const panelCount = countLeafPanels(panel);
 
   // Update sync time display every 5 seconds
   useEffect(() => {

@@ -15,18 +15,29 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Storage } from 'redux-persist';
+import { toast } from 'sonner';
 import {
   createPrismStore,
   getWorkspaceStorageKey,
   addTab,
+  activateTab,
   removeTab,
   renameTab,
   undo,
   redo,
   selectCanUndo,
   selectCanRedo,
+  requestLayoutSelection,
+  requestSearchFocus,
+  startRenameTab,
+  selectLayoutSelectionRequest,
+  selectSearchFocusPanelId,
+  selectIsSingleTabMode,
+  splitPanel,
+  canAddPanel,
 } from './index';
 import type { WorkspaceState } from './types';
+import { MAX_LEAF_PANELS } from '@constants/panels';
 import type { PanelId, TabId, RegisteredLayouts } from '@types';
 
 // =============================================================================
@@ -100,21 +111,30 @@ function savedWorkspace(overrides: Partial<Persisted> = {}): Persisted {
   };
 }
 
+// A thunk toast reaches sonner through prismToast. The mock keeps the tests quiet and shows which
+// Toaster each store addresses.
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
+
 function createStore(
   options: {
+    componentId?: string;
     storage?: Storage;
     setProps?: () => void;
     serverSessionId?: string;
     registeredLayouts?: RegisteredLayouts;
     maxTabs?: number | (() => number);
+    maxPanels?: number | (() => number);
   } = {}
 ) {
   const setProps = options.setProps ?? vi.fn();
   const result = createPrismStore({
-    componentId: COMPONENT_ID,
+    componentId: options.componentId ?? COMPONENT_ID,
     serverSessionId: options.serverSessionId,
     persistenceType: options.storage ? 'local' : 'memory',
     maxTabs: options.maxTabs ?? 16,
+    maxPanels: options.maxPanels ?? MAX_LEAF_PANELS,
     setProps,
     getRegisteredLayouts: () => options.registeredLayouts ?? {},
     storage: options.storage,
@@ -262,6 +282,34 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(1);
       created.store.dispatch(undo());
       expect(present(created).tabs[0].name).toBe('New Tab');
+
+      created.cleanup();
+    });
+
+    it('does not record ui request actions', async () => {
+      const created = createStore();
+      await settle(created);
+      const { id: tabId, panelId } = present(created).tabs[0];
+
+      // activateTab is excluded from the history. Without `syncFilter: true` it would leave
+      // redux-undo's latest unfiltered state behind the present state, and the next ui action
+      // would enter the history.
+      await created.store.dispatch(addTab({ panelId }));
+      created.store.dispatch(activateTab({ tabId, panelId }));
+      expect(history(created).past).toHaveLength(1);
+
+      // The undoable reducer sees every action. A ui action leaves the workspace unchanged,
+      // so redux-undo adds no history entry.
+      created.store.dispatch(requestLayoutSelection({ tabId, layoutId: 'home' }));
+      created.store.dispatch(requestSearchFocus({ panelId }));
+      created.store.dispatch(startRenameTab({ tabId }));
+
+      expect(history(created).past).toHaveLength(1);
+      expect(selectLayoutSelectionRequest(created.store.getState())).toEqual({
+        tabId,
+        layoutId: 'home',
+      });
+      expect(selectSearchFocusPanelId(created.store.getState())).toBe(panelId);
 
       created.cleanup();
     });
@@ -539,6 +587,155 @@ describe('createPrismStore', () => {
       expect(addTab.rejected.match(rejected)).toBe(true);
 
       created.cleanup();
+    });
+  });
+
+  describe('maxPanels read through a getter', () => {
+    it('applies a limit changed after the store was created', async () => {
+      let limit = 1;
+      const created = createStore({ maxPanels: () => limit });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      const tabId = present(created).tabs[1].id;
+
+      const rejected = await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId })
+      );
+      expect(splitPanel.rejected.match(rejected)).toBe(true);
+
+      limit = 2;
+      await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
+      expect(present(created).panelTabs[panelId]).not.toContain(tabId);
+
+      created.cleanup();
+    });
+  });
+
+  describe('splitPanel in the undo history', () => {
+    it('records one entry for a split, none for a refused split, and undoes to the old panel', async () => {
+      const created = createStore({ maxPanels: 2 });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      await created.store.dispatch(addTab({ panelId }));
+      const [, tabB, tabC] = present(created).tabs;
+      const pastBefore = history(created).past.length;
+
+      await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId: tabB.id })
+      );
+      expect(history(created).past).toHaveLength(pastBefore + 1);
+
+      // The workspace is at the limit of two panels now.
+      const refused = await created.store.dispatch(
+        splitPanel({ panelId, direction: 'horizontal', tabId: tabC.id })
+      );
+      expect(splitPanel.rejected.match(refused)).toBe(true);
+      expect(history(created).past).toHaveLength(pastBefore + 1);
+
+      created.store.dispatch(undo());
+      expect(present(created).panelTabs[panelId]).toContain(tabB.id);
+      expect(present(created).tabs.find((t) => t.id === tabB.id)?.panelId).toBe(panelId);
+
+      created.cleanup();
+    });
+
+    it('lets only one of two splits in the same tick pass the limit', async () => {
+      const created = createStore({ maxPanels: 2 });
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId }));
+      await created.store.dispatch(addTab({ panelId }));
+      const [, tabB, tabC] = present(created).tabs;
+
+      await Promise.all([
+        created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId: tabB.id })),
+        created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId: tabC.id })),
+      ]);
+
+      expect(Object.keys(present(created).panelTabs)).toHaveLength(2);
+
+      created.cleanup();
+    });
+
+    it('skips a split whose panel an earlier split in the same tick removed', async () => {
+      const created = createStore();
+      await settle(created);
+      const firstPanelId = present(created).activePanelId;
+      await created.store.dispatch(addTab({ panelId: firstPanelId }));
+      await created.store.dispatch(addTab({ panelId: firstPanelId }));
+      const [, tabB, tabC] = present(created).tabs;
+      await created.store.dispatch(
+        splitPanel({ panelId: firstPanelId, direction: 'horizontal', tabId: tabB.id })
+      );
+      const secondPanelId = present(created).activePanelId;
+
+      // The first split moves the only tab out of the second panel, so the second panel closes.
+      await Promise.all([
+        created.store.dispatch(
+          splitPanel({ panelId: firstPanelId, direction: 'horizontal', tabId: tabB.id })
+        ),
+        created.store.dispatch(
+          splitPanel({ panelId: secondPanelId, direction: 'horizontal', tabId: tabC.id })
+        ),
+      ]);
+
+      expect(present(created).panelTabs[secondPanelId]).toBeUndefined();
+      expect(present(created).panelTabs[firstPanelId]).toContain(tabC.id);
+
+      created.cleanup();
+    });
+  });
+
+  describe('selectIsSingleTabMode', () => {
+    it('is true only for one tab in one panel', async () => {
+      const created = createStore();
+      await settle(created);
+      const panelId = present(created).activePanelId;
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(true);
+
+      await created.store.dispatch(addTab({ panelId }));
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
+
+      const tabId = present(created).tabs[1].id;
+      await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
+      expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
+
+      created.cleanup();
+    });
+  });
+
+  describe('canAddPanel', () => {
+    it('treats a limit below 1 as unlimited', () => {
+      expect(canAddPanel(5, 0)).toBe(true);
+      expect(canAddPanel(5, -1)).toBe(true);
+    });
+
+    it('allows a panel only below the limit', () => {
+      expect(canAddPanel(1, 2)).toBe(true);
+      expect(canAddPanel(2, 2)).toBe(false);
+    });
+  });
+
+  describe('toasts of two stores', () => {
+    it('sends the toast of a thunk to the Toaster of its own Prism instance', async () => {
+      vi.mocked(toast.warning).mockClear();
+      const first = createStore({ componentId: 'prism-a', maxTabs: 1 });
+      const second = createStore({ componentId: 'prism-b', maxTabs: 1 });
+      await settle(first);
+      await settle(second);
+
+      await second.store.dispatch(addTab({ panelId: present(second).activePanelId }));
+
+      expect(toast.warning).toHaveBeenCalledTimes(1);
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Maximum tabs limit reached (1)',
+        expect.objectContaining({ toasterId: 'prism-b' })
+      );
+
+      first.cleanup();
+      second.cleanup();
     });
   });
 

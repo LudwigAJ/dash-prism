@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -14,7 +14,6 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useConfig } from '@context/ConfigContext';
-import { getLeafPanelIds } from '@utils/panels';
 import { getTabIcon } from '@constants/tab-icons';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
@@ -23,7 +22,7 @@ import {
   useAppDispatch,
   useAppSelector,
   selectTabs,
-  selectPanel,
+  selectIsSingleTabMode,
   selectPanelTabs,
   splitPanel,
   moveTab,
@@ -36,18 +35,12 @@ type DndProviderProps = {
 
 export function DndProvider({ children }: DndProviderProps) {
   const dispatch = useAppDispatch();
-  const { maxPanels } = useConfig();
   const tabs = useAppSelector(selectTabs);
-  const panel = useAppSelector(selectPanel);
   const panelTabs = useAppSelector(selectPanelTabs);
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
 
-  // Check if we're in single-tab-single-panel mode (no DnD operations allowed)
-  const isSingleTabMode = useMemo(() => {
-    const leafPanelIds = getLeafPanelIds(panel);
-    const tabCount = tabs?.length ?? 0;
-    return tabCount === 1 && leafPanelIds.length === 1;
-  }, [tabs?.length, panel]);
+  // Single-tab-single-panel mode allows no DnD operations
+  const isSingleTabMode = useAppSelector(selectIsSingleTabMode);
 
   // Configure sensors (pointer + mouse fallback + keyboard for accessibility)
   // MouseSensor added as fallback for headless Chrome where PointerEvents may not fire reliably
@@ -113,7 +106,6 @@ export function DndProvider({ children }: DndProviderProps) {
 
         dispatch(
           splitPanel({
-            maxPanels,
             panelId: targetPanelId,
             direction,
             tabId: activeId,

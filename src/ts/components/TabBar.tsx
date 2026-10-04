@@ -53,6 +53,7 @@ import {
   clearRenameTab,
   splitPanel,
   selectPanelCount,
+  canAddPanel,
 } from '@store';
 
 // =============================================================================
@@ -554,7 +555,7 @@ export const TabBar = memo(function TabBar({
   }, [isMaxTabsReached, panelId, dispatch]);
 
   const panelCount = useAppSelector(selectPanelCount);
-  const isMaxPanelsReached = maxPanels >= 1 && panelCount >= maxPanels;
+  const isMaxPanelsReached = !canAddPanel(panelCount, maxPanels);
 
   const handleSplitPanel = useCallback(async () => {
     if (isMaxPanelsReached || isMaxTabsReached) return;
@@ -562,7 +563,6 @@ export const TabBar = memo(function TabBar({
     if (addTab.fulfilled.match(result)) {
       dispatch(
         splitPanel({
-          maxPanels,
           panelId,
           direction: 'horizontal',
           tabId: result.payload.tab.id,
@@ -570,18 +570,19 @@ export const TabBar = memo(function TabBar({
         })
       );
     }
-  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached, maxPanels]);
+  }, [dispatch, panelId, isMaxPanelsReached, isMaxTabsReached]);
 
-  // Listen for keyboard-triggered rename via renamingTabId
+  // Only the TabBar of the panel that holds the tab handles and clears the rename request.
+  // See UiState for why.
   useEffect(() => {
     if (!renamingTabId) return;
 
-    // Only handle if the tab belongs to this panel
     const tab = tabs.find((t) => t.id === renamingTabId);
-    if (tab && !tab.locked && !isPinned) {
+    if (!tab) return;
+
+    if (!tab.locked && !isPinned) {
       startRename(tab);
     }
-    // Clear the rename trigger after handling
     dispatch(clearRenameTab());
   }, [renamingTabId, tabs, isPinned, startRename, dispatch]);
 

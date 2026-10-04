@@ -17,6 +17,10 @@ import {
   pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
+  requestLayoutSelection,
+  clearLayoutSelectionRequest,
+  requestSearchFocus,
+  clearSearchFocusRequest,
   openInfoModal,
   closeInfoModal,
   openHelpModal,
@@ -59,6 +63,8 @@ describe('uiSlice', () => {
 
       expect(state.searchBarModes).toEqual({});
       expect(state.renamingTabId).toBeNull();
+      expect(state.layoutSelectionRequest).toBeNull();
+      expect(state.searchFocusPanelId).toBeNull();
       expect(state.infoModalTabId).toBeNull();
       expect(state.helpModalOpen).toBe(false);
       expect(state.setIconModalTabId).toBeNull();
@@ -203,6 +209,60 @@ describe('uiSlice', () => {
       store.dispatch(startRenameTab({ tabId: 'tab-2' }));
 
       expect(getUiState(store).renamingTabId).toBe('tab-2');
+    });
+  });
+
+  describe('requestLayoutSelection / clearLayoutSelectionRequest', () => {
+    it('requestLayoutSelection stores the tab and the layout', () => {
+      const store = createTestStore();
+
+      store.dispatch(requestLayoutSelection({ tabId: 'tab-1', layoutId: 'home' }));
+
+      expect(getUiState(store).layoutSelectionRequest).toEqual({
+        tabId: 'tab-1',
+        layoutId: 'home',
+      });
+    });
+
+    it('clearLayoutSelectionRequest clears the request', () => {
+      const store = createTestStore({
+        layoutSelectionRequest: { tabId: 'tab-1', layoutId: 'home' },
+      });
+
+      store.dispatch(clearLayoutSelectionRequest());
+
+      expect(getUiState(store).layoutSelectionRequest).toBeNull();
+    });
+
+    it('a new request replaces a request that nobody consumed', () => {
+      const store = createTestStore({
+        layoutSelectionRequest: { tabId: 'tab-1', layoutId: 'home' },
+      });
+
+      store.dispatch(requestLayoutSelection({ tabId: 'tab-2', layoutId: 'about' }));
+
+      expect(getUiState(store).layoutSelectionRequest).toEqual({
+        tabId: 'tab-2',
+        layoutId: 'about',
+      });
+    });
+  });
+
+  describe('requestSearchFocus / clearSearchFocusRequest', () => {
+    it('requestSearchFocus stores the panel', () => {
+      const store = createTestStore();
+
+      store.dispatch(requestSearchFocus({ panelId: 'panel-1' }));
+
+      expect(getUiState(store).searchFocusPanelId).toBe('panel-1');
+    });
+
+    it('clearSearchFocusRequest clears the request', () => {
+      const store = createTestStore({ searchFocusPanelId: 'panel-1' });
+
+      store.dispatch(clearSearchFocusRequest());
+
+      expect(getUiState(store).searchFocusPanelId).toBeNull();
     });
   });
 
@@ -388,6 +448,18 @@ describe('uiSlice', () => {
       expect(ui.renamingTabId).toBeNull();
       expect(ui.infoModalTabId).toBeNull();
       expect(ui.setIconModalTabId).toBeNull();
+    });
+
+    it('clears a layout selection request for that tab only', () => {
+      const request = (target: TabId) => ({ tabId: target, layoutId: 'home' });
+
+      const own = createCombinedStore({ layoutSelectionRequest: request(tabId) });
+      own.dispatch(removeTab({ tabId }));
+      expect(own.getState().ui.layoutSelectionRequest).toBeNull();
+
+      const other = createCombinedStore({ layoutSelectionRequest: request(tab2Id) });
+      other.dispatch(removeTab({ tabId }));
+      expect(other.getState().ui.layoutSelectionRequest).toEqual(request(tab2Id));
     });
 
     it('does not clear references to a different tab', () => {

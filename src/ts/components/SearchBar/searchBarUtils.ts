@@ -21,3 +21,14 @@ export function filterLayouts(
       meta.keywords?.some((k) => k.toLowerCase().includes(lowerQuery))
   );
 }
+
+/** Checks whether the layout asks for parameters, so that the search bar must show the params step. */
+export function layoutHasParams(layout: LayoutMeta): boolean {
+  return (layout.params?.length ?? 0) > 0;
+}
+
+/** Checks whether the layout offers preset options, so that the search bar must show the options step. */
+export function layoutHasOptions(layout: LayoutMeta): boolean {
+  // Python sends null for a layout without options.
+  return Object.keys(layout.paramOptions ?? {}).length > 0;
+}

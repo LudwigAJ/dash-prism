@@ -6,17 +6,16 @@ import {
   stepActiveChoice,
   type ParamCheck,
 } from './paramValidation';
-import { toast } from 'sonner';
 import type { PanelId } from '@types';
 import { useConfig } from '@context/ConfigContext';
-import { logger } from '@utils/logger';
+import { usePrismToast } from '@hooks/usePrismToast';
 import {
   searchBarReducer,
   createInitialState,
   deriveMode,
   type ModeContext,
 } from './searchBarReducer';
-import { filterLayouts } from './searchBarUtils';
+import { filterLayouts, layoutHasOptions, layoutHasParams } from './searchBarUtils';
 import { useDropdownResize } from './useDropdownResize';
 import {
   useAppDispatch,
@@ -25,11 +24,15 @@ import {
   selectActiveTabIds,
   selectSearchBarsHidden,
   selectFavoriteLayouts,
+  selectLayoutSelectionRequest,
+  selectSearchFocusPanelId,
   updateTabLayout,
-  activateTab,
+  switchToOpenTab,
   toggleSearchBars,
   toggleFavoriteLayout,
   setSearchBarMode,
+  clearLayoutSelectionRequest,
+  clearSearchFocusRequest,
 } from '@store';
 
 /**
@@ -38,6 +41,7 @@ import {
  */
 export function useSearchBarState(panelId: PanelId) {
   const globalDispatch = useAppDispatch();
+  const toast = usePrismToast();
   const tabs = useAppSelector(selectTabs);
   const activeTabIds = useAppSelector(selectActiveTabIds);
   const searchBarsHidden = useAppSelector(selectSearchBarsHidden);
@@ -81,10 +85,8 @@ export function useSearchBarState(panelId: PanelId) {
     hasCurrentLayout: currentLayout !== null,
     selectedLayout: selectedLayout
       ? {
-          hasParams: (selectedLayout.params?.length ?? 0) > 0,
-          hasOptions:
-            (selectedLayout.paramOptions && Object.keys(selectedLayout.paramOptions).length > 0) ??
-            false,
+          hasParams: layoutHasParams(selectedLayout),
+          hasOptions: layoutHasOptions(selectedLayout),
         }
       : null,
   };
@@ -119,15 +121,17 @@ export function useSearchBarState(panelId: PanelId) {
       // Read fresh activeTabId to avoid stale closure
       const currentActiveTabId = activeTabIds[panelId];
       if (!currentActiveTabId) {
-        logger.error('Cannot apply layout: no active tab in panel', { panelId, layoutId });
-        toast.error('Unable to apply layout: no active tab');
+        toast('error', 'Unable to apply layout: no active tab', {
+          logDetails: `Cannot apply layout '${layoutId}': no active tab in panel '${panelId}'`,
+        });
         return;
       }
 
       // Validate layout still exists
       if (!registeredLayouts[layoutId]) {
-        logger.error('Cannot apply layout: layout no longer exists', { panelId, layoutId });
-        toast.error('Layout is no longer available');
+        toast('error', 'Layout is no longer available', {
+          logDetails: `Cannot apply layout '${layoutId}' in panel '${panelId}': layout no longer exists`,
+        });
         dispatch({ type: 'RESET' });
         dispatch({ type: 'RETURN_TO_IDLE', showDropdown: currentLayout === null });
         return;
@@ -140,7 +144,7 @@ export function useSearchBarState(panelId: PanelId) {
       dispatch({ type: 'RESET' });
       dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
     },
-    [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout]
+    [activeTabIds, panelId, globalDispatch, registeredLayouts, currentLayout, toast]
   );
 
   const handleLayoutSelect = useCallback(
@@ -149,24 +153,16 @@ export function useSearchBarState(panelId: PanelId) {
       if (!layout) return;
 
       // Check allowMultiple constraint
-      if (!layout.allowMultiple) {
-        const existingTab = tabs?.find((t) => t.layoutId === layoutId);
-        if (existingTab) {
-          logger.info(`Layout "${layout.name}" already open. Switching to existing tab.`);
-          toast.info(`Layout "${layout.name}" is already open. Switching to it.`, {
-            cancel: { label: 'Dismiss', onClick: () => {} },
-          });
-          globalDispatch(activateTab({ tabId: existingTab.id, panelId: existingTab.panelId }));
-          dispatch({ type: 'RESET' });
-          dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
-          return;
-        }
+      if (globalDispatch(switchToOpenTab(layoutId))) {
+        dispatch({ type: 'RESET' });
+        dispatch({ type: 'RETURN_TO_IDLE', showDropdown: false });
+        return;
       }
 
       dispatch({ type: 'SELECT_LAYOUT', layoutId });
 
-      const hasParams = layout.params && layout.params.length > 0;
-      const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
+      const hasParams = layoutHasParams(layout);
+      const hasOptions = layoutHasOptions(layout);
 
       // No params, no options -> apply directly
       if (!hasParams && !hasOptions) {
@@ -182,7 +178,7 @@ export function useSearchBarState(panelId: PanelId) {
         focusInput();
       }
     },
-    [registeredLayouts, tabs, globalDispatch, applyLayout, focusInput]
+    [registeredLayouts, globalDispatch, applyLayout, focusInput]
   );
 
   const handleOptionSelect = useCallback(
@@ -373,35 +369,31 @@ export function useSearchBarState(panelId: PanelId) {
 
   // ===== EFFECTS =====
 
-  // Layout selection from external events
-  const handleLayoutSelection = useCallback(
-    (e: CustomEvent) => {
-      // Read fresh activeTabId to avoid stale closure
-      const currentActiveTabId = activeTabIds[panelId];
-      if (e.detail.tabId !== currentActiveTabId) return;
-
-      const layout = registeredLayouts[e.detail.layoutId];
-      if (!layout) return;
-
-      const hasParams = layout.params && layout.params.length > 0;
-      const hasOptions = layout.paramOptions && Object.keys(layout.paramOptions).length > 0;
-
-      if (searchBarsHidden && (hasParams || hasOptions)) {
-        dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: e.detail.layoutId });
-        globalDispatch(toggleSearchBars());
-        return;
-      }
-
-      handleLayoutSelect(e.detail.layoutId);
-    },
-    [activeTabIds, panelId, handleLayoutSelect, registeredLayouts, searchBarsHidden, globalDispatch]
-  );
-
+  // Layout the user picked on the empty-tab screen. The search bar of the panel whose active tab
+  // is the target consumes the request (see UiState).
+  const layoutRequest = useAppSelector(selectLayoutSelectionRequest);
   useEffect(() => {
-    window.addEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-    return () =>
-      window.removeEventListener('prism:select-layout', handleLayoutSelection as EventListener);
-  }, [handleLayoutSelection]);
+    if (layoutRequest === null || layoutRequest.tabId !== activeTabId) return;
+    globalDispatch(clearLayoutSelectionRequest());
+
+    const layout = registeredLayouts[layoutRequest.layoutId];
+    if (!layout) return;
+
+    if (searchBarsHidden && (layoutHasParams(layout) || layoutHasOptions(layout))) {
+      dispatch({ type: 'SET_PENDING_LAYOUT', layoutId: layoutRequest.layoutId });
+      globalDispatch(toggleSearchBars());
+      return;
+    }
+
+    handleLayoutSelect(layoutRequest.layoutId);
+  }, [
+    layoutRequest,
+    activeTabId,
+    registeredLayouts,
+    searchBarsHidden,
+    handleLayoutSelect,
+    globalDispatch,
+  ]);
 
   // Handle searchBarsHidden state changes
   useEffect(() => {
@@ -453,23 +445,17 @@ export function useSearchBarState(panelId: PanelId) {
     globalDispatch(setSearchBarMode({ panelId, mode }));
   }, [mode, panelId, globalDispatch]);
 
-  // Focus request from global shortcut
-  const handleFocusSearchbar = useCallback(
-    (event: Event) => {
-      const customEvent = event as CustomEvent<{ panelId?: string }>;
-      if (customEvent.detail?.panelId !== panelId) return;
-      if (searchBarsHidden) return;
-
-      dispatch({ type: 'ENTER_SEARCH_MODE' });
-      focusInput();
-    },
-    [panelId, searchBarsHidden, focusInput]
-  );
-
+  // Focus request from the global shortcut. The search bar of the target panel consumes it (see
+  // UiState).
+  const searchFocusPanelId = useAppSelector(selectSearchFocusPanelId);
   useEffect(() => {
-    window.addEventListener('prism:focus-searchbar', handleFocusSearchbar);
-    return () => window.removeEventListener('prism:focus-searchbar', handleFocusSearchbar);
-  }, [handleFocusSearchbar]);
+    if (searchFocusPanelId !== panelId) return;
+    globalDispatch(clearSearchFocusRequest());
+    if (searchBarsHidden) return;
+
+    dispatch({ type: 'ENTER_SEARCH_MODE' });
+    focusInput();
+  }, [searchFocusPanelId, panelId, searchBarsHidden, focusInput, globalDispatch]);
 
   // Click outside handler
   useEffect(() => {

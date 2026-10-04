@@ -73,9 +73,26 @@ All notable changes to Dash Prism are recorded here. The project follows
 - The `data` prop of `PrismContent` no longer has the key `tabId`. The render
   callback always read the tab ID from the `index` of the component `id`, so the
   key was never used.
+- Prism no longer listens for the window events `prism:select-layout` and
+  `prism:focus-searchbar`. The empty-tab screen and the keyboard shortcut now
+  send these requests to the search bar through the store of the Prism
+  instance. A clientside callback that dispatched one of these events does
+  nothing now.
+- A share link that meets the tab limit now shows the message of the tab limit
+  (`Maximum tabs limit reached (N)`). Before, it showed `Max tabs (N) reached`.
+  A share link or a search bar selection for an open layout that does not allow
+  several tabs now shows the same text in both places:
+  `Layout "X" is already open. Switching to it.`
+- Prism also writes each toast to the browser console, at the level that matches
+  the toast. A toast about bad user input, such as an invalid share link, is a
+  warning. A production build writes only warnings and errors. Before, only the
+  toasts of the store were logged.
 
 ### Fixed
 
+- With two Prism components on one page, a toast now shows only in the component
+  that raised it. Before, every component showed every toast. Each component has
+  its own toaster, and its `id` is the `id` of the component.
 - The search bar accepts `none` and `null` for an optional parameter, and a JSON
   array such as `[1, 2]` for a list parameter. The server already accepted both,
   but the search bar showed an error for them. A shared table of inputs now

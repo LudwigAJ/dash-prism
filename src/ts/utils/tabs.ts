@@ -1,5 +1,5 @@
 import type { Draft } from 'immer';
-import type { Tab, TabId, PanelId } from '@types';
+import type { Tab, TabId, PanelId, LayoutId, LayoutMeta } from '@types';
 
 // Support both regular Tab arrays and Immer Draft arrays
 type TabOrDraft = Tab | Draft<Tab>;
@@ -67,4 +67,18 @@ export function getActiveTabForPanel<T extends TabOrDraft>(
   const activeTabId = activeTabIds[panelId];
   if (!activeTabId) return undefined;
   return findTabById(tabs, activeTabId);
+}
+
+/**
+ * Finds the tab that stops the user from opening a layout a second time.
+ * @returns The open tab of a layout that does not allow multiple tabs, or undefined when the
+ * layout allows several tabs or no tab shows it
+ */
+export function findOpenTabForLayout(
+  tabs: readonly Tab[],
+  layoutId: LayoutId,
+  layout: LayoutMeta
+): Tab | undefined {
+  if (layout.allowMultiple) return undefined;
+  return tabs.find((t) => t.layoutId === layoutId);
 }
