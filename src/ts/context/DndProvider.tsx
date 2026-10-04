@@ -55,8 +55,10 @@ export function DndProvider({ children }: DndProviderProps) {
         distance: 8, // Same constraint for Selenium ActionChains compatibility
       },
     }),
+    // Enter only selects a focused tab. Space selects it and picks it up for a keyboard drag.
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] },
     })
   );
 
@@ -116,9 +118,9 @@ export function DndProvider({ children }: DndProviderProps) {
       return;
     }
 
-    // Case 2: Dropped on TabBar/SearchBar drop zone (cross-panel move)
+    // Case 2: Dropped on the tab bar of a panel (cross-panel move)
     // Use data object instead of regex matching
-    if (dropData?.type === 'searchbar' && dropData.panelId) {
+    if (dropData?.type === 'tab-bar' && dropData.panelId) {
       const targetPanelId = dropData.panelId;
       if (activeTab.panelId !== targetPanelId) {
         dispatch(moveTab({ tabId: activeId, targetPanelId }));

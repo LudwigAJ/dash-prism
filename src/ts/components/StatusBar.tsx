@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Info, Undo2, Lock, Trash2 } from 'lucide-react';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import {
   Tooltip,
@@ -12,7 +11,8 @@ import {
   Separator,
 } from '@components/ui';
 import { cn } from '@utils/cn';
-import { resolveStatusBarItems } from '@constants/statusBar';
+import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
+import { TabInfoRows } from '@components/TabInfoRows';
 import type { StatusBarItem } from '@types';
 import type { DashComponent, DashComponentApi } from '@types';
 import { isDashComponent } from '@types';
@@ -28,19 +28,25 @@ import {
   selectCanUndo,
   undo,
   resetWorkspace,
+  clearPersistedWorkspace,
 } from '@store';
 
 type StatusBarProps = {
   /** Array of PrismAction component specs to render */
   actions?: JSX.Element[];
-  lastSyncTime?: number;
+  /** The time of the last workspace change, in ms since the epoch */
+  lastSyncTime: number;
   onOpenHelp?: () => void;
 };
 
-export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
+/**
+ * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,
+ * then the PrismAction components of the `actions` prop.
+ */
+export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
-  const { clearPersistedState } = usePrism();
-  const { maxTabs, componentId = 'prism', statusBarItems, enableKeyboardShortcuts } = useConfig();
+  const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =
+    useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Select state from Redux
@@ -86,16 +92,14 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     );
 
     if (confirmed) {
-      // Clear persisted storage (localStorage/sessionStorage)
-      clearPersistedState();
+      clearPersistedWorkspace(componentId, persistenceType);
       // Reset reducer state to initial
       dispatch(resetWorkspace());
     }
-  }, [clearPersistedState, dispatch]);
+  }, [componentId, persistenceType, dispatch]);
 
-  const items = resolveStatusBarItems(statusBarItems);
-  const leftItems = items.filter((item) => item !== 'updated');
-  const showUpdated = items.includes('updated');
+  const leftItems = statusBarItems.filter((item) => item !== 'updated');
+  const showUpdated = statusBarItems.includes('updated');
 
   const segments: Record<Exclude<StatusBarItem, 'updated'>, React.ReactNode> = {
     reset: (
@@ -103,7 +107,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-reset"
+            data-testid="prism-status-bar-reset"
             aria-label="Reset workspace"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-destructive"
             onClick={handleReset}
@@ -119,7 +123,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-help"
+            data-testid="prism-status-bar-help"
             aria-label="Help"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-foreground"
             onClick={() => onOpenHelp?.()}
@@ -135,7 +139,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-undo"
+            data-testid="prism-status-bar-undo"
             aria-label="Undo last change"
             className={cn(
               'tw:rounded-sm tw:p-1 tw:transition-colors',
@@ -152,7 +156,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
         <TooltipContent>
           {canUndo
             ? enableKeyboardShortcuts
-              ? 'Undo last change (Ctrl+U)'
+              ? `Undo last change (${formatShortcut(SHORTCUTS.undo, isMacPlatform())})`
               : 'Undo last change'
             : 'Nothing to undo'}
         </TooltipContent>
@@ -161,7 +165,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     mode: (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-mode">
+          <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-mode">
             <span className="tw:text-muted-foreground">Mode:</span>
             <span className="tw:font-medium tw:text-foreground">{searchBarMode}</span>
           </div>
@@ -170,7 +174,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       </Tooltip>
     ),
     panels: (
-      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-panels">
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-panels">
         Panels: <span className="tw:font-medium tw:text-foreground">{panelCount}</span>
         {panelCount > 1 && (
           <span className="tw:text-muted-foreground">({activePanelId.slice(0, 8)})</span>
@@ -183,7 +187,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
           <button
             type="button"
             className="tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:px-1.5 tw:py-0.5 tw:transition-colors tw:hover:bg-muted"
-            data-testid="prism-statusbar-tab"
+            data-testid="prism-status-bar-tab"
           >
             Tab: <span className="tw:text-foreground">{activeTab?.name || '--'}</span>
             {activeTab?.locked && <Lock className="tw:size-[1em] tw:text-muted-foreground" />}
@@ -197,22 +201,14 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
             align="start"
           >
             <div className="tw:space-y-0">
-              <InfoRow label="Name" value={activeTab.name} />
-              <InfoRow label="Tab ID" value={activeTab.id} mono />
-              <InfoRow label="Panel ID" value={activeTab.panelId} mono />
-              <InfoRow label="Created" value={new Date(activeTab.createdAt).toLocaleString()} />
-              <InfoRow label="Layout" value={activeTab.layoutId || 'None'} />
-              <InfoRow label="Locked" value={activeTab.locked ? 'Yes' : 'No'} />
-              {activeTab.layoutParams && (
-                <InfoRow label="Params" value={JSON.stringify(activeTab.layoutParams)} />
-              )}
+              <TabInfoRows tab={activeTab} variant="popover" />
             </div>
           </PopoverContent>
         )}
       </Popover>
     ),
     count: (
-      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-count">
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-count">
         <span className="tw:text-foreground">
           {maxTabs >= 1 ? `${tabCount}/${maxTabs}` : tabCount}
         </span>
@@ -263,7 +259,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
                   {index > 0 && <Sep />}
                   <api.ExternalWrapper
                     component={enhancedActionSpec}
-                    componentPath={[componentId, 'actions', index]}
+                    componentPath={[componentId ?? 'prism', 'actions', index]}
                   />
                 </React.Fragment>
               );
@@ -285,7 +281,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
       {showUpdated && (
         <div
           className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground"
-          data-testid="prism-statusbar-updated"
+          data-testid="prism-status-bar-updated"
         >
           Updated: <span className="tw:text-foreground">{syncTimeDisplay}</span>
         </div>
@@ -297,21 +293,4 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
 /** Thin vertical separator between status bar segments. */
 function Sep() {
   return <Separator orientation="vertical" className="tw:h-3" />;
-}
-
-// Helper component for info rows
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="tw:flex tw:items-center tw:justify-between tw:gap-4 tw:border-b tw:border-border/50 tw:py-2 tw:last:border-0">
-      <span className="tw:text-xs tw:text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          'tw:text-xs tw:font-medium tw:text-foreground',
-          mono && 'tw:font-mono tw:text-muted-foreground'
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
 }

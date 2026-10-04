@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Toaster from shadcn/ui, built on Sonner.
+ * Local changes: each utility class has the `tw:` prefix. The theme comes from the Prism config
+ * instead of next-themes, and the toaster has the id of its Prism component, so that a toast shows
+ * only in the instance that raised it. The toasts show at the top center.
+ */
 import React from 'react';
 import { Toaster as Sonner } from 'sonner';
 import {
@@ -7,7 +13,7 @@ import {
   OctagonXIcon,
   Loader2Icon,
 } from 'lucide-react';
-import { useConfig } from '../../context/ConfigContext';
+import { useConfig } from '@context/ConfigContext';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -27,6 +33,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <OctagonXIcon className="tw:size-4" />,
         loading: <Loader2Icon className="tw:size-4 tw:animate-spin" />,
       }}
+      // The Sonner variables are not CSS properties that React knows, so the object needs the cast
       style={
         {
           '--normal-bg': 'var(--card)',

@@ -2,6 +2,8 @@
  * Pure helpers for Prism's keyboard shortcuts (no React, unit-testable).
  */
 
+import { SHORTCUTS, type Shortcut, type ShortcutAction } from '@constants/shortcuts';
+
 /** The subset of KeyboardEvent the matchers look at. */
 export type KeyChordEvent = {
   ctrlKey: boolean;
@@ -12,18 +14,34 @@ export type KeyChordEvent = {
   key: string;
 };
 
-/**
- * New tab: Ctrl+Alt+N (Cmd+Option+N on macOS).
- *
- * Plain Ctrl/Cmd+N is a browser-reserved shortcut ("new window") that Chrome,
- * Edge and Safari never deliver to the page, so the new-tab binding is a
- * three-key chord instead. It is matched on `code` because with Alt held macOS
- * reports a dead key ('˜') in `key` rather than 'n'.
- */
-export function isNewTabChord(event: KeyChordEvent): boolean {
+/** Tells if a key event is for the key of a shortcut, whatever the modifiers. */
+function matchesKey(event: KeyChordEvent, key: string): boolean {
+  if (key === 'Space') return event.code === 'Space' || event.key === ' ';
+  // With Alt held, macOS gives a dead key such as '˜' in `key`, so an Alt chord reads `code`.
+  if (event.altKey) return event.code === `Key${key}`;
+  return event.key.toLowerCase() === key.toLowerCase();
+}
+
+function matchesShortcut(event: KeyChordEvent, shortcut: Shortcut): boolean {
+  const hasControl = shortcut.ctrlOnly ? event.ctrlKey : event.ctrlKey || event.metaKey;
   return (
-    (event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.code === 'KeyN'
+    hasControl &&
+    event.altKey === Boolean(shortcut.alt) &&
+    event.shiftKey === Boolean(shortcut.shift) &&
+    matchesKey(event, shortcut.key)
   );
+}
+
+function isShortcutAction(name: string): name is ShortcutAction {
+  return name in SHORTCUTS;
+}
+
+/** Finds the action whose shortcut in SHORTCUTS a key event presses, or null. */
+export function matchShortcut(event: KeyChordEvent): ShortcutAction | null {
+  for (const [action, shortcut] of Object.entries(SHORTCUTS)) {
+    if (isShortcutAction(action) && matchesShortcut(event, shortcut)) return action;
+  }
+  return null;
 }
 
 /**

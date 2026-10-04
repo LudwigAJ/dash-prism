@@ -99,7 +99,6 @@ export type {
 } from './store';
 
 // Hooks
-export { usePrism, useActiveTab } from './hooks/usePrism';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useLastChangeTime } from './hooks/useLastChangeTime';
 export { useShareLink, useShareLinkListener } from './hooks/useShareLinks';

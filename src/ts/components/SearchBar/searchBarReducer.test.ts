@@ -1,4 +1,3 @@
-// src/ts/components/SearchBar/searchBarReducer.test.ts
 import { describe, it, expect } from 'vitest';
 import {
   searchBarReducer,
@@ -17,7 +16,7 @@ describe('deriveMode', () => {
     paramValues: {},
     currentParamIndex: 0,
     isUserSearching: false,
-    isPendingLayout: null,
+    pendingLayoutId: null,
     paramError: null,
     activeChoice: null,
   };
@@ -44,26 +43,36 @@ describe('deriveMode', () => {
   });
 
   it('returns params when layout selected with params', () => {
-    const state = { ...baseState, selectedLayoutId: 'chart', currentParamIndex: 0 };
-    const context = { ...baseContext, selectedLayout: { hasParams: true, hasOptions: false } };
+    const state: SearchBarState = { ...baseState, selectedLayoutId: 'chart', currentParamIndex: 0 };
+    const context: ModeContext = {
+      ...baseContext,
+      selectedLayout: { hasParams: true, hasOptions: false },
+    };
     expect(deriveMode(state, context)).toBe('params');
   });
 
   it('returns options when layout selected with options only', () => {
-    const state = { ...baseState, selectedLayoutId: 'chart' };
-    const context = { ...baseContext, selectedLayout: { hasParams: false, hasOptions: true } };
+    const state: SearchBarState = { ...baseState, selectedLayoutId: 'chart' };
+    const context: ModeContext = {
+      ...baseContext,
+      selectedLayout: { hasParams: false, hasOptions: true },
+    };
     expect(deriveMode(state, context)).toBe('options');
   });
 
   it('returns search when isUserSearching is true', () => {
-    const state = { ...baseState, isUserSearching: true };
-    const context = { ...baseContext, hasCurrentLayout: true };
+    const state: SearchBarState = { ...baseState, isUserSearching: true };
+    const context: ModeContext = { ...baseContext, hasCurrentLayout: true };
     expect(deriveMode(state, context)).toBe('search');
   });
 
   it('prioritizes hidden over all other modes', () => {
-    const state = { ...baseState, isUserSearching: true, selectedLayoutId: 'chart' };
-    const context = {
+    const state: SearchBarState = {
+      ...baseState,
+      isUserSearching: true,
+      selectedLayoutId: 'chart',
+    };
+    const context: ModeContext = {
       searchBarsHidden: true,
       hasCurrentLayout: true,
       selectedLayout: { hasParams: true, hasOptions: false },
@@ -72,8 +81,8 @@ describe('deriveMode', () => {
   });
 
   it('prioritizes params over options when both exist', () => {
-    const state = { ...baseState, selectedLayoutId: 'chart', currentParamIndex: 0 };
-    const context = {
+    const state: SearchBarState = { ...baseState, selectedLayoutId: 'chart', currentParamIndex: 0 };
+    const context: ModeContext = {
       ...baseContext,
       selectedLayout: { hasParams: true, hasOptions: true },
     };
@@ -82,19 +91,19 @@ describe('deriveMode', () => {
 });
 
 describe('searchBarReducer', () => {
-  it('RESET clears all state', () => {
-    const state = {
+  it('LAYOUT_APPLIED clears all state and sets the dropdown as asked', () => {
+    const state: SearchBarState = {
       ...createInitialState(),
       searchQuery: 'test',
       selectedLayoutId: 'chart',
       isUserSearching: true,
+      pendingLayoutId: 'chart',
     };
-    const action: SearchBarAction = { type: 'RESET' };
-    const newState = searchBarReducer(state, action);
+    const closed = searchBarReducer(state, { type: 'LAYOUT_APPLIED', showDropdown: false });
+    expect(closed).toEqual(createInitialState());
 
-    expect(newState.searchQuery).toBe('');
-    expect(newState.selectedLayoutId).toBeNull();
-    expect(newState.isUserSearching).toBe(false);
+    const open = searchBarReducer(state, { type: 'LAYOUT_APPLIED', showDropdown: true });
+    expect(open).toEqual({ ...createInitialState(), showDropdown: true });
   });
 
   it('ENTER_SEARCH_MODE sets isUserSearching and opens dropdown', () => {
@@ -108,7 +117,7 @@ describe('searchBarReducer', () => {
   });
 
   it('ENTER_SEARCH_MODE clears selected layout and params', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       selectedLayoutId: 'chart',
       paramValues: { type: 'bar' },
@@ -123,7 +132,7 @@ describe('searchBarReducer', () => {
   });
 
   it('SELECT_LAYOUT sets selectedLayoutId and clears query', () => {
-    const state = { ...createInitialState(), searchQuery: 'chart' };
+    const state: SearchBarState = { ...createInitialState(), searchQuery: 'chart' };
     const action: SearchBarAction = { type: 'SELECT_LAYOUT', layoutId: 'chart-view' };
     const newState = searchBarReducer(state, action);
 
@@ -132,7 +141,7 @@ describe('searchBarReducer', () => {
   });
 
   it('ADVANCE_PARAM increments currentParamIndex', () => {
-    const state = { ...createInitialState(), currentParamIndex: 0 };
+    const state: SearchBarState = { ...createInitialState(), currentParamIndex: 0 };
     const action: SearchBarAction = { type: 'ADVANCE_PARAM' };
     const newState = searchBarReducer(state, action);
 
@@ -140,7 +149,7 @@ describe('searchBarReducer', () => {
   });
 
   it('RETURN_TO_IDLE clears isUserSearching but preserves selection', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       isUserSearching: true,
       selectedLayoutId: 'chart',
@@ -171,21 +180,6 @@ describe('searchBarReducer', () => {
     expect(hide.showDropdown).toBe(false);
   });
 
-  it('CLEAR_SELECTION clears selectedLayoutId and params', () => {
-    const state = {
-      ...createInitialState(),
-      selectedLayoutId: 'chart',
-      paramValues: { type: 'bar' },
-      currentParamIndex: 1,
-    };
-    const action: SearchBarAction = { type: 'CLEAR_SELECTION' };
-    const newState = searchBarReducer(state, action);
-
-    expect(newState.selectedLayoutId).toBeNull();
-    expect(newState.paramValues).toEqual({});
-    expect(newState.currentParamIndex).toBe(0);
-  });
-
   it('SET_PARAM_VALUES stores the map it is given', () => {
     const state = createInitialState();
     const action: SearchBarAction = { type: 'SET_PARAM_VALUES', values: { type: 'bar' } };
@@ -198,7 +192,7 @@ describe('searchBarReducer', () => {
     // Callers build the whole map; merging silently resurrected a value the
     // user had cleared to fall back on the callback's default, and it then
     // reached the server as an empty string.
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       paramValues: { type: 'bar', size: 'large' },
     };
@@ -212,7 +206,7 @@ describe('searchBarReducer', () => {
   });
 
   it('RESET_PARAMS clears all param values and index', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       paramValues: { type: 'bar', size: 'large' },
       currentParamIndex: 2,
@@ -224,17 +218,17 @@ describe('searchBarReducer', () => {
     expect(newState.currentParamIndex).toBe(0);
   });
 
-  it('SET_PENDING_LAYOUT updates isPendingLayout', () => {
+  it('SET_PENDING_LAYOUT updates pendingLayoutId', () => {
     const state = createInitialState();
     const set = searchBarReducer(state, { type: 'SET_PENDING_LAYOUT', layoutId: 'chart' });
-    expect(set.isPendingLayout).toBe('chart');
+    expect(set.pendingLayoutId).toBe('chart');
 
     const clear = searchBarReducer(set, { type: 'SET_PENDING_LAYOUT', layoutId: null });
-    expect(clear.isPendingLayout).toBeNull();
+    expect(clear.pendingLayoutId).toBeNull();
   });
 
   it('RETURN_TO_IDLE sets dropdown visibility explicitly', () => {
-    const state = { ...createInitialState(), showDropdown: true };
+    const state: SearchBarState = { ...createInitialState(), showDropdown: true };
 
     const close = searchBarReducer(state, { type: 'RETURN_TO_IDLE', showDropdown: false });
     expect(close.showDropdown).toBe(false);
@@ -259,13 +253,13 @@ describe('createInitialState', () => {
     expect(state.paramValues).toEqual({});
     expect(state.currentParamIndex).toBe(0);
     expect(state.isUserSearching).toBe(false);
-    expect(state.isPendingLayout).toBeNull();
+    expect(state.pendingLayoutId).toBeNull();
   });
 });
 
 describe('DISMISS action', () => {
   it('closes dropdown and returns to idle', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       showDropdown: true,
       isUserSearching: true,
@@ -278,7 +272,7 @@ describe('DISMISS action', () => {
   });
 
   it('clears selection when clearSelection is true', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       selectedLayoutId: 'chart',
       paramValues: { type: 'bar' },
@@ -293,7 +287,7 @@ describe('DISMISS action', () => {
   });
 
   it('preserves selection when clearSelection is false', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
       selectedLayoutId: 'chart',
       paramValues: { type: 'bar' },
@@ -308,18 +302,18 @@ describe('DISMISS action', () => {
   });
 
   it('clears pending layout', () => {
-    const state = {
+    const state: SearchBarState = {
       ...createInitialState(),
-      isPendingLayout: 'chart',
+      pendingLayoutId: 'chart',
     };
     const action: SearchBarAction = { type: 'DISMISS', clearSelection: false };
     const newState = searchBarReducer(state, action);
 
-    expect(newState.isPendingLayout).toBeNull();
+    expect(newState.pendingLayoutId).toBeNull();
   });
 });
 
-describe('paramError (doc 04 §3.7)', () => {
+describe('paramError', () => {
   it('SET_PARAM_ERROR stores the message and typing/advancing/resetting clears it', () => {
     let state = createInitialState();
     state = searchBarReducer(state, { type: 'SET_PARAM_ERROR', message: 'Must be a number' });
@@ -330,7 +324,9 @@ describe('paramError (doc 04 §3.7)', () => {
     ).toBeNull();
     expect(searchBarReducer(state, { type: 'ADVANCE_PARAM' }).paramError).toBeNull();
     expect(searchBarReducer(state, { type: 'RESET_PARAMS' }).paramError).toBeNull();
-    expect(searchBarReducer(state, { type: 'CLEAR_SELECTION' }).paramError).toBeNull();
+    expect(
+      searchBarReducer(state, { type: 'DISMISS', clearSelection: true }).paramError
+    ).toBeNull();
     expect(
       searchBarReducer(state, { type: 'SET_PARAM_ERROR', message: null }).paramError
     ).toBeNull();
@@ -357,8 +353,8 @@ describe('activeChoice', () => {
       searchBarReducer(state, { type: 'SET_PARAM_VALUES', values: { kind: 'l' } }),
       searchBarReducer(state, { type: 'ADVANCE_PARAM' }),
       searchBarReducer(state, { type: 'RESET_PARAMS' }),
-      searchBarReducer(state, { type: 'CLEAR_SELECTION' }),
-      searchBarReducer(state, { type: 'RESET' }),
+      searchBarReducer(state, { type: 'DISMISS', clearSelection: true }),
+      searchBarReducer(state, { type: 'LAYOUT_APPLIED', showDropdown: false }),
     ];
     expect(next.map((s) => s.activeChoice)).toEqual([null, null, null, null, null]);
   });

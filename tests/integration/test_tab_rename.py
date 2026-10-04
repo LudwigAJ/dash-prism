@@ -50,7 +50,10 @@ def test_rename_via_context_menu(prism_app_with_layouts):
 
 
 def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
-    """The rename input has no visible label, so its name must come from aria-label."""
+    """The rename input has no visible label, so its name must come from aria-label.
+
+    The input is next to the tab trigger, because a button cannot hold an input.
+    """
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
@@ -59,6 +62,10 @@ def test_rename_input_has_an_accessible_name(prism_app_with_layouts):
     rename_input_selector = testutils.trigger_rename_mode(duo, tab_id)
 
     assert duo.find_element(rename_input_selector).accessible_name == "Tab name"
+    assert duo.driver.execute_script(
+        "return document.querySelector(arguments[0]).closest(\"[role='tab']\") === null;",
+        rename_input_selector,
+    ), "The rename input must not be inside the tab trigger"
 
 
 def test_rename_via_double_click(prism_app_with_layouts):

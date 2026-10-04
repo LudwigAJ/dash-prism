@@ -1,4 +1,3 @@
-// src/ts/components/SearchBar/searchBarUtils.ts
 import type { LayoutMeta } from '@types';
 
 /**

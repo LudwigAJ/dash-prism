@@ -33,7 +33,33 @@ All notable changes to Dash Prism are recorded here. The project follows
   others). Each utility class now has the form `tw:flex`, and no class name in a
   layout meets a Prism rule. A host that styled the inside of Prism with the old
   Tailwind class names must use the new names. These names were never public
-  API. The class `scrollbar-none` is now `prism-scrollbar-none`.
+  API. The class `scrollbar-none` is now `prism-scroll-bar-none`.
+- **Each word of a compound in a Prism class name or test id has its own
+  hyphen.** A host stylesheet or a host test that targets one of the old names
+  must use the new name:
+  - The classes `prism-tabbar`, `prism-tabbar-scroll`, `prism-tabbar-add` and
+    `prism-tabbar-split` are now `prism-tab-bar`, `prism-tab-bar-scroll`,
+    `prism-tab-bar-add` and `prism-tab-bar-split`.
+  - The classes `prism-searchbar`, `prism-searchbar-display`,
+    `prism-searchbar-layout-name`, `prism-searchbar-params` and
+    `prism-searchbar-resize-handle` are now `prism-search-bar`,
+    `prism-search-bar-display`, `prism-search-bar-layout-name`,
+    `prism-search-bar-params` and `prism-search-bar-resize-handle`.
+  - The test ids `prism-tabbar-add-button` and `prism-tabbar-split-button` are
+    now `prism-tab-bar-add-button` and `prism-tab-bar-split-button`.
+  - The test ids `prism-searchbar`, `prism-searchbar-display`,
+    `prism-searchbar-input`, `prism-searchbar-param-input`,
+    `prism-searchbar-param-error`, `prism-searchbar-param-choices` and
+    `prism-searchbar-param-choice-<value>` are now `prism-search-bar`,
+    `prism-search-bar-display`, `prism-search-bar-input`,
+    `prism-search-bar-param-input`, `prism-search-bar-param-error`,
+    `prism-search-bar-param-choices` and `prism-search-bar-param-choice-<value>`.
+  - The test ids `prism-statusbar-reset`, `-help`, `-undo`, `-mode`, `-panels`,
+    `-tab`, `-count` and `-updated` are now `prism-status-bar-reset`, `-help`,
+    `-undo`, `-mode`, `-panels`, `-tab`, `-count` and `-updated`.
+
+  A host test that selects the tabs by the test id prefix `prism-tab-` now also
+  gets the tab bar buttons, so it must leave out `prism-tab-bar-`.
 - **Prism no longer builds or sends a JSON Schema for a layout.** The
   `LayoutRegistration.schema` attribute and the `schema` key of
   `get_registered_layouts_metadata()` are removed, so the `registeredLayouts`
@@ -90,15 +116,34 @@ All notable changes to Dash Prism are recorded here. The project follows
 - Reset workspace clears the storage of the active `persistence_type` only. A
   stale entry left in the other storage after a `persistence_type` switch is
   never read and stays until cleared by hand.
+- The tab close button is a native button next to the tab, and no longer a tab
+  stop. `Delete` (or `Backspace`) on a focused tab closes it, unless the tab is
+  locked or its panel is pinned. The wrapper of a tab is no longer a
+  `role="button"` with its own tab stop, so `Tab` goes from the active tab to
+  the add button. A keyboard drag starts from the focused tab, and the focus
+  comes back to that tab after the drop.
+- `Enter` on a focused tab selects it and no longer starts a keyboard drag.
+  `Space` selects the tab and starts the drag.
+- A keyboard shortcut works only with exactly its keys. An extra Shift or Alt
+  stops it, so `Ctrl+Shift+D` and `Ctrl+Alt+D` no longer close a tab. The
+  legacy `'Spacebar'` key value of old browsers is no longer read.
+- The context menu, the undo tooltip and the empty-tab hint write the shortcut
+  keys for the platform, as the help dialog already did: `Ctrl+R` on Windows and
+  Linux, `⌃R` on macOS. Before, the context menu showed `⌃R` on every platform.
+  The help dialog lists Previous tab and Next tab as two rows.
 
 ### Removed
 
 - The bundle no longer re-exports internal store helpers (`redo`,
   `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
   `usePanelTabs`). They were never documented.
+- The bundle no longer exports the hooks `usePrism` and `useActiveTab`. They were
+  never documented.
 
 ### Fixed
 
+- A click on the close button of an inactive tab no longer selects that tab
+  before it closes it, so the selected tab stays selected.
 - `dash_prism.init()` no longer warns that it cannot find the Prism component
   when `app.layout` is an async function. `init` cannot call an async function,
   so it does not check that layout. Before, every app with an async layout

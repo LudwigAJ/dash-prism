@@ -22,7 +22,8 @@ import {
 } from '@store';
 import { cn } from '@utils/cn';
 import { usePrismToast } from '@hooks/usePrismToast';
-import { DEFAULT_STATUS_BAR_ITEMS } from '@constants/statusBar';
+import { resolveStatusBarItems } from '@constants/statusBar';
+import { useLatestRef } from '@hooks/useLatestRef';
 import type {
   RegisteredLayouts,
   Theme,
@@ -31,7 +32,6 @@ import type {
   StatusBarPosition,
   PersistenceType,
   EmptyTabView,
-  StatusBarItem,
 } from '@types';
 import '../global.css';
 import { type DashComponentProps } from 'props';
@@ -136,6 +136,8 @@ export type PrismProps = {
    */
   statusBarPosition?: StatusBarPosition;
 
+  // The union repeats StatusBarItem on purpose: dash-generate-components cannot follow the alias,
+  // and with it the Python component would type the prop as Any.
   /**
    * Which built-in status bar segments to show, in this order: 'reset',
    * 'help', 'undo', 'mode', 'panels', 'tab', 'count', 'updated'. 'updated' is
@@ -267,25 +269,10 @@ function PrismInner({
   //  - maxTabs and maxPanels: may be changed from a callback at any time
   // componentId and persistenceType are baked into the persist key/engine, so
   // Prism remounts PrismInner (via `key`) when either changes.
-  const setPropsRef = useRef(config.setProps);
-  useEffect(() => {
-    setPropsRef.current = config.setProps;
-  }, [config.setProps]);
-
-  const registeredLayoutsRef = useRef(config.registeredLayouts);
-  useEffect(() => {
-    registeredLayoutsRef.current = config.registeredLayouts;
-  }, [config.registeredLayouts]);
-
-  const maxTabsRef = useRef(config.maxTabs);
-  useEffect(() => {
-    maxTabsRef.current = config.maxTabs;
-  }, [config.maxTabs]);
-
-  const maxPanelsRef = useRef(config.maxPanels);
-  useEffect(() => {
-    maxPanelsRef.current = config.maxPanels;
-  }, [config.maxPanels]);
+  const setPropsRef = useLatestRef(config.setProps);
+  const registeredLayoutsRef = useLatestRef(config.registeredLayouts);
+  const maxTabsRef = useLatestRef(config.maxTabs);
+  const maxPanelsRef = useLatestRef(config.maxPanels);
 
   const [{ store, persistor, cleanup }] = useState(() =>
     createPrismStore({
@@ -429,13 +416,11 @@ export function Prism({
   // A fresh array literal arrives on every render (the default above, or a new
   // list from Dash); key it by content so the config context stays referentially
   // stable and consumers do not re-render on every sync. An explicit None from
-  // Python arrives as null, which bypasses the destructuring default: treat it
-  // (and any non-array) as "all segments".
-  const statusBarItemsKey = (
-    Array.isArray(statusBarItems) ? statusBarItems : DEFAULT_STATUS_BAR_ITEMS
-  ).join('|');
-  const stableStatusBarItems = useMemo(
-    () => statusBarItemsKey.split('|').filter(Boolean) as StatusBarItem[],
+  // Python arrives as null, which bypasses the destructuring default:
+  // resolveStatusBarItems treats it (and any non-array) as "all segments".
+  const statusBarItemsKey = Array.isArray(statusBarItems) ? statusBarItems.join('|') : null;
+  const resolvedStatusBarItems = useMemo(
+    () => resolveStatusBarItems(statusBarItemsKey?.split('|')),
     [statusBarItemsKey]
   );
 
@@ -477,12 +462,11 @@ export function Prism({
           size={size}
           maxTabs={maxTabs}
           maxPanels={maxPanels}
-          persistence={persistence}
           persistenceType={persistenceType}
           searchBarPlaceholder={searchBarPlaceholder}
           showStatusBar={showStatusBar}
           statusBarPosition={statusBarPosition}
-          statusBarItems={stableStatusBarItems}
+          statusBarItems={resolvedStatusBarItems}
           initialLayout={initialLayout}
           newTabOpensDropdown={newTabOpensDropdown}
           emptyTabView={emptyTabView}

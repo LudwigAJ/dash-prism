@@ -1,9 +1,17 @@
+/**
+ * @fileoverview Context menu primitives from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix. The menu content renders in the portal
+ * container of the Prism root, so that it takes the theme of its own Prism instance. The item and
+ * the sub trigger keep their classes in `cva` variants, and the components use `forwardRef`.
+ * `ContextMenuCheckboxItem`, `ContextMenuLabel` and `ContextMenuGroup` stay although Prism does
+ * not use them. They carry the `@public` tag, so knip does not report them.
+ */
 import * as React from 'react';
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { usePortalContainer } from '../../context/PortalContainerContext';
-import { cn } from '../../utils/cn';
+import { usePortalContainer } from '@context/PortalContainerContext';
+import { cn } from '@utils/cn';
 
 const contextMenuItemVariants = cva(
   'tw:focus:bg-accent tw:focus:text-accent-foreground tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:px-2 tw:py-1.5 tw:text-sm tw:outline-hidden tw:select-none tw:data-[disabled]:pointer-events-none tw:data-[disabled]:opacity-50 tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
@@ -41,21 +49,9 @@ const contextMenuSubTriggerVariants = cva(
   }
 );
 
-const contextMenuCheckboxItemVariants = cva(
-  'tw:focus:bg-accent tw:focus:text-accent-foreground tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:py-1.5 tw:pr-2 tw:pl-8 tw:text-sm tw:outline-hidden tw:select-none tw:data-[disabled]:pointer-events-none tw:data-[disabled]:opacity-50 tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
-  {
-    variants: {},
-    defaultVariants: {},
-  }
-);
-
-const contextMenuRadioItemVariants = cva(
-  'tw:focus:bg-accent tw:focus:text-accent-foreground tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:py-1.5 tw:pr-2 tw:pl-8 tw:text-sm tw:outline-hidden tw:select-none tw:data-[disabled]:pointer-events-none tw:data-[disabled]:opacity-50 tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4',
-  {
-    variants: {},
-    defaultVariants: {},
-  }
-);
+// The checkbox item and the radio item share their classes.
+const CHOICE_ITEM_CLASS =
+  'tw:focus:bg-accent tw:focus:text-accent-foreground tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:py-1.5 tw:pr-2 tw:pl-8 tw:text-sm tw:outline-hidden tw:select-none tw:data-[disabled]:pointer-events-none tw:data-[disabled]:opacity-50 tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*="size-"])]:size-4';
 
 function ContextMenu({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -67,7 +63,10 @@ function ContextMenuTrigger({
   return <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />;
 }
 
-function ContextMenuGroup({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Group>) {
+/** @public */
+export function ContextMenuGroup({
+  ...props
+}: React.ComponentProps<typeof ContextMenuPrimitive.Group>) {
   return <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />;
 }
 
@@ -158,19 +157,15 @@ const ContextMenuItem = React.forwardRef<
 ));
 ContextMenuItem.displayName = 'ContextMenuItem';
 
-type ContextMenuCheckboxItemProps = React.ComponentPropsWithoutRef<
-  typeof ContextMenuPrimitive.CheckboxItem
-> &
-  VariantProps<typeof contextMenuCheckboxItemVariants>;
-
-const ContextMenuCheckboxItem = React.forwardRef<
+/** @public */
+export const ContextMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.CheckboxItem>,
-  ContextMenuCheckboxItemProps
+  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.CheckboxItem>
 >(({ className, children, checked, ...props }, ref) => (
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     data-slot="context-menu-checkbox-item"
-    className={cn(contextMenuCheckboxItemVariants({}), className)}
+    className={cn(CHOICE_ITEM_CLASS, className)}
     checked={checked}
     {...props}
   >
@@ -184,19 +179,14 @@ const ContextMenuCheckboxItem = React.forwardRef<
 ));
 ContextMenuCheckboxItem.displayName = 'ContextMenuCheckboxItem';
 
-type ContextMenuRadioItemProps = React.ComponentPropsWithoutRef<
-  typeof ContextMenuPrimitive.RadioItem
-> &
-  VariantProps<typeof contextMenuRadioItemVariants>;
-
 const ContextMenuRadioItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.RadioItem>,
-  ContextMenuRadioItemProps
+  React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.RadioItem>
 >(({ className, children, ...props }, ref) => (
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     data-slot="context-menu-radio-item"
-    className={cn(contextMenuRadioItemVariants({}), className)}
+    className={cn(CHOICE_ITEM_CLASS, className)}
     {...props}
   >
     <span className="tw:pointer-events-none tw:absolute tw:left-2 tw:flex tw:size-3.5 tw:items-center tw:justify-center">
@@ -209,7 +199,8 @@ const ContextMenuRadioItem = React.forwardRef<
 ));
 ContextMenuRadioItem.displayName = 'ContextMenuRadioItem';
 
-const ContextMenuLabel = React.forwardRef<
+/** @public */
+export const ContextMenuLabel = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Label> & { inset?: boolean }
 >(({ className, inset, ...props }, ref) => (
@@ -252,18 +243,11 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
-  contextMenuItemVariants,
-  ContextMenuCheckboxItem,
-  contextMenuCheckboxItemVariants,
   ContextMenuRadioItem,
-  contextMenuRadioItemVariants,
-  ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuShortcut,
-  ContextMenuGroup,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-  contextMenuSubTriggerVariants,
   ContextMenuRadioGroup,
 };

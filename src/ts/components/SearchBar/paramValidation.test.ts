@@ -1,5 +1,5 @@
 /**
- * Unit tests for the client-side parameter pre-validation (doc 04 §3.7).
+ * Unit tests for the client-side parameter pre-validation.
  * The server remains the source of truth; these mirror its coercion rules.
  */
 
@@ -217,10 +217,10 @@ describe('stepActiveChoice', () => {
 
 describe('stringifyParams', () => {
   const params = [
-    { name: 'n', type: 'integer', hasDefault: true, required: false },
-    { name: 'country', type: 'string', hasDefault: false, required: true },
-    { name: 'tags', type: 'array', hasDefault: true, required: false },
-  ] as unknown as Parameters<typeof stringifyParams>[0];
+    param({ name: 'n', type: 'integer', hasDefault: true, required: false }),
+    param({ name: 'country', type: 'string', hasDefault: false, required: true }),
+    param({ name: 'tags', type: 'array', hasDefault: true, required: false }),
+  ];
 
   it('drops a blank value for a parameter that has a default', () => {
     // The search bar omits such a parameter so the callback's own default

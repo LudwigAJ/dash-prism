@@ -11,8 +11,8 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-RESET_BUTTON = "[data-testid='prism-statusbar-reset']"
-TAB_SEGMENT = "[data-testid='prism-statusbar-tab']"
+RESET_BUTTON = "[data-testid='prism-status-bar-reset']"
+TAB_SEGMENT = "[data-testid='prism-status-bar-tab']"
 POPOVER = "[data-slot='popover-content']"
 ACTION_BUTTON = "[data-testid='prism-action-save']"
 
@@ -104,10 +104,10 @@ def _segment_order(duo) -> list[str]:
     """Names of the status bar segments, in the order they appear in the DOM."""
     testids = duo.driver.execute_script(
         "return Array.from("
-        "  document.querySelectorAll('.prism-status-bar [data-testid^=\"prism-statusbar-\"]')"
+        "  document.querySelectorAll('.prism-status-bar [data-testid^=\"prism-status-bar-\"]')"
         ").map(el => el.getAttribute('data-testid'));"
     )
-    return [testid.removeprefix("prism-statusbar-") for testid in testids]
+    return [testid.removeprefix("prism-status-bar-") for testid in testids]
 
 
 def test_status_bar_shown_by_default(dash_duo):
@@ -119,10 +119,10 @@ def test_status_bar_shown_by_default(dash_duo):
 def test_status_bar_items_selects_segments(dash_duo):
     duo = _start(dash_duo, ["count", "help"])
     duo.wait_for_element(testutils.HELP_BUTTON, timeout=10)
-    duo.wait_for_element("[data-testid='prism-statusbar-count']", timeout=10)
+    duo.wait_for_element("[data-testid='prism-status-bar-count']", timeout=10)
 
     for hidden in ("reset", "undo", "mode", "panels", "tab", "updated"):
-        assert duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
+        assert duo.find_elements(f"[data-testid='prism-status-bar-{hidden}']") == []
     # Actions are always appended
     duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
@@ -140,7 +140,7 @@ def test_status_bar_items_follows_the_listed_order(dash_duo):
 def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
     """'updated' is pinned right whatever position it is listed in."""
     duo = _start(dash_duo, ["updated", "count", "reset"])
-    duo.wait_for_element("[data-testid='prism-statusbar-updated']", timeout=10)
+    duo.wait_for_element("[data-testid='prism-status-bar-updated']", timeout=10)
 
     assert _segment_order(duo) == ["count", "reset", "updated"]
 
@@ -150,4 +150,4 @@ def test_status_bar_items_empty_leaves_only_actions(dash_duo):
     duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
     for hidden in ("reset", "help", "undo", "mode", "panels", "tab", "count", "updated"):
-        assert duo.find_elements(f"[data-testid='prism-statusbar-{hidden}']") == []
+        assert duo.find_elements(f"[data-testid='prism-status-bar-{hidden}']") == []

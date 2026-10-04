@@ -1,5 +1,6 @@
 import type { LayoutParam, ParamType, ParamConstraints } from '@types';
 
+/** Holds the result of a check of one parameter input: a value to submit, an omission, or an error. */
 export type ParamCheck =
   /** Submits `value` (always a string on the wire). */
   | { ok: true; value: string }
@@ -30,38 +31,46 @@ function parseJsonArray(text: string): string[] | null {
   }
 }
 
-function checkNumber(kind: 'integer' | 'number', raw: string, c: ParamConstraints): string | null {
+function checkNumber(
+  kind: 'integer' | 'number',
+  raw: string,
+  constraints: ParamConstraints
+): string | null {
   if (kind === 'integer' ? !INTEGER_RE.test(raw) : !Number.isFinite(Number(raw)) || raw === '') {
     return kind === 'integer' ? 'Must be a whole number' : 'Must be a number';
   }
   const n = Number(raw);
-  if (c.minimum !== undefined && n < c.minimum) return `Must be at least ${c.minimum}`;
-  if (c.exclusiveMinimum !== undefined && n <= c.exclusiveMinimum) {
-    return `Must be greater than ${c.exclusiveMinimum}`;
+  if (constraints.minimum !== undefined && n < constraints.minimum) {
+    return `Must be at least ${constraints.minimum}`;
   }
-  if (c.maximum !== undefined && n > c.maximum) return `Must be at most ${c.maximum}`;
-  if (c.exclusiveMaximum !== undefined && n >= c.exclusiveMaximum) {
-    return `Must be less than ${c.exclusiveMaximum}`;
+  if (constraints.exclusiveMinimum !== undefined && n <= constraints.exclusiveMinimum) {
+    return `Must be greater than ${constraints.exclusiveMinimum}`;
+  }
+  if (constraints.maximum !== undefined && n > constraints.maximum) {
+    return `Must be at most ${constraints.maximum}`;
+  }
+  if (constraints.exclusiveMaximum !== undefined && n >= constraints.exclusiveMaximum) {
+    return `Must be less than ${constraints.exclusiveMaximum}`;
   }
   return null;
 }
 
-function checkLength(len: number, c: ParamConstraints, unit: string): string | null {
-  if (c.minLength !== undefined && len < c.minLength) {
-    return `Must have at least ${c.minLength} ${unit}`;
+function checkLength(len: number, constraints: ParamConstraints, unit: string): string | null {
+  if (constraints.minLength !== undefined && len < constraints.minLength) {
+    return `Must have at least ${constraints.minLength} ${unit}`;
   }
-  if (c.maxLength !== undefined && len > c.maxLength) {
-    return `Must have at most ${c.maxLength} ${unit}`;
+  if (constraints.maxLength !== undefined && len > constraints.maxLength) {
+    return `Must have at most ${constraints.maxLength} ${unit}`;
   }
   return null;
 }
 
 function checkScalar(type: ParamType, raw: string, param: LayoutParam): string | null {
-  const c = param.constraints ?? {};
+  const constraints = param.constraints ?? {};
   switch (type) {
     case 'integer':
     case 'number':
-      return checkNumber(type, raw, c);
+      return checkNumber(type, raw, constraints);
     case 'boolean': {
       const w = raw.trim().toLowerCase();
       return TRUE_WORDS.has(w) || FALSE_WORDS.has(w) ? null : 'Must be true or false';
@@ -78,11 +87,13 @@ function checkScalar(type: ParamType, raw: string, param: LayoutParam): string |
         : `Must be one of: ${choices.map(String).join(', ')}`;
     }
     case 'string': {
-      const lengthError = checkLength(raw.length, c, 'characters');
+      const lengthError = checkLength(raw.length, constraints, 'characters');
       if (lengthError) return lengthError;
-      if (c.pattern) {
+      if (constraints.pattern) {
         try {
-          if (!new RegExp(c.pattern).test(raw)) return `Must match pattern ${c.pattern}`;
+          if (!new RegExp(constraints.pattern).test(raw)) {
+            return `Must match pattern ${constraints.pattern}`;
+          }
         } catch {
           /* invalid JS regex (e.g. Python-only syntax): let the server decide */
         }
@@ -139,17 +150,17 @@ export function checkParamInput(param: LayoutParam, rawInput: string): ParamChec
 
 /** Short inline hint shown next to the input, e.g. "integer, 1-100" or "bar | line". */
 export function formatParamHint(param: LayoutParam): string {
-  const c = param.constraints ?? {};
+  const constraints = param.constraints ?? {};
   const parts: string[] = [];
   if (param.type === 'enum' && param.choices?.length) {
     return param.choices.map(String).join(' | ');
   }
   if (param.type && param.type !== 'unknown') parts.push(param.type);
-  const lo = c.minimum ?? c.exclusiveMinimum;
-  const hi = c.maximum ?? c.exclusiveMaximum;
+  const lo = constraints.minimum ?? constraints.exclusiveMinimum;
+  const hi = constraints.maximum ?? constraints.exclusiveMaximum;
   if (lo !== undefined || hi !== undefined) parts.push(`${lo ?? ''}-${hi ?? ''}`);
-  if (c.minLength !== undefined || c.maxLength !== undefined) {
-    parts.push(`len ${c.minLength ?? ''}-${c.maxLength ?? ''}`);
+  if (constraints.minLength !== undefined || constraints.maxLength !== undefined) {
+    parts.push(`len ${constraints.minLength ?? ''}-${constraints.maxLength ?? ''}`);
   }
   if (param.nullable) parts.push('optional');
   return parts.join(', ');

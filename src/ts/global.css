@@ -247,11 +247,11 @@
   background-color: var(--muted-foreground);
 }
 
-.prism-root .prism-scrollbar-none {
+.prism-root .prism-scroll-bar-none {
   scrollbar-width: none;
 }
 
-.prism-root .prism-scrollbar-none::-webkit-scrollbar {
+.prism-root .prism-scroll-bar-none::-webkit-scrollbar {
   display: none;
 }
 
@@ -259,7 +259,7 @@
    TAB BAR SIZING (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
-.prism-tabbar {
+.prism-tab-bar {
   background: var(--background);
   height: 2.3em;
   min-height: 2.3em;
@@ -283,24 +283,34 @@
   height: 1em;
 }
 
-.prism-root [data-slot='tabs-trigger'] button {
-  padding: 0.15em;
-}
-
 .prism-root [data-slot='tabs-trigger'].prism-tab-default {
   border-color: var(--border);
+}
+
+/*
+ * The close button sits next to the trigger, because a button cannot hold a button. It covers the
+ * spacer at the end of the trigger, so it uses the font size and the right padding of the trigger.
+ */
+.prism-tab-close {
+  position: absolute;
+  top: 0;
+  right: 0.85em;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.85em;
 }
 
 /* =============================================================================
    TAB BAR SCROLL INDICATORS (gradient fades when tabs overflow)
    ============================================================================= */
 
-.prism-tabbar-scroll {
+.prism-tab-bar-scroll {
   position: relative;
 }
 
-.prism-tabbar-scroll::before,
-.prism-tabbar-scroll::after {
+.prism-tab-bar-scroll::before,
+.prism-tab-bar-scroll::after {
   content: '';
   position: absolute;
   top: 0;
@@ -312,21 +322,21 @@
   transition: opacity 150ms;
 }
 
-.prism-tabbar-scroll::before {
+.prism-tab-bar-scroll::before {
   left: 0;
   background: linear-gradient(to right, var(--background), transparent);
 }
 
-.prism-tabbar-scroll::after {
+.prism-tab-bar-scroll::after {
   right: 0;
   background: linear-gradient(to left, var(--background), transparent);
 }
 
-.prism-tabbar-scroll[data-can-scroll-left]::before {
+.prism-tab-bar-scroll[data-can-scroll-left]::before {
   opacity: 1;
 }
 
-.prism-tabbar-scroll[data-can-scroll-right]::after {
+.prism-tab-bar-scroll[data-can-scroll-right]::after {
   opacity: 1;
 }
 
@@ -346,7 +356,7 @@
    SEARCH BAR COMPONENT (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
-.prism-searchbar {
+.prism-search-bar {
   @apply tw:flex tw:w-full tw:items-center tw:border-b tw:border-border;
 
   height: 2.6em;
@@ -357,42 +367,42 @@
   background: var(--background);
 }
 
-.prism-searchbar-params {
+.prism-search-bar-params {
   background: var(--popover);
 }
 
-.prism-searchbar [data-slot='command-input-wrapper'] {
+.prism-search-bar [data-slot='command-input-wrapper'] {
   height: 100%;
   min-height: 100%;
 }
 
-.prism-searchbar [data-slot='command-input-wrapper'] svg {
+.prism-search-bar [data-slot='command-input-wrapper'] svg {
   width: 1.1em;
   height: 1.1em;
 }
 
-.prism-searchbar [data-slot='command-input'] {
+.prism-search-bar [data-slot='command-input'] {
   height: 100%;
   font-size: 1em;
   padding-block: 0.3em;
 }
 
-.prism-searchbar-display {
+.prism-search-bar-display {
   @apply tw:cursor-pointer tw:transition-colors;
 
   background-color: var(--popover);
   padding-left: 2px;
 }
 
-.prism-searchbar-display:hover {
+.prism-search-bar-display:hover {
   background-color: var(--muted);
 }
 
-.prism-searchbar-display:focus {
+.prism-search-bar-display:focus {
   @apply tw:ring-1 tw:ring-primary tw:outline-none tw:ring-inset;
 }
 
-.prism-searchbar-layout-name {
+.prism-search-bar-layout-name {
   @apply tw:truncate tw:font-medium;
 
   font-size: 1em;
@@ -400,7 +410,7 @@
   margin-left: 0.4em;
 }
 
-.prism-searchbar-resize-handle {
+.prism-search-bar-resize-handle {
   height: 0.4em;
   cursor: ns-resize;
   flex-shrink: 0;
@@ -431,8 +441,15 @@
   border: 1px solid var(--ring);
   border-radius: 0.3em;
   padding: 0.15em 0.6em;
-  font-size: inherit;
+
+  /*
+   * The input sits next to the trigger and not in it, so it repeats the font of the trigger:
+   * text-sm and font-medium, with the font size of the tab bar.
+   */
   font-family: inherit;
+  font-size: 0.85em;
+  font-weight: 500;
+  line-height: calc(1.25 / 0.875);
   color: var(--foreground);
   outline: none;
   box-sizing: border-box;
@@ -447,7 +464,7 @@
    NEW TAB BUTTON (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
-.prism-tabbar-add {
+.prism-tab-bar-add {
   @apply tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:transition-colors;
 
   min-width: 2em;
@@ -456,17 +473,17 @@
   color: var(--muted-foreground);
 }
 
-.prism-tabbar-add svg {
+.prism-tab-bar-add svg {
   width: 1.1em;
   height: 1.1em;
 }
 
-.prism-tabbar-add:disabled {
+.prism-tab-bar-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.prism-tabbar-add:hover:not(:disabled) {
+.prism-tab-bar-add:hover:not(:disabled) {
   color: var(--foreground);
   background-color: var(--muted);
 }
@@ -475,7 +492,7 @@
    SPLIT PANEL BUTTON (em-based - scales with .prism-size-* font-size)
    ============================================================================= */
 
-.prism-tabbar-split {
+.prism-tab-bar-split {
   @apply tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:transition-colors;
 
   min-width: 2em;
@@ -485,17 +502,17 @@
   border-left: 1px solid var(--border);
 }
 
-.prism-tabbar-split svg {
+.prism-tab-bar-split svg {
   width: 1.1em;
   height: 1.1em;
 }
 
-.prism-tabbar-split:disabled {
+.prism-tab-bar-split:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.prism-tabbar-split:hover:not(:disabled) {
+.prism-tab-bar-split:hover:not(:disabled) {
   color: var(--foreground);
   background-color: var(--muted);
 }
@@ -506,7 +523,7 @@
 
 @media print {
   .prism-root .prism-status-bar,
-  .prism-root .prism-searchbar,
+  .prism-root .prism-search-bar,
   .prism-root [data-slot='tabs-list'] {
     display: none;
   }

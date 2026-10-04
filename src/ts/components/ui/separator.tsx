@@ -1,6 +1,11 @@
+/**
+ * @fileoverview Separator from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix, and the line color is lighter
+ * (`bg-border/60`).
+ */
 import * as React from 'react';
 import * as SeparatorPrimitive from '@radix-ui/react-separator';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 const Separator = React.forwardRef<
   React.ElementRef<typeof SeparatorPrimitive.Root>,

@@ -8,10 +8,11 @@ import {
   CommandItem,
   CommandGroup,
   CommandSeparator,
-} from '../ui/command';
+} from '@components/ui/command';
 import type { LayoutOption } from '@types';
 
-export type OptionsModeProps = {
+/** Holds the props of `OptionsMode`. */
+export interface OptionsModeProps {
   selectedLayoutName: string;
   paramOptions: Record<string, LayoutOption>;
   showDropdown: boolean;
@@ -20,13 +21,14 @@ export type OptionsModeProps = {
   onBackToLayouts: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   onBlur: (e: React.FocusEvent) => void;
-  onFocus: () => void;
+  onFocus?: () => void;
   onResizeStart: (e: React.MouseEvent) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   commandRef: React.RefObject<HTMLDivElement>;
-};
+}
 
-export const OptionsMode = ({
+/** Renders the search bar while the user picks a preset option of the selected layout. */
+export function OptionsMode({
   selectedLayoutName,
   paramOptions,
   showDropdown,
@@ -39,9 +41,9 @@ export const OptionsMode = ({
   onResizeStart,
   inputRef,
   commandRef,
-}: OptionsModeProps) => {
+}: OptionsModeProps) {
   return (
-    <div className={cn('prism-searchbar')} ref={commandRef}>
+    <div className={cn('prism-search-bar')} ref={commandRef}>
       <Command
         shouldFilter={false}
         label={`Options for ${selectedLayoutName}`}
@@ -83,7 +85,7 @@ export const OptionsMode = ({
             </CommandGroup>
             {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
             <div
-              className="prism-searchbar-resize-handle"
+              className="prism-search-bar-resize-handle"
               aria-hidden="true"
               onMouseDown={onResizeStart}
             />
@@ -92,6 +94,4 @@ export const OptionsMode = ({
       </Command>
     </div>
   );
-};
-
-OptionsMode.displayName = 'OptionsMode';
+}

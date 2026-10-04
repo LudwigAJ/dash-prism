@@ -15,7 +15,7 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-TAB_COUNT = "[data-testid='prism-statusbar-count']"
+TAB_COUNT = "[data-testid='prism-status-bar-count']"
 
 
 def _start(dash_duo):

@@ -6,133 +6,22 @@ import { SearchMode } from './SearchMode';
 import { ParamsMode } from './ParamsMode';
 import { OptionsMode } from './OptionsMode';
 
-type SearchBarProps = {
+/** Holds the props of `SearchBar`. */
+interface SearchBarProps {
   panelId: PanelId;
-  isPinned?: boolean;
-};
+}
 
+/**
+ * Renders the search bar of a panel in the mode that `deriveMode` gives: the name of the current
+ * layout, the layout search, the parameter input or the option list. It renders nothing while the
+ * search bars are hidden.
+ */
 export const SearchBar = memo(function SearchBar({ panelId }: SearchBarProps) {
-  const {
-    mode,
-    searchQuery,
-    showDropdown,
-    dropdownHeight,
-    activeTab,
-    currentLayout,
-    filteredLayouts,
-    selectedLayout,
-    paramOptions,
-    currentParam,
-    paramValues,
-    currentParamIndex,
-    allParams,
-    favoriteLayouts,
-    searchBarPlaceholder,
-    inputRef,
-    commandRef,
-    setSearchQuery,
-    setParamValues,
-    handleLayoutSelect,
-    handleOptionSelect,
-    handleBackToLayouts,
-    handleDisplayClick,
-    handleDisplayKeyDown,
-    handleFocus,
-    handleBlur,
-    handleKeyDown,
-    handleClick,
-    handleResizeStart,
-    handleToggleFavorite,
-    handleChoiceSelect,
-    handleChoiceHover,
-    paramError,
-    paramChoices,
-    activeChoice,
-  } = useSearchBarState(panelId);
+  const { mode, displayProps, paramsProps, optionsProps, searchProps } = useSearchBarState(panelId);
 
-  // Hidden mode
-  if (mode === 'hidden') {
-    return null;
-  }
-
-  // Display mode
-  if (mode === 'display' && currentLayout) {
-    return (
-      <DisplayMode
-        currentLayoutName={currentLayout.name}
-        activeTab={activeTab}
-        onDisplayClick={handleDisplayClick}
-        onKeyDown={handleDisplayKeyDown}
-      />
-    );
-  }
-
-  // Params mode
-  if (mode === 'params' && currentParam) {
-    return (
-      <ParamsMode
-        selectedLayoutName={selectedLayout?.name ?? ''}
-        currentParam={currentParam}
-        currentParamIndex={currentParamIndex}
-        totalParams={allParams.length}
-        paramValue={paramValues[currentParam.name] ?? ''}
-        paramError={paramError}
-        choices={paramChoices}
-        activeChoice={activeChoice}
-        onParamValueChange={(value) =>
-          setParamValues((v) => ({ ...v, [currentParam.name]: value }))
-        }
-        onChoiceSelect={handleChoiceSelect}
-        onChoiceHover={handleChoiceHover}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onCancel={handleBackToLayouts}
-        inputRef={inputRef}
-      />
-    );
-  }
-
-  // Options mode
-  if (mode === 'options' && paramOptions) {
-    return (
-      <OptionsMode
-        selectedLayoutName={selectedLayout?.name ?? ''}
-        paramOptions={paramOptions}
-        showDropdown={showDropdown}
-        dropdownHeight={dropdownHeight}
-        onOptionSelect={handleOptionSelect}
-        onBackToLayouts={handleBackToLayouts}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onFocus={() => {}}
-        onResizeStart={handleResizeStart}
-        inputRef={inputRef}
-        commandRef={commandRef}
-      />
-    );
-  }
-
-  // Search mode (default)
-  return (
-    <SearchMode
-      searchQuery={searchQuery}
-      filteredLayouts={filteredLayouts}
-      favoriteLayouts={favoriteLayouts}
-      showDropdown={showDropdown}
-      dropdownHeight={dropdownHeight}
-      searchBarPlaceholder={searchBarPlaceholder}
-      onSearchQueryChange={setSearchQuery}
-      onLayoutSelect={handleLayoutSelect}
-      onToggleFavorite={handleToggleFavorite}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      onClick={handleClick}
-      onResizeStart={handleResizeStart}
-      inputRef={inputRef}
-      commandRef={commandRef}
-    />
-  );
+  if (mode === 'hidden') return null;
+  if (mode === 'display' && displayProps) return <DisplayMode {...displayProps} />;
+  if (mode === 'params' && paramsProps) return <ParamsMode {...paramsProps} />;
+  if (mode === 'options' && optionsProps) return <OptionsMode {...optionsProps} />;
+  return <SearchMode {...searchProps} />;
 });
-
-SearchBar.displayName = 'SearchBar';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
@@ -45,7 +45,6 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
   const loadingState = ctx?.useLoading() ?? false;
 
   const [timedOut, setTimedOut] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasLayout = Boolean(data?.layoutId);
   // Prism already normalises the value it passes; guard again for standalone use.
   const effectiveTimeout = normalizeLayoutTimeout(layoutTimeout);
@@ -58,26 +57,16 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
     }
   }, [children]);
 
-  // Start timeout when layoutId is set but children haven't arrived
+  // The timer runs while a selected layout loads and its content has not arrived yet
   useEffect(() => {
-    // Only start timeout if:
-    // 1. We have a layoutId (user selected a layout)
-    // 2. Children haven't arrived yet
-    // 3. We're in loading state (callback is processing)
-    if (hasLayout && !children && loadingState) {
-      timeoutRef.current = setTimeout(() => {
-        logger.error(
-          `[Prism] Layout loading timed out after ${effectiveTimeout}s for layout: ${data?.layoutId}`
-        );
-        setTimedOut(true);
-      }, timeoutMs);
-
-      return () => clearTimeout(timeoutRef.current);
-    }
-
-    // Clear timeout if conditions are no longer met
-    clearTimeout(timeoutRef.current);
-    return undefined;
+    if (!(hasLayout && !children && loadingState)) return undefined;
+    const timer = setTimeout(() => {
+      logger.error(
+        `[Prism] Layout loading timed out after ${effectiveTimeout}s for layout: ${data?.layoutId}`
+      );
+      setTimedOut(true);
+    }, timeoutMs);
+    return () => clearTimeout(timer);
   }, [hasLayout, children, loadingState, timeoutMs, effectiveTimeout, data?.layoutId]);
 
   // ===== STATE 1: Timed out =====

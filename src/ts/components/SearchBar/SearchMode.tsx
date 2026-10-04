@@ -1,5 +1,6 @@
 import React from 'react';
-import { Star, List } from 'lucide-react';
+import { List } from 'lucide-react';
+import { FavoriteStar } from '@components/FavoriteStar';
 import { cn } from '@utils/cn';
 import {
   Command,
@@ -8,11 +9,12 @@ import {
   CommandItem,
   CommandEmpty,
   CommandGroup,
-} from '../ui/command';
+} from '@components/ui/command';
 import type { LayoutMeta } from '@types';
 import { layoutHasOptions, layoutHasParams } from './searchBarUtils';
 
-export type SearchModeProps = {
+/** Holds the props of `SearchMode`. */
+export interface SearchModeProps {
   searchQuery: string;
   filteredLayouts: Array<[string, LayoutMeta]>;
   favoriteLayouts: string[];
@@ -29,9 +31,10 @@ export type SearchModeProps = {
   onResizeStart: (e: React.MouseEvent) => void;
   inputRef: React.RefObject<HTMLInputElement>;
   commandRef: React.RefObject<HTMLDivElement>;
-};
+}
 
-export const SearchMode = ({
+/** Renders the search bar with the layout search and its dropdown of layouts. */
+export function SearchMode({
   searchQuery,
   filteredLayouts,
   favoriteLayouts,
@@ -48,14 +51,14 @@ export const SearchMode = ({
   onResizeStart,
   inputRef,
   commandRef,
-}: SearchModeProps) => {
+}: SearchModeProps) {
   return (
     // The input opens the dropdown on focus, so a keyboard user needs no key handler here.
     <div
-      className={cn('prism-searchbar')}
+      className={cn('prism-search-bar')}
       ref={commandRef}
       role="presentation"
-      data-testid="prism-searchbar"
+      data-testid="prism-search-bar"
       onClick={onClick}
     >
       <Command
@@ -65,7 +68,7 @@ export const SearchMode = ({
       >
         <CommandInput
           ref={inputRef}
-          data-testid="prism-searchbar-input"
+          data-testid="prism-search-bar-input"
           value={searchQuery}
           onValueChange={onSearchQueryChange}
           onFocus={onFocus}
@@ -87,7 +90,6 @@ export const SearchMode = ({
                 {filteredLayouts.map(([id, meta]) => {
                   const hasOptions = layoutHasOptions(meta);
                   const hasParams = layoutHasParams(meta);
-                  const isFavorite = favoriteLayouts.includes(id);
 
                   return (
                     <CommandItem
@@ -96,33 +98,12 @@ export const SearchMode = ({
                       value={`${meta.name} ${meta.keywords?.join(' ') ?? ''}`}
                       onSelect={() => onLayoutSelect(id)}
                     >
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFavorite(id);
-                        }}
-                        className={cn(
-                          'tw:mr-2 tw:shrink-0 tw:rounded tw:p-0.5 tw:transition-colors',
-                          'tw:hover:bg-muted tw:focus-visible:ring-1 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
-                          isFavorite
-                            ? 'tw:text-primary'
-                            : 'tw:text-muted-foreground tw:hover:text-primary'
-                        )}
-                        aria-label={
-                          isFavorite
-                            ? `Remove ${meta.name} from favorites`
-                            : `Add ${meta.name} to favorites`
-                        }
-                      >
-                        <Star
-                          className={cn(
-                            'tw:size-[1em] tw:text-current',
-                            isFavorite && 'tw:fill-current'
-                          )}
-                        />
-                      </button>
+                      <FavoriteStar
+                        layoutName={meta.name}
+                        isFavorite={favoriteLayouts.includes(id)}
+                        onToggle={() => onToggleFavorite(id)}
+                        className="tw:mr-2 tw:shrink-0 tw:rounded tw:p-0.5 tw:focus-visible:ring-1"
+                      />
                       <div className="tw:flex tw:flex-1 tw:items-center tw:gap-3 tw:overflow-hidden">
                         <span className="tw:shrink-0 tw:font-medium">{meta.name}</span>
                         {meta.description && (
@@ -151,7 +132,7 @@ export const SearchMode = ({
             )}
             {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
             <div
-              className="prism-searchbar-resize-handle"
+              className="prism-search-bar-resize-handle"
               aria-hidden="true"
               onMouseDown={onResizeStart}
             />
@@ -160,6 +141,4 @@ export const SearchMode = ({
       </Command>
     </div>
   );
-};
-
-SearchMode.displayName = 'SearchMode';
+}

@@ -27,14 +27,18 @@ import dash_prism
 # =============================================================================
 # CSS Selectors
 # =============================================================================
-TAB_SELECTOR = "[data-testid^='prism-tab-']:not([data-testid*='close'])"
+# The prefix prism-tab- also matches the close buttons, the rename input and the tab bar buttons.
+TAB_SELECTOR = (
+    "[data-testid^='prism-tab-']:not([data-testid*='close'])"
+    ":not([data-testid^='prism-tab-rename-']):not([data-testid^='prism-tab-bar-'])"
+)
 PANEL_SELECTOR = "[data-testid^='prism-panel-']"
-ADD_TAB_BUTTON = "[data-testid='prism-tabbar-add-button']"
-SPLIT_PANEL_BUTTON = "[data-testid='prism-tabbar-split-button']"
-SEARCHBAR_INPUT = "[data-testid='prism-searchbar-input']"
+ADD_TAB_BUTTON = "[data-testid='prism-tab-bar-add-button']"
+SPLIT_PANEL_BUTTON = "[data-testid='prism-tab-bar-split-button']"
+SEARCHBAR_INPUT = "[data-testid='prism-search-bar-input']"
 CONTEXT_MENU = "[data-testid='prism-context-menu']"
-HELP_BUTTON = "[data-testid='prism-statusbar-help']"
-UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
+HELP_BUTTON = "[data-testid='prism-status-bar-help']"
+UNDO_BUTTON = "[data-testid='prism-status-bar-undo']"
 TOAST = "[data-sonner-toast]"
 PRISM_ROOT = ".prism-root"
 

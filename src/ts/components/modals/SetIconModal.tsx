@@ -12,16 +12,17 @@ import { TAB_ICON_NAMES, getTabIcon, getIconLabel } from '@constants/tab-icons';
 import { cn } from '@utils/cn';
 import type { Tab, TabId } from '@types';
 
-export type SetIconModalProps = {
+/** Holds the props of `SetIconModal`. */
+interface SetIconModalProps {
   /** Whether the modal is open */
   open: boolean;
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
   /** Tab to set icon for */
   tab: Tab | null;
-  /** Callback when an icon is selected */
-  onSelectIcon: (tabId: TabId, icon: string | undefined) => void;
-};
+  /** Callback when an icon is selected. An omitted icon clears the icon of the tab. */
+  onSelectIcon: (tabId: TabId, icon?: string) => void;
+}
 
 /**
  * Displays a scrollable grid of icons for tab customization.
@@ -33,7 +34,7 @@ export type SetIconModalProps = {
 export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconModalProps) {
   if (!tab) return null;
 
-  const handleSelectIcon = (iconName: string | undefined) => {
+  const handleSelectIcon = (iconName?: string) => {
     onSelectIcon(tab.id, iconName);
     onOpenChange(false);
   };
@@ -53,7 +54,7 @@ export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconM
             {/* No icon option */}
             <button
               type="button"
-              onClick={() => handleSelectIcon(undefined)}
+              onClick={() => handleSelectIcon()}
               aria-label="No icon"
               aria-pressed={noIconSelected}
               title="No icon"

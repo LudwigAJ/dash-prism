@@ -3,19 +3,24 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '@utils/cn';
 import type { Tab } from '@types';
 
-export type DisplayModeProps = {
+/** Holds the props of `DisplayMode`. */
+export interface DisplayModeProps {
   currentLayoutName: string;
   activeTab: Tab | null;
   onDisplayClick: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-};
+}
 
-export const DisplayMode = ({
+/**
+ * Renders the search bar of a tab that shows a layout: the layout name with its option or
+ * parameter values. A click or a typed character starts a new search.
+ */
+export function DisplayMode({
   currentLayoutName,
   activeTab,
   onDisplayClick,
   onKeyDown,
-}: DisplayModeProps) => {
+}: DisplayModeProps) {
   const params = activeTab?.layoutParams;
   const option = activeTab?.layoutOption;
   const hasParams = params && Object.keys(params).length > 0;
@@ -24,12 +29,12 @@ export const DisplayMode = ({
   return (
     <button
       type="button"
-      data-testid="prism-searchbar-display"
-      className={cn('prism-searchbar prism-searchbar-display tw:text-left')}
+      data-testid="prism-search-bar-display"
+      className={cn('prism-search-bar prism-search-bar-display tw:text-left')}
       onClick={onDisplayClick}
       onKeyDown={onKeyDown}
     >
-      <span className="prism-searchbar-layout-name">{currentLayoutName}</span>
+      <span className="prism-search-bar-layout-name">{currentLayoutName}</span>
       {hasOption && (
         <>
           <ChevronRight className="tw:mx-1 tw:size-[1em] tw:flex-shrink-0 tw:text-muted-foreground" />
@@ -45,6 +50,4 @@ export const DisplayMode = ({
         ))}
     </button>
   );
-};
-
-DisplayMode.displayName = 'DisplayMode';
+}

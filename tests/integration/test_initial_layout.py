@@ -19,7 +19,7 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-DISPLAY_BAR = "[data-testid='prism-searchbar-display']"
+DISPLAY_BAR = "[data-testid='prism-search-bar-display']"
 
 
 def _stored_layout_ids(driver) -> list[str] | None:

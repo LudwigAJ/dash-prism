@@ -73,8 +73,8 @@ def test_async_app_static_layout_works(dash_duo):
     duo = _start_async_prism_app(dash_duo)
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
     duo.wait_for_element("[data-testid='prism-layout-item-static-async']", timeout=5)
@@ -89,8 +89,8 @@ def test_async_callback_layout_renders(dash_duo):
     duo = _start_async_prism_app(dash_duo)
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Async Greeting")
     duo.wait_for_element("[data-testid='prism-layout-item-async-greeting']", timeout=5)

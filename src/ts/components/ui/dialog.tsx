@@ -1,27 +1,38 @@
+/**
+ * @fileoverview Dialog primitives from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix. The portal renders in the portal
+ * container of the Prism root, so that the dialog takes the theme of its own Prism instance.
+ * `DialogTrigger`, `DialogClose`, `DialogOverlay` and `DialogPortal` stay as exports although no
+ * other module uses them. They carry the `@public` tag, so knip does not report them.
+ */
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { usePortalContainer } from '../../context/PortalContainerContext';
-import { cn } from '../../utils/cn';
+import { usePortalContainer } from '@context/PortalContainerContext';
+import { cn } from '@utils/cn';
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+/** @public */
+export function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+/** @public */
+export function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   const container = usePortalContainer();
   return <DialogPrimitive.Portal data-slot="dialog-portal" container={container} {...props} />;
 }
 
-function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
+/** @public */
+export function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-function DialogOverlay({
+/** @public */
+export function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
@@ -117,15 +128,4 @@ function DialogDescription({
   );
 }
 
-export {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-  DialogTrigger,
-};
+export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle };

@@ -1,4 +1,4 @@
-import type { DashComponent } from '@types';
+import type { DashComponent, TabId } from '@types';
 
 /** Default layout timeout in seconds; mirrors DEFAULT_LAYOUT_TIMEOUT in dash_prism/app_init.py. */
 const DEFAULT_LAYOUT_TIMEOUT = 30;
@@ -49,4 +49,15 @@ export function buildDashSpec(
       },
     },
   };
+}
+
+/**
+ * Builds the Dash component path of the content of a tab.
+ *
+ * WorkspaceView gives this path to Dash's ExternalWrapper, which registers the content under it.
+ * TabItem gives the same path to `useLoading` to show the spinner of the tab. The two must agree,
+ * or the spinner never shows.
+ */
+export function makeComponentPath(componentId: string, tabId: TabId): string[] {
+  return [componentId, 'content', tabId];
 }

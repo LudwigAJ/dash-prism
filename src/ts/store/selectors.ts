@@ -2,6 +2,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { getLeafPanelIds } from '@utils/panels';
+import { findTabById } from '@utils/tabs';
 
 // Workspace selectors. Each one reads the field of the same name of the present workspace.
 
@@ -34,6 +35,18 @@ export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
 /** Gives the number of tabs in the workspace. */
 export const selectTabCount = createSelector(selectTabs, (tabs) => tabs.length);
+
+/** Gives the tab that the info modal shows, or null when the modal is closed. */
+export const selectInfoModalTab = createSelector(selectTabs, selectInfoModalTabId, (tabs, tabId) =>
+  tabId ? (findTabById(tabs, tabId) ?? null) : null
+);
+
+/** Gives the tab that the icon modal edits, or null when the modal is closed. */
+export const selectSetIconModalTab = createSelector(
+  selectTabs,
+  selectSetIconModalTabId,
+  (tabs, tabId) => (tabId ? (findTabById(tabs, tabId) ?? null) : null)
+);
 
 const selectLeafPanelIds = createSelector(selectPanel, getLeafPanelIds);
 

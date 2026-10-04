@@ -45,8 +45,8 @@ def _start_app(dash_duo):
 
 
 def _select_layout(duo, layout_id: str) -> None:
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(layout_id)
     duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)

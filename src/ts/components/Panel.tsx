@@ -1,14 +1,13 @@
 import React, { useEffect, useCallback, memo, useRef } from 'react';
 import { OutPortal } from 'react-reverse-portal';
-import { useActiveTab } from '@hooks/usePrism';
 import { SplitPane, Pane } from 'react-split-pane';
 import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
 import { SearchBar } from '@components/SearchBar';
 import { PanelDropzone } from '@components/PanelDropzone';
-import type { PanelNode, Tab, TabId, PanelId } from '@types';
+import type { PanelNode, Tab, PanelId } from '@types';
 import { isLeafPanel } from '@utils/panels';
-import { findTabById } from '@utils/tabs';
+import { findTabById, getActiveTabForPanel } from '@utils/tabs';
 import { EmptyTabView } from '@components/layouts';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import {
@@ -16,21 +15,18 @@ import {
   useAppSelector,
   selectTabs,
   selectPanelTabs,
+  selectActiveTabIds,
   selectActivePanelId,
   activateTab,
   setActivePanel,
   resizePanel,
 } from '@store';
+import type { AppDispatch } from '@store';
 import { usePortal } from '@context/PortalContext';
 
 type PanelProps = {
   panel: PanelNode;
-  onOpenInfo?: (tab: Tab) => void;
 };
-
-export function makeComponentPath(componentId: string, tabId: TabId): string[] {
-  return [componentId, 'content', tabId];
-}
 
 // =============================================================================
 // useNativePanelFocus — Native pointerdown (capture) listener
@@ -38,11 +34,7 @@ export function makeComponentPath(componentId: string, tabId: TabId): string[] {
 // root prevents synthetic events from reaching Prism's tree.
 // =============================================================================
 
-function useNativePanelFocus(
-  panelId: PanelId,
-  activePanelId: PanelId,
-  dispatch: ReturnType<typeof useAppDispatch>
-) {
+function useNativePanelFocus(panelId: PanelId, activePanelId: PanelId, dispatch: AppDispatch) {
   const panelRef = useRef<HTMLDivElement>(null);
   const activePanelIdRef = useRef(activePanelId);
   activePanelIdRef.current = activePanelId;
@@ -77,6 +69,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
   const { getPortalNode } = usePortal();
   const allTabs = useAppSelector(selectTabs);
   const panelTabsMap = useAppSelector(selectPanelTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
   const activePanelId = useAppSelector(selectActivePanelId);
 
   const panelTabIds = panelTabsMap[panel.id] || [];
@@ -84,9 +77,8 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
     .map((tabId) => findTabById(allTabs, tabId))
     .filter((tab): tab is Tab => tab !== undefined);
 
-  const activeTab = useActiveTab(panel.id);
   const isActive = activePanelId === panel.id;
-  const activeTabId = activeTab?.id ?? null;
+  const activeTabId = getActiveTabForPanel(allTabs, activeTabIds, panel.id)?.id ?? null;
   const isPinned = panel.pinned ?? false;
 
   const handleTabChange = useCallback(
@@ -120,7 +112,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
           isActive={isActive}
         />
 
-        <SearchBar panelId={panel.id} isPinned={isPinned} />
+        <SearchBar panelId={panel.id} />
 
         <PanelDropzone panelId={panel.id} isPinned={isPinned}>
           <div className="tw:relative tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto">
@@ -156,12 +148,11 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
   );
 });
 
-LeafPanel.displayName = 'LeafPanel';
-
-// =============================================================================
-// Panel - Recursively renders SplitPane for containers, LeafPanel for leaves
-// =============================================================================
-
+/**
+ * Renders a node of the panel tree. A leaf panel shows its tab bar, its search bar and its tab
+ * content. A container panel splits its area between its children, and the component calls itself
+ * for each child container.
+ */
 export const Panel = memo(function Panel({ panel }: PanelProps) {
   const dispatch = useAppDispatch();
   const isLeaf = isLeafPanel(panel);

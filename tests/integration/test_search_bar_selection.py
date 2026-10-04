@@ -15,8 +15,8 @@ pytestmark = pytest.mark.integration
 
 
 def _search(duo, query: str) -> None:
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys(query)
 
 
@@ -69,7 +69,7 @@ def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
     assert len(testutils.get_tabs(duo)) == 1, "Should still have 1 tab after selecting layout"
 
 
-DISPLAY_BAR = "[data-testid='prism-searchbar-display']"
+DISPLAY_BAR = "[data-testid='prism-search-bar-display']"
 
 
 def _open_static_layout(duo) -> None:

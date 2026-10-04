@@ -1,52 +1,54 @@
-// src/ts/components/SearchBar/searchBarReducer.ts
 import { produce } from 'immer';
 import { logger } from '@utils/logger';
 
-// =============================================================================
-// Types
-// =============================================================================
-
+/** Names what the search bar shows. `deriveMode` computes it, and no state stores it. */
 export type SearchBarMode = 'hidden' | 'display' | 'search' | 'options' | 'params';
 
-export type SearchBarState = {
+/**
+ * Holds the local state of one search bar. `deriveMode` reads `selectedLayoutId`,
+ * `currentParamIndex` and `isUserSearching`. The other fields hold the input text, the dropdown
+ * and the parameter step.
+ */
+export interface SearchBarState {
   searchQuery: string;
   showDropdown: boolean;
+  /** The layout that the user picked, while its parameters or options are still open */
   selectedLayoutId: string | null;
   paramValues: Record<string, string>;
   currentParamIndex: number;
+  /** Whether the user started a search on a tab that already has a layout */
   isUserSearching: boolean;
-  isPendingLayout: string | null;
+  /** The layout that waits until the hidden search bars show again, to ask for its parameters */
+  pendingLayoutId: string | null;
   /** Inline validation message for the current parameter input, if any */
   paramError: string | null;
   /** The choice that the arrow keys marked in the list of an enum parameter, if any */
   activeChoice: string | null;
-};
+}
 
+/** Lists the actions of `searchBarReducer`. */
 export type SearchBarAction =
-  | { type: 'RESET' }
   | { type: 'SET_SEARCH_QUERY'; query: string }
   | { type: 'SET_SHOW_DROPDOWN'; show: boolean }
   | { type: 'ENTER_SEARCH_MODE'; initialQuery?: string }
   | { type: 'SELECT_LAYOUT'; layoutId: string }
-  | { type: 'CLEAR_SELECTION' }
   | { type: 'SET_PARAM_VALUES'; values: Record<string, string> }
   | { type: 'ADVANCE_PARAM' }
   | { type: 'RESET_PARAMS' }
   | { type: 'SET_PARAM_ERROR'; message: string | null }
   | { type: 'SET_ACTIVE_CHOICE'; choice: string | null }
   | { type: 'SET_PENDING_LAYOUT'; layoutId: string | null }
+  | { type: 'LAYOUT_APPLIED'; showDropdown: boolean }
   | { type: 'RETURN_TO_IDLE'; showDropdown: boolean }
   | { type: 'DISMISS'; clearSelection: boolean };
 
-export type ModeContext = {
+/** Holds the facts outside the local state that `deriveMode` needs. */
+export interface ModeContext {
   searchBarsHidden: boolean;
+  /** Whether the active tab of the panel shows a registered layout */
   hasCurrentLayout: boolean;
   selectedLayout: { hasParams: boolean; hasOptions: boolean } | null;
-};
-
-// =============================================================================
-// Mode Derivation
-// =============================================================================
+}
 
 /**
  * Derives the SearchBar mode from state and context.
@@ -69,13 +71,11 @@ export function deriveMode(state: SearchBarState, context: ModeContext): SearchB
   return 'display';
 }
 
-// =============================================================================
-// Reducer
-// =============================================================================
-
+/**
+ * Builds the state of a search bar that shows nothing yet. The dropdown starts closed. An effect
+ * of useSearchBarState opens it for a new tab when the `newTabOpensDropdown` prop asks for it.
+ */
 export function createInitialState(): SearchBarState {
-  // Note: showDropdown starts false - the useSearchBarState effect will open it
-  // based on newTabOpensDropdown config when appropriate
   return {
     searchQuery: '',
     showDropdown: false,
@@ -83,16 +83,13 @@ export function createInitialState(): SearchBarState {
     paramValues: {},
     currentParamIndex: 0,
     isUserSearching: false,
-    isPendingLayout: null,
+    pendingLayoutId: null,
     paramError: null,
     activeChoice: null,
   };
 }
 
-/**
- * Clears the layout selection and the param state.
- * Extracted to avoid duplication across multiple actions.
- */
+/** Clears the layout selection and the param state. */
 function clearSelection(draft: SearchBarState) {
   draft.selectedLayoutId = null;
   draft.paramValues = {};
@@ -101,11 +98,9 @@ function clearSelection(draft: SearchBarState) {
   draft.activeChoice = null;
 }
 
+/** Applies a search bar action to the local state of one search bar. */
 export const searchBarReducer = produce((draft: SearchBarState, action: SearchBarAction) => {
   switch (action.type) {
-    case 'RESET':
-      Object.assign(draft, createInitialState());
-      break;
     case 'SET_SEARCH_QUERY':
       draft.searchQuery = action.query;
       break;
@@ -122,9 +117,6 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.selectedLayoutId = action.layoutId;
       draft.searchQuery = '';
       draft.showDropdown = true;
-      break;
-    case 'CLEAR_SELECTION':
-      clearSelection(draft);
       break;
     case 'SET_PARAM_VALUES':
       // Replace rather than merge: callers build the whole map, and a merge
@@ -154,17 +146,22 @@ export const searchBarReducer = produce((draft: SearchBarState, action: SearchBa
       draft.activeChoice = action.choice;
       break;
     case 'SET_PENDING_LAYOUT':
-      draft.isPendingLayout = action.layoutId;
+      draft.pendingLayoutId = action.layoutId;
+      break;
+    case 'LAYOUT_APPLIED':
+      // The search bar starts again from nothing, with the dropdown as the caller says
+      Object.assign(draft, createInitialState());
+      draft.showDropdown = action.showDropdown;
       break;
     case 'RETURN_TO_IDLE':
       draft.isUserSearching = false;
       draft.showDropdown = action.showDropdown;
-      draft.isPendingLayout = null;
+      draft.pendingLayoutId = null;
       break;
     case 'DISMISS':
       draft.showDropdown = false;
       draft.isUserSearching = false;
-      draft.isPendingLayout = null;
+      draft.pendingLayoutId = null;
       draft.searchQuery = '';
       if (action.clearSelection) {
         clearSelection(draft);

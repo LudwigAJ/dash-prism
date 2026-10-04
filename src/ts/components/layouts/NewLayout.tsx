@@ -2,8 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@components/ui/card';
 import { useConfig } from '@context/ConfigContext';
 import { cn } from '@utils/cn';
-import { Star, Layers } from 'lucide-react';
-import type { TabId } from '@types';
+import { Layers } from 'lucide-react';
+import { FavoriteStar } from '@components/FavoriteStar';
+import type { LayoutMeta, TabId } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -12,17 +13,28 @@ import {
   requestLayoutSelection,
 } from '@store';
 
-type NewLayoutProps = {
+/** Holds the props of `NewLayout`. */
+interface NewLayoutProps {
   tabId: TabId;
-};
+}
 
-type LayoutCardProps = {
+/** Holds the props of `LayoutCard`. */
+interface LayoutCardProps {
   id: string;
-  meta: { name: string; description?: string; params?: Array<{ name: string }> };
+  meta: LayoutMeta;
   isFavorite: boolean;
   onLayoutClick: (layoutId: string) => void;
   onToggleFavorite: (layoutId: string) => void;
-};
+}
+
+/** Holds the props of `LayoutSection`. */
+interface LayoutSectionProps {
+  title: string;
+  entries: Array<[string, LayoutMeta]>;
+  favoriteLayouts: string[];
+  onLayoutClick: (layoutId: string) => void;
+  onToggleFavorite: (layoutId: string) => void;
+}
 
 // Defined at module level so React sees a stable component identity across renders.
 // Defining inside NewLayout would cause unmount/remount on every re-render,
@@ -66,23 +78,44 @@ function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: L
         )}
 
         {/* The star follows the title in the focus order. It is a sibling, because a button cannot contain a button. */}
-        <button
-          type="button"
-          data-testid={`prism-layout-card-favorite-${id}`}
-          onClick={() => onToggleFavorite(id)}
-          className={cn(
-            'tw:absolute tw:top-2 tw:right-2 tw:z-10 tw:rounded-md tw:p-1.5 tw:transition-colors',
-            'tw:hover:bg-muted tw:focus-visible:ring-2 tw:focus-visible:ring-ring tw:focus-visible:outline-none',
-            isFavorite ? 'tw:text-primary' : 'tw:text-muted-foreground tw:hover:text-primary'
-          )}
-          aria-label={
-            isFavorite ? `Remove ${meta.name} from favorites` : `Add ${meta.name} to favorites`
-          }
-        >
-          <Star className={cn('tw:size-[1em]', isFavorite && 'tw:fill-current')} />
-        </button>
+        <FavoriteStar
+          layoutName={meta.name}
+          isFavorite={isFavorite}
+          onToggle={() => onToggleFavorite(id)}
+          className="tw:absolute tw:top-2 tw:right-2 tw:z-10 tw:rounded-md tw:p-1.5 tw:focus-visible:ring-2"
+          testId={`prism-layout-card-favorite-${id}`}
+        />
       </Card>
     </article>
+  );
+}
+
+/** Renders one titled grid of layout cards. */
+function LayoutSection({
+  title,
+  entries,
+  favoriteLayouts,
+  onLayoutClick,
+  onToggleFavorite,
+}: LayoutSectionProps) {
+  return (
+    <section className="tw:mb-[2.3em] tw:last:mb-0">
+      <h2 className="tw:mb-[1.1em] tw:text-[1em] tw:font-medium tw:tracking-wide tw:text-muted-foreground tw:uppercase">
+        {title}
+      </h2>
+      <div className="tw:grid tw:grid-cols-[repeat(auto-fill,minmax(15em,1fr))] tw:gap-[1.1em]">
+        {entries.map(([id, meta]) => (
+          <LayoutCard
+            key={id}
+            id={id}
+            meta={meta}
+            isFavorite={favoriteLayouts.includes(id)}
+            onLayoutClick={onLayoutClick}
+            onToggleFavorite={onToggleFavorite}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -150,46 +183,23 @@ export function NewLayout({ tabId }: NewLayoutProps) {
       data-testid="prism-empty-tab-layouts"
       className="tw:flex tw:h-full tw:w-full tw:flex-col tw:overflow-auto tw:bg-background tw:p-[1.7em]"
     >
-      {/* Favorites Section */}
       {favoriteEntries.length > 0 && (
-        <section className="tw:mb-[2.3em] tw:last:mb-0">
-          <h2 className="tw:mb-[1.1em] tw:text-[1em] tw:font-medium tw:tracking-wide tw:text-muted-foreground tw:uppercase">
-            Favorites
-          </h2>
-          <div className="tw:grid tw:grid-cols-[repeat(auto-fill,minmax(15em,1fr))] tw:gap-[1.1em]">
-            {favoriteEntries.map(([id, meta]) => (
-              <LayoutCard
-                key={id}
-                id={id}
-                meta={meta}
-                isFavorite={true}
-                onLayoutClick={handleLayoutClick}
-                onToggleFavorite={handleToggleFavorite}
-              />
-            ))}
-          </div>
-        </section>
+        <LayoutSection
+          title="Favorites"
+          entries={favoriteEntries}
+          favoriteLayouts={favoriteLayouts}
+          onLayoutClick={handleLayoutClick}
+          onToggleFavorite={handleToggleFavorite}
+        />
       )}
-
-      {/* Layouts Section */}
       {otherEntries.length > 0 && (
-        <section className="tw:mb-[2.3em] tw:last:mb-0">
-          <h2 className="tw:mb-[1.1em] tw:text-[1em] tw:font-medium tw:tracking-wide tw:text-muted-foreground tw:uppercase">
-            Layouts
-          </h2>
-          <div className="tw:grid tw:grid-cols-[repeat(auto-fill,minmax(15em,1fr))] tw:gap-[1.1em]">
-            {otherEntries.map(([id, meta]) => (
-              <LayoutCard
-                key={id}
-                id={id}
-                meta={meta}
-                isFavorite={favoriteLayouts.includes(id)}
-                onLayoutClick={handleLayoutClick}
-                onToggleFavorite={handleToggleFavorite}
-              />
-            ))}
-          </div>
-        </section>
+        <LayoutSection
+          title="Layouts"
+          entries={otherEntries}
+          favoriteLayouts={favoriteLayouts}
+          onLayoutClick={handleLayoutClick}
+          onToggleFavorite={handleToggleFavorite}
+        />
       )}
     </div>
   );

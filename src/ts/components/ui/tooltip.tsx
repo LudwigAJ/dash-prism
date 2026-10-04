@@ -1,9 +1,18 @@
+/**
+ * @fileoverview Tooltip primitives from shadcn/ui, built on Radix.
+ * Local changes: each utility class has the `tw:` prefix. A tooltip opens after 800 ms instead of
+ * at once, and has no side offset. The content renders in the portal container of the Prism root,
+ * so that it takes the theme of its own Prism instance. Each `Tooltip` has its own
+ * `TooltipProvider`, as in shadcn/ui, so the export of the provider is not needed by Prism. It
+ * carries the `@public` tag, so knip does not report it.
+ */
 import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
-import { usePortalContainer } from '../../context/PortalContainerContext';
-import { cn } from '../../utils/cn';
+import { usePortalContainer } from '@context/PortalContainerContext';
+import { cn } from '@utils/cn';
 
-function TooltipProvider({
+/** @public */
+export function TooltipProvider({
   delayDuration = 800,
   skipDelayDuration = 0,
   ...props
@@ -30,8 +39,6 @@ function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimiti
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
-const TooltipRoot = TooltipPrimitive.Root;
-
 function TooltipContent({
   className,
   sideOffset = 0,
@@ -57,4 +64,4 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent, TooltipRoot };
+export { Tooltip, TooltipTrigger, TooltipContent };

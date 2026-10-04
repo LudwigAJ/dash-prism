@@ -11,6 +11,11 @@ interface PanelDropzoneProps {
   isPinned?: boolean;
 }
 
+/**
+ * Wraps the content of a leaf panel with four edge drop zones. A tab that the user drops on an
+ * edge splits the panel on that side. The zones show only during a drag, and only when the panel
+ * can split.
+ */
 export function PanelDropzone({ panelId, children, isPinned = false }: PanelDropzoneProps) {
   const { active } = useDndContext();
   const { maxPanels } = useConfig();
