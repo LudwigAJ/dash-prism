@@ -49,16 +49,14 @@ export function matchShortcut(event: KeyChordEvent): ShortcutAction | null {
  * every workspace (the page around it, or a portalled overlay).
  */
 export function originWorkspace(target: EventTarget | null): Element | null {
-  const el = target as Element | null;
-  return el?.closest?.('.prism-view-workspace') ?? null;
+  return target instanceof Element ? target.closest('.prism-view-workspace') : null;
 }
 
 /** Whether keystrokes on this element belong to text entry and must be left alone. */
 export function isEditableTarget(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  if (!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(el.isContentEditable);
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
 }
 
 /**

@@ -2,7 +2,7 @@
  * Regression tests for the keyboard chord matchers.
  */
 
-import { describe, it, expect } from 'vitest';
+import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest';
 import {
   createRootRegistry,
   isEditableTarget,
@@ -82,16 +82,48 @@ describe('matchShortcut', () => {
   });
 });
 
+// The tests run in node, which has no DOM. These classes stand in for Element and HTMLElement,
+// which isEditableTarget and originWorkspace check with `instanceof`.
+class FakeElement extends EventTarget {
+  constructor(private readonly workspace: Element | null = null) {
+    super();
+  }
+
+  closest(): Element | null {
+    return this.workspace;
+  }
+}
+
+class FakeHTMLElement extends FakeElement {
+  constructor(
+    readonly tagName: string,
+    readonly isContentEditable = false
+  ) {
+    super();
+  }
+}
+
+beforeAll(() => {
+  vi.stubGlobal('Element', FakeElement);
+  vi.stubGlobal('HTMLElement', FakeHTMLElement);
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('isEditableTarget', () => {
   it('recognises text-entry elements and content-editable nodes', () => {
-    expect(isEditableTarget({ tagName: 'INPUT' } as unknown as EventTarget)).toBe(true);
-    expect(isEditableTarget({ tagName: 'TEXTAREA' } as unknown as EventTarget)).toBe(true);
-    expect(isEditableTarget({ tagName: 'SELECT' } as unknown as EventTarget)).toBe(true);
-    expect(
-      isEditableTarget({ tagName: 'DIV', isContentEditable: true } as unknown as EventTarget)
-    ).toBe(true);
-    expect(isEditableTarget({ tagName: 'DIV' } as unknown as EventTarget)).toBe(false);
+    expect(isEditableTarget(new FakeHTMLElement('INPUT'))).toBe(true);
+    expect(isEditableTarget(new FakeHTMLElement('TEXTAREA'))).toBe(true);
+    expect(isEditableTarget(new FakeHTMLElement('SELECT'))).toBe(true);
+    expect(isEditableTarget(new FakeHTMLElement('DIV', true))).toBe(true);
+    expect(isEditableTarget(new FakeHTMLElement('DIV'))).toBe(false);
     expect(isEditableTarget(null)).toBe(false);
+  });
+
+  it('ignores a target that is not an HTML element (document, window)', () => {
+    expect(isEditableTarget(new EventTarget())).toBe(false);
   });
 });
 
@@ -182,21 +214,17 @@ describe('createRootRegistry', () => {
 });
 
 describe('originWorkspace', () => {
-  function target(match: Element | null) {
-    return { closest: () => match } as unknown as EventTarget;
-  }
-
   it('returns the workspace the keystroke came from', () => {
     const workspace = {} as Element;
-    expect(originWorkspace(target(workspace))).toBe(workspace);
+    expect(originWorkspace(new FakeElement(workspace))).toBe(workspace);
   });
 
   it('returns null for a keystroke outside every workspace', () => {
-    expect(originWorkspace(target(null))).toBeNull();
+    expect(originWorkspace(new FakeElement())).toBeNull();
     expect(originWorkspace(null)).toBeNull();
   });
 
-  it('tolerates a target without closest (document, window)', () => {
-    expect(originWorkspace({} as EventTarget)).toBeNull();
+  it('returns null for a target that is not an element (document, window)', () => {
+    expect(originWorkspace(new EventTarget())).toBeNull();
   });
 });
