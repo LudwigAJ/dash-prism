@@ -1,5 +1,4 @@
-"""
-Integration tests for tab lifecycle operations.
+"""Integration tests for tab lifecycle operations.
 
 Tests tab creation, closing, renaming, and other tab management operations
 using browser automation via dash[testing].
@@ -104,8 +103,7 @@ def test_tab_selection(prism_app_with_layouts):
 
 
 def test_tab_persists_after_creation(prism_app_with_layouts):
-    """
-    Test that a newly created tab persists after Redux sync cycles.
+    """Test that a newly created tab persists after Redux sync cycles.
 
     This is a regression test for an issue where tabs would appear briefly
     and then disappear due to a race condition in the Redux/Dash sync:

@@ -1,5 +1,4 @@
-"""
-Tests for panel splitting via drag-to-edge operations.
+"""Tests for panel splitting via drag-to-edge operations.
 
 Panel splitting uses the SPLIT_PANEL action which:
 - Creates a container panel
@@ -22,8 +21,7 @@ class TestPanelSplit:
 
     @pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"])
     def test_split_panel_by_edge(self, prism_app_with_layouts, edge):
-        """
-        Test splitting panel by dragging tab to each edge.
+        """Test splitting panel by dragging tab to each edge.
 
         Setup: 3 tabs in panel
         Action: Drag tab to specified edge drop zone
@@ -47,8 +45,7 @@ class TestPanelSplit:
         assert len(testutils.get_tabs(duo)) == 3, "Should still have 3 tabs total"
 
     def test_split_moves_only_dragged_tab(self, prism_app_with_layouts):
-        """
-        Test that only the dragged tab moves to the new panel.
+        """Test that only the dragged tab moves to the new panel.
 
         Setup: 3 tabs [A, B, C] in panel
         Action: Drag B to right edge
@@ -71,9 +68,7 @@ class TestPanelSplit:
         assert tab_counts == [1, 2], f"Expected [1, 2] distribution, got {tab_counts}"
 
     def test_split_preserves_original_panel_id(self, prism_app_with_layouts):
-        """
-        Test that original panel keeps its ID after split.
-        """
+        """Test that original panel keeps its ID after split."""
         duo = prism_app_with_layouts
 
         testutils.create_tabs_for_dnd_test(duo, 3)
@@ -86,8 +81,7 @@ class TestPanelSplit:
         assert original_panel_id in panel_ids, f"Original ID should exist: {panel_ids}"
 
     def test_two_sequential_splits(self, prism_app_with_layouts):
-        """
-        Test performing two splits to create 3 panels.
+        """Test performing two splits to create 3 panels.
 
         Workflow:
         1. Start with 4 tabs in 1 panel

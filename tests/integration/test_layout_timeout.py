@@ -1,5 +1,4 @@
-"""
-Integration tests for the ``layoutTimeout`` prop.
+"""Integration tests for the ``layoutTimeout`` prop.
 
 Before 1.0 the prop reached neither the client-side loading timer (it was
 always 30 s) nor the synchronous render callback (which ignored

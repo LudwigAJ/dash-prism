@@ -1,5 +1,4 @@
-"""
-Integration tests for toasts.
+"""Integration tests for toasts.
 
 Each Prism instance has its own Toaster. A toast that one instance raises must
 show in that instance only.

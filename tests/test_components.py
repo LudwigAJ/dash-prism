@@ -1,6 +1,4 @@
-"""
-Tests for dash_prism component instantiation and rendering.
-"""
+"""Tests for dash_prism component instantiation and rendering."""
 
 from __future__ import annotations
 

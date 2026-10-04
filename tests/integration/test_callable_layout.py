@@ -1,5 +1,4 @@
-"""
-Integration tests for callable vs static app.layout.
+"""Integration tests for callable vs static app.layout.
 
 Tests that dash_prism.init() properly handles both:
 1. Static layouts (app.layout = html.Div(...)) - recommended approach

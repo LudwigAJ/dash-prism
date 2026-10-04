@@ -1,5 +1,4 @@
-"""
-Integration tests for the style isolation of Prism.
+"""Integration tests for the style isolation of Prism.
 
 Prism shares the page with the host Dash app. These tests check that Prism
 does not restyle the host page, that two instances keep their own theme, and

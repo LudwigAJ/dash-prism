@@ -1,5 +1,4 @@
-"""
-Integration tests for keyboard shortcuts.
+"""Integration tests for keyboard shortcuts.
 
 Tests Cmd/Ctrl+Alt+N (new tab), Cmd/Ctrl+D (close tab).
 """

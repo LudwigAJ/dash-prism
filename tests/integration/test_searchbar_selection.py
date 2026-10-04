@@ -1,5 +1,4 @@
-"""
-Integration tests for selecting layouts from the SearchBar.
+"""Integration tests for selecting layouts from the SearchBar.
 
 Tests the full flow: open search bar -> type query -> select a layout -> verify
 the correct tab opens with the correct content rendered.

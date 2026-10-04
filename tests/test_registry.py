@@ -1,6 +1,4 @@
-"""
-Tests for dash_prism layout registry functionality.
-"""
+"""Tests for dash_prism layout registry functionality."""
 
 from __future__ import annotations
 
@@ -197,9 +195,7 @@ def test_layout_metadata_matches_the_fixture_of_the_frontend() -> None:
 
 
 def test_layout_parameter_to_dict_contract() -> None:
-    """
-    Contract test for LayoutParameter.to_dict() matching frontend LayoutParam type.
-    """
+    """Contract test for LayoutParameter.to_dict() matching frontend LayoutParam type."""
     from dash_prism.registry import LayoutParameter
 
     param = LayoutParameter(

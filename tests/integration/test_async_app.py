@@ -1,5 +1,4 @@
-"""
-Integration tests for Dash apps with use_async=True.
+"""Integration tests for Dash apps with use_async=True.
 
 An app with ``use_async=True`` gets the async render callback of app_init.py,
 which is a separate code path from the sync callback.

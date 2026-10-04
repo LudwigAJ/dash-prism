@@ -1,5 +1,4 @@
-"""
-Integration tests for the refresh of a tab.
+"""Integration tests for the refresh of a tab.
 
 The Refresh menu item only appears for a tab that has a layout.
 """

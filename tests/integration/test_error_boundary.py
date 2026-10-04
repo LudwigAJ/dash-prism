@@ -1,5 +1,4 @@
-"""
-Integration tests for the actions of the error boundary.
+"""Integration tests for the actions of the error boundary.
 
 Dash catches the errors in a tab layout itself, so these tests mount the
 exported ErrorBoundary with a child that throws. A host page for the real

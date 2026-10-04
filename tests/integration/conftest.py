@@ -1,5 +1,4 @@
-"""
-Pytest configuration and fixtures for dash_prism integration tests.
+"""Pytest configuration and fixtures for dash_prism integration tests.
 
 Integration tests use dash[testing]'s dash_duo fixture to test browser interactions.
 The helpers are in tests/integration/testutils.py.
@@ -19,8 +18,7 @@ from tests.integration import testutils
 # Chrome Performance Options for Faster Tests
 # =============================================================================
 def pytest_setup_options():
-    """
-    Configure Chrome options for faster, more reliable headless testing.
+    """Configure Chrome options for faster, more reliable headless testing.
 
     This hook is called by dash[testing] to configure the browser.
     """
@@ -47,8 +45,7 @@ def pytest_setup_options():
 # =============================================================================
 @pytest.fixture(autouse=True)
 def clear_registry_integration():
-    """
-    Clear the layout registry before and after each test.
+    """Clear the layout registry before and after each test.
 
     Ensures integration tests don't interfere with each other.
     """
@@ -59,8 +56,7 @@ def clear_registry_integration():
 
 @pytest.fixture(autouse=True)
 def assert_no_browser_errors(request, dash_duo):
-    """
-    Fail each test that leaves an error in the browser console.
+    """Fail each test that leaves an error in the browser console.
 
     The check runs after the test, so a failure shows as a pytest ERROR in the
     teardown, not as a test failure. A test marked with
@@ -80,8 +76,7 @@ def assert_no_browser_errors(request, dash_duo):
 
 @pytest.fixture
 def prism_app_with_layouts(dash_duo):
-    """
-    Serve Prism with a static layout and a layout that holds a button.
+    """Serve Prism with a static layout and a layout that holds a button.
 
     The limit of 10 tabs lets a test reach the limit with few clicks.
     """

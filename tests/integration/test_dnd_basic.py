@@ -1,5 +1,4 @@
-"""
-Basic drag-and-drop infrastructure tests.
+"""Basic drag-and-drop infrastructure tests.
 
 These tests verify the DnD infrastructure works correctly:
 - Drop zone visibility in single-tab vs multi-tab mode
@@ -20,8 +19,7 @@ class TestDropZoneBehavior:
     """Tests for drop zone visibility based on tab count."""
 
     def test_single_tab_no_drop_zones(self, prism_app_with_layouts):
-        """
-        Test that drop zones do not appear with only 1 tab (single-tab mode).
+        """Test that drop zones do not appear with only 1 tab (single-tab mode).
 
         Drop zones are disabled when isSingleTabMode = true.
         """
@@ -38,9 +36,7 @@ class TestDropZoneBehavior:
             testutils.cancel_drag_with_escape(duo)
 
     def test_multi_tab_drop_zones_appear(self, prism_app_with_layouts):
-        """
-        Test that drop zones appear during drag with 2+ tabs.
-        """
+        """Test that drop zones appear during drag with 2+ tabs."""
         duo = prism_app_with_layouts
 
         # A second tab ends the single-tab mode.
@@ -63,9 +59,7 @@ class TestDragCancellation:
     """Tests for drag cancellation behavior."""
 
     def test_escape_cancels_drag_preserves_order(self, prism_app_with_layouts):
-        """
-        Test that pressing Escape cancels drag and preserves tab order.
-        """
+        """Test that pressing Escape cancels drag and preserves tab order."""
         duo = prism_app_with_layouts
 
         testutils.create_tabs_for_dnd_test(duo, 3)

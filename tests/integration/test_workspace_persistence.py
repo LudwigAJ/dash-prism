@@ -1,5 +1,4 @@
-"""
-Integration tests for workspace persistence.
+"""Integration tests for workspace persistence.
 
 Tests the persistence props, the storage that they select, and the
 readWorkspace and updateWorkspace props.
@@ -119,8 +118,7 @@ def test_undo_is_persisted_across_reload(dash_duo):
 
 
 def test_readWorkspace_reflects_tab_creation(dash_duo):
-    """
-    Test that readWorkspace prop reflects state after adding a tab.
+    """Test that readWorkspace prop reflects state after adding a tab.
 
     This verifies the Prism → Dash sync via readWorkspace.
     """
@@ -155,8 +153,7 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
 
 
 def test_updateWorkspace_modifies_state(dash_duo):
-    """
-    Test that updateWorkspace prop can modify workspace state.
+    """Test that updateWorkspace prop can modify workspace state.
 
     This verifies the Dash → Prism sync via updateWorkspace.
     We test by programmatically changing tab names via updateWorkspace,
@@ -229,8 +226,7 @@ def test_updateWorkspace_modifies_state(dash_duo):
 
 
 def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
-    """
-    Test save/load roundtrip using readWorkspace and updateWorkspace.
+    """Test save/load roundtrip using readWorkspace and updateWorkspace.
 
     Simulates the pattern used in usage.py for save/load functionality.
     """

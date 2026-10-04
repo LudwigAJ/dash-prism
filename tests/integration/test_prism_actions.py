@@ -1,5 +1,4 @@
-"""
-Integration tests for Action components.
+"""Integration tests for Action components.
 
 Tests action rendering in status bar and n_clicks callback pattern.
 """

@@ -1,6 +1,4 @@
-"""
-Pytest configuration and fixtures for dash_prism tests.
-"""
+"""Pytest configuration and fixtures for dash_prism tests."""
 
 from __future__ import annotations
 
@@ -12,8 +10,7 @@ import dash_prism
 
 @pytest.fixture
 def dash_app() -> Dash:
-    """
-    Create a minimal Dash app for testing.
+    """Create a minimal Dash app for testing.
 
     Returns
     -------
@@ -26,8 +23,7 @@ def dash_app() -> Dash:
 
 @pytest.fixture
 def prism_app() -> Dash:
-    """
-    Create a Dash app with a Prism component.
+    """Create a Dash app with a Prism component.
 
     Returns
     -------
@@ -52,8 +48,7 @@ def prism_app() -> Dash:
 
 @pytest.fixture(autouse=True)
 def clear_registry():
-    """
-    Clear the layout registry before and after each test.
+    """Clear the layout registry before and after each test.
 
     Ensures tests don't interfere with each other.
     """
@@ -64,8 +59,7 @@ def clear_registry():
 
 @pytest.fixture
 def sample_layout():
-    """
-    Create a simple layout for testing.
+    """Create a simple layout for testing.
 
     Returns
     -------

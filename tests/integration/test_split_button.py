@@ -1,5 +1,4 @@
-"""
-Integration tests for the split panel button in the TabBar.
+"""Integration tests for the split panel button in the TabBar.
 
 Tests that the split button is visible on the active panel, creates a new panel
 when clicked, and is hidden on inactive panels.

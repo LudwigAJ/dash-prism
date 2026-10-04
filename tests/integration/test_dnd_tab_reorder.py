@@ -1,5 +1,4 @@
-"""
-Tests for tab reordering within the same panel.
+"""Tests for tab reordering within the same panel.
 
 Tab reordering uses the REORDER_TAB action and operates on panelTabs array.
 These tests verify that tabs can be dragged to new positions within
@@ -34,8 +33,7 @@ class TestTabReorder:
         ],
     )
     def test_reorder_tab_positions(self, prism_app_with_layouts, source_idx, target_idx):
-        """
-        Test dragging tabs to different positions within the panel.
+        """Test dragging tabs to different positions within the panel.
 
         Verifies:
         - Tab order changes
@@ -55,9 +53,7 @@ class TestTabReorder:
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
     def test_reorder_with_two_tabs(self, prism_app_with_layouts):
-        """
-        Test reordering with exactly 2 tabs (minimum for DnD).
-        """
+        """Test reordering with exactly 2 tabs (minimum for DnD)."""
         duo = prism_app_with_layouts
 
         duo.find_element(testutils.ADD_TAB_BUTTON).click()
@@ -70,9 +66,7 @@ class TestTabReorder:
         assert testutils.get_tab_order_in_panel(duo, 0) == initial_order[::-1]
 
     def test_multiple_sequential_reorders(self, prism_app_with_layouts):
-        """
-        Test multiple sequential reorder operations preserve state.
-        """
+        """Test multiple sequential reorder operations preserve state."""
         duo = prism_app_with_layouts
 
         expected = testutils.create_tabs_for_dnd_test(duo, 4)

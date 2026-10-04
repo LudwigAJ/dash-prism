@@ -1,5 +1,4 @@
-"""
-Integration tests for ``serverSessionId`` reconciliation.
+"""Integration tests for ``serverSessionId`` reconciliation.
 
 A persisted workspace that references a layout the server no longer registers
 must lose that tab on the next load instead of rendering a "Layout not found"

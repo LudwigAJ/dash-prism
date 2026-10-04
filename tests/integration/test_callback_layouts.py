@@ -1,5 +1,4 @@
-"""
-Integration tests for callback/decorator layout registration.
+"""Integration tests for callback/decorator layout registration.
 
 Tests that layouts registered via the @register_layout decorator (with a
 function that returns a component) work end-to-end in the browser.

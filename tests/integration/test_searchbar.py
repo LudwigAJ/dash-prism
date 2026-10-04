@@ -1,5 +1,4 @@
-"""
-Integration tests for SearchBar component.
+"""Integration tests for SearchBar component.
 
 Tests the modes of the search bar, its dropdown and its input in the browser.
 """
@@ -35,8 +34,7 @@ def _wait_for_empty_query(duo) -> None:
 
 
 def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
-    """
-    Test that SearchBar renders on initial page load.
+    """Test that SearchBar renders on initial page load.
 
     Verifies:
     - SearchBar is present in the DOM
@@ -60,8 +58,7 @@ def test_search_input_has_an_accessible_name(prism_app_with_layouts):
 
 
 def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
-    """
-    Test basic mode transition: display -> search.
+    """Test basic mode transition: display -> search.
 
     Verifies:
     - Clicking the SearchBar activates search mode
@@ -88,8 +85,7 @@ def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
 
 
 def test_searchbar_typing_updates_query(prism_app_with_layouts):
-    """
-    Test that typing in SearchBar updates the search query.
+    """Test that typing in SearchBar updates the search query.
 
     Verifies:
     - Text input works
@@ -111,8 +107,7 @@ def test_searchbar_typing_updates_query(prism_app_with_layouts):
 
 
 def test_searchbar_independent_per_tab(prism_app_with_layouts):
-    """
-    Test that each tab has independent SearchBar state.
+    """Test that each tab has independent SearchBar state.
 
     Verifies:
     - Creating a new tab shows SearchBar
@@ -148,8 +143,7 @@ def test_searchbar_rapid_interactions(prism_app_with_layouts):
 
 
 def test_searchbar_focus_management(prism_app_with_layouts):
-    """
-    Test SearchBar focus behavior is correct.
+    """Test SearchBar focus behavior is correct.
 
     Verifies:
     - Input can receive focus
@@ -175,8 +169,7 @@ def test_searchbar_focus_management(prism_app_with_layouts):
 
 
 def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
-    """
-    Test SearchBar continues working after tab operations.
+    """Test SearchBar continues working after tab operations.
 
     Verifies:
     - SearchBar works after creating tabs

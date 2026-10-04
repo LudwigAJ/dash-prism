@@ -1,5 +1,4 @@
-"""
-Helpers for the dash_prism integration tests.
+"""Helpers for the dash_prism integration tests.
 
 The module starts apps (:func:`start_prism`, :func:`start_app`), waits for
 states of the page (the ``wait_for_*`` functions), and drives Prism through
@@ -45,8 +44,7 @@ DROP_ZONE_LEFT = "[data-testid^='prism-drop-zone-left']"
 
 
 def get_free_port() -> int:
-    """
-    Return a port that no other server uses.
+    """Return a port that no other server uses.
 
     Each xdist worker counts the default ports of dash[testing] from the same
     start, so two workers would give two servers the same port.
@@ -130,8 +128,7 @@ def start_prism(
 # Each wait raises TimeoutException when its condition does not hold in time.
 # =============================================================================
 def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> None:
-    """
-    Wait until every panel has a width and a height.
+    """Wait until every panel has a width and a height.
 
     react-split-pane renders the children of a panel only after a ResizeObserver
     gave the panel a size, so a drag must not start before then.
@@ -152,8 +149,7 @@ def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> None:
 
 
 def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> None:
-    """
-    Wait until the number of tabs equals ``expected_count``.
+    """Wait until the number of tabs equals ``expected_count``.
 
     :param dash_duo: The dash testing fixture.
     :param expected_count: The expected number of tabs.
@@ -170,8 +166,7 @@ def wait_for_tab_count(dash_duo, expected_count: int, timeout: float = 10.0) -> 
 
 
 def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -> None:
-    """
-    Wait until the number of panels equals ``expected_count``.
+    """Wait until the number of panels equals ``expected_count``.
 
     :param dash_duo: The dash testing fixture.
     :param expected_count: The expected number of panels.
@@ -190,8 +185,7 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -
 def wait_for_tab_named(
     dash_duo, name: str, *, index: int | None = None, timeout: float = 10.0
 ) -> None:
-    """
-    Wait until a tab shows ``name``.
+    """Wait until a tab shows ``name``.
 
     :param dash_duo: The dash testing fixture.
     :param name: The text that the tab must contain.
@@ -210,8 +204,7 @@ def wait_for_tab_named(
 
 
 def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) -> None:
-    """
-    Wait until no visible element matches ``selector``.
+    """Wait until no visible element matches ``selector``.
 
     :param dash_duo: The dash testing fixture.
     :param selector: The CSS selector of the element.
@@ -224,8 +217,7 @@ def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) ->
 
 
 def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> None:
-    """
-    Wait until the drop zones of a drag appear.
+    """Wait until the drop zones of a drag appear.
 
     The drop zones exist only while a drag is active, and only in a panel that is
     not pinned, when the workspace holds more than one tab.
@@ -253,8 +245,7 @@ def get_panels(dash_duo):
 
 
 def get_tab_id(dash_duo, index: int = 0) -> str | None:
-    """
-    Return the ID of the tab at ``index``, or ``None`` if there is no such tab.
+    """Return the ID of the tab at ``index``, or ``None`` if there is no such tab.
 
     :param dash_duo: The dash testing fixture.
     :param index: The index of the tab in the DOM order of all tabs.
@@ -267,8 +258,7 @@ def get_tab_id(dash_duo, index: int = 0) -> str | None:
 
 
 def get_panel_id(dash_duo, panel_index: int = 0) -> str | None:
-    """
-    Return the ID of the panel at ``panel_index``, or ``None`` if there is no such panel.
+    """Return the ID of the panel at ``panel_index``, or ``None`` if there is no such panel.
 
     :param dash_duo: The dash testing fixture.
     :param panel_index: The index of the panel in the DOM order.
@@ -282,8 +272,7 @@ def get_panel_id(dash_duo, panel_index: int = 0) -> str | None:
 
 
 def get_tab_order_in_panel(dash_duo, panel_index: int = 0) -> list[str]:
-    """
-    Return the IDs of the tabs in a panel, in the order of the tab bar.
+    """Return the IDs of the tabs in a panel, in the order of the tab bar.
 
     :param dash_duo: The dash testing fixture.
     :param panel_index: The index of the panel in the DOM order.
@@ -310,8 +299,7 @@ def are_drop_zones_present(dash_duo) -> bool:
 
 
 def check_browser_errors(dash_duo) -> list[dict[str, Any]]:
-    """
-    Return the console errors that the browser logged since the last call.
+    """Return the console errors that the browser logged since the last call.
 
     :param dash_duo: The dash testing fixture.
     :returns: The log entries of level ``SEVERE``.
@@ -324,8 +312,7 @@ def check_browser_errors(dash_duo) -> list[dict[str, Any]]:
 # React Interaction Helpers
 # =============================================================================
 def trigger_rename_mode(dash_duo, tab_id: str) -> str:
-    """
-    Double-click a tab and wait for its rename input.
+    """Double-click a tab and wait for its rename input.
 
     :param dash_duo: The dash testing fixture.
     :param tab_id: The ID of the tab to rename.
@@ -346,8 +333,7 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> str:
 
 
 def set_input_value_react(dash_duo, selector: str, value: str):
-    """
-    Set the value of a React controlled input and wait until the input shows it.
+    """Set the value of a React controlled input and wait until the input shows it.
 
     React replaces the value property of an input, so a plain assignment does
     not reach its onChange handler. The native setter does.
@@ -382,8 +368,7 @@ def set_input_value_react(dash_duo, selector: str, value: str):
 
 
 def press_enter_on_element(dash_duo, selector: str):
-    """
-    Send an Enter keydown event to the element that matches ``selector``.
+    """Send an Enter keydown event to the element that matches ``selector``.
 
     :param dash_duo: The dash testing fixture.
     :param selector: The CSS selector of the element.
@@ -406,8 +391,7 @@ def press_enter_on_element(dash_duo, selector: str):
 
 
 def tab_to(dash_duo, selector: str, max_presses: int = 80) -> None:
-    """
-    Press Tab until the element that matches ``selector`` has focus.
+    """Press Tab until the element that matches ``selector`` has focus.
 
     A control that a keyboard user cannot reach with Tab fails here. The helper
     starts from the current focus, so a test can move to a known element first.
@@ -432,8 +416,7 @@ def press_key(dash_duo, key: str) -> None:
 
 
 def create_tabs_for_dnd_test(dash_duo, count: int = 3) -> list[str]:
-    """
-    Add tabs until the workspace holds ``count`` tabs.
+    """Add tabs until the workspace holds ``count`` tabs.
 
     :param dash_duo: The dash testing fixture.
     :param count: The number of tabs, the initial tab included.
@@ -480,8 +463,7 @@ def drag_tab_to_position(
     target_tab_index: int,
     panel_index: int = 0,
 ) -> None:
-    """
-    Drag a tab onto another tab of the same panel, so the tabs change places.
+    """Drag a tab onto another tab of the same panel, so the tabs change places.
 
     :param dash_duo: The dash testing fixture.
     :param source_tab_index: The index of the tab to drag.
@@ -515,8 +497,7 @@ def drag_tab_to_panel_edge(
     source_panel_index: int = 0,
     target_panel_index: int = 0,
 ) -> None:
-    """
-    Drag a tab onto an edge drop zone of a panel, so the panel splits.
+    """Drag a tab onto an edge drop zone of a panel, so the panel splits.
 
     The caller waits for the new panel count.
 
@@ -543,8 +524,7 @@ def drag_tab_to_panel_edge(
 
 
 def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> None:
-    """
-    Start a drag of a tab and keep the mouse pressed.
+    """Start a drag of a tab and keep the mouse pressed.
 
     Call :func:`cancel_drag_with_escape` to end the drag.
 
@@ -570,8 +550,7 @@ def get_modifier_key():
 
 
 def open_context_menu(dash_duo, tab_element):
-    """
-    Right-click a tab and wait until its context menu is visible.
+    """Right-click a tab and wait until its context menu is visible.
 
     :param dash_duo: The dash testing fixture.
     :param tab_element: The tab element.

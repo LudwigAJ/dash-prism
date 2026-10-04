@@ -1,6 +1,4 @@
-"""
-Regression tests for packaging and documentation claims (01 §4, §6).
-"""
+"""Regression tests for packaging and documentation claims (01 §4, §6)."""
 
 from __future__ import annotations
 

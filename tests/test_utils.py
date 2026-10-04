@@ -1,6 +1,4 @@
-"""
-Tests for dash_prism utility functions.
-"""
+"""Tests for dash_prism utility functions."""
 
 from __future__ import annotations
 

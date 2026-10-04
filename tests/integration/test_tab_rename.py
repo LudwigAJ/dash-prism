@@ -1,5 +1,4 @@
-"""
-Integration tests for tab renaming.
+"""Integration tests for tab renaming.
 
 Tests renaming tabs via the context menu and double-click, verifying the rename
 input appears, accepts new text, and commits on Enter/blur.
@@ -16,8 +15,7 @@ pytestmark = pytest.mark.integration
 
 
 def _click_context_menu_rename(duo, tab_id: str) -> str:
-    """
-    Click Rename in the open context menu and wait for the rename input.
+    """Click Rename in the open context menu and wait for the rename input.
 
     Radix ContextMenu calls onSelect after the close animation of the menu, so
     the rename input appears only after the menu is gone.

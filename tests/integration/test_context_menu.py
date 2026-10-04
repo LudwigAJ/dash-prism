@@ -1,5 +1,4 @@
-"""
-Integration tests for context menu interactions.
+"""Integration tests for context menu interactions.
 
 Tests right-click menu on tabs: rename, duplicate, lock/unlock, close,
 style variants, and icon selection.

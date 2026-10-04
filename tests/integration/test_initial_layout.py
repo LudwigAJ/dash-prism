@@ -1,5 +1,4 @@
-"""
-Integration tests for the initialLayout prop.
+"""Integration tests for the initialLayout prop.
 
 Regression tests for the bug where initialLayout was validated on the Python
 side but never applied by the frontend. The first tab always opened as an
