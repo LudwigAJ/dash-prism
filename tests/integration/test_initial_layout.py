@@ -1,38 +1,35 @@
-"""
-Integration tests for the initialLayout prop.
+"""Integration tests for the initialLayout prop.
 
 Regression tests for the bug where initialLayout was validated on the Python
 side but never applied by the frontend. The first tab always opened as an
 empty "New Tab" regardless of the initialLayout setting.
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
 
+import json
+
 import pytest
-from dash import Dash, html
-from selenium.webdriver.common.by import By
+from dash import html
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.wait import WebDriverWait
 
 import dash_prism
+from tests.integration import testutils
 
-from conftest import (
-    ADD_TAB_BUTTON,
-    PRISM_ROOT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    get_tabs,
-    wait_for_tab_count,
-)
-
-# Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
+
+DISPLAY_BAR = "[data-testid='prism-searchbar-display']"
+
+
+def _stored_layout_ids(driver) -> list[str] | None:
+    """Return the layout ID of each tab in the persisted workspace, or None before the write."""
+    raw = driver.execute_script(
+        "return localStorage.getItem(arguments[0]);", testutils.storage_key("prism")
+    )
+    if raw is None:
+        return None
+    return [tab.get("layoutId") for tab in json.loads(json.loads(raw)["present"])["tabs"]]
 
 
 def test_initial_layout_applied_on_fresh_workspace(dash_duo):
@@ -42,197 +39,100 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     ConfigContext but no frontend code read it and applied it. The first tab always
     opened as 'New Tab' with no layout.
     """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
-
     dash_prism.register_layout(
         id="analytics",
         name="Analytics",
         layout=html.Div("Analytics content", id="analytics-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
+    duo = testutils.start_prism(dash_duo, layouts={}, initialLayout="home")
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-
-    # The first tab should have the "Home Dashboard" layout loaded,
-    # not be an empty "New Tab"
-    tabs = get_tabs(dash_duo)
-    assert len(tabs) == 1, "Should have 1 tab"
-
-    # Wait for the tab name to update from "New Tab" to "Home Dashboard"
-    def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-        if not tab_elements:
-            return False
-        return "Home Dashboard" in tab_elements[0].text
-
-    WebDriverWait(dash_duo.driver, 10).until(
-        tab_has_layout_name,
-        message="First tab should be named 'Home Dashboard' from initialLayout",
-    )
-
-    # The layout content should be rendered
-    # Note: inject_tab_id transforms id="home-content" into a dict ID
-    # like {"type":"home-content","index":"<tabId>"}, so use attribute-contains selector
-    dash_duo.wait_for_element("[id*='home-content']", timeout=10)
-
-    errors = check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
+    assert len(testutils.get_tabs(duo)) == 1, "Should have 1 tab"
+    testutils.wait_for_tab_named(duo, "Home Dashboard", index=0)
+    # inject_tab_id turns the ID into a pattern ID, so the selector matches a part of it.
+    duo.wait_for_element("[id*='home-content']", timeout=10)
 
 
-def test_initial_layout_ignored_with_persistence(dash_duo):
-    """Test that initialLayout does NOT override a persisted workspace.
+def test_persisted_workspace_wins_over_initial_layout(dash_duo):
+    """A restored workspace keeps its tabs, even when its one tab holds another layout.
 
-    When persistence is enabled and a saved workspace exists, the persisted
-    state should take precedence over initialLayout.
+    initialLayout fills only a fresh workspace: one tab without a layout.
     """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
+    dash_prism.register_layout(
+        id="analytics",
+        name="Analytics",
+        layout=html.Div("Analytics content", id="analytics-content"),
+    )
+    duo = testutils.start_prism(
+        dash_duo,
+        layouts={},
+        initialLayout="home",
+        persistence=True,
+        persistence_type="local",
+    )
+    testutils.wait_for_tab_named(duo, "Home Dashboard", index=0)
 
-    # Use memory persistence (no actual storage, so workspace is always fresh).
-    # With memory persistence, initialLayout SHOULD be applied since there is
-    # no saved state.
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
+    # Put the other layout into the only tab, so the persisted workspace differs
+    # from the one that initialLayout makes.
+    duo.find_element(DISPLAY_BAR).click()
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys("Analytics")
+    duo.wait_for_element("[data-testid='prism-layout-item-analytics']", timeout=5).click()
+    testutils.wait_for_tab_named(duo, "Analytics", index=0)
+    WebDriverWait(duo.driver, 5).until(
+        lambda driver: _stored_layout_ids(driver) == ["analytics"],
+        message="The workspace with the analytics tab should reach localStorage",
     )
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.driver.refresh()
+    duo.wait_for_element("[id*='analytics-content']", timeout=10)
 
-    # With memory persistence (fresh workspace), initialLayout should apply
-    def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-        if not tab_elements:
-            return False
-        return "Home Dashboard" in tab_elements[0].text
-
-    WebDriverWait(dash_duo.driver, 10).until(
-        tab_has_layout_name,
-        message="First tab should show 'Home Dashboard' with memory persistence (fresh workspace)",
-    )
+    with pytest.raises(TimeoutException):
+        testutils.wait_for_tab_named(duo, "Home Dashboard", timeout=1.5)
+    assert [tab.text for tab in testutils.get_tabs(duo)] == ["Analytics"]
 
 
 def test_initial_layout_without_prop_shows_new_tab(dash_duo):
     """Test that without initialLayout, the first tab is a plain 'New Tab'."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
 
-    # No initialLayout prop
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
+    duo = testutils.start_prism(dash_duo, layouts={})
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-
-    # The first tab should be "New Tab" (no layout loaded)
-    tabs = get_tabs(dash_duo)
+    tabs = testutils.get_tabs(duo)
     assert len(tabs) == 1, "Should have 1 tab"
-
-    # Tab should say "New Tab", not "Home Dashboard"
     assert (
         "New Tab" in tabs[0].text
     ), f"Without initialLayout, tab should be 'New Tab', got '{tabs[0].text}'"
 
-    errors = check_browser_errors(dash_duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
-
 
 def test_initial_layout_new_tabs_still_empty(dash_duo):
     """Test that only the FIRST tab gets initialLayout, not subsequent new tabs."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
+    duo = testutils.start_prism(dash_duo, layouts={}, initialLayout="home")
+    testutils.wait_for_tab_named(duo, "Home Dashboard", index=0)
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(duo, 2)
 
-    # Wait for first tab to get the initial layout
-    def tab_has_layout_name(driver):
-        tab_elements = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-        if not tab_elements:
-            return False
-        return "Home Dashboard" in tab_elements[0].text
-
-    WebDriverWait(dash_duo.driver, 10).until(tab_has_layout_name)
-
-    # Add a second tab
-    add_button = dash_duo.find_element(ADD_TAB_BUTTON)
-    add_button.click()
-    wait_for_tab_count(dash_duo, 2)
-
-    # The second tab should be "New Tab", not "Home Dashboard"
-    tabs = get_tabs(dash_duo)
-    assert len(tabs) == 2
-
-    # The second (newer) tab should be "New Tab"
-    second_tab_text = tabs[1].text
+    second_tab_text = testutils.get_tabs(duo)[1].text
     assert "New Tab" in second_tab_text, (
         f"Second tab should be 'New Tab', got '{second_tab_text}'. "
         "initialLayout should only apply to the first tab on a fresh workspace."

@@ -1,5 +1,4 @@
-"""
-Integration tests for ``serverSessionId`` reconciliation (01 §1.3 / 02 B-2).
+"""Integration tests for ``serverSessionId`` reconciliation.
 
 A persisted workspace that references a layout the server no longer registers
 must lose that tab on the next load instead of rendering a "Layout not found"
@@ -12,24 +11,14 @@ import json
 import time
 
 import pytest
-from dash import Dash, html
 from selenium.webdriver.support.wait import WebDriverWait
 
-import dash_prism
 from dash_prism.app_init import _compute_server_session_id
-
-from conftest import (
-    PRISM_ROOT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-STORAGE_KEY = "persist:prism-workspace-prism"
-TOAST_SELECTOR = "[data-sonner-toast]"
+STORAGE_KEY = testutils.storage_key("prism")
 
 
 def _persisted_workspace(server_session_id: str) -> str:
@@ -72,26 +61,6 @@ def _persisted_workspace(server_session_id: str) -> str:
     return json.dumps({key: json.dumps(value) for key, value in state.items()})
 
 
-def _start_app(dash_duo):
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home", id="home-content"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=True,
-                persistence_type="local",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=get_free_port())
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-    return dash_duo
-
-
 def _read_stored(duo) -> str | None:
     return duo.driver.execute_script("return localStorage.getItem(arguments[0]);", STORAGE_KEY)
 
@@ -120,22 +89,23 @@ def _wait_for_initial_write(duo, timeout: float = 15.0, stable_for: float = 0.6)
     sync each land in their own write a few ticks apart, so a seed dropped after
     the first one can still be overwritten. Wait for the value to hold steady.
     """
-    deadline = time.monotonic() + timeout
-    previous, steady_since = None, None
-    while time.monotonic() < deadline:
+    previous, steady_since = None, time.monotonic()
+
+    def stored_value_is_steady(driver) -> bool:
+        nonlocal previous, steady_since
         current = _read_stored(duo)
-        if current is not None and current == previous:
-            steady_since = steady_since or time.monotonic()
-            if time.monotonic() - steady_since >= stable_for:
-                return
-        else:
-            previous, steady_since = current, None
-        time.sleep(0.1)
-    raise AssertionError("redux-persist kept rewriting the workspace")
+        if current is None or current != previous:
+            previous, steady_since = current, time.monotonic()
+            return False
+        return time.monotonic() - steady_since >= stable_for
+
+    WebDriverWait(duo.driver, timeout, poll_frequency=0.1).until(
+        stored_value_is_steady, message="redux-persist kept rewriting the workspace"
+    )
 
 
 def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
-    duo = _start_app(dash_duo)
+    duo = testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
     _wait_for_initial_write(duo)
 
     # Simulate a workspace saved by a previous deployment that still had layout 'gone'.
@@ -146,19 +116,19 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     )
     assert _stored_session_id(duo) == "stale", "the seed was overwritten before reload"
     duo.driver.refresh()
-    duo.wait_for_element(PRISM_ROOT, timeout=10)
+    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # The user is told what happened (the toast is raised after mount, not from
     # the reducer during rehydration where nothing is listening yet).
     # sonner mounts the toast element before it fills in the text, so wait for
     # the text rather than reading it once.
-    duo.wait_for_contains_text(TOAST_SELECTOR, "Closed 1 tab", timeout=10)
+    duo.wait_for_contains_text(testutils.TOAST, "Closed 1 tab", timeout=10)
 
-    wait_for_tab_count(duo, 1, timeout=10)
-    tabs = duo.find_elements(TAB_SELECTOR)
+    testutils.wait_for_tab_count(duo, 1, timeout=10)
+    tabs = duo.find_elements(testutils.TAB_SELECTOR)
     assert [t.text for t in tabs] == ["Home"]
     duo.wait_for_element("[id*='home-content']", timeout=10)
-    assert "not found" not in duo.find_element(PRISM_ROOT).text.lower()
+    assert "not found" not in duo.find_element(testutils.PRISM_ROOT).text.lower()
 
     # The registry change is recorded: the stored fingerprint is now the one
     # derived from the current registry, not the seeded one.
@@ -167,4 +137,3 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
         lambda _: _stored_session_id(duo) == expected,
         message="expected the derived serverSessionId to be persisted",
     )
-    assert check_browser_errors(duo) == []

@@ -1,42 +1,23 @@
-"""
-Integration tests for callback/decorator layout registration.
+"""Integration tests for callback/decorator layout registration.
 
 Tests that layouts registered via the @register_layout decorator (with a
 function that returns a component) work end-to-end in the browser.
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
+from dash import html
 
 import dash_prism
-
-from conftest import (
-    PRISM_ROOT,
-    SEARCHBAR_INPUT,
-    TAB_SELECTOR,
-    check_browser_errors,
-    get_free_port,
-    wait_for_tab_count,
-)
+from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
 
 def _start_app_with_callback_layouts(dash_duo):
     """Start a Prism app that uses decorator-style callback layouts."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
 
-    # Register a callback layout (decorator pattern)
     @dash_prism.register_layout(
         id="greeting",
         name="Greeting",
@@ -48,7 +29,6 @@ def _start_app_with_callback_layouts(dash_duo):
             id="greeting-content",
         )
 
-    # Register a parameterized callback layout
     @dash_prism.register_layout(
         id="chart",
         name="Chart View",
@@ -64,94 +44,45 @@ def _start_app_with_callback_layouts(dash_duo):
             id="chart-content",
         )
 
-    # Also register a static layout for comparison
     dash_prism.register_layout(
         id="static",
         name="Static Page",
         layout=html.Div("Static content", id="static-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-
-    dash_prism.init("prism", app)
-
-    port = get_free_port()
-    dash_duo.start_server(app, port=port)
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
-
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def test_callback_layout_renders_content(dash_duo):
     """Test that a callback-registered layout renders its content correctly."""
     duo = _start_app_with_callback_layouts(dash_duo)
 
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    # Open search bar and select the "Greeting" callback layout
     duo.wait_for_element(".prism-searchbar", timeout=5)
-    searchbar = duo.find_element(".prism-searchbar")
-    searchbar.click()
-
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    search_input = duo.find_element(SEARCHBAR_INPUT)
-    search_input.send_keys("Greeting")
-
-    # Wait for the layout item to appear and click it
+    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Greeting")
     duo.wait_for_element("[data-testid='prism-layout-item-greeting']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-greeting']").click()
 
-    # Verify the callback layout content is rendered
-    # Note: inject_tab_id transforms ids, so use contains selector
+    # inject_tab_id turns the ID into a pattern ID, so the selector matches a part of it.
     duo.wait_for_element("[id*='greeting-content']", timeout=10)
-
-    # Tab name should be "Greeting"
-    def tab_shows_greeting(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-        return any("Greeting" in t.text for t in tabs)
-
-    WebDriverWait(duo.driver, 5).until(
-        tab_shows_greeting, message="Tab should show 'Greeting' layout name"
-    )
-
-    errors = check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
+    testutils.wait_for_tab_named(duo, "Greeting", timeout=5)
 
 
 def test_static_and_callback_layouts_coexist(dash_duo):
     """Test that static and callback layouts can both be used in the same app."""
     duo = _start_app_with_callback_layouts(dash_duo)
 
-    wait_for_tab_count(duo, 1)
+    testutils.wait_for_tab_count(duo, 1)
 
-    # Open the static layout first
     duo.wait_for_element(".prism-searchbar", timeout=5)
     duo.find_element(".prism-searchbar").click()
-    duo.wait_for_element(SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(SEARCHBAR_INPUT).send_keys("Static")
-
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
     duo.wait_for_element("[data-testid='prism-layout-item-static']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-static']").click()
 
-    # Wait for static content
     duo.wait_for_element("[id*='static-content']", timeout=10)
-
-    # Verify we have 1 tab with the static layout
-    def tab_shows_static(driver):
-        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
-        return any("Static Page" in t.text for t in tabs)
-
-    WebDriverWait(duo.driver, 5).until(tab_shows_static)
-
-    errors = check_browser_errors(duo)
-    assert len(errors) == 0, f"No browser errors expected: {errors}"
+    testutils.wait_for_tab_named(duo, "Static Page", timeout=5)
