@@ -12,13 +12,13 @@ import type { TabId } from '@types';
 
 type PortalMap = Map<TabId, HtmlPortalNode>;
 
-type PortalContextValue = {
+interface PortalContextValue {
   /**
    * Gets or creates a portal node for a tab.
    * Returns the same node on subsequent calls for the same tabId.
    */
   getPortalNode: (tabId: TabId) => HtmlPortalNode;
-};
+}
 
 // =============================================================================
 // Context
@@ -30,9 +30,9 @@ const PortalContext = createContext<PortalContextValue | null>(null);
 // Provider
 // =============================================================================
 
-type PortalProviderProps = {
+interface PortalProviderProps {
   children: React.ReactNode;
-};
+}
 
 /**
  * Manages the React portals that preserve Dash component state when tabs

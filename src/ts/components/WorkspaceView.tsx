@@ -81,11 +81,11 @@ const DashContentRenderer = memo(
   }
 );
 
-type WorkspaceViewProps = {
+interface WorkspaceViewProps {
   /** Array of PrismAction component specs */
   actions?: JSX.Element[];
   children?: React.ReactNode;
-};
+}
 
 /**
  * Renders the workspace of one Prism component: the panel tree, the status bar and the modals. It

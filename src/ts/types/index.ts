@@ -23,7 +23,7 @@ export type StatusBarItem =
 // =============================================================================
 
 /** Holds one tab: its name, its panel and the layout that it shows. */
-export type Tab = {
+export interface Tab {
   id: TabId;
   name: string;
   panelId: PanelId;
@@ -39,10 +39,10 @@ export type Tab = {
 
   icon?: string;
   style?: string;
-};
+}
 
 /** Holds one node of the panel tree. A node without children is a leaf panel that holds tabs. */
-export type PanelNode = {
+export interface PanelNode {
   id: PanelId;
   order: PanelOrder;
   direction: PanelDirection;
@@ -50,7 +50,7 @@ export type PanelNode = {
   children: PanelNode[];
   /** Size as percentage (0-100) */
   size?: string | number;
-};
+}
 
 // =============================================================================
 // Layout Types
@@ -59,7 +59,7 @@ export type PanelNode = {
 export type ParamType =
   'string' | 'integer' | 'number' | 'boolean' | 'enum' | 'array' | 'object' | 'unknown';
 
-export type ParamConstraints = {
+export interface ParamConstraints {
   minimum?: number;
   exclusiveMinimum?: number;
   maximum?: number;
@@ -67,7 +67,7 @@ export type ParamConstraints = {
   minLength?: number;
   maxLength?: number;
   pattern?: string;
-};
+}
 
 // `null` here is a JSON scalar that a default or a choice can hold. It does not
 // mean that the value is absent.
@@ -136,12 +136,12 @@ export interface Workspace {
  * Data structure for shareable tab links.
  * Encoded as base64 JSON in URL hash: #p:<base64>
  */
-export type ShareData = {
+export interface ShareData {
   layoutId: string;
   name?: string;
   layoutParams?: Record<string, string>;
   layoutOption?: string;
-};
+}
 
 // =============================================================================
 // Notification Types (Handled by Sonner - not in Redux)
@@ -158,19 +158,19 @@ export type ShareData = {
 /**
  * Dash component specification format (from https://github.com/plotly/dash)
  */
-type BaseDashProps = {
+interface BaseDashProps {
   id?: string | Record<string, string>;
   [propName: string]: unknown;
-};
+}
 
 /**
  * Dash component specification format (from https://github.com/plotly/dash)
  */
-export type DashComponent = {
+export interface DashComponent {
   type: string;
   namespace: string;
   props: BaseDashProps;
-};
+}
 
 /**
  * Checks if a value is a DashComponent.
@@ -197,16 +197,16 @@ type DashPath = Array<string | number>;
 /**
  * Props for ExternalWrapper component
  */
-type ExternalWrapperProps = {
+interface ExternalWrapperProps {
   component: DashComponent;
   componentPath: DashPath;
   temp?: boolean;
-};
+}
 
 /**
  * Dash context type returned by useDashContext
  */
-type DashContextType = {
+interface DashContextType {
   componentPath: DashPath;
   useLoading: (options?: {
     extraPath?: DashPath;
@@ -215,18 +215,18 @@ type DashContextType = {
   }) => boolean;
   useStore: () => unknown;
   useDispatch: () => unknown;
-};
+}
 
 /**
  * Type for window.dash_component_api (Dash 3.1.1+)
  */
-export type DashComponentApi = {
+export interface DashComponentApi {
   ExternalWrapper: React.ComponentType<ExternalWrapperProps>;
   useDashContext: () => DashContextType;
   DashContext: React.Context<DashContextType | undefined>;
   getLayout: (path: DashPath | string) => Record<string, unknown> | null;
   stringifyId: (id: string | Record<string, unknown>) => string;
-};
+}
 
 // Augment global Window interface
 declare global {

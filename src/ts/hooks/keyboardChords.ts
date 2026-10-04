@@ -5,14 +5,14 @@
 import { SHORTCUTS, type Shortcut, type ShortcutAction } from '@constants/shortcuts';
 
 /** The subset of KeyboardEvent the matchers look at. */
-export type KeyChordEvent = {
+export interface KeyChordEvent {
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
   code: string;
   key: string;
-};
+}
 
 /** Tells if a key event is for the key of a shortcut, whatever the modifiers. */
 function matchesKey(event: KeyChordEvent, key: string): boolean {
@@ -83,14 +83,14 @@ export function isOverlayOpen(doc: Pick<Document, 'querySelector'>): boolean {
  * the first that mounted. Ownership is handed to another mounted workspace when
  * the owner unmounts, so the survivors never all go silent.
  */
-export type RootRegistry<T> = {
+export interface RootRegistry<T> {
   /** Registers a mounted root. The returned function unregisters the root when it unmounts. */
   register(root: T): () => void;
   /** Makes `root` the owner (it must still be mounted). */
   claim(root: T): void;
   /** Whether `root` may handle a shortcut right now. */
   owns(root: T): boolean;
-};
+}
 
 /** Builds an empty RootRegistry. The keyboard shortcut hook keeps one for the whole page. */
 export function createRootRegistry<T>(): RootRegistry<T> {

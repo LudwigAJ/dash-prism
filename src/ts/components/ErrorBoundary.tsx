@@ -15,7 +15,7 @@ import { logger } from '@utils/logger';
  */
 export type ErrorBoundaryLevel = 'panel' | 'workspace';
 
-type Props = {
+interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
@@ -28,12 +28,12 @@ type Props = {
    * Callback to clear persisted storage (for workspace level reset).
    */
   onClearStorage?: () => void;
-};
+}
 
-type State = {
+interface State {
   hasError: boolean;
   error: Error | null;
-};
+}
 
 /**
  * ErrorBoundary catches JavaScript errors in its child component tree,
