@@ -1,7 +1,8 @@
 """Integration tests for context menu interactions.
 
 Tests right-click menu on tabs: rename, duplicate, lock/unlock, close,
-style variants, and icon selection.
+style variants, and icon selection. Also tests the refresh of a tab, which the
+menu offers only for a tab that has a layout, and its keyboard shortcut.
 """
 
 from __future__ import annotations
@@ -9,6 +10,8 @@ from __future__ import annotations
 import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
 
@@ -110,3 +113,39 @@ def test_icon_picker_buttons_have_names_and_announce_the_current_icon(prism_app_
     buttons = _open_icon_picker(duo)
     pressed = [b.accessible_name for b in buttons if b.get_attribute("aria-pressed") == "true"]
     assert pressed == [chosen]
+
+
+# =============================================================================
+# Refresh of a tab
+# =============================================================================
+def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):
+    """Test that Refresh menu item is hidden when tab has no layout assigned."""
+    duo = prism_app_with_layouts
+
+    # The initial tab has no layout.
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
+
+    assert duo.find_elements("[data-testid='prism-context-menu-refresh']") == []
+
+    ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
+
+
+def test_refresh_shortcut_remounts_the_tab_content(prism_app_with_layouts):
+    """Ctrl/Cmd+Shift+R renders the layout of the active tab again, in the same tab."""
+    duo = prism_app_with_layouts
+    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
+    duo.find_element("[data-testid='prism-layout-item-test-static']").click()
+    content = duo.wait_for_element("[id*='static-content']", timeout=10)
+
+    modifier = testutils.get_modifier_key()
+    ActionChains(duo.driver).key_down(modifier).key_down(Keys.SHIFT).send_keys("r").key_up(
+        Keys.SHIFT
+    ).key_up(modifier).perform()
+
+    WebDriverWait(duo.driver, 10).until(
+        EC.staleness_of(content), message="The refresh should mount the tab content again"
+    )
+    duo.wait_for_element("[id*='static-content']", timeout=10)
+    assert [tab.text for tab in testutils.get_tabs(duo)] == ["Test Static Layout"]

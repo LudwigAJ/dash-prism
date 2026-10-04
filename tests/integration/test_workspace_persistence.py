@@ -26,14 +26,14 @@ def test_prism_initializes_without_persistence(dash_duo):
     assert len(testutils.get_tabs(duo)) == 1, "Should have 1 initial tab"
 
 
-def test_prism_initializes_with_localStorage_persistence(dash_duo):
+def test_prism_initializes_with_local_storage_persistence(dash_duo):
     """Test that Prism initializes with localStorage persistence enabled."""
     duo = testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
 
     assert len(testutils.get_tabs(duo)) == 1, "Should have 1 initial tab"
 
 
-def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
+def test_prism_initializes_with_session_storage_persistence(dash_duo):
     """Test that Prism initializes with sessionStorage persistence enabled."""
     duo = testutils.start_prism(dash_duo, persistence=True, persistence_type="session")
 
@@ -117,7 +117,7 @@ def test_undo_is_persisted_across_reload(dash_duo):
 # =============================================================================
 
 
-def test_readWorkspace_reflects_tab_creation(dash_duo):
+def test_read_workspace_reflects_tab_creation(dash_duo):
     """Test that readWorkspace prop reflects state after adding a tab.
 
     This verifies the Prism → Dash sync via readWorkspace.
@@ -152,7 +152,7 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
     duo.wait_for_text_to_equal("#workspace-output", "tabs:2", timeout=10)
 
 
-def test_updateWorkspace_modifies_state(dash_duo):
+def test_update_workspace_modifies_state(dash_duo):
     """Test that updateWorkspace prop can modify workspace state.
 
     This verifies the Dash → Prism sync via updateWorkspace.
@@ -225,7 +225,7 @@ def test_updateWorkspace_modifies_state(dash_duo):
     )
 
 
-def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
+def test_read_workspace_update_workspace_roundtrip(dash_duo):
     """Test save/load roundtrip using readWorkspace and updateWorkspace.
 
     Simulates the pattern used in usage.py for save/load functionality.
