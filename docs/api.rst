@@ -100,12 +100,14 @@ Icons
 A tab can show an icon. The icon names come from a selected subset of the
 `lucide-react <https://lucide.dev/icons>`_ icon set. The frontend bundle
 contains only this subset, thus a tab with a name that is not in the list shows
-no icon. The two names that follow read the list from ``icons.json`` on the
-first access, and not at import time.
+no icon. The package reads the list from ``icons.json`` one time, when Python
+imports ``dash_prism``. :data:`dash_prism.AVAILABLE_ICONS` is a
+:class:`frozenset`, thus it has the set operations too.
 
 .. autofunction:: dash_prism.get_available_icons
 
 .. autodata:: dash_prism.AVAILABLE_ICONS
+   :no-value:
 
 Utilities
 ---------
@@ -130,11 +132,17 @@ Exceptions
 
 Prism raises :exc:`~dash_prism.InitializationError` from
 :func:`dash_prism.init` when the setup is not correct, for example when
-``app.layout`` is not set. Prism raises :exc:`~dash_prism.InvalidWorkspace`
-from :func:`dash_prism.validate_workspace` when a workspace dictionary is not
+``app.layout`` is not set. Prism raises
+:exc:`~dash_prism.InvalidWorkspaceError` from
+:func:`dash_prism.validate_workspace` when a workspace dictionary is not
 coherent. The `Parameter Validation`_ section above documents
 :class:`~dash_prism.ParamValidationError`.
 
 .. autoclass:: dash_prism.InitializationError
 
-.. autoclass:: dash_prism.InvalidWorkspace
+.. autoclass:: dash_prism.InvalidWorkspaceError
+
+.. data:: dash_prism.InvalidWorkspace
+
+   An alias of :exc:`dash_prism.InvalidWorkspaceError`. The alias keeps the
+   older name available through the 1.x releases.

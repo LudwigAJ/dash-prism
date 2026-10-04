@@ -33,31 +33,49 @@ import inspect
 import json
 import logging
 import re
+import traceback
 import types
 import typing
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, Union, get_args, get_origin, get_type_hints
+from typing import (
+    Any,
+    Literal,
+    NamedTuple,
+    TypeAlias,
+    TypeGuard,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
-logger = logging.getLogger("dash_prism")
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
+from pydantic.fields import FieldInfo
 
-# =============================================================================
-# OPTIONAL PYDANTIC DETECTION
-# =============================================================================
+logger = logging.getLogger(__name__)
 
 
-def _is_base_model(tp: Any) -> bool:
-    """Check whether ``tp`` is a pydantic v2 ``BaseModel`` subclass."""
-    if not isinstance(tp, type):
-        return False
-    from pydantic import BaseModel
-
-    return issubclass(tp, BaseModel)
+def _is_base_model(tp: Any) -> TypeGuard[type[BaseModel]]:
+    """Tell whether ``tp`` is a pydantic v2 ``BaseModel`` subclass."""
+    return isinstance(tp, type) and issubclass(tp, BaseModel)
 
 
 # =============================================================================
 # PUBLIC METADATA CLASS
 # =============================================================================
+
+# Maps each constraint field of Param to the JSON Schema keyword that the
+# search bar reads.
+_CONSTRAINT_TO_SCHEMA = {
+    "ge": "minimum",
+    "gt": "exclusiveMinimum",
+    "le": "maximum",
+    "lt": "exclusiveMaximum",
+    "min_length": "minLength",
+    "max_length": "maxLength",
+    "pattern": "pattern",
+}
 
 
 @dataclass(frozen=True)
@@ -118,17 +136,7 @@ class Param:
     def as_field_kwargs(self) -> dict[str, Any]:
         """Translate to keyword arguments for :func:`pydantic.Field`."""
         kwargs: dict[str, Any] = {}
-        for key in (
-            "description",
-            "title",
-            "ge",
-            "gt",
-            "le",
-            "lt",
-            "min_length",
-            "max_length",
-            "pattern",
-        ):
+        for key in ("description", "title", *_CONSTRAINT_TO_SCHEMA):
             value = getattr(self, key)
             if value is not None:
                 kwargs[key] = value
@@ -143,22 +151,11 @@ class Param:
 
     def constraints(self) -> dict[str, Any]:
         """JSON-schema-style constraint dict for the frontend."""
-        out: dict[str, Any] = {}
-        if self.ge is not None:
-            out["minimum"] = self.ge
-        if self.gt is not None:
-            out["exclusiveMinimum"] = self.gt
-        if self.le is not None:
-            out["maximum"] = self.le
-        if self.lt is not None:
-            out["exclusiveMaximum"] = self.lt
-        if self.min_length is not None:
-            out["minLength"] = self.min_length
-        if self.max_length is not None:
-            out["maxLength"] = self.max_length
-        if self.pattern is not None:
-            out["pattern"] = self.pattern
-        return out
+        return {
+            schema_key: getattr(self, key)
+            for key, schema_key in _CONSTRAINT_TO_SCHEMA.items()
+            if getattr(self, key) is not None
+        }
 
 
 # =============================================================================
@@ -182,6 +179,7 @@ class FieldError:
     code: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert to a dictionary for JSON serialization."""
         return {
             "field": self.field,
             "message": self.message,
@@ -191,11 +189,13 @@ class FieldError:
 
 
 class ParamValidationError(ValueError):
-    """Occurs when the parameters that come in for a layout are not valid.
+    """Layout parameters that did not validate.
 
-    This error is a subclass of :class:`ValueError`, so an ``except ValueError``
-    that an application already has continues to catch it. :func:`dash_prism.init`
-    catches this class specifically, and shows the error for each parameter.
+    The validator of a layout raises this error when the parameters that come
+    in for the layout are not valid. This error is a subclass of
+    :class:`ValueError`, so an ``except ValueError`` that an application already
+    has continues to catch it. :func:`dash_prism.init` catches this class
+    specifically, and shows the error for each parameter.
 
     :ivar layout_id: The identifier of the layout that received the parameters.
     :ivar errors: One :class:`FieldError` for each parameter that is not valid.
@@ -207,21 +207,25 @@ class ParamValidationError(ValueError):
         super().__init__(self.format())
 
     def format(self) -> str:
+        """Make the message of the error, with one line for each parameter."""
         lines = [f"Invalid parameters for layout '{self.layout_id}':"]
-        for err in self.errors:
-            suffix = "" if err.input is None else f" (got {err.input!r})"
-            lines.append(f"  - {err.field}: {err.message}{suffix}")
+        for error in self.errors:
+            suffix = "" if error.input is None else f" (got {error.input!r})"
+            lines.append(f"  - {error.field}: {error.message}{suffix}")
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"layoutId": self.layout_id, "errors": [e.to_dict() for e in self.errors]}
+        """Convert to a dictionary for JSON serialization (camelCase keys)."""
+        return {"layoutId": self.layout_id, "errors": [error.to_dict() for error in self.errors]}
 
 
 # =============================================================================
 # PARAMETER DESCRIPTION (what the frontend sees)
 # =============================================================================
 
-ParamType = Literal["string", "integer", "number", "boolean", "enum", "array", "object", "unknown"]
+ParamType: TypeAlias = Literal[
+    "string", "integer", "number", "boolean", "enum", "array", "object", "unknown"
+]
 
 
 @dataclass
@@ -259,6 +263,7 @@ class LayoutParameter:
 
     @property
     def required(self) -> bool:
+        """``True`` if the parameter has no default, so the user must give a value."""
         return not self.has_default
 
     def to_dict(self) -> dict[str, Any]:
@@ -276,7 +281,11 @@ class LayoutParameter:
             "constraints": {k: _json_safe(v) for k, v in self.constraints.items()},
             "description": self.description,
             "title": self.title,
-            "examples": None if self.examples is None else [_json_safe(e) for e in self.examples],
+            "examples": (
+                None
+                if self.examples is None
+                else [_json_safe(example) for example in self.examples]
+            ),
             "placeholder": self.placeholder,
         }
 
@@ -290,8 +299,8 @@ _EMPTY = inspect.Parameter.empty
 
 
 @dataclass
-class ParamSpec:
-    """Holds one resolved parameter of a layout callback.
+class ResolvedParam:
+    """Holds one resolved parameter of a layout callback, or one field of its body model.
 
     This class is internal to the package.
     """
@@ -305,16 +314,16 @@ class ParamSpec:
 
 
 @dataclass
-class CallableSpec:
+class SignatureSpec:
     """Holds the resolved signature of one layout callback.
 
     This class is internal to the package.
     """
 
-    params: list[ParamSpec]
+    params: list[ResolvedParam]
     accepts_var_kwargs: bool = False
     body_param: str | None = None  # the name of the one BaseModel parameter
-    body_model: type | None = None
+    body_model: type[BaseModel] | None = None
 
 
 def _resolve_hints(func: Callable[..., Any]) -> dict[str, Any]:
@@ -336,6 +345,7 @@ def _resolve_hints(func: Callable[..., Any]) -> dict[str, Any]:
 
 
 def _unwrap_annotated(tp: Any) -> tuple[Any, list[Any]]:
+    """Split ``Annotated[T, ...]`` into ``T`` and the list of its metadata."""
     if get_origin(tp) is typing.Annotated:
         args = get_args(tp)
         return args[0], list(args[1:])
@@ -343,6 +353,12 @@ def _unwrap_annotated(tp: Any) -> tuple[Any, list[Any]]:
 
 
 def _strip_optional(tp: Any) -> tuple[Any, bool]:
+    """Remove ``None`` from a union.
+
+    :returns: A tuple (type, nullable). The type is the one remaining member,
+        or the union unchanged when two or more members other than ``None``
+        remain. ``nullable`` is ``True`` if the union holds ``None``.
+    """
     origin = get_origin(tp)
     if origin is Union or origin is types.UnionType:
         args = get_args(tp)
@@ -389,8 +405,12 @@ def _is_listed_choice(value: Any, choices: Sequence[Any]) -> bool:
 
 
 def _absorb_constraints(obj: Any, merged: dict[str, Any]) -> None:
-    """Duck-type ``annotated_types`` constraint objects (Ge, Le, MinLen, ...)."""
-    for key in ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern"):
+    """Duck-type ``annotated_types`` constraint objects (Ge, Le, MinLen, ...).
+
+    Writes the constraints it finds into ``merged``. A key that ``merged``
+    already holds keeps its value.
+    """
+    for key in _CONSTRAINT_TO_SCHEMA:
         value = getattr(obj, key, None)
         if value is not None and key not in merged:
             merged[key] = value
@@ -400,17 +420,17 @@ def _collect_metadata(metadata: Sequence[Any]) -> tuple[Param, list[Any]]:
     """Merge the ``Annotated`` metadata this package knows into one :class:`Param`.
 
     Returns the merged ``Param`` and the metadata items we did not consume
-    (pydantic ``FieldInfo``, ``annotated_types`` objects, arbitrary objects),
-    which are handed to pydantic untouched when it is available.
+    (pydantic ``FieldInfo``, ``annotated_types`` objects, arbitrary objects).
+    The validator gives those items to pydantic unchanged.
     """
     merged: dict[str, Any] = {}
     leftover: list[Any] = []
     for item in metadata:
         if isinstance(item, Param):
-            for f in dataclasses.fields(item):
-                value = getattr(item, f.name)
-                if value is not None and f.name not in merged:
-                    merged[f.name] = value
+            for param_field in dataclasses.fields(item):
+                value = getattr(item, param_field.name)
+                if value is not None and param_field.name not in merged:
+                    merged[param_field.name] = value
             continue
         if isinstance(item, str):
             merged.setdefault("description", item)
@@ -432,8 +452,8 @@ def _collect_metadata(metadata: Sequence[Any]) -> tuple[Param, list[Any]]:
     return Param(**merged), leftover
 
 
-def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
-    """Resolve the parameters of a layout callback into a :class:`CallableSpec`.
+def introspect_callable(func: Callable[..., Any]) -> SignatureSpec:
+    """Resolve the parameters of a layout callback into a :class:`SignatureSpec`.
 
     A callback declares its parameters as plain type hints, as
     :data:`typing.Annotated` metadata, or as one pydantic ``BaseModel``. The
@@ -446,9 +466,9 @@ def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
     """
     sig = inspect.signature(func)
     hints = _resolve_hints(func)
-    params: list[ParamSpec] = []
+    params: list[ResolvedParam] = []
     accepts_var_kwargs = False
-    body: tuple[str, type] | None = None
+    body: tuple[str, type[BaseModel]] | None = None
 
     for name, param in sig.parameters.items():
         if param.kind is inspect.Parameter.VAR_KEYWORD:
@@ -468,7 +488,7 @@ def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
             body = (name, base)
 
         params.append(
-            ParamSpec(
+            ResolvedParam(
                 name=name,
                 annotation=annotation,
                 has_default=has_default,
@@ -484,7 +504,7 @@ def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
             f"parameter '{body[0]}'. A model parameter must be the only parameter."
         )
 
-    return CallableSpec(
+    return SignatureSpec(
         params=params,
         accepts_var_kwargs=accepts_var_kwargs,
         body_param=body[0] if body else None,
@@ -492,27 +512,76 @@ def introspect_callable(func: Callable[..., Any]) -> CallableSpec:
     )
 
 
-def describe_type(tp: Any) -> tuple[ParamType, bool, list[Any] | None, ParamType | None]:
-    """Map a resolved annotation to ``(type, nullable, choices, items)``."""
+def _body_model_fields(model: type[BaseModel]) -> Iterator[ResolvedParam]:
+    """Read each field of a body model as one parameter.
+
+    :param model: The pydantic model that the layout callback takes.
+    :returns: For each field of the model, in the order of the declaration, a
+        :class:`ResolvedParam`. Its ``meta`` merges the ``Param`` and the
+        pydantic metadata of the field. Its ``extra_metadata`` is empty,
+        because the model keeps its own metadata.
+    """
+    for name, info in model.model_fields.items():
+        meta, _ = _collect_metadata([info, *info.metadata])
+        has_default = not info.is_required()
+        yield ResolvedParam(
+            name=name,
+            annotation=_EMPTY if info.annotation is None else info.annotation,
+            has_default=has_default,
+            default=info.get_default(call_default_factory=True) if has_default else None,
+            meta=meta,
+            extra_metadata=[],
+        )
+
+
+def _user_facing_params(spec: SignatureSpec) -> list[ResolvedParam]:
+    """Return the parameters that the user fills in.
+
+    For the body-model style these are the fields of the model, so the search
+    bar asks for each field one at a time. For the other styles they are the
+    parameters of the signature.
+    """
+    if spec.body_model is None:
+        return spec.params
+    return list(_body_model_fields(spec.body_model))
+
+
+class _TypeDescription(NamedTuple):
+    """The simplified form of an annotation that the search bar reads.
+
+    :ivar kind: The simplified type.
+    :ivar nullable: ``True`` if the annotation accepts ``None``.
+    :ivar choices: The values that a ``Literal`` or an ``Enum`` allows, or ``None``.
+    :ivar items: The simplified type of the items when ``kind`` is ``"array"``.
+    """
+
+    kind: ParamType
+    nullable: bool
+    choices: list[Any] | None
+    items: ParamType | None
+
+
+def describe_type(tp: Any) -> _TypeDescription:
+    """Map a resolved annotation to the simplified type that the search bar reads."""
     base, _ = _unwrap_annotated(tp)
     base, nullable = _strip_optional(base)
     base, _ = _unwrap_annotated(base)
     origin = get_origin(base)
 
     if base is _EMPTY or base is Any:
-        return "unknown", nullable, None, None
+        return _TypeDescription("unknown", nullable, None, None)
     if base is bool:
-        return "boolean", nullable, None, None
+        return _TypeDescription("boolean", nullable, None, None)
     if base is int:
-        return "integer", nullable, None, None
+        return _TypeDescription("integer", nullable, None, None)
     if base is float:
-        return "number", nullable, None, None
+        return _TypeDescription("number", nullable, None, None)
     if base is str:
-        return "string", nullable, None, None
+        return _TypeDescription("string", nullable, None, None)
     if origin is Literal:
-        return "enum", nullable, list(get_args(base)), None
+        return _TypeDescription("enum", nullable, list(get_args(base)), None)
     if isinstance(base, type) and issubclass(base, enum.Enum):
-        return "enum", nullable, [m.value for m in base], None
+        return _TypeDescription("enum", nullable, [m.value for m in base], None)
     if origin in (list, tuple, set, frozenset, Sequence, typing.Sequence) or base in (
         list,
         tuple,
@@ -520,11 +589,11 @@ def describe_type(tp: Any) -> tuple[ParamType, bool, list[Any] | None, ParamType
         frozenset,
     ):
         args = get_args(base)
-        items: ParamType = describe_type(args[0])[0] if args else "unknown"
-        return "array", nullable, None, items
+        items: ParamType = describe_type(args[0]).kind if args else "unknown"
+        return _TypeDescription("array", nullable, None, items)
     if origin is dict or base is dict or _is_base_model(base) or dataclasses.is_dataclass(base):
-        return "object", nullable, None, None
-    return "unknown", nullable, None, None
+        return _TypeDescription("object", nullable, None, None)
+    return _TypeDescription("unknown", nullable, None, None)
 
 
 def _annotation_name(tp: Any) -> str | None:
@@ -536,6 +605,13 @@ def _annotation_name(tp: Any) -> str | None:
 
 
 def _json_safe(value: Any) -> Any:
+    """Convert a value into a form that :func:`json.dumps` accepts.
+
+    An ``Enum`` member becomes its value. A list, a tuple or a set becomes a
+    list, and the keys of a mapping become strings. A pydantic model and a
+    dataclass instance become dictionaries. A dataclass class and each other
+    object become their ``str()``.
+    """
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     if isinstance(value, enum.Enum):
@@ -544,14 +620,20 @@ def _json_safe(value: Any) -> Any:
         return [_json_safe(v) for v in value]
     if isinstance(value, Mapping):
         return {str(k): _json_safe(v) for k, v in value.items()}
-    if _is_base_model(type(value)):
+    if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return _json_safe(dataclasses.asdict(value))
     return str(value)
 
 
-def _layout_parameter_from_spec(spec: ParamSpec) -> LayoutParameter:
+def _layout_parameter_from_spec(spec: ResolvedParam) -> LayoutParameter:
+    """Make the search bar metadata for one parameter.
+
+    A ``Param(choices=...)`` replaces the choices of the annotation. It also
+    makes a scalar or an unknown type into ``"enum"``, so the search bar shows
+    a pick list.
+    """
     ptype, nullable, choices, items = describe_type(spec.annotation)
     if spec.meta.choices is not None:
         choices = list(spec.meta.choices)
@@ -574,7 +656,7 @@ def _layout_parameter_from_spec(spec: ParamSpec) -> LayoutParameter:
     )
 
 
-def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
+def build_layout_parameters(spec: SignatureSpec) -> list[LayoutParameter]:
     """Build the parameter list that the frontend receives.
 
     For the body-model style this function reads the fields of the model
@@ -584,29 +666,7 @@ def build_layout_parameters(spec: CallableSpec) -> list[LayoutParameter]:
     :param spec: The resolved signature of the layout callback.
     :returns: One :class:`LayoutParameter` for each parameter or model field.
     """
-    if spec.body_model is None:
-        return [_layout_parameter_from_spec(p) for p in spec.params]
-
-    result: list[LayoutParameter] = []
-    for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
-        meta, _ = _collect_metadata([info, *info.metadata])
-        has_default = not info.is_required()
-        default = None
-        if has_default:
-            default = info.get_default(call_default_factory=True)
-        result.append(
-            _layout_parameter_from_spec(
-                ParamSpec(
-                    name=name,
-                    annotation=info.annotation if info.annotation is not None else _EMPTY,
-                    has_default=has_default,
-                    default=default,
-                    meta=meta,
-                    extra_metadata=[],
-                )
-            )
-        )
-    return result
+    return [_layout_parameter_from_spec(p) for p in _user_facing_params(spec)]
 
 
 def _choice_message(choices: Sequence[Any]) -> str:
@@ -620,10 +680,10 @@ def _choice_message(choices: Sequence[Any]) -> str:
     rendered = [repr(c) if isinstance(c, str) else str(c) for c in choices]
     if len(rendered) == 1:
         return f"Input should be {rendered[0]}"
-    return "Input should be " + ", ".join(rendered[:-1]) + f" or {rendered[-1]}"
+    return f"Input should be {', '.join(rendered[:-1])} or {rendered[-1]}"
 
 
-def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: Param) -> None:
+def _check_choice_declaration(layout_id: str, param: ResolvedParam) -> None:
     """Reject a choice declaration the search bar and the callback cannot both obey.
 
     The search bar builds the pick list from the parameter metadata, and the
@@ -637,9 +697,10 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
 
     :raises ValueError: If the declaration is one of the three below.
     """
-    if meta.choices is None:
+    if param.meta.choices is None:
         return
-    declared = list(meta.choices)
+    name = param.name
+    declared = list(param.meta.choices)
     if not declared:
         raise ValueError(
             f"Layout '{layout_id}': parameter '{name}' declares Param(choices=[]). "
@@ -647,8 +708,8 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
             "or list the values the parameter accepts."
         )
 
-    ptype, _, annotated, _ = describe_type(annotation)
-    if ptype == "array" and not all(
+    description = describe_type(param.annotation)
+    if description.kind == "array" and not all(
         isinstance(choice, (list, tuple, set, frozenset)) for choice in declared
     ):
         raise ValueError(
@@ -659,6 +720,7 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
             "instead, annotate the item type: list[Literal['a', 'b']]."
         )
 
+    annotated = description.choices
     if annotated is not None and not _same_choices(annotated, declared):
         raise ValueError(
             f"Layout '{layout_id}': parameter '{name}' declares its choices twice and "
@@ -669,24 +731,18 @@ def _check_choice_declaration(layout_id: str, name: str, annotation: Any, meta: 
         )
 
 
-def check_choice_declarations(layout_id: str, spec: CallableSpec) -> None:
+def check_choice_declarations(layout_id: str, spec: SignatureSpec) -> None:
     """Check every parameter's choices, for both declaration styles.
 
     :raises ValueError: If a choice list is empty, scalar on a collection
         parameter, or contradicts the choices the annotation already declares.
     """
-    if spec.body_model is None:
-        for param in spec.params:
-            _check_choice_declaration(layout_id, param.name, param.annotation, param.meta)
-        return
-    for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
-        meta, _ = _collect_metadata([info, *info.metadata])
-        annotation = info.annotation if info.annotation is not None else _EMPTY
-        _check_choice_declaration(layout_id, name, annotation, meta)
+    for param in _user_facing_params(spec):
+        _check_choice_declaration(layout_id, param)
 
 
 # =============================================================================
-# BASIC (STDLIB) COERCION
+# NORMALIZATION OF THE BROWSER STRINGS
 # =============================================================================
 
 # The search bar checks the same input in the browser, in
@@ -712,9 +768,6 @@ def check_choice_declarations(layout_id: str, spec: CallableSpec) -> None:
 #   an empty input, so the server applies the default.
 # - The regular-expression syntax. The client uses a JavaScript RegExp, and it
 #   lets a pattern pass if JavaScript cannot read it.
-
-_TRUE = {"true", "1", "yes", "on", "y", "t"}
-_FALSE = {"false", "0", "no", "off", "n", "f"}
 
 
 def _is_blank(value: Any) -> bool:
@@ -777,9 +830,19 @@ def prepare_client_params(
     return out
 
 
+# =============================================================================
+# VALIDATION
+# =============================================================================
+
+
+def _relaxed_field(definition: tuple[Any, FieldInfo]) -> tuple[Any, FieldInfo]:
+    """Make a field definition that accepts any value and keeps the default."""
+    return (Any, Field(definition[1].default))
+
+
 def _model_keeping_what_pydantic_accepts(
-    model_name: str, config: Any, fields: Mapping[str, Any]
-) -> tuple[Any, list[str]]:
+    model_name: str, config: ConfigDict, fields: Mapping[str, tuple[Any, FieldInfo]]
+) -> tuple[type[BaseModel], list[str]]:
     """Rebuild a model, degrading only the fields pydantic refused.
 
     A single parameter that pydantic cannot make a schema for -- ``dict[str, SomeAppClass]``,
@@ -789,189 +852,124 @@ def _model_keeping_what_pydantic_accepts(
     Returns the model and the names of the parameters it gave up on, so the
     caller can say which ones lost their validation.
     """
-    from pydantic import Field, create_model
 
-    def build(items: Mapping[str, Any]) -> Any:
-        return create_model(model_name or "LayoutParams", __config__=config, **items)
-
-    def relaxed(field: Any) -> Any:
-        return (Any, Field(field[1].default))
+    # The field definitions are typed Any, because mypy also matches the values
+    # of **items against the other keyword parameters of create_model.
+    def build(items: Mapping[str, Any]) -> type[BaseModel]:
+        return create_model(model_name, __config__=config, **items)
 
     kept: dict[str, Any] = {}
     degraded: list[str] = []
-    for name, spec in fields.items():
+    for name, definition in fields.items():
         try:
-            build({name: spec})
-        except Exception:  # noqa: BLE001 - a type that pydantic cannot model
-            kept[name] = relaxed(spec)
+            build({name: definition})
+        except Exception as exc:  # noqa: BLE001 - a type that pydantic cannot model
+            logger.debug(
+                "pydantic refused parameter %r of model %s: %s",
+                name,
+                model_name,
+                type(exc).__name__,
+            )
+            kept[name] = _relaxed_field(definition)
             degraded.append(name)
         else:
-            kept[name] = spec
+            kept[name] = definition
     try:
         return build(kept), degraded
     except Exception:  # noqa: BLE001 - a combination of types that pydantic cannot model
         # Reachable when a type only misbehaves in combination -- a custom
         # __get_pydantic_core_schema__ that fails the second time it is asked,
         # for instance. Give up on all of them rather than on registration.
-        return build({name: relaxed(field) for name, field in fields.items()}), list(fields)
+        relaxed = {name: _relaxed_field(definition) for name, definition in fields.items()}
+        return build(relaxed), list(fields)
 
 
-class LayoutValidator(typing.Protocol):
-    """Validates and coerces incoming parameters for one layout."""
+@dataclass(frozen=True)
+class _ValidationPlan:
+    """The work that a validator does on the browser strings, before and after pydantic.
 
-    layout_id: str
+    :ivar nullable: The parameters for which a blank string becomes ``None``.
+    :ivar arrays: The parameters for which a string becomes a list.
+    :ivar choices: Every choice list, by parameter. The validator changes the
+        string from the browser back into the choice that it stands for.
+    :ivar declared_choices: The choice lists that a ``Param`` declares on a
+        field of a body model. pydantic does not read a ``Param``, so the
+        validator checks these lists itself. The signature style has none.
+    :ivar passthrough: The parameters that skip the model and go to the
+        callback unchanged. The body-model style has none.
+    """
 
-    def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
-        """Return coerced kwargs for the callback or raise :class:`ParamValidationError`."""
-        ...
+    nullable: frozenset[str]
+    arrays: frozenset[str]
+    choices: Mapping[str, Sequence[Any]]
+    declared_choices: Mapping[str, Sequence[Any]] = field(default_factory=dict)
+    passthrough: frozenset[str] = frozenset()
+
+
+def _plan_for(
+    params: Sequence[ResolvedParam],
+    *,
+    declared_choices: Mapping[str, Sequence[Any]] | None = None,
+    passthrough: frozenset[str] = frozenset(),
+) -> _ValidationPlan:
+    """Make the validation plan for the parameters that the user fills in."""
+    described = {p.name: describe_type(p.annotation) for p in params}
+    # Every value arrives as a string. Remember what each choice really is, so
+    # that "2" can become 2 for Literal[1, 2]. See _match_choice.
+    choices: dict[str, Sequence[Any]] = {
+        name: description.choices
+        for name, description in described.items()
+        if description.choices is not None
+    }
+    for p in params:
+        if p.meta.choices is not None:
+            choices[p.name] = list(p.meta.choices)
+    return _ValidationPlan(
+        nullable=frozenset(name for name, d in described.items() if d.nullable),
+        arrays=frozenset(name for name, d in described.items() if d.kind == "array"),
+        choices=choices,
+        declared_choices=declared_choices or {},
+        passthrough=passthrough,
+    )
 
 
 class PydanticValidator:
-    """Validator backed by a pydantic model built from the callback signature."""
+    """Validator of the parameters of one layout, backed by a pydantic model.
+
+    :ivar layout_id: The identifier of the layout, which the error messages use.
+    :ivar model: The pydantic model that validates the parameters.
+    :ivar body_param: The name of the one model parameter of the callback, or
+        ``None`` if the callback does not take a body model.
+    """
 
     def __init__(
         self,
         layout_id: str,
-        model: Any,
+        model: type[BaseModel],
         body_param: str | None,
-        nullable: frozenset[str] = frozenset(),
-        arrays: frozenset[str] = frozenset(),
-        choices: Mapping[str, Sequence[Any]] | None = None,
-        passthrough: frozenset[str] = frozenset(),
-        declared_choices: Mapping[str, Sequence[Any]] | None = None,
+        plan: _ValidationPlan,
     ) -> None:
         self.layout_id = layout_id
         self.model = model
         self.body_param = body_param
-        self._nullable = nullable
-        self._arrays = arrays
-        # Every choice we know of, used to turn the browser's string back into
-        # the value it stands for.
-        self._choices = dict(choices or {})
-        # Only those a Param(choices=...) declared, which is what nothing else
-        # enforces for a body model.
-        self._declared_choices = dict(declared_choices or {})
-        self._passthrough = passthrough
-
-    @classmethod
-    def from_spec(cls, layout_id: str, spec: CallableSpec) -> PydanticValidator:
-        from pydantic import ConfigDict, Field, create_model
-
-        if spec.body_model is not None:
-            described = {
-                name: describe_type(info.annotation)
-                for name, info in spec.body_model.model_fields.items()  # type: ignore[attr-defined]
-            }
-        else:
-            described = {p.name: describe_type(p.annotation) for p in spec.params}
-        nullable = frozenset(name for name, d in described.items() if d[1])
-        arrays = frozenset(name for name, d in described.items() if d[0] == "array")
-        # Every value arrives as a string. Remember what each choice really
-        # is, so that "2" can become 2 for Literal[1, 2]. See _match_choice.
-        choices: dict[str, Sequence[Any]] = {
-            name: d[2] for name, d in described.items() if d[2] is not None
-        }
-        if spec.body_model is None:
-            for p in spec.params:
-                if p.meta.choices is not None:
-                    choices[p.name] = list(p.meta.choices)
-        else:
-            # A body model is kept exactly as the app declared it, so pydantic
-            # never sees our Param metadata. Collect the field choices anyway:
-            # they drive both the coercion of the string the browser sends and
-            # the membership check in validate().
-            declared: dict[str, Sequence[Any]] = {}
-            for name, info in spec.body_model.model_fields.items():  # type: ignore[attr-defined]
-                meta, _ = _collect_metadata([info, *info.metadata])
-                if meta.choices is not None:
-                    declared[name] = list(meta.choices)
-                    choices[name] = list(meta.choices)
-            return cls(
-                layout_id,
-                spec.body_model,
-                spec.body_param,
-                nullable,
-                arrays,
-                choices,
-                declared_choices=declared,
-            )
-
-        # pydantic refuses to declare a field whose name starts with an
-        # underscore, but a layout callable can correctly have one. Those
-        # parameters skip the model, and go to the callback unchanged.
-        passthrough = frozenset(p.name for p in spec.params if p.name.startswith("_"))
-
-        fields: dict[str, Any] = {}
-        for p in spec.params:
-            if p.name in passthrough:
-                continue
-            tp = p.annotation if p.annotation is not _EMPTY else Any
-            base, _ = _unwrap_annotated(tp)
-            inner, inner_nullable = _strip_optional(base)
-            if p.meta.choices is not None and get_origin(inner) is not Literal:
-                # describe_type reports such a parameter nullable, so the search
-                # bar offers a blank and prepare_client_params turns it into
-                # None. A type rebuilt from the choices alone drops the
-                # Optional and rejects that None. The user then has no input
-                # that can succeed, except a choice from the list.
-                tp = Literal[tuple(p.meta.choices)]
-                if inner_nullable:
-                    tp = typing.Optional[tp]
-            field_kwargs = p.meta.as_field_kwargs()
-            if describe_type(tp)[0] == "unknown":
-                # pydantic cannot make a schema for an arbitrary class, such
-                # as a DataFrame, a Figure, or a type of the application. An
-                # unhandled PydanticSchemaGenerationError here stops the import
-                # of every application that annotates one. Such a parameter
-                # goes through untouched instead, which is what a parameter
-                # with no annotation already does. Its constraints have no
-                # meaning on Any, so only the descriptive metadata stays.
-                tp = Any
-                field_kwargs = {
-                    key: value
-                    for key, value in field_kwargs.items()
-                    if key in ("description", "title", "examples", "json_schema_extra")
-                }
-            elif p.extra_metadata:
-                tp = typing.Annotated[(tp, *p.extra_metadata)]
-            default = p.default if p.has_default else ...
-            fields[p.name] = (tp, Field(default, **field_kwargs))
-
-        model_name = (
-            "".join(part.capitalize() for part in re.split(r"[^0-9a-zA-Z]+", layout_id)) + "Params"
-        )
-        config = ConfigDict(
-            extra="allow" if spec.accepts_var_kwargs else "forbid",
-            coerce_numbers_to_str=True,
-            # A parameter can correctly be named "model_id", or start with an
-            # underscore. Neither is the business of pydantic here.
-            protected_namespaces=(),
-        )
-        try:
-            model = create_model(
-                model_name or "LayoutParams",
-                __config__=config,
-                **fields,
-            )
-        except Exception as exc:  # noqa: BLE001 - a signature that defeats pydantic
-            # Registration must not fail because a signature defeats pydantic.
-            # Keep every field it can still model. The rest go through
-            # without validation.
-            model, degraded = _model_keeping_what_pydantic_accepts(model_name, config, fields)
-            logger.warning(
-                "dash_prism: could not build a validation model for layout '%s' (%s); "
-                "%s passed through without validation.",
-                layout_id,
-                exc,
-                ("parameter " + ", ".join(sorted(degraded)) if degraded else "its parameters are"),
-            )
-        return cls(layout_id, model, None, nullable, arrays, choices, passthrough)
+        self._plan = plan
 
     def validate(self, params: Mapping[str, Any]) -> dict[str, Any]:
-        from pydantic import ValidationError
+        """Change the strings from the browser into the keyword arguments of the callback.
 
-        data = prepare_client_params(params, self._nullable, self._arrays, self._choices)
-        held_back = {name: data.pop(name) for name in list(data) if name in self._passthrough}
+        :param params: The parameters that the browser sent, by name.
+        :returns: For a body model, one entry that holds the model instance,
+            and the passthrough parameters. For the other styles, the
+            parameters that the browser sent, the extra keyword arguments, and
+            the passthrough parameters. A parameter that the browser left out
+            is absent, so the callback applies its own default.
+        :raises ParamValidationError: If one or more parameters are not valid.
+            A custom validator or type that raises another exception also
+            gives this error, with one ``<root>`` entry.
+        """
+        plan = self._plan
+        data = prepare_client_params(params, plan.nullable, plan.arrays, plan.choices)
+        held_back = {name: data.pop(name) for name in list(data) if name in plan.passthrough}
         try:
             instance = self.model.model_validate(data)
         except ValidationError as exc:
@@ -988,12 +986,14 @@ class PydanticValidator:
         except Exception as exc:  # noqa: BLE001 - a custom validator or type raising on its own
             # Callers catch ParamValidationError and render the panel for
             # invalid parameters. Any other error becomes a server error,
-            # which tells the user nothing.
+            # which tells the user nothing. The message of the exception can
+            # hold a parameter value, so the log gets the frames and not exc_info.
+            frames = "".join(traceback.format_tb(exc.__traceback__))
             logger.warning(
-                "dash_prism: validating parameters for layout '%s' raised %s: %s",
+                "Validation of the parameters of layout %r raised %s\n%s",
                 self.layout_id,
                 type(exc).__name__,
-                exc,
+                frames,
             )
             raise ParamValidationError(
                 self.layout_id,
@@ -1011,7 +1011,7 @@ class PydanticValidator:
         out.update(held_back)
         return out
 
-    def _reject_unlisted_choices(self, instance: Any) -> None:
+    def _reject_unlisted_choices(self, instance: BaseModel) -> None:
         """Hold a body model's fields to the choices the search bar offered.
 
         The signature style rewrites a choice-carrying parameter into a
@@ -1038,16 +1038,110 @@ class PydanticValidator:
                 _json_safe(getattr(instance, name)),
                 "literal_error",
             )
-            for name, choices in self._declared_choices.items()
+            for name, choices in self._plan.declared_choices.items()
             if name in instance.model_fields_set
-            and not (getattr(instance, name) is None and name in self._nullable)
+            and not (getattr(instance, name) is None and name in self._plan.nullable)
             and not _is_listed_choice(getattr(instance, name), choices)
         ]
         if errors:
             raise ParamValidationError(self.layout_id, errors)
 
 
-def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
+def _from_body_model(layout_id: str, body_param: str, model: type[BaseModel]) -> PydanticValidator:
+    """Make the validator for a callback that takes one pydantic model.
+
+    The validator keeps the model exactly as the application declares it, so
+    pydantic never sees the ``Param`` metadata of a field. The field choices
+    thus go into the plan. They change the string from the browser into the
+    choice, and the validator checks them after the model validates.
+    """
+    params = list(_body_model_fields(model))
+    declared = {p.name: list(p.meta.choices) for p in params if p.meta.choices is not None}
+    return PydanticValidator(
+        layout_id, model, body_param, _plan_for(params, declared_choices=declared)
+    )
+
+
+def _signature_field(param: ResolvedParam) -> tuple[Any, FieldInfo]:
+    """Make the pydantic field definition for one parameter of a signature."""
+    tp = param.annotation if param.annotation is not _EMPTY else Any
+    base, _ = _unwrap_annotated(tp)
+    inner, inner_nullable = _strip_optional(base)
+    if param.meta.choices is not None and get_origin(inner) is not Literal:
+        # describe_type reports such a parameter nullable, so the search
+        # bar offers a blank and prepare_client_params turns it into
+        # None. A type rebuilt from the choices alone drops the
+        # Optional and rejects that None. The user then has no input
+        # that can succeed, except a choice from the list.
+        tp = Literal[tuple(param.meta.choices)]
+        if inner_nullable:
+            tp = typing.Optional[tp]
+    field_kwargs = param.meta.as_field_kwargs()
+    if describe_type(tp).kind == "unknown":
+        # pydantic cannot make a schema for an arbitrary class, such
+        # as a DataFrame, a Figure, or a type of the application. An
+        # unhandled PydanticSchemaGenerationError here stops the import
+        # of every application that annotates one. Such a parameter
+        # goes through untouched instead, which is what a parameter
+        # with no annotation already does. Its constraints have no
+        # meaning on Any, so only the descriptive metadata stays.
+        tp = Any
+        field_kwargs = {
+            key: value
+            for key, value in field_kwargs.items()
+            if key in ("description", "title", "examples", "json_schema_extra")
+        }
+    elif param.extra_metadata:
+        tp = typing.Annotated[(tp, *param.extra_metadata)]
+    default = param.default if param.has_default else ...
+    return (tp, Field(default, **field_kwargs))
+
+
+def _from_signature(layout_id: str, spec: SignatureSpec) -> PydanticValidator:
+    """Make the validator for a callback that declares its parameters in its signature.
+
+    The validator builds one pydantic model from the signature. A parameter
+    whose name starts with an underscore skips the model. If pydantic refuses
+    a parameter, that parameter goes through without validation, and the
+    function writes a warning to the log.
+    """
+    # pydantic refuses to declare a field whose name starts with an
+    # underscore, but a layout callable can correctly have one. Those
+    # parameters skip the model, and go to the callback unchanged.
+    passthrough = frozenset(p.name for p in spec.params if p.name.startswith("_"))
+    fields: dict[str, Any] = {
+        p.name: _signature_field(p) for p in spec.params if p.name not in passthrough
+    }
+
+    model_name = (
+        "".join(part.capitalize() for part in re.split(r"[^0-9a-zA-Z]+", layout_id)) + "Params"
+    )
+    config = ConfigDict(
+        extra="allow" if spec.accepts_var_kwargs else "forbid",
+        coerce_numbers_to_str=True,
+        # A parameter can correctly be named "model_id", or start with an
+        # underscore. Neither is the business of pydantic here.
+        protected_namespaces=(),
+    )
+    try:
+        model = create_model(model_name, __config__=config, **fields)
+    except Exception as exc:  # noqa: BLE001 - a signature that defeats pydantic
+        # Registration must not fail because a signature defeats pydantic.
+        # Keep every field it can still model. The rest go through
+        # without validation.
+        model, degraded = _model_keeping_what_pydantic_accepts(model_name, config, fields)
+        logger.warning(
+            "Layout %r: pydantic raised %s for the parameter model. "
+            "Parameters without validation: %s.",
+            layout_id,
+            type(exc).__name__,
+            ", ".join(sorted(degraded)) or "none",
+        )
+    plan = _plan_for(spec.params, passthrough=passthrough)
+    return PydanticValidator(layout_id, model, None, plan)
+
+
+def build_validator(layout_id: str, spec: SignatureSpec) -> PydanticValidator:
     """Make the validator for one layout.
 
     :param layout_id: The identifier of the layout, which the error messages use.
@@ -1057,4 +1151,6 @@ def build_validator(layout_id: str, spec: CallableSpec) -> LayoutValidator:
         :func:`check_choice_declarations` for the three kinds.
     """
     check_choice_declarations(layout_id, spec)
-    return PydanticValidator.from_spec(layout_id, spec)
+    if spec.body_model is None or spec.body_param is None:
+        return _from_signature(layout_id, spec)
+    return _from_body_model(layout_id, spec.body_param, spec.body_model)

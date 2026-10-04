@@ -45,7 +45,7 @@ from dash.exceptions import PreventUpdate
 
 # dash_prism/__init__.py imports this module before it rebinds the name
 # ``registry`` to the registry object, so this import gets the module.
-from dash_prism import params, registry, utils
+from dash_prism import layout_tree, params, registry
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def _compute_server_session_id(layout_ids: Iterable[str]) -> str:
 
 
 def _inject_metadata_into_layout(
-    layout_tree: Any,
+    tree: Any,
     prism_id: str,
     layouts_metadata: dict[str, Any],
     session_id: str,
@@ -122,8 +122,8 @@ def _inject_metadata_into_layout(
     stays. If a layout function returned ``None``, the function writes a warning
     to the log and returns ``None``.
 
-    :param layout_tree: The layout component tree to search.
-    :type layout_tree: Any
+    :param tree: The layout component tree to search.
+    :type tree: Any
     :param prism_id: The ID of the Prism component to write the metadata to.
     :type prism_id: str
     :param layouts_metadata: The metadata of the registered layouts. The
@@ -133,21 +133,21 @@ def _inject_metadata_into_layout(
         writes it to the ``serverSessionId`` prop.
     :type session_id: str
     :returns: The same layout tree that you supplied, or ``None`` if
-        ``layout_tree`` was ``None``.
+        ``tree`` was ``None``.
     :rtype: Any
     """
-    if layout_tree is None:
+    if tree is None:
         logger.warning(
             "Layout function returned None. Prism component '%s' may not be available.", prism_id
         )
         return None
 
-    prism = utils.find_component_by_id(layout_tree, prism_id)
+    prism = layout_tree.find_component_by_id(tree, prism_id)
     if prism is not None:
         prism.registeredLayouts = layouts_metadata
         if getattr(prism, "serverSessionId", None) is None:
             prism.serverSessionId = session_id
-    return layout_tree
+    return tree
 
 
 def _create_layout_wrapper(
@@ -190,12 +190,12 @@ def _create_layout_wrapper(
         async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             try:
                 # _R is the coroutine type for an async layout. mypy cannot see that.
-                layout_tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
+                tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
             except Exception:
                 logger.exception("Error in async layout function")
                 raise
 
-            return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
+            return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
 
         return cast(Callable[_P, _R], async_wrapper)
     else:
@@ -203,12 +203,12 @@ def _create_layout_wrapper(
         @functools.wraps(original_layout)
         def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             try:
-                layout_tree = original_layout(*args, **kwargs)
+                tree = original_layout(*args, **kwargs)
             except Exception:
                 logger.exception("Error in sync layout function")
                 raise
 
-            return _inject_metadata_into_layout(layout_tree, prism_id, layouts_metadata, session_id)
+            return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
 
         return cast(Callable[_P, _R], sync_wrapper)
 
@@ -248,7 +248,7 @@ def _get_layout_root(app: Dash) -> Any | None:
 
     try:
         return layout()
-    except Exception:  # pragma: no cover - depends on app layout
+    except Exception:  # The layout function of the application must not stop init().
         warnings.warn(
             "Failed to call app.layout() while searching for the Prism component. "
             "Make sure that your layout function can be called with no arguments.",
@@ -332,7 +332,7 @@ def _validate_prism_component(app: Dash, prism_id: str) -> Any | None:
     layout_root = _get_layout_root(app)
     if inspect.iscoroutinefunction(app.layout):
         return None
-    prism_component = utils.find_component_by_id(layout_root, prism_id)
+    prism_component = layout_tree.find_component_by_id(layout_root, prism_id)
 
     if prism_component is None:
         warnings.warn(
@@ -407,7 +407,7 @@ def _is_connected(app: Dash, prism_id: str) -> bool:
     """
     layout = app.layout
     if not callable(layout):
-        return utils.find_component_by_id(layout, prism_id) in _filled_prism_components
+        return layout_tree.find_component_by_id(layout, prism_id) in _filled_prism_components
 
     while layout is not None:
         # "in" gives False for a callable that cannot have a weak reference.
@@ -439,7 +439,7 @@ def _attach_metadata(app: Dash, prism_id: str) -> None:
 
     if not callable(original_layout):
         _inject_metadata_into_layout(original_layout, prism_id, layouts_metadata, session_id)
-        prism = utils.find_component_by_id(original_layout, prism_id)
+        prism = layout_tree.find_component_by_id(original_layout, prism_id)
         if prism is not None:
             _filled_prism_components.add(prism)
         return
@@ -753,9 +753,7 @@ def _lookup_and_resolve(
     registration = registry.get_layout(layout_id)
     if registration is None:
         raise ValueError(f"Layout '{layout_id}' not found")
-    resolved_params = registry.resolve_layout_params(
-        registration, layout_id, layout_params, layout_option
-    )
+    resolved_params = registry.resolve_layout_params(registration, layout_params, layout_option)
     return registration, resolved_params
 
 
@@ -800,13 +798,13 @@ def _render_tab_layout(
 
     try:
         registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
-        if registration.is_callable and registration.callback is not None:
+        if registration.callback is not None:
             layout = _run_callback(
                 registration.callback, registration.is_async, resolved_params, timeout
             )
         else:
             layout = copy.deepcopy(registration.layout)
-        return utils.inject_tab_id(layout, tab_id)
+        return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
         return _error_component_for(exc, layout_id, timeout)
 
@@ -846,13 +844,13 @@ async def _render_tab_layout_async(
 
     try:
         registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
-        if registration.is_callable and registration.callback is not None:
+        if registration.callback is not None:
             layout = await _run_callback_async(
                 registration.callback, registration.is_async, resolved_params, timeout
             )
         else:
             layout = copy.deepcopy(registration.layout)
-        return utils.inject_tab_id(layout, tab_id)
+        return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
         return _error_component_for(exc, layout_id, timeout)
 
@@ -960,14 +958,14 @@ def _register_render_callback(app: Dash, background: bool) -> None:
     if use_async:
 
         @register
-        async def render_prism_content_async(content_id, data):
+        async def render_prism_content_async(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this async callback."""
             return await _render_content_request_async(content_id, data)
 
     else:
 
         @register
-        def render_prism_content(content_id, data):
+        def render_prism_content(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this sync callback."""
             return _render_content_request(content_id, data)
 

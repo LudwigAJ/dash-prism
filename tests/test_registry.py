@@ -12,8 +12,7 @@ from dash import html
 from pydantic import BaseModel, Field
 
 import dash_prism
-from dash_prism import Param
-from dash_prism.registry import LayoutParameter
+from dash_prism import LayoutParameter, Param
 
 LAYOUT_META_FIXTURE = Path(__file__).parent / "fixtures" / "layout_meta.json"
 
@@ -117,6 +116,23 @@ def test_clear_registry(sample_layout) -> None:
     dash_prism.clear_registry()
     assert "to-clear" not in dash_prism.registry
     assert len(dash_prism.registry) == 0
+
+
+def test_layouts_is_a_read_only_view_of_the_registry(sample_layout) -> None:
+    layouts = dash_prism.registry.layouts
+    dash_prism.register_layout(id="later", layout=sample_layout)
+
+    assert list(layouts) == ["later"]
+    with pytest.raises(TypeError):
+        layouts["other"] = layouts["later"]  # type: ignore[index]
+
+
+def test_only_an_omitted_name_falls_back_to_the_id(sample_layout) -> None:
+    dash_prism.register_layout(id="no-name", layout=sample_layout)
+    dash_prism.register_layout(id="empty-name", name="", layout=html.Div())
+
+    assert dash_prism.get_layout("no-name").name == "no-name"
+    assert dash_prism.get_layout("empty-name").name == ""
 
 
 def _register_reference_layouts() -> None:

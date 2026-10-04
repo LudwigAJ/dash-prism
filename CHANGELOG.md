@@ -70,8 +70,43 @@ All notable changes to Dash Prism are recorded here. The project follows
   layout that takes a pydantic model. Code that read the schema must build it
   from its own pydantic model.
 
+- **`LayoutRegistry.layouts` is a read-only view.** The property returns a
+  `types.MappingProxyType` of the registry and no longer a copy. The view
+  shows each later registration. Code that changed the returned dictionary
+  now gets a `TypeError`.
+
 ### Changed
 
+- The parameter validation logs with the logger `dash_prism.params`, so a
+  handler on `dash_prism` still receives the records. Its messages no longer
+  start with `dash_prism:`. When a custom validator of a layout raises an
+  exception that is not a validation error, the log names the class of the
+  exception and the stack frames, but not the message, because the message can
+  hold a value that the user typed.
+- `AVAILABLE_ICONS` is a real `frozenset`, so the set operations work too.
+  The package reads `icons.json` when Python imports it. Before, a proxy read
+  the file at the first use and had only the membership test, iteration and
+  `len()`.
+- `import dash_prism` raises `ImportError` when Dash does not import correctly,
+  for example because of a local file `dash.py`. Before, it printed a message
+  and ended the process with `sys.exit(1)`.
+- The exception of `validate_workspace` is now `InvalidWorkspaceError`, so all
+  three public exceptions end in `Error`. `InvalidWorkspace` stays as an alias
+  of the same class.
+- `find_component_by_id` returns the first component with the ID, in the order
+  of the walk (a component before its children). Before, it returned the last
+  one.
+- The component tree helpers are in the module `dash_prism.layout_tree`, and
+  `validate_workspace` is in `dash_prism.workspace`. The names on `dash_prism`
+  are the same. `validate_workspace(errors='ignore')` logs with the logger
+  `dash_prism.workspace`, and its messages no longer start with `[Prism]`.
+- The module `dash_prism.registry` no longer re-exports `LayoutParameter` and
+  has no `__all__`. Import `LayoutParameter` from `dash_prism`.
+- `resolve_layout_params` in `dash_prism.registry` reads the layout ID from the
+  registration. It no longer takes the `layout_id` and `validate` arguments.
+  It is not part of the documented API.
+- `register_layout(name="")` keeps the empty name. Only an omitted name falls
+  back to the layout ID.
 - Context menus, dialogs, popovers and tooltips render inside the Prism root
   element and use the theme of their own instance. A host ancestor of the Prism
   component that has a `transform`, `filter` or `contain` property, or its own
@@ -132,8 +167,20 @@ All notable changes to Dash Prism are recorded here. The project follows
   Linux, `⌃R` on macOS. Before, the context menu showed `⌃R` on every platform.
   The help dialog lists Previous tab and Next tab as two rows.
 
+### Deprecated
+
+- `InvalidWorkspace` is an alias of `InvalidWorkspaceError`. Catch the new name.
+  The alias goes away in 2.0.
+- The module `dash_prism.utils` only gives the names of `dash_prism.layout_tree`
+  and `dash_prism.workspace`. Import the names from `dash_prism`. The module goes
+  away in 2.0.
+- `LayoutRegistration.body_param` is always `None`. Registration no longer sets
+  it, because nothing read it. The field goes away in 2.0.
+
 ### Removed
 
+- The module attribute `dash_prism.package_name` is removed. It was never
+  documented.
 - The bundle no longer re-exports internal store helpers (`redo`,
   `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
   `usePanelTabs`). They were never documented.

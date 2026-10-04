@@ -162,7 +162,7 @@ the two sides of the workspace contract.
    ``selectWorkspaceSnapshot`` in ``src/ts/store/selectors.ts`` makes the value
    of ``readWorkspace``, and the ``syncWorkspace`` action applies a
    ``Partial<Workspace>``. The Python side is
-   :func:`dash_prism.validate_workspace` in ``dash_prism/utils.py``, which
+   :func:`dash_prism.validate_workspace` in ``dash_prism/workspace.py``, which
    checks the five required keys of a dict. The documentation of the
    ``readWorkspace`` prop in ``PrismComponent.tsx`` and in ``dash_prism/Prism.py``
    lists all the keys. When you change a key, change all three places by hand.
