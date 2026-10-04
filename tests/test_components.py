@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import warnings
+
 import pytest
 from dash import Dash, html
 
 import dash_prism
+from dash_prism.PrismComponent import PrismComponent
 
 
 def test_prism_component_instantiation() -> None:
@@ -103,8 +106,6 @@ def test_prism_warns_when_persistence_true_but_type_is_memory() -> None:
 
 def test_prism_does_not_warn_for_effective_persistence_combinations() -> None:
     """Only the no-op combination warns."""
-    import warnings
-
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         dash_prism.Prism(id="p", persistence=True, persistence_type="local", style={})
@@ -122,8 +123,6 @@ def test_prop_docstrings_match_behaviour() -> None:
     and ``help()`` shows. B-4 was exactly these two drifting apart, so both are
     checked here.
     """
-    from dash_prism.PrismComponent import PrismComponent
-
     claims = (
         "counts every panel together",  # maxTabs is global, not per panel
         "500 ms after the last change",  # readWorkspace debounces, not throttles
@@ -169,8 +168,6 @@ def test_prism_warns_on_quiet_empty_tab_combination() -> None:
 
 
 def test_prism_does_not_warn_for_other_empty_tab_combinations() -> None:
-    import warnings
-
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         dash_prism.Prism(id="p", emptyTabView="none", style={})
@@ -192,8 +189,6 @@ def test_prism_warns_when_actions_are_hidden_by_show_status_bar() -> None:
     action = dash_prism.Action(id="save", label="Save")
     with pytest.warns(UserWarning, match="showStatusBar=False"):
         dash_prism.Prism(id="p", showStatusBar=False, actions=[action], style={})
-
-    import warnings
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)

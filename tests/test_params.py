@@ -4,11 +4,15 @@
 
 import enum
 import json
+import logging
+import re
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
 import pytest
 from dash import html
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import core_schema
 
 import dash_prism
 from dash_prism import Param, ParamValidationError
@@ -93,8 +97,6 @@ def test_future_annotations_are_resolved():
 
 
 def test_body_model_style():
-    from pydantic import BaseModel, Field
-
     class M(BaseModel):
         n: int = Field(1, ge=1)
         title: str
@@ -113,8 +115,6 @@ def test_body_model_style():
 
 
 def test_body_model_must_be_only_param():
-    from pydantic import BaseModel
-
     class M(BaseModel):
         x: int = 1
 
@@ -233,10 +233,8 @@ def test_parameter_named_with_a_leading_underscore_is_passed_through():
 
 def test_constraints_are_json_safe():
     """A compiled pattern would break Dash's serialisation of the metadata."""
-    import json
-    import re as _re
 
-    def layout(code: Annotated[str, Param(pattern=_re.compile(r"^[a-z]+$"))] = "abc"):
+    def layout(code: Annotated[str, Param(pattern=re.compile(r"^[a-z]+$"))] = "abc"):
         return html.Div()
 
     params = P.build_layout_parameters(P.introspect_callable(layout))
@@ -398,7 +396,6 @@ def test_body_model_choices_are_enforced_not_just_advertised():
     The search bar offered the pick list and nothing held the request to it:
     a value that was never on the list reached the callback.
     """
-    from pydantic import BaseModel
 
     class Body(BaseModel):
         ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])]
@@ -421,7 +418,6 @@ def test_body_model_choices_are_enforced_not_just_advertised():
 
 def test_a_blank_still_clears_an_optional_body_model_choice():
     """Guard: enforcing the list must not swallow the nullable blank."""
-    from pydantic import BaseModel
 
     class Body(BaseModel):
         ticker: Annotated[Optional[str], Param(choices=["BTPS", "FRTR"])] = None
@@ -500,7 +496,6 @@ def test_body_model_tuple_choices_survive_pydantic_coercion():
     is still the list it parsed to, so it never matched the declared tuple and
     a perfectly valid submission was refused.
     """
-    from pydantic import BaseModel
 
     class Body(BaseModel):
         pair: Annotated[tuple[int, int], Param(choices=[(1, 2), (3, 4)])]
@@ -524,7 +519,6 @@ def test_a_body_models_own_validator_runs_before_its_choices_are_checked():
     before-validator strips it -- and because ``param_options`` are validated
     at registration, a layout like this could no longer be imported at all.
     """
-    from pydantic import BaseModel, field_validator
 
     class Body(BaseModel):
         kind: Annotated[Literal["a", "b"], Param(choices=["a", "b"])]
@@ -549,7 +543,6 @@ def test_body_model_enum_choices_accept_the_member_pydantic_builds():
     ``'Color.RED'``), so the check has to compare across representations rather
     than demand the declaration's own spelling.
     """
-    from pydantic import BaseModel
 
     class Body(BaseModel):
         color: Annotated[Color, Param(choices=[Color.RED, Color.BLUE])]
@@ -568,7 +561,6 @@ def test_an_alias_cannot_route_around_a_body_models_choices():
     Keyed on the incoming names it saw no field called ``ticker`` at all, so an
     off-list value submitted under the alias reached the callback untouched.
     """
-    from pydantic import BaseModel, Field
 
     class Body(BaseModel):
         ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])] = Field(alias="t")
@@ -587,7 +579,6 @@ def test_an_alias_cannot_route_around_a_body_models_choices():
 
 def test_an_unset_body_field_keeps_its_default_unchecked():
     """Guard: the check must not start validating defaults nobody submitted."""
-    from pydantic import BaseModel
 
     class Body(BaseModel):
         ticker: Annotated[str, Param(choices=["BTPS", "FRTR"])] = "DBR"
@@ -630,7 +621,6 @@ def test_a_genuinely_different_choice_list_is_still_a_contradiction():
 
 def test_the_warning_names_the_parameters_that_lost_validation():
     """A log line saying "its parameters" hid which one actually degraded."""
-    import logging
 
     def layout(cfg: dict[str, _AppType], n: int = 1):
         return html.Div()
@@ -656,8 +646,6 @@ def test_the_last_resort_fallback_gives_up_on_every_field():
     first time it is asked and fails the next, so the combined rebuild still
     fails and everything has to be relaxed.
     """
-    from pydantic import ConfigDict, Field
-    from pydantic_core import core_schema
 
     class _RefusesToBeSchematisedTwice:
         calls = 0

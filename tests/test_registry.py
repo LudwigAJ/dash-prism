@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 import dash_prism
 from dash_prism import Param
+from dash_prism.registry import LayoutParameter
 
 LAYOUT_META_FIXTURE = Path(__file__).parent / "fixtures" / "layout_meta.json"
 
@@ -196,8 +197,6 @@ def test_layout_metadata_matches_the_fixture_of_the_frontend() -> None:
 
 def test_layout_parameter_to_dict_contract() -> None:
     """Contract test for LayoutParameter.to_dict() matching frontend LayoutParam type."""
-    from dash_prism.registry import LayoutParameter
-
     param = LayoutParameter(
         name="test_param",
         has_default=True,

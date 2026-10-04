@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+import dash_prism
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -74,8 +76,6 @@ def test_user_guide_does_not_promise_string_ids_without_allow_multiple() -> None
 
 def test_api_reference_documents_exactly_the_public_api() -> None:
     """docs/api.rst and dash_prism.__all__ must list the same names (01 §2.1)."""
-    import dash_prism
-
     api = (ROOT / "docs" / "api.rst").read_text(encoding="utf-8")
     documented = set(re.findall(r"^\.\. (?:auto\w+|data):: dash_prism\.(\w+)", api, re.M))
     public = set(dash_prism.__all__)
@@ -87,8 +87,6 @@ def test_api_reference_documents_exactly_the_public_api() -> None:
 
 def test_removed_public_helpers_are_gone() -> None:
     """render_layout_for_tab could not render async layouts and duplicated init.py."""
-    import dash_prism
-
     assert not hasattr(dash_prism, "render_layout_for_tab")
     assert not hasattr(dash_prism.utils, "render_layout_for_tab")
 
