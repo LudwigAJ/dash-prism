@@ -1,6 +1,8 @@
-import { type Draft } from 'immer';
 import type { PanelNode, PanelId, PanelDirection } from '@types';
 import { generateShortId } from '@utils/uuid';
+
+// The reducers pass immer drafts. A draft of a PanelNode has the same fields, so `PanelNode`
+// takes it, and a function can change the draft in place.
 
 // =============================================================================
 // Query Functions (Read-only)
@@ -9,33 +11,30 @@ import { generateShortId } from '@utils/uuid';
 /**
  * Checks if a panel is a leaf panel (can hold tabs)
  */
-export function isLeafPanel(root: PanelNode | Draft<PanelNode>): boolean {
+export function isLeafPanel(root: PanelNode): boolean {
   return root.children.length === 0;
 }
 
 /**
  * Gets all leaf panel IDs from a panel tree (recursive)
  */
-export function getLeafPanelIds(root: PanelNode | Draft<PanelNode>): PanelId[] {
+export function getLeafPanelIds(root: PanelNode): PanelId[] {
   if (!root || !root.children) return [];
   if (isLeafPanel(root)) return [root.id];
-  return root.children.flatMap(getLeafPanelIds);
+  return root.children.flatMap((child) => getLeafPanelIds(child));
 }
 
 /**
  * Counts total number of leaf panels in a tree
  */
-export function countLeafPanels(root: PanelNode | Draft<PanelNode>): number {
+export function countLeafPanels(root: PanelNode): number {
   return getLeafPanelIds(root).length;
 }
 
 /**
  * Finds a panel by ID in the tree (recursive)
  */
-export function findPanelById(
-  root: PanelNode | Draft<PanelNode>,
-  panelId: PanelId
-): PanelNode | Draft<PanelNode> | null {
+export function findPanelById(root: PanelNode, panelId: PanelId): PanelNode | null {
   if (root.id === panelId) return root;
 
   for (const child of root.children) {
@@ -50,9 +49,9 @@ export function findPanelById(
  * Finds parent panel with index (useful for splicing in mutations)
  */
 function findParentPanelWithIndex(
-  root: PanelNode | Draft<PanelNode>,
+  root: PanelNode,
   panelId: PanelId
-): { parent: PanelNode | Draft<PanelNode>; index: number } | null {
+): { parent: PanelNode; index: number } | null {
   for (let i = 0; i < root.children.length; i++) {
     if (root.children[i].id === panelId) {
       return { parent: root, index: i };
@@ -71,9 +70,9 @@ function findParentPanelWithIndex(
  * Updates a panel in the tree by ID (in-place mutation)
  */
 export function updatePanelInTree(
-  root: PanelNode | Draft<PanelNode>,
+  root: PanelNode,
   panelId: PanelId,
-  updater: (p: PanelNode | Draft<PanelNode>) => void
+  updater: (p: PanelNode) => void
 ): boolean {
   if (root.id === panelId) {
     updater(root);
@@ -97,7 +96,7 @@ export function updatePanelInTree(
  *
  * @returns true if the panel was removed, false if the panel is not in the tree or is a container
  */
-export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId: PanelId): boolean {
+export function removePanelFromTree(root: PanelNode, panelId: PanelId): boolean {
   const result = findParentPanelWithIndex(root, panelId);
   if (!result) return false;
   if (!isLeafPanel(result.parent.children[result.index])) return false;
@@ -146,7 +145,7 @@ export function removePanelFromTree(root: PanelNode | Draft<PanelNode>, panelId:
  * in a reducer also makes Immer discard the draft, so the tree stays unchanged.
  */
 export function splitPanel(
-  rootPanel: PanelNode | Draft<PanelNode>,
+  rootPanel: PanelNode,
   options: {
     panelId: PanelId;
     direction: PanelDirection;
