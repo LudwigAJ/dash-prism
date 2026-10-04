@@ -1,5 +1,5 @@
 /**
- * Regression tests for buildDashSpec (02 B-3 / 01 §1.1).
+ * Regression tests for buildDashSpec.
  *
  * The Prism `layoutTimeout` prop used to be placed only inside `data`, while
  * PrismContent's client-side timer read the `layoutTimeout` prop, so the
