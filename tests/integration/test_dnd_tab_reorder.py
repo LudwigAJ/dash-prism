@@ -21,6 +21,13 @@ from tests.integration import testutils
 pytestmark = pytest.mark.integration
 
 
+def _moved(order: list[str], source_idx: int, target_idx: int) -> list[str]:
+    """Return ``order`` with the tab at ``source_idx`` moved to ``target_idx``."""
+    moved = list(order)
+    moved.insert(target_idx, moved.pop(source_idx))
+    return moved
+
+
 class TestTabReorder:
     """Tests for tab reorder operations within a single panel."""
 
@@ -48,11 +55,9 @@ class TestTabReorder:
 
         testutils.drag_tab_to_position(duo, source_idx, target_idx)
 
-        new_order = testutils.get_tab_order_in_panel(duo, 0)
-
-        # All tabs preserved
-        assert set(new_order) == set(initial_order), "All tabs should exist"
-        assert len(testutils.get_tabs(duo)) == 3, "Still 3 tabs"
+        assert testutils.get_tab_order_in_panel(duo, 0) == _moved(
+            initial_order, source_idx, target_idx
+        )
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
     def test_reorder_with_two_tabs(self, prism_app_with_layouts):
@@ -68,9 +73,7 @@ class TestTabReorder:
 
         testutils.drag_tab_to_position(duo, 0, 1)
 
-        new_order = testutils.get_tab_order_in_panel(duo, 0)
-        assert len(new_order) == 2, "Still 2 tabs"
-        assert set(new_order) == set(initial_order), "Same tabs exist"
+        assert testutils.get_tab_order_in_panel(duo, 0) == initial_order[::-1]
 
     def test_multiple_sequential_reorders(self, prism_app_with_layouts):
         """
@@ -78,15 +81,11 @@ class TestTabReorder:
         """
         duo = prism_app_with_layouts
 
-        testutils.create_tabs_for_dnd_test(duo, 4)
-        initial_tabs = set(testutils.get_tab_order_in_panel(duo, 0))
+        expected = testutils.create_tabs_for_dnd_test(duo, 4)
 
-        # Perform 3 reorders
-        testutils.drag_tab_to_position(duo, 0, 2)
-        testutils.drag_tab_to_position(duo, 3, 1)
-        testutils.drag_tab_to_position(duo, 1, 3)
+        for source_idx, target_idx in [(0, 2), (3, 1), (1, 3)]:
+            testutils.drag_tab_to_position(duo, source_idx, target_idx)
+            expected = _moved(expected, source_idx, target_idx)
+            assert testutils.get_tab_order_in_panel(duo, 0) == expected
 
-        final_order = testutils.get_tab_order_in_panel(duo, 0)
-
-        assert set(final_order) == initial_tabs, "All tabs preserved"
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"

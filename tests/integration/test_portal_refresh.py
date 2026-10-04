@@ -21,6 +21,8 @@ from __future__ import annotations
 import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
 
@@ -68,27 +70,21 @@ def test_context_menu_has_core_items(prism_app_with_layouts):
     testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
 
-def test_keyboard_shortcut_refresh_no_error(prism_app_with_layouts):
-    """Test Ctrl+Shift+R doesn't cause errors even for tabs without layout."""
+def test_refresh_shortcut_remounts_the_tab_content(prism_app_with_layouts):
+    """Ctrl/Cmd+Shift+R renders the layout of the active tab again, in the same tab."""
     duo = prism_app_with_layouts
+    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
+    duo.find_element("[data-testid='prism-layout-item-test-static']").click()
+    content = duo.wait_for_element("[id*='static-content']", timeout=10)
 
-    # Verify we have at least 1 tab
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) >= 1, "Should have at least 1 tab"
-
-    # Press Ctrl+Shift+R (refresh shortcut)
-    # For tabs without layout, this should be a no-op (guarded in reducer)
     modifier = testutils.get_modifier_key()
+    ActionChains(duo.driver).key_down(modifier).key_down(Keys.SHIFT).send_keys("r").key_up(
+        Keys.SHIFT
+    ).key_up(modifier).perform()
 
-    # Use ActionChains for modifier combination
-    actions = ActionChains(duo.driver)
-    actions.key_down(modifier).key_down(Keys.SHIFT).send_keys("r").key_up(Keys.SHIFT).key_up(
-        modifier
-    ).perform()
-
-    # Tab count should remain the same (refresh doesn't close tab)
-    testutils.wait_for_tab_count(duo, len(tabs), timeout=3)
-
-    # Verify no console errors from refresh action
-    tabs_after = testutils.get_tabs(duo)
-    assert len(tabs_after) == len(tabs), "Refresh should not change tab count"
+    WebDriverWait(duo.driver, 10).until(
+        EC.staleness_of(content), message="The refresh should mount the tab content again"
+    )
+    duo.wait_for_element("[id*='static-content']", timeout=10)
+    assert [tab.text for tab in testutils.get_tabs(duo)] == ["Test Static Layout"]

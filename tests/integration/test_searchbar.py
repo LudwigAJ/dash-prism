@@ -13,10 +13,7 @@ Best Practices Applied:
 
 from __future__ import annotations
 
-import time
-
 import pytest
-from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
@@ -26,8 +23,23 @@ from tests.integration import testutils
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
-# Short pause for UI animations/transitions (honest about what it does)
-_UI_SETTLE_MS = 0.3
+# The dropdown lists this layout while it is open with an empty query.
+_LAYOUT_ITEM = "[data-testid='prism-layout-item-test-static']"
+
+
+def _open_dropdown(duo) -> None:
+    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(_LAYOUT_ITEM, timeout=5)
+
+
+def _wait_for_empty_query(duo) -> None:
+    WebDriverWait(duo.driver, 3).until(
+        lambda driver: driver.find_element(
+            By.CSS_SELECTOR, testutils.SEARCHBAR_INPUT
+        ).get_attribute("value")
+        == "",
+        message="Escape should clear the query",
+    )
 
 
 def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
@@ -85,30 +97,13 @@ def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
 
 
 def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
-    """
-    Test that pressing Escape closes the SearchBar dropdown.
-
-    Verifies:
-    - Escape key interaction works
-    - No errors during keyboard interaction
-    """
+    """Escape closes the dropdown of the search bar."""
     duo = prism_app_with_layouts
-    testutils.wait_for_tab_count(duo, 1)
+    _open_dropdown(duo)
 
-    # Activate search mode
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    searchbar = duo.find_element(".prism-searchbar")
-    searchbar.click()
+    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(Keys.ESCAPE)
 
-    # Wait for search input
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
-
-    # Press Escape
-    search_input.send_keys(Keys.ESCAPE)
-
-    # Wait for search input to disappear
-    time.sleep(_UI_SETTLE_MS)
+    testutils.wait_for_element_invisible(duo, _LAYOUT_ITEM)
 
 
 def test_searchbar_typing_updates_query(prism_app_with_layouts):
@@ -176,67 +171,18 @@ def test_searchbar_independent_per_tab(prism_app_with_layouts):
 
 
 def test_searchbar_rapid_interactions(prism_app_with_layouts):
-    """
-    Test rapid user interactions don't cause errors.
+    """Each open, type and Escape cycle starts from a clean search bar.
 
-    Verifies:
-    - Multiple quick clicks work
-    - No race conditions in state updates
+    The next cycle opens the full list again only if Escape cleared the query
+    and closed the dropdown.
     """
     duo = prism_app_with_layouts
-    testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-
-    # Rapid sequence: click -> type -> escape -> click -> type -> escape
     for _ in range(3):
-        searchbar = duo.find_element(".prism-searchbar")
-        searchbar.click()
-
-        # Wait for input; if it doesn't appear within 1s, the searchbar may be
-        # in a different mode — that's acceptable for a rapid-interaction test.
-        try:
-            duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=1)
-            search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
-            search_input.send_keys("abc")
-            search_input.send_keys(Keys.ESCAPE)
-        except WebDriverException:
-            # Input may not appear if searchbar is in a transitional mode
-            pass
-
-        time.sleep(0.1)
-
-
-def test_searchbar_handles_multiple_open_close_cycles(prism_app_with_layouts):
-    """
-    Test SearchBar maintains consistency across multiple cycles.
-
-    Verifies:
-    - State doesn't become corrupted
-    - Memory is properly managed (no leaks)
-    """
-    duo = prism_app_with_layouts
-    testutils.wait_for_tab_count(duo, 1)
-
-    # Perform 5 open/close cycles
-    for i in range(5):
-        duo.wait_for_element(".prism-searchbar", timeout=3)
-        searchbar = duo.find_element(".prism-searchbar")
-
-        # Open
-        searchbar.click()
-        time.sleep(0.2)
-
-        # Close via Escape if input is available
-        try:
-            duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=1)
-            search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
-            search_input.send_keys(Keys.ESCAPE)
-        except WebDriverException:
-            # Input may not appear in every cycle if mode transitions are fast
-            pass
-
-        time.sleep(0.2)
+        _open_dropdown(duo)
+        search_input = duo.find_element(testutils.SEARCHBAR_INPUT)
+        search_input.send_keys("abc", Keys.ESCAPE)
+        _wait_for_empty_query(duo)
 
 
 def test_searchbar_focus_management(prism_app_with_layouts):
@@ -317,34 +263,15 @@ def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
 
 
 def test_searchbar_survives_page_resize(prism_app_with_layouts):
-    """
-    Test SearchBar handles window resize without errors.
-
-    Verifies:
-    - No crashes on resize
-    - Reducer state remains consistent
-    """
+    """An open dropdown stays open through a resize of the window."""
     duo = prism_app_with_layouts
-    testutils.wait_for_tab_count(duo, 1)
-
-    # Get initial window size
+    _open_dropdown(duo)
     initial_size = duo.driver.get_window_size()
 
-    # Activate SearchBar
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    searchbar = duo.find_element(".prism-searchbar")
-    searchbar.click()
-
-    # Resize window
     duo.driver.set_window_size(1200, 800)
-    time.sleep(0.5)
-
-    # Resize back
     duo.driver.set_window_size(initial_size["width"], initial_size["height"])
-    time.sleep(0.5)
 
-    # SearchBar should still be present and functional
-    duo.wait_for_element(".prism-searchbar", timeout=3)
+    assert duo.find_element(_LAYOUT_ITEM).is_displayed()
 
 
 # =============================================================================
@@ -356,8 +283,6 @@ def test_searchbar_survives_page_resize(prism_app_with_layouts):
 # mount and the dropdown auto-opens, so no listener was ever attached for it;
 # the input's onBlur usually hid the bug. Both tests below fail on the old
 # effect dependencies and pass with `[handleDismiss, state.showDropdown]`.
-
-_LAYOUT_ITEM = "[data-testid='prism-layout-item-test-static']"
 
 
 def _dropdown_open(duo) -> bool:

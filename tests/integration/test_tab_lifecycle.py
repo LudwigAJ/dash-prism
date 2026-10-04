@@ -127,29 +127,28 @@ def test_max_tabs_limit(prism_app_with_layouts):
 
 
 def test_tab_selection(prism_app_with_layouts):
-    """Test switching between tabs."""
+    """A click on a tab makes it the one selected tab of the panel."""
     duo = prism_app_with_layouts
-
-    # Create 1 more tab (1 initial + 1 = 2 total)
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
+    tab_ids = [testutils.get_tab_id(duo, 0), testutils.get_tab_id(duo, 1)]
 
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Should have 2 tabs"
+    def selected_tab_ids(driver) -> list[str]:
+        return [
+            tab_id
+            for tab_id in tab_ids
+            if driver.find_element(
+                By.CSS_SELECTOR, f"[data-testid='prism-tab-{tab_id}'] [role='tab']"
+            ).get_attribute("aria-selected")
+            == "true"
+        ]
 
-    # Click first tab
-    tabs[0].click()
-
-    # Click second tab
-    # Re-fetch to avoid stale element after first click
-    tabs = testutils.get_tabs(duo)
-    tabs[1].click()
-
-    # Both clicks should complete without error
-    # Verify we still have 2 tabs (no side effects)
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Should still have 2 tabs after switching"
+    for tab_id in (tab_ids[0], tab_ids[1]):
+        duo.find_element(f"[data-testid='prism-tab-{tab_id}']").click()
+        WebDriverWait(duo.driver, 5).until(
+            lambda driver: selected_tab_ids(driver) == [tab_id],
+            message=f"Only tab {tab_id} should be selected",
+        )
 
 
 def test_tab_persists_after_creation(prism_app_with_layouts):
