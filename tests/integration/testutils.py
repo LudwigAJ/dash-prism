@@ -235,6 +235,19 @@ def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> None:
     )
 
 
+def wait_for_callbacks_idle(dash_duo, timeout: float = 10.0) -> None:
+    """Wait until Dash has no callback that is requested or running.
+
+    Use it before an assertion that a callback did not change the page.
+
+    :param dash_duo: The dash testing fixture.
+    :param timeout: The maximum wait in seconds.
+    """
+    WebDriverWait(dash_duo.driver, timeout).until(
+        lambda _: dash_duo.redux_state_rqs == [], message="Dash callbacks did not finish"
+    )
+
+
 # =============================================================================
 # Element Getters
 # =============================================================================

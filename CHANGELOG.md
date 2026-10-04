@@ -166,6 +166,11 @@ All notable changes to Dash Prism are recorded here. The project follows
   keys for the platform, as the help dialog already did: `Ctrl+R` on Windows and
   Linux, `⌃R` on macOS. Before, the context menu showed `⌃R` on every platform.
   The help dialog lists Previous tab and Next tab as two rows.
+- The demo app moved from `usage.py` to the package `examples/`, with one
+  module for each layout. Start it from the root of the repository with
+  `python -m examples.app`. It serves on http://127.0.0.1:5050. The figures of
+  the demo now follow the `theme` prop, and the chrome of each layout follows it
+  through `examples/assets/demo.css`.
 
 ### Deprecated
 

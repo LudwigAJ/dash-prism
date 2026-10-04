@@ -25,8 +25,15 @@ package. You cannot import ``dash_prism`` until those files exist.
 Each Poetry group has one purpose. The ``dev`` group holds Black, Ruff, mypy, and
 the packages that the component generator needs. The ``test`` group holds pytest,
 its plugins, and Selenium. The ``docs`` group holds Furo, which pulls in
-Sphinx. The ``demo`` group holds numpy and pandas, which the ``usage.py`` demo
-application needs.
+Sphinx. The ``demo`` group holds numpy and pandas, which the demo app in
+``examples/`` needs.
+
+To start the demo app, run this command from the root of the repository. Then
+open http://127.0.0.1:5050 in a browser.
+
+.. code-block:: bash
+
+   poetry run python -m examples.app
 
 If `just <https://github.com/casey/just>`_ is installed, ``just install &&
 just build`` does the same work as the last three commands.

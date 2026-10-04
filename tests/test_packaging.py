@@ -45,7 +45,7 @@ def test_docs_do_not_use_removed_run_server() -> None:
         *(ROOT / "dash_prism").glob("*.py"),
         *(ROOT / "docs").glob("*.rst"),
         ROOT / "README.md",
-        ROOT / "usage.py",
+        *(ROOT / "examples").rglob("*.py"),
     ]
     offenders = [str(f) for f in files if "run_server" in f.read_text(encoding="utf-8")]
     assert offenders == []
