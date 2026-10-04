@@ -73,14 +73,14 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
   const getActiveTab = useCallback(() => {
     const activeTabId = activeTabIds[activePanelId];
     if (!activeTabId) return null;
-    return tabs?.find((t) => t.id === activeTabId) ?? null;
+    return tabs.find((t) => t.id === activeTabId) ?? null;
   }, [activeTabIds, activePanelId, tabs]);
 
   // ========== Helper: Get tabs in active panel ==========
   const getActivePanelTabs = useCallback(() => {
     const tabIds = panelTabs[activePanelId] ?? [];
     return tabIds
-      .map((id) => tabs?.find((t) => t.id === id))
+      .map((id) => tabs.find((t) => t.id === id))
       .filter((t): t is Tab => t !== undefined);
   }, [panelTabs, activePanelId, tabs]);
 

@@ -51,7 +51,7 @@ export function useSearchBarState(panelId: PanelId) {
   // ===== DERIVED GLOBAL STATE =====
   const activeTabId = activeTabIds[panelId];
   const activeTab = useMemo(
-    () => tabs?.find((t) => t.id === activeTabId) ?? null,
+    () => tabs.find((t) => t.id === activeTabId) ?? null,
     [tabs, activeTabId]
   );
 

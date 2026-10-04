@@ -64,7 +64,7 @@ export function DndProvider({ children }: DndProviderProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const tab = tabs?.find((t) => t.id === active.id);
+    const tab = tabs.find((t) => t.id === active.id);
 
     if (tab?.locked) {
       // Don't allow dragging locked tabs
@@ -127,7 +127,7 @@ export function DndProvider({ children }: DndProviderProps) {
     }
 
     // Case 3: Dropped on another tab (reorder within panel or cross-panel)
-    const overTab = tabs?.find((t) => t.id === overId);
+    const overTab = tabs.find((t) => t.id === overId);
     if (!overTab) return;
 
     if (activeTab.panelId === overTab.panelId) {
