@@ -37,6 +37,10 @@ type StatusBarProps = {
   onOpenHelp?: () => void;
 };
 
+/**
+ * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,
+ * then the PrismAction components of the `actions` prop.
+ */
 export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =

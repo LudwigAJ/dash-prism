@@ -153,10 +153,11 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
 
 LeafPanel.displayName = 'LeafPanel';
 
-// =============================================================================
-// Panel - Recursively renders SplitPane for containers, LeafPanel for leaves
-// =============================================================================
-
+/**
+ * Renders a node of the panel tree. A leaf panel shows its tab bar, its search bar and its tab
+ * content. A container panel splits its area between its children, and the component calls itself
+ * for each child container.
+ */
 export const Panel = memo(function Panel({ panel }: PanelProps) {
   const dispatch = useAppDispatch();
   const isLeaf = isLeafPanel(panel);

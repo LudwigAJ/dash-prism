@@ -10,23 +10,21 @@ import { Button } from '@components/ui/button';
 import { cn } from '@utils/cn';
 import type { Tab } from 'types';
 
-export type InfoModalProps = {
+/** Holds the props of `InfoModal`. */
+interface InfoModalProps {
   /** Whether the modal is open */
   open: boolean;
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
   /** Tab data to display */
   tab: Tab | null;
-};
+}
 
 /**
  * Displays detailed information about a tab.
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows tab name, ID, creation date, layout, lock status, and parameters.
- *
- * Note: Modal state is managed via local useState in PrismView,
- * NOT in Redux (see Reversibility Philosophy section).
  */
 export function InfoModal({ open, onOpenChange, tab }: InfoModalProps) {
   const rowClass = cn(

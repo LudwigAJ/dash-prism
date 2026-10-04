@@ -89,6 +89,11 @@ type WorkspaceViewProps = {
   children?: React.ReactNode;
 };
 
+/**
+ * Renders the workspace of one Prism component: the panel tree, the status bar and the modals. It
+ * also keeps the content of each tab mounted in a portal, so a tab keeps its Dash state when it
+ * moves to another panel.
+ */
 export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);

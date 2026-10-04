@@ -14,23 +14,21 @@ import { useConfig } from '@context/ConfigContext';
 // Version injected at build time from package.json via webpack DefinePlugin
 const VERSION = process.env.APP_VERSION ?? '0.0.0';
 
-export type HelpModalProps = {
+/** Holds the props of `HelpModal`. */
+interface HelpModalProps {
   /** Whether the modal is open */
   open: boolean;
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
   /** Version string to display */
   version?: string;
-};
+}
 
 /**
  * Displays keyboard shortcuts and help information.
  *
  * Uses Radix Dialog for accessible modal behavior.
  * Shows version info, keyboard shortcuts, and feature documentation.
- *
- * Note: Modal state is managed via local useState in PrismView,
- * NOT in Redux (see Reversibility Philosophy section).
  */
 export function HelpModal({ open, onOpenChange, version = VERSION }: HelpModalProps) {
   const { enableKeyboardShortcuts, enableShareLinks } = useConfig();
