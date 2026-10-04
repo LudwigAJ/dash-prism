@@ -96,6 +96,8 @@ All notable changes to Dash Prism are recorded here. The project follows
 - The bundle no longer re-exports internal store helpers (`redo`,
   `clearHistory`, `selectCanRedo`, `collapsePanel`, `clearSearchBarMode`,
   `usePanelTabs`). They were never documented.
+- The bundle no longer exports the hooks `usePrism` and `useActiveTab`. They were
+  never documented.
 
 ### Fixed
 

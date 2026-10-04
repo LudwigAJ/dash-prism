@@ -32,6 +32,10 @@ import {
   selectLayoutSelectionRequest,
   selectSearchFocusPanelId,
   selectIsSingleTabMode,
+  selectInfoModalTab,
+  selectSetIconModalTab,
+  openInfoModal,
+  openSetIconModal,
   splitPanel,
 } from './index';
 import type { WorkspaceState } from './types';
@@ -701,6 +705,36 @@ describe('createPrismStore', () => {
       const tabId = present(created).tabs[1].id;
       await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
       expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
+
+      created.cleanup();
+    });
+  });
+
+  describe('selectInfoModalTab and selectSetIconModalTab', () => {
+    it('give the tab of an open modal and null for a closed one', async () => {
+      const created = createStore();
+      await settle(created);
+      const tab = present(created).tabs[0];
+      const state = () => created.store.getState();
+      expect(selectInfoModalTab(state())).toBeNull();
+      expect(selectSetIconModalTab(state())).toBeNull();
+
+      created.store.dispatch(openInfoModal({ tabId: tab.id }));
+      created.store.dispatch(openSetIconModal({ tabId: tab.id }));
+      expect(selectInfoModalTab(state())).toBe(tab);
+      expect(selectSetIconModalTab(state())).toBe(tab);
+
+      created.cleanup();
+    });
+
+    it('give null when the tab of the modal no longer exists', async () => {
+      const created = createStore();
+      await settle(created);
+      created.store.dispatch(openInfoModal({ tabId: 'gone' }));
+      created.store.dispatch(openSetIconModal({ tabId: 'gone' }));
+
+      expect(selectInfoModalTab(created.store.getState())).toBeNull();
+      expect(selectSetIconModalTab(created.store.getState())).toBeNull();
 
       created.cleanup();
     });

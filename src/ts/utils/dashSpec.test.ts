@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildDashSpec, normalizeLayoutTimeout } from './dashSpec';
+import { buildDashSpec, makeComponentPath, normalizeLayoutTimeout } from './dashSpec';
 
 describe('buildDashSpec', () => {
   it('targets the PrismContent component with a pattern-matching object id', () => {
@@ -55,5 +55,11 @@ describe('normalizeLayoutTimeout', () => {
     expect(normalizeLayoutTimeout(-1)).toBe(30);
     expect(normalizeLayoutTimeout(Number.NaN)).toBe(30);
     expect(normalizeLayoutTimeout(true)).toBe(30);
+  });
+});
+
+describe('makeComponentPath', () => {
+  it('puts the content of a tab under the id of its Prism component', () => {
+    expect(makeComponentPath('prism', 'tab-1')).toEqual(['prism', 'content', 'tab-1']);
   });
 });

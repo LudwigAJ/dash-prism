@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Info, Undo2, Lock, Trash2 } from 'lucide-react';
-import { usePrism } from '@hooks/usePrism';
 import { useConfig } from '@context/ConfigContext';
 import {
   Tooltip,
@@ -28,6 +27,7 @@ import {
   selectCanUndo,
   undo,
   resetWorkspace,
+  clearPersistedWorkspace,
 } from '@store';
 
 type StatusBarProps = {
@@ -39,8 +39,8 @@ type StatusBarProps = {
 
 export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
-  const { clearPersistedState } = usePrism();
-  const { maxTabs, componentId = 'prism', statusBarItems, enableKeyboardShortcuts } = useConfig();
+  const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =
+    useConfig();
   const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
 
   // Select state from Redux
@@ -86,12 +86,11 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
     );
 
     if (confirmed) {
-      // Clear persisted storage (localStorage/sessionStorage)
-      clearPersistedState();
+      clearPersistedWorkspace(componentId, persistenceType);
       // Reset reducer state to initial
       dispatch(resetWorkspace());
     }
-  }, [clearPersistedState, dispatch]);
+  }, [componentId, persistenceType, dispatch]);
 
   const items = resolveStatusBarItems(statusBarItems);
   const leftItems = items.filter((item) => item !== 'updated');
@@ -263,7 +262,7 @@ export function StatusBar({ actions = [], lastSyncTime = Date.now(), onOpenHelp 
                   {index > 0 && <Sep />}
                   <api.ExternalWrapper
                     component={enhancedActionSpec}
-                    componentPath={[componentId, 'actions', index]}
+                    componentPath={[componentId ?? 'prism', 'actions', index]}
                   />
                 </React.Fragment>
               );

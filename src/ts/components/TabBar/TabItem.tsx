@@ -11,7 +11,6 @@ import {
   TooltipTrigger,
   Spinner,
 } from '@components/ui';
-import { makeComponentPath } from '@components/Panel';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
 import { useConfig } from '@context/ConfigContext';
@@ -19,6 +18,7 @@ import type { Tab, TabId } from '@types';
 import { MAX_TAB_NAME_LENGTH } from '@store/workspaceSlice';
 import { useAppDispatch, removeTab } from '@store';
 import { cn } from '@utils/cn';
+import { makeComponentPath } from '@utils/dashSpec';
 import { TabContextMenu } from './TabContextMenu';
 
 /** Holds the props of `TabItem`. */

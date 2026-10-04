@@ -1,20 +1,32 @@
 import React, { memo, useMemo, useRef } from 'react';
 import { InPortal } from 'react-reverse-portal';
-import { usePrism } from '@hooks/usePrism';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { useLastChangeTime } from '@hooks/useLastChangeTime';
 import { useShareLinkListener } from '@hooks/useShareLinks';
 import { useConfig } from '@context/ConfigContext';
 import { usePortal } from '@context/PortalContext';
-import { Panel, makeComponentPath } from '@components/Panel';
+import { Panel } from '@components/Panel';
 import { StatusBar } from '@components/StatusBar';
 import { HelpModal } from '@components/modals/HelpModal';
 import { InfoModal } from '@components/modals/InfoModal';
 import { SetIconModal } from '@components/modals/SetIconModal';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import type { Tab, DashComponent, DashComponentApi } from '@types';
-import { buildDashSpec } from '@utils/dashSpec';
-import { useAppDispatch, useAppSelector, selectTabs, selectPanel, setTabIcon } from '@store';
+import { buildDashSpec, makeComponentPath } from '@utils/dashSpec';
+import {
+  useAppDispatch,
+  useAppSelector,
+  selectTabs,
+  selectPanel,
+  selectHelpModalOpen,
+  selectInfoModalTab,
+  selectSetIconModalTab,
+  setTabIcon,
+  openHelpModal,
+  closeHelpModal,
+  closeInfoModal,
+  closeSetIconModal,
+} from '@store';
 
 // =============================================================================
 // DashContentRenderer - Memoized component that renders Dash layout content
@@ -81,6 +93,9 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const panel = useAppSelector(selectPanel);
+  const helpModalOpen = useAppSelector(selectHelpModalOpen);
+  const infoModalTab = useAppSelector(selectInfoModalTab);
+  const setIconModalTab = useAppSelector(selectSetIconModalTab);
   const { getPortalNode } = usePortal();
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -88,15 +103,9 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   useKeyboardShortcuts(rootRef);
   useShareLinkListener();
   const { lastSyncTime } = useLastChangeTime();
-  const {
-    infoModalTab,
-    helpModalOpen,
-    setIconModalTab,
-    closeInfoModal,
-    closeHelpModal,
-    closeSetIconModal,
-    openHelpModal,
-  } = usePrism();
+  const handleOpenHelp = () => {
+    dispatch(openHelpModal());
+  };
 
   const { statusBarPosition, showStatusBar } = useConfig();
 
@@ -120,7 +129,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         })}
 
       {showStatusBar && statusBarPosition === 'top' && (
-        <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
       )}
 
       <div className="prism-view-panels">
@@ -128,15 +137,19 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
       </div>
 
       {showStatusBar && statusBarPosition === 'bottom' && (
-        <StatusBar actions={actions} onOpenHelp={openHelpModal} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
       )}
-      {/* Modals - local state only */}
-      <HelpModal open={helpModalOpen} onOpenChange={closeHelpModal} />
-      <InfoModal open={infoModalTab !== null} tab={infoModalTab} onOpenChange={closeInfoModal} />
+      {/* The ui slice holds which modal is open and for which tab */}
+      <HelpModal open={helpModalOpen} onOpenChange={() => dispatch(closeHelpModal())} />
+      <InfoModal
+        open={infoModalTab !== null}
+        tab={infoModalTab}
+        onOpenChange={() => dispatch(closeInfoModal())}
+      />
       <SetIconModal
         open={setIconModalTab !== null}
         tab={setIconModalTab}
-        onOpenChange={closeSetIconModal}
+        onOpenChange={() => dispatch(closeSetIconModal())}
         onSelectIcon={(tabId, icon) => {
           dispatch(setTabIcon({ tabId, icon }));
         }}

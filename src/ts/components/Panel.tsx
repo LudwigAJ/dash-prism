@@ -1,14 +1,13 @@
 import React, { useEffect, useCallback, memo, useRef } from 'react';
 import { OutPortal } from 'react-reverse-portal';
-import { useActiveTab } from '@hooks/usePrism';
 import { SplitPane, Pane } from 'react-split-pane';
 import { Tabs, TabsContent } from '@components/ui/tabs';
 import { TabBar } from '@components/TabBar';
 import { SearchBar } from '@components/SearchBar';
 import { PanelDropzone } from '@components/PanelDropzone';
-import type { PanelNode, Tab, TabId, PanelId } from '@types';
+import type { PanelNode, Tab, PanelId } from '@types';
 import { isLeafPanel } from '@utils/panels';
-import { findTabById } from '@utils/tabs';
+import { findTabById, getActiveTabForPanel } from '@utils/tabs';
 import { EmptyTabView } from '@components/layouts';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import {
@@ -16,6 +15,7 @@ import {
   useAppSelector,
   selectTabs,
   selectPanelTabs,
+  selectActiveTabIds,
   selectActivePanelId,
   activateTab,
   setActivePanel,
@@ -26,10 +26,6 @@ import { usePortal } from '@context/PortalContext';
 type PanelProps = {
   panel: PanelNode;
 };
-
-export function makeComponentPath(componentId: string, tabId: TabId): string[] {
-  return [componentId, 'content', tabId];
-}
 
 // =============================================================================
 // useNativePanelFocus — Native pointerdown (capture) listener
@@ -76,6 +72,7 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
   const { getPortalNode } = usePortal();
   const allTabs = useAppSelector(selectTabs);
   const panelTabsMap = useAppSelector(selectPanelTabs);
+  const activeTabIds = useAppSelector(selectActiveTabIds);
   const activePanelId = useAppSelector(selectActivePanelId);
 
   const panelTabIds = panelTabsMap[panel.id] || [];
@@ -83,9 +80,8 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
     .map((tabId) => findTabById(allTabs, tabId))
     .filter((tab): tab is Tab => tab !== undefined);
 
-  const activeTab = useActiveTab(panel.id);
   const isActive = activePanelId === panel.id;
-  const activeTabId = activeTab?.id ?? null;
+  const activeTabId = getActiveTabForPanel(allTabs, activeTabIds, panel.id)?.id ?? null;
   const isPinned = panel.pinned ?? false;
 
   const handleTabChange = useCallback(
