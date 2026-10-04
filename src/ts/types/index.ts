@@ -183,11 +183,11 @@ export function isDashComponent(value: unknown): value is DashComponent {
     'type' in value &&
     'namespace' in value &&
     'props' in value &&
-    typeof (value as DashComponent).type === 'string' &&
-    typeof (value as DashComponent).namespace === 'string' &&
-    typeof (value as DashComponent).props === 'object' &&
-    (value as DashComponent).props !== null &&
-    !Array.isArray((value as DashComponent).props)
+    typeof value.type === 'string' &&
+    typeof value.namespace === 'string' &&
+    typeof value.props === 'object' &&
+    value.props !== null &&
+    !Array.isArray(value.props)
   );
 }
 
