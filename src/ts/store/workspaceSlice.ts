@@ -9,7 +9,7 @@ import {
 import type { Tab, PanelId, TabId, LayoutId, PanelDirection, Workspace } from '@types';
 import type { WorkspaceState, ThunkExtra } from './types';
 import { generateShortId } from '@utils/uuid';
-import { findOpenTabForLayout, findTabById, findTabIndex } from '@utils/tabs';
+import { createTab, findOpenTabForLayout, findTabById, findTabIndex } from '@utils/tabs';
 import {
   getLeafPanelIds,
   countLeafPanels,
@@ -54,6 +54,45 @@ function collapseEmptyPanel(state: WorkspaceState, panelId: PanelId): boolean {
 }
 
 /**
+ * Takes a tab out of the tab list of its panel. If the tab was the active tab of the panel, the
+ * last remaining tab of the panel becomes active.
+ *
+ * The tab stays in `state.tabs` with its old `panelId`. The caller removes it or attaches it to
+ * another panel.
+ */
+export function detachTab(state: WorkspaceState, tab: Tab): void {
+  const panelId = tab.panelId;
+  const panelTabIds = state.panelTabs[panelId] ?? [];
+  const index = panelTabIds.indexOf(tab.id);
+  if (index !== -1) panelTabIds.splice(index, 1);
+
+  if (state.activeTabIds[panelId] === tab.id) {
+    const lastTabId = panelTabIds[panelTabIds.length - 1];
+    if (lastTabId) {
+      state.activeTabIds[panelId] = lastTabId;
+    } else {
+      delete state.activeTabIds[panelId];
+    }
+  }
+}
+
+/**
+ * Puts a tab into the tab list of `panelId`, at `index` or at the end. The tab becomes the active
+ * tab of the panel, and the panel becomes the active panel.
+ */
+export function attachTab(state: WorkspaceState, tab: Tab, panelId: PanelId, index?: number): void {
+  tab.panelId = panelId;
+  const panelTabIds = (state.panelTabs[panelId] ??= []);
+  if (index !== undefined && index >= 0) {
+    panelTabIds.splice(Math.min(index, panelTabIds.length), 0, tab.id);
+  } else {
+    panelTabIds.push(tab.id);
+  }
+  state.activeTabIds[panelId] = tab.id;
+  state.activePanelId = panelId;
+}
+
+/**
  * Removes a tab and repairs the surrounding state: panelTabs, the panel's active
  * tab, collapsing a panel that became empty, or spawning a blank tab when the
  * last tab of the last panel was removed.
@@ -75,50 +114,19 @@ function removeTabFromState(
   if (tab.locked && !options.ignoreLock) return false;
 
   const panelId = tab.panelId;
-
-  // Note: Undo is handled by redux-undo wrapping the entire slice.
-  // When user dispatches undo(), the entire state reverts to before this action.
-
-  // Remove from tabs array
   state.tabs.splice(tabIndex, 1);
+  detachTab(state, tab);
 
-  // Remove from panelTabs
-  const idx = state.panelTabs[panelId]?.indexOf(tabId);
-  if (idx !== undefined && idx !== -1) {
-    state.panelTabs[panelId].splice(idx, 1);
-  }
-
-  // Update active tab
-  if (state.activeTabIds[panelId] === tabId) {
-    const remaining = state.panelTabs[panelId] ?? [];
-    const lastTab = remaining[remaining.length - 1];
-    if (lastTab) {
-      state.activeTabIds[panelId] = lastTab;
-    } else {
-      delete state.activeTabIds[panelId];
-    }
-  }
-
-  // Handle empty panel: collapse or spawn new tab
   if (collapseEmptyPanel(state, panelId)) {
-    // Panel was collapsed — move focus to another panel
     const remaining = getLeafPanelIds(state.panel);
     if (remaining.length > 0) {
       state.activePanelId = remaining[0];
     }
   } else if ((state.panelTabs[panelId]?.length ?? 0) === 0) {
-    // This is the last panel - spawn a new empty tab
-    const newTabId: TabId = generateShortId();
-    const newTab: Tab = {
-      id: newTabId,
-      name: 'New Tab',
-      panelId: panelId,
-      createdAt: Date.now(),
-      mountKey: generateShortId(),
-    };
+    // The workspace never shows an empty last panel, so a blank tab replaces the removed one.
+    const newTab = createTab(panelId);
     state.tabs.push(newTab);
-    state.panelTabs[panelId] = [newTabId];
-    state.activeTabIds[panelId] = newTabId;
+    attachTab(state, newTab, panelId);
   }
   return true;
 }
@@ -154,46 +162,13 @@ function splitPanelInState(state: WorkspaceState, payload: SplitPanelPayload): v
   // Block same-panel split if panel only has one tab
   if (isSamePanelSplit && sourcePanelTabs.length <= 1) return;
 
-  // Step 1: Perform tree split operation. It throws if the panel is not a leaf of the tree.
+  // The tree split throws if the panel is not a leaf of the tree.
   const newPanelId = splitPanelTree(state.panel, { panelId, direction, position });
+  detachTab(state, tabToMove);
+  attachTab(state, tabToMove, newPanelId);
 
-  // Step 2: Move tab to new panel
-  state.panelTabs[newPanelId] = [];
-
-  const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
-  if (sourceIdx !== undefined && sourceIdx !== -1) {
-    state.panelTabs[sourcePanelId].splice(sourceIdx, 1);
-  }
-
-  state.panelTabs[newPanelId].push(tabId);
-  tabToMove.panelId = newPanelId;
-
-  // Step 3: Update active states
-  state.activeTabIds[newPanelId] = tabId;
-  state.activePanelId = newPanelId;
-
-  if (state.activeTabIds[panelId] === tabId) {
-    const remaining = state.panelTabs[panelId] ?? [];
-    const lastTab = remaining[remaining.length - 1];
-    if (lastTab) {
-      state.activeTabIds[panelId] = lastTab;
-    } else {
-      delete state.activeTabIds[panelId];
-    }
-  }
-
-  if (!isSamePanelSplit && state.activeTabIds[sourcePanelId] === tabId) {
-    const remaining = state.panelTabs[sourcePanelId] ?? [];
-    const lastTab = remaining[remaining.length - 1];
-    if (lastTab) {
-      state.activeTabIds[sourcePanelId] = lastTab;
-    } else {
-      delete state.activeTabIds[sourcePanelId];
-    }
-  }
-
-  // Step 4: Clean up source panel if empty (for cross-panel splits).
-  // Return value ignored: new panel already received focus above.
+  // A cross-panel split can empty the source panel. The new panel already has the focus, so the
+  // result of the collapse does not matter.
   if (!isSamePanelSplit) {
     collapseEmptyPanel(state, sourcePanelId);
   }
@@ -218,19 +193,10 @@ function splitPanelInState(state: WorkspaceState, payload: SplitPanelPayload): v
  */
 export function createInitialWorkspaceState(): WorkspaceState {
   const panelId: PanelId = generateShortId();
-  const tabId: TabId = generateShortId();
+  const tab = createTab(panelId);
 
   return {
-    tabs: [
-      {
-        id: tabId,
-        name: 'New Tab',
-        panelId,
-        layoutId: undefined,
-        createdAt: Date.now(),
-        mountKey: generateShortId(),
-      },
-    ],
+    tabs: [tab],
     panel: {
       id: panelId,
       order: 0,
@@ -238,8 +204,8 @@ export function createInitialWorkspaceState(): WorkspaceState {
       children: [],
       size: '100%',
     },
-    panelTabs: { [panelId]: [tabId] },
-    activeTabIds: { [panelId]: tabId },
+    panelTabs: { [panelId]: [tab.id] },
+    activeTabIds: { [panelId]: tab.id },
     activePanelId: panelId,
     favoriteLayouts: [],
     searchBarsHidden: false,
@@ -300,17 +266,12 @@ export const addTab = createAsyncThunk<
     }
   }
 
-  // Create the new tab
-  const newTab: Tab = {
-    id: generateShortId(),
-    name: payload.name ?? 'New Tab',
-    panelId: payload.panelId,
+  const newTab = createTab(payload.panelId, {
+    name: payload.name,
     layoutId: payload.layoutId,
     layoutParams: payload.params,
     layoutOption: payload.option,
-    createdAt: Date.now(),
-    mountKey: generateShortId(),
-  };
+  });
 
   // Pass maxTabs through for race condition guard in reducer
   return { tab: newTab, maxTabs: extra.getMaxTabs() };
@@ -355,15 +316,12 @@ export const duplicateTab = createAsyncThunk<
     }
   }
 
-  const newTab: Tab = {
+  const newTab = createTab(originalTab.panelId, {
     ...originalTab,
-    id: generateShortId(),
     name: `${originalTab.name} (copy)`,
-    createdAt: Date.now(),
     locked: false,
     layoutParams: originalTab.layoutParams ? { ...originalTab.layoutParams } : undefined,
-    mountKey: generateShortId(),
-  };
+  });
 
   // Pass maxTabs through for race condition guard in reducer
   return { tab: newTab, maxTabs: extra.getMaxTabs() };
@@ -552,38 +510,10 @@ const workspaceSlice = createSlice({
       const leafPanelIds = getLeafPanelIds(state.panel);
       if (!leafPanelIds.includes(targetPanelId)) return;
 
-      // Remove from source
-      const sourceIdx = state.panelTabs[sourcePanelId]?.indexOf(tabId);
-      if (sourceIdx !== undefined && sourceIdx !== -1) {
-        state.panelTabs[sourcePanelId].splice(sourceIdx, 1);
-      }
+      detachTab(state, tab);
+      attachTab(state, tab, targetPanelId, targetIndex);
 
-      // Add to target
-      if (!state.panelTabs[targetPanelId]) state.panelTabs[targetPanelId] = [];
-      if (targetIndex !== undefined && targetIndex >= 0) {
-        const clampedIndex = Math.min(targetIndex, state.panelTabs[targetPanelId].length);
-        state.panelTabs[targetPanelId].splice(clampedIndex, 0, tabId);
-      } else {
-        state.panelTabs[targetPanelId].push(tabId);
-      }
-
-      tab.panelId = targetPanelId;
-      state.activeTabIds[targetPanelId] = tabId;
-      state.activePanelId = targetPanelId;
-
-      // Update source panel's active tab if the moved tab was active
-      if (state.activeTabIds[sourcePanelId] === tabId) {
-        const remaining = state.panelTabs[sourcePanelId] ?? [];
-        const lastTab = remaining[remaining.length - 1];
-        if (lastTab) {
-          state.activeTabIds[sourcePanelId] = lastTab;
-        } else {
-          delete state.activeTabIds[sourcePanelId];
-        }
-      }
-
-      // Collapse source panel if it's now empty (and not the last panel).
-      // Return value ignored: target panel already received focus above.
+      // The target panel already has the focus, so the result of the collapse does not matter.
       collapseEmptyPanel(state, sourcePanelId);
     },
 

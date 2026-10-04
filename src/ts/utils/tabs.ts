@@ -1,5 +1,26 @@
 import type { Draft } from 'immer';
 import type { Tab, TabId, PanelId, LayoutId, LayoutMeta } from '@types';
+import { generateShortId } from '@utils/uuid';
+
+/** Gives the name of a tab that the user did not name. */
+export const NEW_TAB_NAME = 'New Tab';
+
+/**
+ * Builds a new tab in `panelId`. The tab gets the default name when `fields` has no name.
+ *
+ * The tab always gets a fresh `id`, `mountKey` and `createdAt`, also when `fields` holds them,
+ * so a copy of a tab can pass the original as `fields`.
+ */
+export function createTab(panelId: PanelId, fields: Partial<Tab> = {}): Tab {
+  return {
+    ...fields,
+    id: generateShortId(),
+    name: fields.name ?? NEW_TAB_NAME,
+    panelId,
+    createdAt: Date.now(),
+    mountKey: generateShortId(),
+  };
+}
 
 // Support both regular Tab arrays and Immer Draft arrays
 type TabOrDraft = Tab | Draft<Tab>;

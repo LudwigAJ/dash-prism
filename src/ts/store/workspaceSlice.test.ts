@@ -42,6 +42,8 @@ import {
   reconcileWithServer,
   MAX_TAB_NAME_LENGTH,
   switchToOpenTab,
+  detachTab,
+  attachTab,
 } from './workspaceSlice';
 import type { WorkspaceState, ThunkExtra } from './types';
 import type { Tab, PanelNode, PanelId, TabId } from '@types';
@@ -214,6 +216,75 @@ function countLeafPanels(panel: PanelNode): number {
 // =============================================================================
 // Tab Operation Tests
 // =============================================================================
+
+describe('detachTab', () => {
+  it('takes the tab out of its panel and keeps it in tabs', () => {
+    const state = createTwoPanelState();
+    detachTab(state, state.tabs[1]);
+
+    expect(state.panelTabs['panel-1']).toEqual(['tab-1']);
+    expect(state.tabs).toHaveLength(3);
+    expect(state.tabs[1].panelId).toBe('panel-1');
+  });
+
+  it('activates the last remaining tab when the active tab leaves', () => {
+    const state = createTwoPanelState();
+    state.panelTabs['panel-1'].push('tab-x');
+    detachTab(state, state.tabs[0]);
+
+    expect(state.activeTabIds['panel-1']).toBe('tab-x');
+  });
+
+  it('leaves the active tab alone when another tab leaves', () => {
+    const state = createTwoPanelState();
+    detachTab(state, state.tabs[1]);
+
+    expect(state.activeTabIds['panel-1']).toBe('tab-1');
+  });
+
+  it('clears the active tab of a panel that becomes empty', () => {
+    const state = createTwoPanelState();
+    detachTab(state, state.tabs[2]);
+
+    expect(state.panelTabs['panel-2']).toEqual([]);
+    expect(state.activeTabIds['panel-2']).toBeUndefined();
+  });
+});
+
+describe('attachTab', () => {
+  it('appends the tab to the panel and focuses it', () => {
+    const state = createTwoPanelState();
+    const tab = state.tabs[0];
+    detachTab(state, tab);
+    attachTab(state, tab, 'panel-2');
+
+    expect(tab.panelId).toBe('panel-2');
+    expect(state.panelTabs['panel-2']).toEqual(['tab-3', 'tab-1']);
+    expect(state.activeTabIds['panel-2']).toBe('tab-1');
+    expect(state.activePanelId).toBe('panel-2');
+  });
+
+  it('inserts at the index and clamps an index past the end', () => {
+    const state = createTwoPanelState();
+    const [tab1, tab2] = state.tabs;
+    detachTab(state, tab1);
+    attachTab(state, tab1, 'panel-2', 0);
+    detachTab(state, tab2);
+    attachTab(state, tab2, 'panel-2', 99);
+
+    expect(state.panelTabs['panel-2']).toEqual(['tab-1', 'tab-3', 'tab-2']);
+  });
+
+  it('creates the tab list of a panel that has none', () => {
+    const state = createTwoPanelState();
+    const tab = state.tabs[2];
+    detachTab(state, tab);
+    delete state.panelTabs['panel-2'];
+    attachTab(state, tab, 'panel-2');
+
+    expect(state.panelTabs['panel-2']).toEqual(['tab-3']);
+  });
+});
 
 describe('workspaceSlice', () => {
   describe('addTab', () => {
