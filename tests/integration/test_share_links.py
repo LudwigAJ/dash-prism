@@ -36,7 +36,7 @@ def _start(dash_duo, enable_share_links: bool, *, allow_multiple: bool = True, *
 
 
 def _open_home(duo) -> None:
-    duo.find_element(".prism-searchbar").click()
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("home")
     duo.wait_for_element("[data-testid='prism-layout-item-home']", timeout=5)

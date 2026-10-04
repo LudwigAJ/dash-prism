@@ -134,7 +134,7 @@ def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):
 def test_refresh_shortcut_remounts_the_tab_content(prism_app_with_layouts):
     """Ctrl/Cmd+Shift+R renders the layout of the active tab again, in the same tab."""
     duo = prism_app_with_layouts
-    duo.find_element(".prism-searchbar").click()
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
     duo.find_element("[data-testid='prism-layout-item-test-static']").click()
     content = duo.wait_for_element("[id*='static-content']", timeout=10)

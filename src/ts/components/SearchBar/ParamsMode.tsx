@@ -82,14 +82,14 @@ export function ParamsMode({
   }, [activeChoice]);
 
   return (
-    <div className={cn('prism-searchbar prism-searchbar-params tw:pl-3')}>
+    <div className={cn('prism-search-bar prism-search-bar-params tw:pl-3')}>
       {/* Counter */}
       <span className="tw:text-sm tw:whitespace-nowrap tw:text-muted-foreground">
         ({currentParamIndex + 1}/{totalParams})
       </span>
 
       {/* Layout name */}
-      <span className="prism-searchbar-layout-name">{selectedLayoutName}</span>
+      <span className="prism-search-bar-layout-name">{selectedLayoutName}</span>
 
       {/* Chevron separator */}
       <ChevronRight className="tw:mx-1 tw:size-[1em] tw:flex-shrink-0 tw:text-muted-foreground" />
@@ -104,7 +104,7 @@ export function ParamsMode({
       <div className="tw:relative tw:ml-2 tw:flex tw:min-w-0 tw:flex-1 tw:items-center">
         <input
           ref={inputRef}
-          data-testid="prism-searchbar-param-input"
+          data-testid="prism-search-bar-param-input"
           aria-label={currentParam.title ?? currentParam.name}
           className={cn(
             'tw:w-full tw:border-none tw:bg-transparent tw:text-sm tw:outline-none',
@@ -140,7 +140,7 @@ export function ParamsMode({
             id={listId}
             role="listbox"
             aria-label={`${currentParam.title ?? currentParam.name} choices`}
-            data-testid="prism-searchbar-param-choices"
+            data-testid="prism-search-bar-param-choices"
             className="tw:absolute tw:top-full tw:left-0 tw:z-[100] tw:mt-1 tw:max-h-60 tw:min-w-40 tw:overflow-y-auto tw:rounded-sm tw:border tw:border-border tw:bg-popover tw:py-1 tw:text-sm tw:shadow-md"
           >
             {choices.map((choice, index) => (
@@ -152,7 +152,7 @@ export function ParamsMode({
                 role="option"
                 tabIndex={-1}
                 aria-selected={choice === activeChoice}
-                data-testid={`prism-searchbar-param-choice-${choice}`}
+                data-testid={`prism-search-bar-param-choice-${choice}`}
                 className={cn(
                   'tw:cursor-default tw:px-3 tw:py-1 tw:hover:bg-muted',
                   // The bar and the weight carry the mark where the muted background is faint.
@@ -176,7 +176,7 @@ export function ParamsMode({
         <span
           id={errorId}
           role="alert"
-          data-testid="prism-searchbar-param-error"
+          data-testid="prism-search-bar-param-error"
           className="tw:ml-2 tw:text-xs tw:whitespace-nowrap tw:text-destructive"
         >
           {paramError}

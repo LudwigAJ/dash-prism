@@ -59,8 +59,8 @@ def test_callback_layout_renders_content(dash_duo):
 
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Greeting")
     duo.wait_for_element("[data-testid='prism-layout-item-greeting']", timeout=5)
@@ -77,8 +77,8 @@ def test_static_and_callback_layouts_coexist(dash_duo):
 
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
     duo.wait_for_element("[data-testid='prism-layout-item-static']", timeout=5)

@@ -235,7 +235,7 @@ def test_print_hides_the_chrome_of_prism_only(dash_duo):
             return {
               background: toRgb(getComputedStyle(document.querySelector('#prism-first')).backgroundColor),
               tabList: display('#prism-first [data-slot=tabs-list]'),
-              searchBar: display('#prism-first .prism-searchbar'),
+              searchBar: display('#prism-first .prism-search-bar'),
               hostTabs: display('#host-tabs'),
             };
             """)

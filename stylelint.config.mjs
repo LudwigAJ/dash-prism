@@ -29,6 +29,15 @@ export default {
     // The svg rules of the tab triggers, the search bar and the two tab bar buttons never match the
     // same element. The rule reports them because the later selectors have lower specificity.
     'no-descending-specificity': null,
+    // Kebab case, as in the preset, and each word of a compound name gets its hyphen: tab-bar, not
+    // tabbar. A host page can target these class names, so the spelling must not drift.
+    'selector-class-pattern': [
+      '^(?!.*(?:tabbar|searchbar|statusbar|scrollbar|dropzone))[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
+      {
+        message: (selector) =>
+          `Expected class "${selector}" to be kebab-case with each word hyphenated`,
+      },
+    ],
     'declaration-no-important': true,
     'property-disallowed-list': ['/^-ms-/'],
   },

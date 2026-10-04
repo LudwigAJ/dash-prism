@@ -19,7 +19,7 @@ LAYOUT_ITEM = "[data-testid='prism-layout-item-test-static']"
 
 
 def _open_dropdown(duo) -> None:
-    duo.find_element(".prism-searchbar").click()
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(LAYOUT_ITEM, timeout=5)
 
 
@@ -33,7 +33,7 @@ def _wait_for_empty_query(duo) -> None:
     )
 
 
-def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
+def test_search_bar_exists_on_initial_load(prism_app_with_layouts):
     """Test that SearchBar renders on initial page load.
 
     Verifies:
@@ -43,7 +43,7 @@ def test_searchbar_exists_on_initial_load(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
+    duo.wait_for_element(".prism-search-bar", timeout=5)
 
 
 def test_search_input_has_an_accessible_name(prism_app_with_layouts):
@@ -57,7 +57,7 @@ def test_search_input_has_an_accessible_name(prism_app_with_layouts):
     assert search_input.accessible_name == "Search layouts"
 
 
-def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
+def test_search_bar_transitions_to_search_mode(prism_app_with_layouts):
     """Test basic mode transition: display -> search.
 
     Verifies:
@@ -67,14 +67,14 @@ def test_searchbar_transitions_to_search_mode(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
 
     search_input = duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     assert search_input.is_displayed(), "Search input should be visible"
 
 
-def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
+def test_search_bar_escape_closes_dropdown(prism_app_with_layouts):
     """Escape closes the dropdown of the search bar."""
     duo = prism_app_with_layouts
     _open_dropdown(duo)
@@ -84,7 +84,7 @@ def test_searchbar_escape_closes_dropdown(prism_app_with_layouts):
     testutils.wait_for_element_invisible(duo, LAYOUT_ITEM)
 
 
-def test_searchbar_typing_updates_query(prism_app_with_layouts):
+def test_search_bar_typing_updates_query(prism_app_with_layouts):
     """Test that typing in SearchBar updates the search query.
 
     Verifies:
@@ -95,8 +95,8 @@ def test_searchbar_typing_updates_query(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys("test")
 
     WebDriverWait(duo.driver, 2).until(
@@ -106,7 +106,7 @@ def test_searchbar_typing_updates_query(prism_app_with_layouts):
     )
 
 
-def test_searchbar_independent_per_tab(prism_app_with_layouts):
+def test_search_bar_independent_per_tab(prism_app_with_layouts):
     """Test that each tab has independent SearchBar state.
 
     Verifies:
@@ -121,14 +121,14 @@ def test_searchbar_independent_per_tab(prism_app_with_layouts):
     testutils.wait_for_tab_count(duo, 2)
 
     testutils.get_tabs(duo)[0].click()
-    duo.wait_for_element(".prism-searchbar", timeout=3)
+    duo.wait_for_element(".prism-search-bar", timeout=3)
 
     # The click re-renders the tab bar, so the elements from before it are stale.
     testutils.get_tabs(duo)[1].click()
-    duo.wait_for_element(".prism-searchbar", timeout=3)
+    duo.wait_for_element(".prism-search-bar", timeout=3)
 
 
-def test_searchbar_rapid_interactions(prism_app_with_layouts):
+def test_search_bar_rapid_interactions(prism_app_with_layouts):
     """Each open, type and Escape cycle starts from a clean search bar.
 
     The next cycle opens the full list again only if Escape cleared the query
@@ -142,7 +142,7 @@ def test_searchbar_rapid_interactions(prism_app_with_layouts):
         _wait_for_empty_query(duo)
 
 
-def test_searchbar_focus_management(prism_app_with_layouts):
+def test_search_bar_focus_management(prism_app_with_layouts):
     """Test SearchBar focus behavior is correct.
 
     Verifies:
@@ -152,8 +152,8 @@ def test_searchbar_focus_management(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-searchbar", timeout=5)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=5)
+    duo.find_element(".prism-search-bar").click()
     search_input = duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     search_input.click()
     search_input.send_keys("focused")
@@ -168,7 +168,7 @@ def test_searchbar_focus_management(prism_app_with_layouts):
     )
 
 
-def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
+def test_search_bar_works_after_tab_operations(prism_app_with_layouts):
     """Test SearchBar continues working after tab operations.
 
     Verifies:
@@ -184,8 +184,8 @@ def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
     testutils.wait_for_tab_count(duo, 3)
 
     testutils.get_tabs(duo)[1].click()
-    duo.wait_for_element(".prism-searchbar", timeout=3)
-    duo.find_element(".prism-searchbar").click()
+    duo.wait_for_element(".prism-search-bar", timeout=3)
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys("test")
 
     WebDriverWait(duo.driver, 2).until(
@@ -195,7 +195,7 @@ def test_searchbar_works_after_tab_operations(prism_app_with_layouts):
     )
 
 
-def test_searchbar_survives_page_resize(prism_app_with_layouts):
+def test_search_bar_survives_page_resize(prism_app_with_layouts):
     """An open dropdown stays open through a resize of the window."""
     duo = prism_app_with_layouts
     _open_dropdown(duo)

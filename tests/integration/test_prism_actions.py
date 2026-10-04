@@ -14,7 +14,7 @@ from tests.integration import testutils
 pytestmark = pytest.mark.integration
 
 
-def test_prism_action_renders_in_statusbar(dash_duo):
+def test_prism_action_renders_in_status_bar(dash_duo):
     """Test that Action components render in status bar."""
     action1 = dash_prism.Action(id="action1", label="Action 1")
     action2 = dash_prism.Action(id="action2", label="Action 2")

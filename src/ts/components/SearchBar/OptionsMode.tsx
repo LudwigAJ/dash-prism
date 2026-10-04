@@ -43,7 +43,7 @@ export function OptionsMode({
   commandRef,
 }: OptionsModeProps) {
   return (
-    <div className={cn('prism-searchbar')} ref={commandRef}>
+    <div className={cn('prism-search-bar')} ref={commandRef}>
       <Command
         shouldFilter={false}
         label={`Options for ${selectedLayoutName}`}
@@ -85,7 +85,7 @@ export function OptionsMode({
             </CommandGroup>
             {/* Resize handle. It works with the mouse only, so assistive technology skips it. */}
             <div
-              className="prism-searchbar-resize-handle"
+              className="prism-search-bar-resize-handle"
               aria-hidden="true"
               onMouseDown={onResizeStart}
             />

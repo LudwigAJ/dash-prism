@@ -93,7 +93,7 @@ def test_ctrl_space_focuses_the_search_bar_of_the_active_panel(prism_app_with_la
     for index in (1, 0):
         tab = testutils.get_tabs(duo)[index]
         tab.click()
-        expected = ["prism-searchbar-input", duo.driver.execute_script(panel_of, tab)]
+        expected = ["prism-search-bar-input", duo.driver.execute_script(panel_of, tab)]
 
         duo.find_element("body").send_keys(Keys.CONTROL, Keys.SPACE)
         WebDriverWait(duo.driver, 5).until(

@@ -107,7 +107,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-reset"
+            data-testid="prism-status-bar-reset"
             aria-label="Reset workspace"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-destructive"
             onClick={handleReset}
@@ -123,7 +123,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-help"
+            data-testid="prism-status-bar-help"
             aria-label="Help"
             className="tw:rounded-sm tw:p-1 tw:text-muted-foreground tw:transition-colors tw:hover:bg-muted tw:hover:text-foreground"
             onClick={() => onOpenHelp?.()}
@@ -139,7 +139,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-testid="prism-statusbar-undo"
+            data-testid="prism-status-bar-undo"
             aria-label="Undo last change"
             className={cn(
               'tw:rounded-sm tw:p-1 tw:transition-colors',
@@ -165,7 +165,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
     mode: (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-mode">
+          <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-mode">
             <span className="tw:text-muted-foreground">Mode:</span>
             <span className="tw:font-medium tw:text-foreground">{searchBarMode}</span>
           </div>
@@ -174,7 +174,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
       </Tooltip>
     ),
     panels: (
-      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-panels">
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-panels">
         Panels: <span className="tw:font-medium tw:text-foreground">{panelCount}</span>
         {panelCount > 1 && (
           <span className="tw:text-muted-foreground">({activePanelId.slice(0, 8)})</span>
@@ -187,7 +187,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
           <button
             type="button"
             className="tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:px-1.5 tw:py-0.5 tw:transition-colors tw:hover:bg-muted"
-            data-testid="prism-statusbar-tab"
+            data-testid="prism-status-bar-tab"
           >
             Tab: <span className="tw:text-foreground">{activeTab?.name || '--'}</span>
             {activeTab?.locked && <Lock className="tw:size-[1em] tw:text-muted-foreground" />}
@@ -208,7 +208,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
       </Popover>
     ),
     count: (
-      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-statusbar-count">
+      <div className="tw:flex tw:items-center tw:gap-1" data-testid="prism-status-bar-count">
         <span className="tw:text-foreground">
           {maxTabs >= 1 ? `${tabCount}/${maxTabs}` : tabCount}
         </span>
@@ -281,7 +281,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
       {showUpdated && (
         <div
           className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground"
-          data-testid="prism-statusbar-updated"
+          data-testid="prism-status-bar-updated"
         >
           Updated: <span className="tw:text-foreground">{syncTimeDisplay}</span>
         </div>

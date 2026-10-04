@@ -29,12 +29,12 @@ export function DisplayMode({
   return (
     <button
       type="button"
-      data-testid="prism-searchbar-display"
-      className={cn('prism-searchbar prism-searchbar-display tw:text-left')}
+      data-testid="prism-search-bar-display"
+      className={cn('prism-search-bar prism-search-bar-display tw:text-left')}
       onClick={onDisplayClick}
       onKeyDown={onKeyDown}
     >
-      <span className="prism-searchbar-layout-name">{currentLayoutName}</span>
+      <span className="prism-search-bar-layout-name">{currentLayoutName}</span>
       {hasOption && (
         <>
           <ChevronRight className="tw:mx-1 tw:size-[1em] tw:flex-shrink-0 tw:text-muted-foreground" />

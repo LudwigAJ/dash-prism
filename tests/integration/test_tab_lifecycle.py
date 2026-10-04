@@ -87,7 +87,7 @@ def test_tab_list_has_one_tab_stop(prism_app_with_layouts):
     testutils.press_key(duo, Keys.TAB)
 
     focused = duo.driver.execute_script("return document.activeElement.dataset.testid;")
-    assert focused == "prism-tabbar-add-button"
+    assert focused == "prism-tab-bar-add-button"
 
 
 # The live region of dnd-kit announces each step of a keyboard drag.

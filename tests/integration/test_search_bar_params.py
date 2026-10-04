@@ -18,9 +18,9 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-PARAM_INPUT = "[data-testid='prism-searchbar-param-input']"
-PARAM_ERROR = "[data-testid='prism-searchbar-param-error']"
-CHOICE = "[data-testid='prism-searchbar-param-choice-{}']"
+PARAM_INPUT = "[data-testid='prism-search-bar-param-input']"
+PARAM_ERROR = "[data-testid='prism-search-bar-param-error']"
+CHOICE = "[data-testid='prism-search-bar-param-choice-{}']"
 
 
 def _start(dash_duo):
@@ -32,7 +32,7 @@ def _start(dash_duo):
 
 
 def _enter_params_mode(duo, search: str = "Typed", layout_id: str = "typed") -> None:
-    duo.find_element(".prism-searchbar").click()
+    duo.find_element(".prism-search-bar").click()
     duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
     duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(search)
     duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)
@@ -188,7 +188,7 @@ def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
 # =============================================================================
 # Combobox pattern for the choice list
 # =============================================================================
-CHOICE_LIST = "[data-testid='prism-searchbar-param-choices']"
+CHOICE_LIST = "[data-testid='prism-search-bar-param-choices']"
 # Module level, because the annotations are strings that the registry resolves in the module.
 MANY_CHOICES = [f"choice-{index:02d}" for index in range(40)]
 

@@ -57,8 +57,8 @@ export const TabBar = memo(function TabBar({
   const isDraggingFromOtherPanel =
     active?.data.current?.type === 'tab' && active.data.current.panelId !== panelId && !isPinned;
   const { setNodeRef, isOver } = useDroppable({
-    id: `searchbar-drop-${panelId}`,
-    data: { panelId, type: 'searchbar' },
+    id: `tab-bar-drop-${panelId}`,
+    data: { panelId, type: 'tab-bar' },
     disabled: !isDraggingFromOtherPanel,
   });
 
@@ -85,7 +85,7 @@ export const TabBar = memo(function TabBar({
   return (
     <div
       ref={setNodeRef}
-      className="prism-tabbar tw:relative tw:flex tw:w-full tw:shrink-0 tw:items-stretch tw:border-border"
+      className="prism-tab-bar tw:relative tw:flex tw:w-full tw:shrink-0 tw:items-stretch tw:border-border"
     >
       {isOver && (
         <div className="tw:pointer-events-none tw:absolute tw:inset-0 tw:z-10 tw:bg-primary/15" />
@@ -93,7 +93,7 @@ export const TabBar = memo(function TabBar({
       {/* The tabs and the add button scroll together. The scroll bar is hidden. */}
       <div
         ref={scrollContainerRef}
-        className="prism-tabbar-scroll prism-scrollbar-none tw:flex tw:min-w-0 tw:flex-1 tw:items-stretch tw:overflow-x-scroll tw:overflow-y-hidden"
+        className="prism-tab-bar-scroll prism-scroll-bar-none tw:flex tw:min-w-0 tw:flex-1 tw:items-stretch tw:overflow-x-scroll tw:overflow-y-hidden"
         data-can-scroll-left={canScrollLeft || undefined}
         data-can-scroll-right={canScrollRight || undefined}
       >
@@ -126,9 +126,9 @@ export const TabBar = memo(function TabBar({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                data-testid="prism-tabbar-add-button"
+                data-testid="prism-tab-bar-add-button"
                 aria-label="New tab"
-                className="prism-tabbar-add"
+                className="prism-tab-bar-add"
                 onClick={handleAddTab}
                 disabled={isMaxTabsReached}
               >
@@ -151,9 +151,9 @@ export const TabBar = memo(function TabBar({
           <TooltipTrigger asChild>
             <button
               type="button"
-              data-testid="prism-tabbar-split-button"
+              data-testid="prism-tab-bar-split-button"
               aria-label="Split panel"
-              className="prism-tabbar-split"
+              className="prism-tab-bar-split"
               onClick={handleSplitPanel}
               disabled={isMaxTabsReached}
             >

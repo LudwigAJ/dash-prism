@@ -33,7 +33,33 @@ All notable changes to Dash Prism are recorded here. The project follows
   others). Each utility class now has the form `tw:flex`, and no class name in a
   layout meets a Prism rule. A host that styled the inside of Prism with the old
   Tailwind class names must use the new names. These names were never public
-  API. The class `scrollbar-none` is now `prism-scrollbar-none`.
+  API. The class `scrollbar-none` is now `prism-scroll-bar-none`.
+- **Each word of a compound in a Prism class name or test id has its own
+  hyphen.** A host stylesheet or a host test that targets one of the old names
+  must use the new name:
+  - The classes `prism-tabbar`, `prism-tabbar-scroll`, `prism-tabbar-add` and
+    `prism-tabbar-split` are now `prism-tab-bar`, `prism-tab-bar-scroll`,
+    `prism-tab-bar-add` and `prism-tab-bar-split`.
+  - The classes `prism-searchbar`, `prism-searchbar-display`,
+    `prism-searchbar-layout-name`, `prism-searchbar-params` and
+    `prism-searchbar-resize-handle` are now `prism-search-bar`,
+    `prism-search-bar-display`, `prism-search-bar-layout-name`,
+    `prism-search-bar-params` and `prism-search-bar-resize-handle`.
+  - The test ids `prism-tabbar-add-button` and `prism-tabbar-split-button` are
+    now `prism-tab-bar-add-button` and `prism-tab-bar-split-button`.
+  - The test ids `prism-searchbar`, `prism-searchbar-display`,
+    `prism-searchbar-input`, `prism-searchbar-param-input`,
+    `prism-searchbar-param-error`, `prism-searchbar-param-choices` and
+    `prism-searchbar-param-choice-<value>` are now `prism-search-bar`,
+    `prism-search-bar-display`, `prism-search-bar-input`,
+    `prism-search-bar-param-input`, `prism-search-bar-param-error`,
+    `prism-search-bar-param-choices` and `prism-search-bar-param-choice-<value>`.
+  - The test ids `prism-statusbar-reset`, `-help`, `-undo`, `-mode`, `-panels`,
+    `-tab`, `-count` and `-updated` are now `prism-status-bar-reset`, `-help`,
+    `-undo`, `-mode`, `-panels`, `-tab`, `-count` and `-updated`.
+
+  A host test that selects the tabs by the test id prefix `prism-tab-` now also
+  gets the tab bar buttons, so it must leave out `prism-tab-bar-`.
 - **Prism no longer builds or sends a JSON Schema for a layout.** The
   `LayoutRegistration.schema` attribute and the `schema` key of
   `get_registered_layouts_metadata()` are removed, so the `registeredLayouts`

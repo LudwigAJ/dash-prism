@@ -301,7 +301,7 @@ export function useSearchBarState(panelId: PanelId) {
   }, [mode]);
 
   /**
-   * Dismisses the searchbar dropdown and returns to the idle state.
+   * Dismisses the search bar dropdown and returns to the idle state.
    * Consolidates the repeated dismiss logic used across blur, escape, etc.
    */
   const handleDismiss = useCallback(() => {
