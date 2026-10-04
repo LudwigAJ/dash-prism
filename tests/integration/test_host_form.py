@@ -10,7 +10,6 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-HELP_BUTTON = "[data-testid='prism-statusbar-help']"
 DIALOG = "[role='dialog']"
 
 
@@ -29,22 +28,22 @@ def test_prism_buttons_do_not_submit_the_form_around_them(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    testutils.start_app(dash_duo, app)
-    dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
+    duo = testutils.start_app(dash_duo, app)
+    duo.wait_for_element(testutils.HELP_BUTTON, timeout=10)
 
     # A shared Button that closes its dialog unmounts before the submit, so only buttons that
     # stay mounted can show a submit. Button itself is covered by a unit test.
     # Dash may stop the submit afterwards, so the test records the event itself. The listener
     # runs in the capture phase, before any handler of the page.
-    dash_duo.driver.execute_script(
+    duo.driver.execute_script(
         "window.__submitted = false;"
         "document.addEventListener('submit', () => { window.__submitted = true; }, true);"
     )
 
-    dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
-    testutils.wait_for_tab_count(dash_duo, 2)
-    dash_duo.find_element(HELP_BUTTON).click()
-    dash_duo.wait_for_element(DIALOG, timeout=5)
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(duo, 2)
+    duo.find_element(testutils.HELP_BUTTON).click()
+    duo.wait_for_element(DIALOG, timeout=5)
 
-    assert dash_duo.driver.execute_script("return window.__submitted;") is False
-    assert dash_duo.find_elements(testutils.PRISM_ROOT)
+    assert duo.driver.execute_script("return window.__submitted;") is False
+    assert duo.find_elements(testutils.PRISM_ROOT)

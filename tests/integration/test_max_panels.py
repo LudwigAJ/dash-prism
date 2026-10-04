@@ -1,4 +1,4 @@
-"""Integration tests for the maxPanels prop (doc 03 §3.1)."""
+"""Integration tests for the maxPanels prop."""
 
 from __future__ import annotations
 

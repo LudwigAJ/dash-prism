@@ -1,12 +1,10 @@
 """
-Utility functions for dash_prism integration tests.
+Helpers for the dash_prism integration tests.
 
-This module contains helper functions for interacting with Prism components
-in integration tests. These utilities follow Dash testing best practices:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Use ActionChains with .pause() for DnD operations
-- Check for browser console errors
+The module starts apps (:func:`start_prism`, :func:`start_app`), waits for
+states of the page (the ``wait_for_*`` functions), and drives Prism through
+Selenium. Each wait raises ``TimeoutException`` when its condition does not
+hold in time. The selectors use the ``data-testid`` attributes of Prism.
 """
 
 from __future__ import annotations
@@ -28,7 +26,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 import dash_prism
 
 # =============================================================================
-# CSS Selectors - use data-testid for stability across React re-renders
+# CSS Selectors
 # =============================================================================
 TAB_SELECTOR = "[data-testid^='prism-tab-']:not([data-testid*='close'])"
 PANEL_SELECTOR = "[data-testid^='prism-panel-']"
@@ -36,37 +34,49 @@ ADD_TAB_BUTTON = "[data-testid='prism-tabbar-add-button']"
 SPLIT_PANEL_BUTTON = "[data-testid='prism-tabbar-split-button']"
 SEARCHBAR_INPUT = "[data-testid='prism-searchbar-input']"
 CONTEXT_MENU = "[data-testid='prism-context-menu']"
+HELP_BUTTON = "[data-testid='prism-statusbar-help']"
+UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
+TOAST = "[data-sonner-toast]"
 PRISM_ROOT = ".prism-root"
 
-# DnD Drop Zone Selectors
-# Note: Actual DOM uses data-testid="prism-drop-zone-{edge}-{panelId}"
-# so we use ^= (starts-with) prefix matching
+# The test ID of a drop zone is prism-drop-zone-{edge}-{panelId}. The prefix
+# matches the left zone of each panel.
 DROP_ZONE_LEFT = "[data-testid^='prism-drop-zone-left']"
 
 
 def get_free_port() -> int:
     """
-    Find and return an available port by binding to port 0.
+    Return a port that no other server uses.
 
-    This is thread-safe and avoids port conflicts in parallel test execution.
+    Each xdist worker counts the default ports of dash[testing] from the same
+    start, so two workers would give two servers the same port.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-    return port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen(1)
+        return sock.getsockname()[1]
 
 
-def start_app(dash_duo: DashComposite, app: Dash) -> None:
+def storage_key(component_id: str) -> str:
+    """Return the browser storage key of the persisted workspace of a Prism component.
+
+    The format must match ``getWorkspaceStorageKey`` in ``src/ts/store/index.ts``.
+    """
+    return f"persist:prism-workspace-{component_id}"
+
+
+def start_app(dash_duo: DashComposite, app: Dash) -> DashComposite:
     """Serve ``app`` on a free port and wait until the first Prism component renders.
 
     Call :func:`dash_prism.init` before this function.
 
     :param dash_duo: The dash[testing] fixture.
     :param app: The Dash app to serve.
+    :returns: ``dash_duo``, after Prism rendered.
     """
     dash_duo.start_server(app, port=get_free_port())
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    return dash_duo
 
 
 def start_prism(
@@ -112,8 +122,7 @@ def start_prism(
         style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
     )
     dash_prism.init(props["id"], app)
-    start_app(dash_duo, app)
-    return dash_duo
+    return start_app(dash_duo, app)
 
 
 # =============================================================================
@@ -178,6 +187,28 @@ def wait_for_panel_count(dash_duo, expected_count: int, timeout: float = 10.0) -
     )
 
 
+def wait_for_tab_named(
+    dash_duo, name: str, *, index: int | None = None, timeout: float = 10.0
+) -> None:
+    """
+    Wait until a tab shows ``name``.
+
+    :param dash_duo: The dash testing fixture.
+    :param name: The text that the tab must contain.
+    :param index: The index of the tab that must show the name. The default
+        accepts any tab.
+    :param timeout: The maximum wait in seconds.
+    """
+
+    def tab_shows_name(driver):
+        tabs = driver.find_elements(By.CSS_SELECTOR, TAB_SELECTOR)
+        if index is not None:
+            tabs = tabs[index : index + 1]
+        return any(name in tab.text for tab in tabs)
+
+    WebDriverWait(dash_duo.driver, timeout).until(tab_shows_name, message=f"No tab shows {name!r}")
+
+
 def wait_for_element_invisible(dash_duo, selector: str, timeout: float = 5.0) -> None:
     """
     Wait until no visible element matches ``selector``.
@@ -212,30 +243,21 @@ def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> None:
 # Element Getters
 # =============================================================================
 def get_tabs(dash_duo):
-    """Return list of tab elements (excluding close buttons)."""
+    """Return the tab elements, without their close buttons."""
     return dash_duo.find_elements(TAB_SELECTOR)
 
 
 def get_panels(dash_duo):
-    """Return list of panel elements."""
+    """Return the panel elements."""
     return dash_duo.find_elements(PANEL_SELECTOR)
 
 
 def get_tab_id(dash_duo, index: int = 0) -> str | None:
     """
-    Get the ID of a tab by index.
+    Return the ID of the tab at ``index``, or ``None`` if there is no such tab.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    index : int
-        Tab index (0-based).
-
-    Returns
-    -------
-    str | None
-        The tab ID or None if not found.
+    :param dash_duo: The dash testing fixture.
+    :param index: The index of the tab in the DOM order of all tabs.
     """
     tabs = get_tabs(dash_duo)
     if index < len(tabs):
@@ -246,19 +268,10 @@ def get_tab_id(dash_duo, index: int = 0) -> str | None:
 
 def get_panel_id(dash_duo, panel_index: int = 0) -> str | None:
     """
-    Get the panel ID by index.
+    Return the ID of the panel at ``panel_index``, or ``None`` if there is no such panel.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    panel_index : int
-        Panel index.
-
-    Returns
-    -------
-    str | None
-        Panel ID or None if not found.
+    :param dash_duo: The dash testing fixture.
+    :param panel_index: The index of the panel in the DOM order.
     """
     panels = get_panels(dash_duo)
     if panel_index >= len(panels):
@@ -270,19 +283,10 @@ def get_panel_id(dash_duo, panel_index: int = 0) -> str | None:
 
 def get_tab_order_in_panel(dash_duo, panel_index: int = 0) -> list[str]:
     """
-    Get the order of tab IDs in a specific panel.
+    Return the IDs of the tabs in a panel, in the order of the tab bar.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    panel_index : int
-        Panel index.
-
-    Returns
-    -------
-    list[str]
-        List of tab IDs in order.
+    :param dash_duo: The dash testing fixture.
+    :param panel_index: The index of the panel in the DOM order.
     """
     panels = get_panels(dash_duo)
     if panel_index >= len(panels):
@@ -301,43 +305,19 @@ def get_tab_order_in_panel(dash_duo, panel_index: int = 0) -> list[str]:
 
 
 def are_drop_zones_present(dash_duo) -> bool:
+    """Return whether the drop zones of a drag are in the DOM."""
+    return bool(dash_duo.driver.find_elements(By.CSS_SELECTOR, DROP_ZONE_LEFT))
+
+
+def check_browser_errors(dash_duo) -> list[dict[str, Any]]:
     """
-    Check if drop zone elements are currently present in the DOM.
+    Return the console errors that the browser logged since the last call.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-
-    Returns
-    -------
-    bool
-        True if at least one drop zone is present.
+    :param dash_duo: The dash testing fixture.
+    :returns: The log entries of level ``SEVERE``.
     """
-    elements = dash_duo.driver.find_elements(By.CSS_SELECTOR, DROP_ZONE_LEFT)
-    return len(elements) > 0
-
-
-def check_browser_errors(dash_duo) -> list:
-    """
-    Check browser console for errors.
-
-    Per Dash testing best practices, always check for console errors.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-
-    Returns
-    -------
-    list
-        List of error log entries (should be empty for passing tests).
-    """
-    logs = dash_duo.get_logs()
-    # Filter for severe errors only
-    errors = [log for log in logs if log.get("level") == "SEVERE"]
-    return errors
+    # get_logs filters by time only, whatever its docstring says.
+    return [log for log in dash_duo.get_logs() if log["level"] == "SEVERE"]
 
 
 # =============================================================================
@@ -367,33 +347,26 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> str:
 
 def set_input_value_react(dash_duo, selector: str, value: str):
     """
-    Set input value in a way that works with React's controlled inputs.
+    Set the value of a React controlled input and wait until the input shows it.
 
-    React uses custom value descriptors, so we need to use the native setter.
+    React replaces the value property of an input, so a plain assignment does
+    not reach its onChange handler. The native setter does.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    selector : str
-        CSS selector for the input element.
-    value : str
-        Value to set.
+    :param dash_duo: The dash testing fixture.
+    :param selector: The CSS selector of the input.
+    :param value: The value to set.
     """
     dash_duo.driver.execute_script(
         """
         var input = document.querySelector(arguments[0]);
         if (input) {
-            // Focus the input first
             input.focus();
-
-            // Use the native setter to bypass React's descriptor
             var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
                 window.HTMLInputElement.prototype, 'value'
             ).set;
             nativeInputValueSetter.call(input, arguments[1]);
 
-            // Trigger React's onChange - need both 'input' and 'change' events
+            // React listens for 'input', other handlers for 'change'.
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -402,7 +375,6 @@ def set_input_value_react(dash_duo, selector: str, value: str):
         value,
     )
 
-    # explicit wait for the value to be set, replacing the hardcoded JS timeout
     WebDriverWait(dash_duo.driver, 2.0).until(
         lambda d: d.find_element(By.CSS_SELECTOR, selector).get_attribute("value") == value,
         message=f"Value '{value}' was not set on element '{selector}'",
@@ -411,14 +383,10 @@ def set_input_value_react(dash_duo, selector: str, value: str):
 
 def press_enter_on_element(dash_duo, selector: str):
     """
-    Press Enter key on an element to trigger onKeyDown handler.
+    Send an Enter keydown event to the element that matches ``selector``.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    selector : str
-        CSS selector for the element.
+    :param dash_duo: The dash testing fixture.
+    :param selector: The CSS selector of the element.
     """
     dash_duo.driver.execute_script(
         """
@@ -463,24 +431,13 @@ def press_key(dash_duo, key: str) -> None:
     ActionChains(dash_duo.driver).send_keys(key).perform()
 
 
-# =============================================================================
-# Tab Management Helpers
-# =============================================================================
 def create_tabs_for_dnd_test(dash_duo, count: int = 3) -> list[str]:
     """
-    Create multiple tabs for DnD testing.
+    Add tabs until the workspace holds ``count`` tabs.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    count : int
-        Total number of tabs desired (including initial tab).
-
-    Returns
-    -------
-    list[str]
-        List of tab IDs in order.
+    :param dash_duo: The dash testing fixture.
+    :param count: The number of tabs, the initial tab included.
+    :returns: The IDs of the tabs, in order.
     """
     initial_tab_id = get_tab_id(dash_duo, 0)
     tab_ids = [initial_tab_id] if initial_tab_id else []
@@ -608,23 +565,16 @@ def cancel_drag_with_escape(dash_duo) -> None:
 # Common Interaction Helpers
 # =============================================================================
 def get_modifier_key():
-    """Get the correct modifier key for the current platform.
-
-    Returns Keys.COMMAND on macOS, Keys.CONTROL elsewhere.
-    """
+    """Return the modifier key of the shortcuts: Command on macOS, Control elsewhere."""
     return Keys.COMMAND if platform.system() == "Darwin" else Keys.CONTROL
 
 
 def open_context_menu(dash_duo, tab_element):
     """
-    Open context menu on a tab element.
+    Right-click a tab and wait until its context menu is visible.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash testing fixture.
-    tab_element : WebElement
-        The tab element to right-click.
+    :param dash_duo: The dash testing fixture.
+    :param tab_element: The tab element.
     """
     ActionChains(dash_duo.driver).context_click(tab_element).perform()
     WebDriverWait(dash_duo.driver, 3).until(

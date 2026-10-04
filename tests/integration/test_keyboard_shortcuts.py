@@ -2,42 +2,28 @@
 Integration tests for keyboard shortcuts.
 
 Tests Cmd/Ctrl+Alt+N (new tab), Cmd/Ctrl+D (close tab).
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
 
 import pytest
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
 
-# Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
 
-def _css(selector: str) -> tuple[str, str]:
-    return (By.CSS_SELECTOR, selector)
-
-
 def test_keyboard_shortcut_new_tab(prism_app_with_layouts):
-    """Test Cmd/Ctrl+Alt+N creates a new tab (02 G-1).
+    """Test Cmd/Ctrl+Alt+N creates a new tab.
 
     Plain Cmd/Ctrl+N is a browser-reserved shortcut that Chrome never delivers
     to the page, so Prism binds a three-key chord instead.
     """
     duo = prism_app_with_layouts
-
-    # Prism starts with 1 initial tab
-    initial_tabs = testutils.get_tabs(duo)
-    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
+    assert len(testutils.get_tabs(duo)) == 1, "Should start with 1 initial tab"
 
     modifier = testutils.get_modifier_key()
     body = duo.find_element("body")
@@ -48,48 +34,26 @@ def test_keyboard_shortcut_new_tab(prism_app_with_layouts):
         testutils.wait_for_tab_count(duo, 2, timeout=1.5)
     assert len(testutils.get_tabs(duo)) == 1, "Cmd/Ctrl+N must no longer create a tab"
 
-    # Press the chord: Cmd+Option+N (Mac) or Ctrl+Alt+N (Windows/Linux)
     body.send_keys(modifier, Keys.ALT, "n")
-
-    # Wait for new tab to appear (explicit wait)
     testutils.wait_for_tab_count(duo, 2, timeout=5)
-
-    # Verify tab created
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Cmd/Ctrl+Alt+N should create new tab"
 
 
 def test_keyboard_shortcut_close_tab(prism_app_with_layouts):
     """Test Cmd/Ctrl+D closes active tab when multiple tabs exist."""
     duo = prism_app_with_layouts
-
-    # Create 1 more tab (1 initial + 1 = 2 total)
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
 
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Should have 2 tabs"
+    duo.find_element("body").send_keys(testutils.get_modifier_key(), "d")
 
-    # Press Cmd+D to close active tab
-    modifier = testutils.get_modifier_key()
-    body = duo.find_element("body")
-    body.send_keys(modifier, "d")
-
-    # Wait for tab to close (explicit wait)
     testutils.wait_for_tab_count(duo, 1, timeout=5)
-
-    # Verify one tab closed
-    tabs_after = testutils.get_tabs(duo)
-    assert len(tabs_after) == 1, "Cmd/Ctrl+D should close active tab"
 
 
 def test_shortcuts_do_not_fire_while_a_context_menu_is_open(prism_app_with_layouts):
     """An open menu owns the keyboard: Ctrl+D must not close the tab behind it.
 
     Radix portals the menu to document.body, outside every Prism root, so the
-    window-level shortcut listener used to act on the workspace underneath
-    (02 G-1).
+    window-level shortcut listener used to act on the workspace underneath.
     """
     duo = prism_app_with_layouts
 
@@ -107,7 +71,7 @@ def test_shortcuts_do_not_fire_while_a_context_menu_is_open(prism_app_with_layou
 
     # Closing the menu hands the keyboard back.
     duo.find_element("body").send_keys(Keys.ESCAPE)
-    WebDriverWait(duo.driver, 3).until(lambda d: not d.find_elements(*_css(testutils.CONTEXT_MENU)))
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=3)
     duo.find_element("body").send_keys(modifier, "d")
     testutils.wait_for_tab_count(duo, 1, timeout=5)
 
@@ -140,19 +104,19 @@ def test_ctrl_space_focuses_the_search_bar_of_the_active_panel(prism_app_with_la
 
 def test_keyboard_shortcuts_can_be_disabled(dash_duo):
     """enableKeyboardShortcuts=False installs no listener and hides the help section."""
-    testutils.start_prism(dash_duo, enableKeyboardShortcuts=False)
-    testutils.wait_for_tab_count(dash_duo, 1)
+    duo = testutils.start_prism(dash_duo, enableKeyboardShortcuts=False)
+    testutils.wait_for_tab_count(duo, 1)
 
-    body = dash_duo.find_element("body")
+    body = duo.find_element("body")
     body.send_keys(testutils.get_modifier_key(), Keys.ALT, "n")
     with pytest.raises(TimeoutException):
-        testutils.wait_for_tab_count(dash_duo, 2, timeout=1.5)
-    assert len(testutils.get_tabs(dash_duo)) == 1
+        testutils.wait_for_tab_count(duo, 2, timeout=1.5)
+    assert len(testutils.get_tabs(duo)) == 1
 
-    # Help dialog no longer advertises shortcuts
-    dash_duo.find_element("[data-testid='prism-statusbar-help']").click()
-    dash_duo.wait_for_element("[role='dialog']", timeout=5)
+    # The help dialog no longer lists the shortcuts.
+    duo.find_element(testutils.HELP_BUTTON).click()
+    duo.wait_for_element("[role='dialog']", timeout=5)
     # Section titles are rendered uppercase via CSS; compare case-insensitively.
-    dialog_text = dash_duo.find_element("[role='dialog']").text.lower()
+    dialog_text = duo.find_element("[role='dialog']").text.lower()
     assert "tab management" in dialog_text
     assert "keyboard shortcuts" not in dialog_text

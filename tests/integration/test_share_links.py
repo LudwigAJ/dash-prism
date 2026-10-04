@@ -1,4 +1,4 @@
-"""Integration tests for the enableShareLinks prop (doc 03 §3.1)."""
+"""Integration tests for the enableShareLinks prop."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import json
 import pytest
 from dash import html
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.keys import Keys
 
 import dash_prism
 from tests.integration import testutils
@@ -15,7 +16,6 @@ from tests.integration import testutils
 pytestmark = pytest.mark.integration
 
 SHARE_ITEM = "[data-testid='prism-context-menu-share']"
-TOAST_SELECTOR = "[data-sonner-toast]"
 
 
 def _share_hash(layout_id: str, name: str) -> str:
@@ -50,7 +50,7 @@ def test_share_links_enabled_by_default(dash_duo):
 
     testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
     duo.wait_for_element(SHARE_ITEM, timeout=3)
-    duo.find_element("body").send_keys("\ue00c")  # Escape closes the menu
+    duo.find_element("body").send_keys(Keys.ESCAPE)
 
     # A share hash opens the layout in a new tab
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Shared"))
@@ -63,7 +63,7 @@ def test_share_links_disabled(dash_duo):
 
     testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
     assert duo.find_elements(SHARE_ITEM) == []
-    duo.find_element("body").send_keys("\ue00c")
+    duo.find_element("body").send_keys(Keys.ESCAPE)
 
     # A share hash is ignored
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Shared"))
@@ -117,9 +117,9 @@ def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
     testutils.wait_for_tab_count(duo, 2, timeout=10)
 
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Second"))
-    duo.wait_for_contains_text(TOAST_SELECTOR, "Maximum tabs limit reached (2)", timeout=10)
+    duo.wait_for_contains_text(testutils.TOAST, "Maximum tabs limit reached (2)", timeout=10)
 
-    toast_text = " ".join(t.text for t in duo.find_elements(TOAST_SELECTOR))
+    toast_text = " ".join(t.text for t in duo.find_elements(testutils.TOAST))
     assert "Opened shared tab: Second" not in toast_text
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 2
 
@@ -130,6 +130,6 @@ def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
     _open_home(duo)
 
     duo.driver.get(duo.driver.current_url.split("#")[0] + _share_hash("home", "Again"))
-    duo.wait_for_contains_text(TOAST_SELECTOR, "is already open. Switching to it.", timeout=10)
+    duo.wait_for_contains_text(testutils.TOAST, "is already open. Switching to it.", timeout=10)
 
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1

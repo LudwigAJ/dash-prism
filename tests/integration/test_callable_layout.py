@@ -4,12 +4,6 @@ Integration tests for callable vs static app.layout.
 Tests that dash_prism.init() properly handles both:
 1. Static layouts (app.layout = html.Div(...)) - recommended approach
 2. Callable layouts (app.layout = lambda: html.Div(...)) - supported for compatibility
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
@@ -20,15 +14,12 @@ from dash import Dash, html
 import dash_prism
 from tests.integration import testutils
 
-# Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
 
 def test_static_layout_integration(dash_duo):
     """Test that Prism works correctly with static app.layout (recommended approach)."""
     app = Dash(__name__, suppress_callback_exceptions=True)
-
-    # Register test layouts
     dash_prism.register_layout(
         id="static-test",
         name="Static Test",
@@ -40,8 +31,6 @@ def test_static_layout_integration(dash_duo):
             ]
         ),
     )
-
-    # Define static layout (recommended approach)
     app.layout = html.Div(
         [
             html.H1("Dash Prism Integration Test - Static Layout"),
@@ -57,36 +46,20 @@ def test_static_layout_integration(dash_duo):
         style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
     )
 
-    # Initialize Prism (this injects metadata once for static layouts)
+    # init injects the metadata into a static layout once and leaves it a component tree.
     dash_prism.init("test-prism", app)
-
-    # Verify app.layout is not callable
     assert not callable(app.layout), "Static layout should not be callable after init"
 
-    testutils.start_app(dash_duo, app)
+    duo = testutils.start_app(dash_duo, app)
+    testutils.wait_for_tab_count(duo, 1)
 
-    # Wait for initial tab to appear (Prism always starts with a "New Layout" tab)
-    testutils.wait_for_tab_count(dash_duo, 1)
-
-    # Verify initial tab exists
-    initial_tabs = testutils.get_tabs(dash_duo)
-    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
-
-    # Create a second tab by clicking add button to verify functionality
-    add_button = dash_duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
-    testutils.wait_for_tab_count(dash_duo, 2)
-
-    # Verify we now have 2 tabs
-    tabs = testutils.get_tabs(dash_duo)
-    assert len(tabs) == 2, "Should have 2 tabs after clicking add"
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(duo, 2)
 
 
 def test_callable_layout_integration(dash_duo):
     """Test that Prism works correctly with callable app.layout (supported for compatibility)."""
     app = Dash(__name__, suppress_callback_exceptions=True)
-
-    # Register test layouts
     dash_prism.register_layout(
         id="callable-test",
         name="Callable Test",
@@ -99,8 +72,6 @@ def test_callable_layout_integration(dash_duo):
         ),
     )
 
-    # Define callable layout (function that returns layout)
-    # This is supported but static layouts are recommended for better performance
     def layout():
         return html.Div(
             [
@@ -119,27 +90,13 @@ def test_callable_layout_integration(dash_duo):
 
     app.layout = layout
 
-    # Initialize Prism (this wraps the callable to inject metadata on every render)
+    # init wraps a callable layout, so the metadata goes into each render.
     dash_prism.init("test-prism-callable", app)
-
-    # Verify the layout function was wrapped
     assert callable(app.layout), "app.layout should still be callable after init"
     assert hasattr(app.layout, "__wrapped__"), "app.layout should be marked as wrapped"
 
-    testutils.start_app(dash_duo, app)
+    duo = testutils.start_app(dash_duo, app)
+    testutils.wait_for_tab_count(duo, 1)
 
-    # Wait for initial tab to appear
-    testutils.wait_for_tab_count(dash_duo, 1)
-
-    # Verify initial tab exists
-    initial_tabs = testutils.get_tabs(dash_duo)
-    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
-
-    # Create a second tab by clicking add button to verify functionality
-    add_button = dash_duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
-    testutils.wait_for_tab_count(dash_duo, 2)
-
-    # Verify we now have 2 tabs
-    tabs = testutils.get_tabs(dash_duo)
-    assert len(tabs) == 2, "Should have 2 tabs after clicking add"
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
+    testutils.wait_for_tab_count(duo, 2)

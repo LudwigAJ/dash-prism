@@ -6,13 +6,6 @@ Panel splitting uses the SPLIT_PANEL action which:
 - Keeps original panel ID
 - Creates new sibling panel
 - Moves tab to new panel
-
-Best Practices Applied (per DASH_TESTING_GUIDELINES.md):
-- Use explicit waits (dash_duo.wait_for_*) instead of time.sleep()
-- Use ActionChains chaining with .pause() for DnD operations
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
@@ -41,18 +34,15 @@ class TestPanelSplit:
         """
         duo = prism_app_with_layouts
 
-        # Create 3 tabs (need 2+ to enable DnD and allow split)
+        # A single tab cannot split its panel.
         testutils.create_tabs_for_dnd_test(duo, 3)
         assert len(testutils.get_tabs(duo)) == 3, "Should have 3 tabs for DnD test"
         assert len(testutils.get_panels(duo)) == 1, "Should start with 1 panel"
 
-        # Drag to specified edge to split
         testutils.drag_tab_to_panel_edge(duo, 1, edge)
 
-        # Wait for panel split (10s timeout for reliability)
         testutils.wait_for_panel_count(duo, 2, timeout=10.0)
 
-        # Verify 2 panels and 3 tabs
         assert len(testutils.get_panels(duo)) == 2, "Should have 2 panels after split"
         assert len(testutils.get_tabs(duo)) == 3, "Should still have 3 tabs total"
 
@@ -68,19 +58,15 @@ class TestPanelSplit:
 
         tab_ids = testutils.create_tabs_for_dnd_test(duo, 3)
 
-        # Drag middle tab to right edge
         testutils.drag_tab_to_panel_edge(duo, 1, "right")
         testutils.wait_for_panel_count(duo, 2, timeout=10.0)
 
-        # Get tabs in each panel
         panel0_tabs = testutils.get_tab_order_in_panel(duo, 0)
         panel1_tabs = testutils.get_tab_order_in_panel(duo, 1)
 
-        # Verify all tabs accounted for
         all_panel_tabs = set(panel0_tabs + panel1_tabs)
         assert all_panel_tabs == set(tab_ids), "All tabs should be preserved"
 
-        # One panel should have 1 tab, other should have 2
         tab_counts = sorted([len(panel0_tabs), len(panel1_tabs)])
         assert tab_counts == [1, 2], f"Expected [1, 2] distribution, got {tab_counts}"
 
@@ -96,7 +82,6 @@ class TestPanelSplit:
         testutils.drag_tab_to_panel_edge(duo, 1, "right")
         testutils.wait_for_panel_count(duo, 2, timeout=10.0)
 
-        # One of the panels should have original ID
         panel_ids = [testutils.get_panel_id(duo, 0), testutils.get_panel_id(duo, 1)]
         assert original_panel_id in panel_ids, f"Original ID should exist: {panel_ids}"
 
@@ -113,15 +98,10 @@ class TestPanelSplit:
 
         testutils.create_tabs_for_dnd_test(duo, 4)
 
-        # First split
         testutils.drag_tab_to_panel_edge(duo, 1, "right")
         testutils.wait_for_panel_count(duo, 2, timeout=10.0)
         assert len(testutils.get_panels(duo)) == 2, "Should have 2 panels after first split"
 
-        # Second split from first panel
         testutils.drag_tab_to_panel_edge(duo, 0, "bottom", source_panel_index=0)
         testutils.wait_for_panel_count(duo, 3, timeout=10.0)
-
-        # Verify state
-        assert len(testutils.get_panels(duo)) >= 2, "Should have at least 2 panels"
         assert len(testutils.get_tabs(duo)) == 4, "Should still have 4 tabs"

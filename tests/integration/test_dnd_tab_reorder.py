@@ -4,12 +4,6 @@ Tests for tab reordering within the same panel.
 Tab reordering uses the REORDER_TAB action and operates on panelTabs array.
 These tests verify that tabs can be dragged to new positions within
 the same panel without creating new panels.
-
-Best Practices Applied (per DASH_TESTING_GUIDELINES.md):
-- Use explicit waits (dash_duo.wait_for_*) instead of time.sleep()
-- Use ActionChains chaining with .pause() for DnD operations
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
 """
 
 from __future__ import annotations

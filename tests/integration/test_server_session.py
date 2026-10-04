@@ -1,5 +1,5 @@
 """
-Integration tests for ``serverSessionId`` reconciliation (01 §1.3 / 02 B-2).
+Integration tests for ``serverSessionId`` reconciliation.
 
 A persisted workspace that references a layout the server no longer registers
 must lose that tab on the next load instead of rendering a "Layout not found"
@@ -19,8 +19,7 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-STORAGE_KEY = "persist:prism-workspace-prism"
-TOAST_SELECTOR = "[data-sonner-toast]"
+STORAGE_KEY = testutils.storage_key("prism")
 
 
 def _persisted_workspace(server_session_id: str) -> str:
@@ -124,7 +123,7 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     # the reducer during rehydration where nothing is listening yet).
     # sonner mounts the toast element before it fills in the text, so wait for
     # the text rather than reading it once.
-    duo.wait_for_contains_text(TOAST_SELECTOR, "Closed 1 tab", timeout=10)
+    duo.wait_for_contains_text(testutils.TOAST, "Closed 1 tab", timeout=10)
 
     testutils.wait_for_tab_count(duo, 1, timeout=10)
     tabs = duo.find_elements(testutils.TAB_SELECTOR)

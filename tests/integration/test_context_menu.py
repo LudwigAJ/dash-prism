@@ -3,12 +3,6 @@ Integration tests for context menu interactions.
 
 Tests right-click menu on tabs: rename, duplicate, lock/unlock, close,
 style variants, and icon selection.
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
@@ -19,66 +13,37 @@ from selenium.webdriver.common.keys import Keys
 
 from tests.integration import testutils
 
-# Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
 
 def test_context_menu_appears_on_right_click(prism_app_with_layouts):
     """Test that context menu appears on right-click."""
     duo = prism_app_with_layouts
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
 
-    # Right-click tab
-    tab = duo.find_element(testutils.TAB_SELECTOR)
-    testutils.open_context_menu(duo, tab)
+    assert duo.find_element(testutils.CONTEXT_MENU).is_displayed()
 
-    # Verify menu appears
-    context_menu = duo.find_element(testutils.CONTEXT_MENU)
-    assert context_menu.is_displayed(), "Context menu should be visible"
-
-    # Press Escape to close menu
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-
-    # Wait for menu to close (explicit wait)
     testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
 
 def test_context_menu_close(prism_app_with_layouts):
     """Test closing tab via context menu."""
     duo = prism_app_with_layouts
-
-    # Create 2 tabs total (1 initial + 1 new)
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
 
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2
+    testutils.open_context_menu(duo, testutils.get_tabs(duo)[0])
+    duo.find_element("[data-testid='prism-context-menu-close']").click()
 
-    # Right-click first tab
-    tab = tabs[0]
-    testutils.open_context_menu(duo, tab)
-
-    # Click close menu item
-    close_item = duo.find_element("[data-testid='prism-context-menu-close']")
-    close_item.click()
-
-    # Wait for tab to be closed (explicit wait)
     testutils.wait_for_tab_count(duo, 1)
-
-    # Verify tab closed
-    tabs_after = testutils.get_tabs(duo)
-    assert len(tabs_after) == 1, "Tab should be closed"
 
 
 def test_context_menu_has_expected_items(prism_app_with_layouts):
     """Test that context menu contains expected menu items."""
     duo = prism_app_with_layouts
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
 
-    # Right-click tab
-    tab = duo.find_element(testutils.TAB_SELECTOR)
-    testutils.open_context_menu(duo, tab)
-
-    # Verify expected menu items exist
     expected_items = [
         "[data-testid='prism-context-menu-rename']",
         "[data-testid='prism-context-menu-duplicate']",
@@ -87,58 +52,33 @@ def test_context_menu_has_expected_items(prism_app_with_layouts):
     ]
 
     for selector in expected_items:
-        elements = duo.find_elements(selector)
-        assert len(elements) > 0, f"Menu item {selector} should exist"
+        assert duo.find_elements(selector), f"Menu item {selector} should exist"
 
-    # Close menu
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
 
 
 def test_context_menu_duplicate_creates_new_tab(prism_app_with_layouts):
     """Test that duplicate menu item creates a new tab."""
     duo = prism_app_with_layouts
+    assert len(testutils.get_tabs(duo)) == 1, "Should start with 1 tab"
 
-    # Verify starting with 1 tab
-    initial_count = len(testutils.get_tabs(duo))
-    assert initial_count == 1, "Should start with 1 tab"
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
+    duo.find_element("[data-testid='prism-context-menu-duplicate']").click()
 
-    # Right-click tab
-    tab = duo.find_element(testutils.TAB_SELECTOR)
-    testutils.open_context_menu(duo, tab)
-
-    # Click duplicate menu item
-    duplicate_item = duo.find_element("[data-testid='prism-context-menu-duplicate']")
-    duplicate_item.click()
-
-    # Wait for new tab to appear
     testutils.wait_for_tab_count(duo, 2)
-
-    # Verify 2 tabs exist
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Duplicate should create new tab"
 
 
 def test_context_menu_closes_on_escape(prism_app_with_layouts):
     """Test that pressing Escape closes the context menu."""
     duo = prism_app_with_layouts
+    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
+    assert duo.find_element(testutils.CONTEXT_MENU).is_displayed()
 
-    # Right-click tab
-    tab = duo.find_element(testutils.TAB_SELECTOR)
-    testutils.open_context_menu(duo, tab)
-
-    # Verify menu is visible
-    context_menu = duo.find_element(testutils.CONTEXT_MENU)
-    assert context_menu.is_displayed(), "Context menu should be visible"
-
-    # Press Escape
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-
-    # Wait for menu to close
     testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
-    # Verify menu is gone or not visible
     menus = duo.find_elements(testutils.CONTEXT_MENU)
-    if len(menus) > 0:
+    if menus:
         assert not menus[0].is_displayed(), "Context menu should be hidden"
 
 

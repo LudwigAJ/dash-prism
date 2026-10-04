@@ -3,44 +3,28 @@ Integration tests for tab lifecycle operations.
 
 Tests tab creation, closing, renaming, and other tab management operations
 using browser automation via dash[testing].
-
-Best Practices Applied:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors (data-testid)
-- Check for browser console errors
-- Keep tests isolated and focused
 """
 
 from __future__ import annotations
 
 import pytest
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 from tests.integration import testutils
 
-# Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 
 
 def test_create_new_tab(prism_app_with_layouts):
     """Test creating a new tab via the add button."""
     duo = prism_app_with_layouts
+    assert len(testutils.get_tabs(duo)) == 1, "Should start with 1 initial tab"
 
-    # Prism always starts with 1 initial tab (showing NewLayout)
-    initial_tabs = testutils.get_tabs(duo)
-    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
 
-    # Click the add tab button
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
-
-    # Wait for new tab to appear (explicit wait, not sleep)
     testutils.wait_for_tab_count(duo, 2)
-
-    # Verify two tabs now exist
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Should have 2 tabs after clicking add"
 
 
 def test_add_tab_button_has_an_accessible_name(prism_app_with_layouts):
@@ -53,77 +37,45 @@ def test_add_tab_button_has_an_accessible_name(prism_app_with_layouts):
 def test_close_tab(prism_app_with_layouts):
     """Test closing a tab via the close button."""
     duo = prism_app_with_layouts
-
-    # Create a second tab (Prism starts with 1)
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
+    duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
-
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 2, "Should have 2 tabs"
-
-    # Get the second tab's ID
     tab_id = testutils.get_tab_id(duo, 1)
     assert tab_id is not None, "Tab ID should not be None"
 
-    # Hover over tab to reveal close button (it's hidden until hover)
-    tab = tabs[1]
+    # The close button shows only while the pointer is over the tab.
     duo.driver.execute_script(
-        "arguments[0].dispatchEvent(new MouseEvent('mouseenter', {bubbles: true}))", tab
+        "arguments[0].dispatchEvent(new MouseEvent('mouseenter', {bubbles: true}))",
+        testutils.get_tabs(duo)[1],
     )
+    duo.wait_for_element(f"[data-testid='prism-tab-close-{tab_id}']", timeout=2).click()
 
-    # Find and click the close button
-    close_selector = f"[data-testid='prism-tab-close-{tab_id}']"
-    duo.wait_for_element(close_selector, timeout=2)
-    close_button = duo.find_element(close_selector)
-    close_button.click()
-
-    # Wait for tab to be removed (explicit wait)
     testutils.wait_for_tab_count(duo, 1)
-
-    # Verify tab was removed
-    tabs_after = testutils.get_tabs(duo)
-    assert len(tabs_after) == 1, "Should have 1 tab remaining after closing"
 
 
 def test_create_multiple_tabs(prism_app_with_layouts):
     """Test creating multiple tabs."""
     duo = prism_app_with_layouts
-
-    # Start with 1 initial tab, create 2 more for total of 3
     add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
 
     add_button.click()
     testutils.wait_for_tab_count(duo, 2)
-
     add_button.click()
     testutils.wait_for_tab_count(duo, 3)
-
-    # Verify 3 tabs exist
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 3, "Should have 3 tabs"
 
 
 def test_max_tabs_limit(prism_app_with_layouts):
     """Test that maxTabs limit is enforced."""
     duo = prism_app_with_layouts
 
-    # App is configured with maxTabs=10, start with 1 initial tab
-    # Create 9 more tabs (1 initial + 9 = 10 total)
-    for i in range(9):
-        # Re-fetch button each iteration to avoid stale element
+    # The fixture sets maxTabs=10, and the workspace starts with one tab.
+    for count in range(2, 11):
+        # The button re-renders after each click, so look it up again each time.
         add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-        # Use JavaScript click for reliability
         duo.driver.execute_script("arguments[0].click();", add_button)
-        testutils.wait_for_tab_count(duo, i + 2)
+        testutils.wait_for_tab_count(duo, count)
 
-    tabs = testutils.get_tabs(duo)
-    assert len(tabs) == 10, "Should have 10 tabs (the max)"
-
-    # Re-fetch button and verify it's disabled at max tabs
     add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    is_disabled = add_button.get_attribute("disabled")
-    assert is_disabled is not None, "Add button should be disabled at max tabs"
+    assert add_button.get_attribute("disabled") is not None, "Add button should be disabled"
 
 
 def test_tab_selection(prism_app_with_layouts):
@@ -164,36 +116,11 @@ def test_tab_persists_after_creation(prism_app_with_layouts):
     The fix ensures the store is stable and tabs persist.
     """
     duo = prism_app_with_layouts
+    assert len(testutils.get_tabs(duo)) == 1, "Should start with 1 initial tab"
 
-    # Start with 1 initial tab
-    initial_tabs = testutils.get_tabs(duo)
-    assert len(initial_tabs) == 1, "Should start with 1 initial tab"
-
-    # Click the add tab button (single click should work)
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
-
-    # Wait for the new tab to appear
-    testutils.wait_for_tab_count(duo, 2)
-
-    # Wait for Redux sync cycle to complete (500ms debounce + processing).
-    # Poll for tab count stability rather than sleeping.
-    def tabs_still_at_2(driver):
-        return len(driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)) == 2
-
-    WebDriverWait(duo.driver, 3).until(
-        tabs_still_at_2, message="Tab should persist after Redux sync cycle"
-    )
-
-    # Add another tab to verify continued functionality
-    add_button = duo.find_element(testutils.ADD_TAB_BUTTON)
-    add_button.click()
-    testutils.wait_for_tab_count(duo, 3)
-
-    # Wait for sync cycle again
-    def tabs_still_at_3(driver):
-        return len(driver.find_elements(By.CSS_SELECTOR, testutils.TAB_SELECTOR)) == 3
-
-    WebDriverWait(duo.driver, 3).until(
-        tabs_still_at_3, message="Both new tabs should persist after Redux sync cycle"
-    )
+    # The sync runs 500 ms after the last change. The new tab must outlive it.
+    for count in (2, 3):
+        duo.find_element(testutils.ADD_TAB_BUTTON).click()
+        testutils.wait_for_tab_count(duo, count)
+        with pytest.raises(TimeoutException):
+            testutils.wait_for_tab_count(duo, count - 1, timeout=1.5)

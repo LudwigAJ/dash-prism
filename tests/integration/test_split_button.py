@@ -35,35 +35,24 @@ def test_split_button_creates_new_panel(prism_app_with_layouts):
     """Clicking the split button should create a second panel with a new tab."""
     duo = prism_app_with_layouts
 
-    # Start with 1 panel, 1 tab
     assert len(testutils.get_panels(duo)) == 1
     assert len(testutils.get_tabs(duo)) == 1
 
-    # Click split button
-    split_btn = duo.find_element(testutils.SPLIT_PANEL_BUTTON)
-    split_btn.click()
+    duo.find_element(testutils.SPLIT_PANEL_BUTTON).click()
 
-    # Wait for the new panel and tab to appear
     testutils.wait_for_panel_count(duo, 2)
     testutils.wait_for_tab_count(duo, 2)
     testutils.wait_for_panel_layout_stable(duo)
-
-    assert len(testutils.get_panels(duo)) == 2, "Should have 2 panels after split"
-    assert len(testutils.get_tabs(duo)) == 2, "Should have 2 tabs after split"
 
 
 def test_split_button_hidden_when_not_active(prism_app_with_layouts):
     """After split, only the active panel should show the split button."""
     duo = prism_app_with_layouts
 
-    # Split to create two panels
-    split_btn = duo.find_element(testutils.SPLIT_PANEL_BUTTON)
-    split_btn.click()
-
+    duo.find_element(testutils.SPLIT_PANEL_BUTTON).click()
     testutils.wait_for_panel_count(duo, 2)
     testutils.wait_for_panel_layout_stable(duo)
 
-    # Only 1 split button should be visible (on the active panel)
     buttons = duo.driver.find_elements(By.CSS_SELECTOR, testutils.SPLIT_PANEL_BUTTON)
     assert len(buttons) == 1, "Only the active panel should show the split button"
 
@@ -74,11 +63,8 @@ def test_double_click_empty_space_still_works(prism_app_with_layouts):
 
     assert len(testutils.get_tabs(duo)) == 1
 
-    # Double-click the empty space area in the tab bar (inside the scrollable div)
-    # The empty space div has title="Double-click to add new tab"
     empty_space = duo.driver.find_element(By.CSS_SELECTOR, "[title='Double-click to add new tab']")
 
     ActionChains(duo.driver).double_click(empty_space).perform()
 
     testutils.wait_for_tab_count(duo, 2)
-    assert len(testutils.get_tabs(duo)) == 2, "Double-click on empty space should add a tab"

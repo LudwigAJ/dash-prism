@@ -1,4 +1,4 @@
-"""Integration tests for prop changes after mount (02 A-8).
+"""Integration tests for prop changes after mount.
 
 The Redux store is created once per mount; ``maxTabs`` is read through a ref
 getter so a callback can change it without rebuilding the store (which used to
@@ -15,7 +15,6 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-UNDO_BUTTON = "[data-testid='prism-statusbar-undo']"
 TAB_COUNT = "[data-testid='prism-statusbar-count']"
 
 
@@ -41,7 +40,7 @@ def _start(dash_duo):
 
 
 def _undo_enabled(duo) -> bool:
-    return duo.find_element(UNDO_BUTTON).get_attribute("disabled") is None
+    return duo.find_element(testutils.UNDO_BUTTON).get_attribute("disabled") is None
 
 
 def test_changing_max_tabs_keeps_workspace_and_undo_history(dash_duo):
@@ -75,7 +74,7 @@ def test_changing_max_tabs_keeps_workspace_and_undo_history(dash_duo):
         testutils.wait_for_tab_count(duo, 4, timeout=1.5)
 
     # Undo still walks the history recorded before the prop changes.
-    duo.find_element(UNDO_BUTTON).click()
+    duo.find_element(testutils.UNDO_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
-    duo.find_element(UNDO_BUTTON).click()
+    duo.find_element(testutils.UNDO_BUTTON).click()
     testutils.wait_for_tab_count(duo, 1)

@@ -2,13 +2,7 @@
 Pytest configuration and fixtures for dash_prism integration tests.
 
 Integration tests use dash[testing]'s dash_duo fixture to test browser interactions.
-Following Dash Testing Best Practices:
-- Use explicit waits (wait_for_*) instead of time.sleep()
-- Use reliable CSS selectors
-- Check for browser console errors
-- Keep tests isolated
-
-Utility functions are defined in testutils.py.
+The helpers are in tests/integration/testutils.py.
 """
 
 from __future__ import annotations

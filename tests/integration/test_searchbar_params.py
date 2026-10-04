@@ -1,4 +1,4 @@
-"""Integration tests for typed layout parameters in the search bar (doc 04 §3.8)."""
+"""Integration tests for typed layout parameters in the search bar."""
 
 from __future__ import annotations
 
