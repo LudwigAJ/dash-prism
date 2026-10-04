@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import warnings
-
 import pytest
-from dash import Dash, html
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -22,30 +19,20 @@ POPOVER = "[data-slot='popover-content']"
 ACTION_BUTTON = "[data-testid='prism-action-save']"
 
 
-def _app(show_status_bar: bool, items: list[str] | None = None) -> Dash:
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
-    # Passing actions with showStatusBar=False warns on purpose (covered by the
-    # unit tests); here we only care that the buttons are not rendered.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        prism = dash_prism.Prism(
-            id="prism",
-            showStatusBar=show_status_bar,
-            statusBarItems=items,
-            actions=[dash_prism.Action(id="save", label="Save")],
-            persistence=False,
-            persistence_type="memory",
-            style={"height": "100vh"},
-        )
-    app.layout = html.Div([prism], style={"height": "100vh"})
-    dash_prism.init("prism", app)
-    return app
+def _start(dash_duo, items: list[str] | None = None) -> None:
+    testutils.start_prism(
+        dash_duo, statusBarItems=items, actions=[dash_prism.Action(id="save", label="Save")]
+    )
 
 
 def test_status_bar_hidden(dash_duo):
-    dash_duo.start_server(_app(False), port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    # The actions show that the hidden bar renders nothing. Prism warns about them on purpose.
+    with pytest.warns(UserWarning, match="showStatusBar=False"):
+        testutils.start_prism(
+            dash_duo,
+            showStatusBar=False,
+            actions=[dash_prism.Action(id="save", label="Save")],
+        )
     dash_duo.wait_for_element(testutils.ADD_TAB_BUTTON, timeout=10)
 
     assert dash_duo.find_elements(HELP_BUTTON) == []
@@ -59,7 +46,7 @@ def test_status_bar_hidden(dash_duo):
 
 
 def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
-    dash_duo.start_server(_app(True), port=testutils.get_free_port())
+    _start(dash_duo)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     # The buttons show only an icon, so the name is the only text a screen reader gets.
@@ -70,7 +57,7 @@ def test_status_bar_icon_buttons_have_accessible_names(dash_duo):
 
 @pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "space"])
 def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, key):
-    dash_duo.start_server(_app(True), port=testutils.get_free_port())
+    _start(dash_duo)
     dash_duo.wait_for_element(TAB_SEGMENT, timeout=10)
 
     segment = dash_duo.find_element(TAB_SEGMENT)
@@ -92,7 +79,7 @@ def test_status_bar_tab_segment_opens_its_popover_from_the_keyboard(dash_duo, ke
 
 
 def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
-    dash_duo.start_server(_app(True), port=testutils.get_free_port())
+    _start(dash_duo)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     dash_duo.find_element(HELP_BUTTON).click()
@@ -107,7 +94,7 @@ def test_help_dialog_sections_are_h3_headings_under_the_h2_title(dash_duo):
 
 
 def test_status_bar_dividers_are_decoration_not_text(dash_duo):
-    dash_duo.start_server(_app(True), port=testutils.get_free_port())
+    _start(dash_duo)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     # A literal "|" in the text would be read aloud between every pair of segments.
@@ -128,14 +115,14 @@ def _segment_order(dash_duo) -> list[str]:
 
 
 def test_status_bar_shown_by_default(dash_duo):
-    dash_duo.start_server(_app(True), port=testutils.get_free_port())
+    _start(dash_duo)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
     assert testutils.check_browser_errors(dash_duo) == []
 
 
 def test_status_bar_items_selects_segments(dash_duo):
-    dash_duo.start_server(_app(True, ["count", "help"]), port=testutils.get_free_port())
+    _start(dash_duo, ["count", "help"])
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
     dash_duo.wait_for_element("[data-testid='prism-statusbar-count']", timeout=10)
 
@@ -150,7 +137,7 @@ def test_status_bar_items_selects_segments(dash_duo):
 
 def test_status_bar_items_follows_the_listed_order(dash_duo):
     """The prop is an ordered subset: reversing the list reverses the bar."""
-    dash_duo.start_server(_app(True, ["help", "count"]), port=testutils.get_free_port())
+    _start(dash_duo, ["help", "count"])
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     assert _segment_order(dash_duo) == ["help", "count"]
@@ -159,7 +146,7 @@ def test_status_bar_items_follows_the_listed_order(dash_duo):
 
 def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
     """'updated' is pinned right whatever position it is listed in."""
-    dash_duo.start_server(_app(True, ["updated", "count", "reset"]), port=testutils.get_free_port())
+    _start(dash_duo, ["updated", "count", "reset"])
     dash_duo.wait_for_element("[data-testid='prism-statusbar-updated']", timeout=10)
 
     assert _segment_order(dash_duo) == ["count", "reset", "updated"]
@@ -167,7 +154,7 @@ def test_status_bar_items_keeps_updated_on_the_right(dash_duo):
 
 
 def test_status_bar_items_empty_leaves_only_actions(dash_duo):
-    dash_duo.start_server(_app(True, []), port=testutils.get_free_port())
+    _start(dash_duo, [])
     dash_duo.wait_for_element(ACTION_BUTTON, timeout=10)
 
     for hidden in ("reset", "help", "undo", "mode", "panels", "tab", "count", "updated"):

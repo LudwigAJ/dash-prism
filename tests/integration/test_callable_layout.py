@@ -63,9 +63,7 @@ def test_static_layout_integration(dash_duo):
     # Verify app.layout is not callable
     assert not callable(app.layout), "Static layout should not be callable after init"
 
-    # Start the app
-    port = testutils.get_free_port()
-    dash_duo.start_server(app, port=port)
+    testutils.start_app(dash_duo, app)
 
     # Wait for initial tab to appear (Prism always starts with a "New Layout" tab)
     testutils.wait_for_tab_count(dash_duo, 1)
@@ -132,9 +130,7 @@ def test_callable_layout_integration(dash_duo):
     assert callable(app.layout), "app.layout should still be callable after init"
     assert hasattr(app.layout, "__wrapped__"), "app.layout should be marked as wrapped"
 
-    # Start the app
-    port = testutils.get_free_port()
-    dash_duo.start_server(app, port=port)
+    testutils.start_app(dash_duo, app)
 
     # Wait for initial tab to appear
     testutils.wait_for_tab_count(dash_duo, 1)

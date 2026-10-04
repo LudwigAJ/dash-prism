@@ -51,7 +51,7 @@ def test_a_toast_shows_only_in_the_instance_that_raised_it(dash_duo):
     app.layout = html.Div([_prism("prism-first"), _prism("prism-second")])
     dash_prism.init("prism-first", app)
     dash_duo.driver.set_window_size(1280, 900)
-    dash_duo.start_server(app, port=testutils.get_free_port())
+    testutils.start_app(dash_duo, app)
     for prism_id in ("prism-first", "prism-second"):
         dash_duo.wait_for_element(f"#{prism_id} {testutils.TAB_SELECTOR}", timeout=10)
 

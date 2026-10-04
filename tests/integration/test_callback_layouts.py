@@ -14,7 +14,7 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
+from dash import html
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -26,7 +26,6 @@ pytestmark = pytest.mark.integration
 
 def _start_app_with_callback_layouts(dash_duo):
     """Start a Prism app that uses decorator-style callback layouts."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
 
     # Register a callback layout (decorator pattern)
     @dash_prism.register_layout(
@@ -63,25 +62,7 @@ def _start_app_with_callback_layouts(dash_duo):
         layout=html.Div("Static content", id="static-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-
-    dash_prism.init("prism", app)
-
-    port = testutils.get_free_port()
-    dash_duo.start_server(app, port=port)
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def test_callback_layout_renders_content(dash_duo):

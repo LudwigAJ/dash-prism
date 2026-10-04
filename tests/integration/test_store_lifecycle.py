@@ -12,7 +12,6 @@ import time
 import pytest
 from dash import Dash, Input, Output, ctx, html
 
-import dash_prism
 from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
@@ -23,21 +22,6 @@ TAB_COUNT = "[data-testid='prism-statusbar-count']"
 
 def _start(dash_duo):
     app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
-    app.layout = html.Div(
-        [
-            html.Button("Limit 4", id="limit-4"),
-            html.Button("Limit 1", id="limit-1"),
-            dash_prism.Prism(
-                id="prism",
-                maxTabs=2,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "90vh", "width": "100%"},
-            ),
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
 
     @app.callback(
         Output("prism", "maxTabs"),
@@ -48,10 +32,13 @@ def _start(dash_duo):
     def set_limit(_n4, _n1):
         return 4 if ctx.triggered_id == "limit-4" else 1
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+    return testutils.start_prism(
+        dash_duo,
+        app=app,
+        children=[html.Button("Limit 4", id="limit-4"), html.Button("Limit 1", id="limit-1")],
+        maxTabs=2,
+        style={"height": "90vh", "width": "100%"},
+    )
 
 
 def _undo_enabled(duo) -> bool:

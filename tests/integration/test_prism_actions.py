@@ -23,19 +23,9 @@ pytestmark = pytest.mark.integration
 
 def test_prism_action_renders_in_statusbar(dash_duo):
     """Test that Action components render in status bar."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    # Create actions
     action1 = dash_prism.Action(id="action1", label="Action 1")
     action2 = dash_prism.Action(id="action2", label="Action 2")
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-
-    app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action1, action2], style={})])
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, actions=[action1, action2])
 
     # Wait for actions to render (they're rendered asynchronously)
     dash_duo.wait_for_element("[data-testid='prism-action-action1']", timeout=5)
@@ -62,18 +52,12 @@ def test_prism_action_click_triggers_callback(dash_duo):
             return "Not clicked"
         return f"Clicked {n_clicks} times"
 
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(id="prism", actions=[action], style={}),
-            html.Div(id="output", children="Not clicked"),
-        ]
+    testutils.start_prism(
+        dash_duo,
+        app=app,
+        children=[html.Div(id="output", children="Not clicked")],
+        actions=[action],
     )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
 
     # Verify initial state
     output = dash_duo.find_element("#output")
@@ -94,17 +78,8 @@ def test_prism_action_click_triggers_callback(dash_duo):
 
 def test_prism_action_renders_text_label(dash_duo):
     """Test Action renders its text label correctly."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     action = dash_prism.Action(id="label-action", label="Label Action")
-
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test"))
-
-    app.layout = html.Div([dash_prism.Prism(id="prism", actions=[action], style={})])
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, actions=[action])
 
     # Wait for and verify action renders the label
     dash_duo.wait_for_element("[data-testid='prism-action-label-action']", timeout=5)

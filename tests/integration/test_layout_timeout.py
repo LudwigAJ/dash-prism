@@ -40,24 +40,8 @@ def _start_app(dash_duo):
         time.sleep(SLOW_SECONDS)
         return html.Div("sync done", id="slow-sync-done")
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                layoutTimeout=TIMEOUT_SECONDS,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
     with pytest.warns(UserWarning, match="async"):
-        dash_prism.init("prism", app)
-
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+        return testutils.start_prism(dash_duo, app=app, layouts={}, layoutTimeout=TIMEOUT_SECONDS)
 
 
 def _select_layout(duo, layout_id: str) -> None:

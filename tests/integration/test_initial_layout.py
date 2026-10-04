@@ -15,7 +15,7 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
+from dash import html
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -33,8 +33,6 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
     ConfigContext but no frontend code read it and applied it. The first tab always
     opened as 'New Tab' with no layout.
     """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
@@ -47,22 +45,7 @@ def test_initial_layout_applied_on_fresh_workspace(dash_duo):
         layout=html.Div("Analytics content", id="analytics-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, layouts={}, initialLayout="home")
 
     # The first tab should have the "Home Dashboard" layout loaded,
     # not be an empty "New Tab"
@@ -96,33 +79,13 @@ def test_initial_layout_ignored_with_persistence(dash_duo):
     When persistence is enabled and a saved workspace exists, the persisted
     state should take precedence over initialLayout.
     """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
 
-    # Use memory persistence (no actual storage, so workspace is always fresh).
-    # With memory persistence, initialLayout SHOULD be applied since there is
-    # no saved state.
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, layouts={}, initialLayout="home")
 
     # With memory persistence (fresh workspace), initialLayout should apply
     def tab_has_layout_name(driver):
@@ -139,30 +102,13 @@ def test_initial_layout_ignored_with_persistence(dash_duo):
 
 def test_initial_layout_without_prop_shows_new_tab(dash_duo):
     """Test that without initialLayout, the first tab is a plain 'New Tab'."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
 
-    # No initialLayout prop
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, layouts={})
 
     # The first tab should be "New Tab" (no layout loaded)
     tabs = testutils.get_tabs(dash_duo)
@@ -179,30 +125,13 @@ def test_initial_layout_without_prop_shows_new_tab(dash_duo):
 
 def test_initial_layout_new_tabs_still_empty(dash_duo):
     """Test that only the FIRST tab gets initialLayout, not subsequent new tabs."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     dash_prism.register_layout(
         id="home",
         name="Home Dashboard",
         layout=html.Div("Home content", id="home-content"),
     )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                initialLayout="home",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, layouts={}, initialLayout="home")
 
     # Wait for first tab to get the initial layout
     def tab_has_layout_name(driver):

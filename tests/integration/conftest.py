@@ -14,7 +14,7 @@ Utility functions are defined in testutils.py.
 from __future__ import annotations
 
 import pytest
-from dash import Dash, Input, Output, html
+from dash import html
 from selenium.webdriver.chrome.options import Options
 
 import dash_prism
@@ -63,158 +63,23 @@ def clear_registry_integration():
     dash_prism.clear_registry()
 
 
-def _start_prism_app(dash_duo):
+@pytest.fixture
+def prism_app_with_layouts(dash_duo):
     """
-    Start a Dash app with Prism component and registered test layouts.
+    Serve Prism with a static layout and a layout that holds a button.
 
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash[testing] fixture combining Dash server + browser.
-
-    Returns
-    -------
-    DashComposite
-        The dash_duo instance with app already started and loaded.
+    The limit of 10 tabs lets a test reach the limit with few clicks.
     """
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    # Register test layouts
     dash_prism.register_layout(
         id="test-static",
         name="Test Static Layout",
         description="A simple static test layout",
         layout=html.Div([html.H1("Test Content"), html.P("Static content", id="static-content")]),
     )
-
     dash_prism.register_layout(
         id="test-callback",
         name="Test Callback Layout",
-        description="A layout with callback",
-        layout=html.Div(
-            [
-                html.H1("Callback Test"),
-                html.Button("Click me", id="test-button", n_clicks=0),
-                html.Div(id="test-output"),
-            ]
-        ),
+        description="A layout with a button",
+        layout=html.Div([html.H1("Callback Test"), html.Button("Click me", id="test-button")]),
     )
-
-    @app.callback(Output("test-output", "children"), Input("test-button", "n_clicks"))
-    def update_output(n_clicks):
-        return f"Clicked {n_clicks} times"
-
-    # Set up app layout with Prism
-    # Explicitly disable persistence to avoid state leaking between tests
-    # Use 100vh height to fill the viewport for proper DnD testing
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                theme="light",
-                maxTabs=10,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-
-    # Initialize Prism with callbacks
-    dash_prism.init("prism", app)
-
-    # Get a free port to avoid conflicts in parallel test execution
-    port = testutils.get_free_port()
-
-    # CRITICAL: Inject ResizeObserver patch BEFORE app mount via Chrome DevTools Protocol
-    # This ensures all observers created during React mount use the patched implementation.
-    # The previous approach of patching after start_server() was too late - react-split-pane
-    # creates its observers during initial mount and never picks up the post-hoc patch.
-    dash_duo.driver.execute_cdp_cmd(
-        "Page.addScriptToEvaluateOnNewDocument",
-        {"source": """
-            (function() {
-                const OriginalResizeObserver = window.ResizeObserver;
-                if (!OriginalResizeObserver) return;
-
-                window.ResizeObserver = class PatchedResizeObserver {
-                    constructor(callback) {
-                        this.callback = callback;
-                        this.observer = new OriginalResizeObserver((entries, observer) => {
-                            callback(entries, observer);
-                        });
-                    }
-
-                    observe(target, options) {
-                        this.observer.observe(target, options);
-
-                        // Fire callback immediately AND retry until non-zero dimensions
-                        // This is critical for headless Chrome where initial rects may be 0x0
-                        const fireCallback = (attempt = 0) => {
-                            const rect = target.getBoundingClientRect();
-                            const entry = {
-                                target,
-                                contentRect: rect,
-                                borderBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
-                                contentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }]
-                            };
-                            this.callback([entry], this.observer);
-
-                            // Retry up to 10 times if dimensions are zero
-                            if ((rect.width === 0 && rect.height === 0) && attempt < 10) {
-                                requestAnimationFrame(() => fireCallback(attempt + 1));
-                            }
-                        };
-                        requestAnimationFrame(() => fireCallback(0));
-                    }
-
-                    unobserve(target) {
-                        this.observer.unobserve(target);
-                    }
-
-                    disconnect() {
-                        this.observer.disconnect();
-                    }
-                };
-
-                // Suppress ResizeObserver loop errors
-                window.addEventListener('error', e => {
-                    if (e.message && e.message.includes('ResizeObserver loop')) {
-                        e.stopImmediatePropagation();
-                    }
-                });
-
-                console.log('[Test] ResizeObserver patched via CDP before app mount');
-            })();
-            """},
-    )
-
-    # Explicitly set window size BEFORE server start (critical for headless mode!)
-    dash_duo.driver.set_window_size(1920, 1080)
-
-    # Start server on the dynamically assigned port
-    dash_duo.start_server(app, port=port)
-
-    # Force a resize event after mount to trigger any pending observers
-    dash_duo.driver.execute_script("window.dispatchEvent(new Event('resize'));")
-
-    return dash_duo
-
-
-@pytest.fixture
-def prism_app_with_layouts(dash_duo):
-    """
-    Create a Dash app with Prism component and registered test layouts.
-
-    Parameters
-    ----------
-    dash_duo : DashComposite
-        The dash[testing] fixture combining Dash server + browser.
-
-    Returns
-    -------
-    DashComposite
-        The dash_duo instance with app already started and loaded.
-    """
-    return _start_prism_app(dash_duo)
+    return testutils.start_prism(dash_duo, layouts={}, maxTabs=10)

@@ -21,7 +21,6 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
-import dash_prism
 from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
@@ -70,28 +69,7 @@ def wait_for_storage(
 
 def test_prism_initializes_without_persistence(dash_duo):
     """Test that Prism works with persistence disabled."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={},
-            )
-        ]
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo)
 
     # Should have 1 initial tab
     tabs = testutils.get_tabs(dash_duo)
@@ -104,28 +82,7 @@ def test_prism_initializes_without_persistence(dash_duo):
 
 def test_prism_initializes_with_localStorage_persistence(dash_duo):
     """Test that Prism initializes with localStorage persistence enabled."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=True,
-                persistence_type="local",
-                style={},
-            )
-        ]
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
 
     # Should have 1 initial tab
     tabs = testutils.get_tabs(dash_duo)
@@ -138,28 +95,7 @@ def test_prism_initializes_with_localStorage_persistence(dash_duo):
 
 def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
     """Test that Prism initializes with sessionStorage persistence enabled."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=True,
-                persistence_type="session",
-                style={},
-            )
-        ]
-    )
-
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, persistence=True, persistence_type="session")
 
     # Should have 1 initial tab
     tabs = testutils.get_tabs(dash_duo)
@@ -173,30 +109,9 @@ def test_prism_initializes_with_sessionStorage_persistence(dash_duo):
 STORAGE_KEY = "persist:prism-workspace-prism"
 
 
-def _persistence_app(*, persistence: bool, persistence_type: str) -> Dash:
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="test", name="Test", layout=html.Div("Test content"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=persistence,
-                persistence_type=persistence_type,
-                style={"height": "90vh"},
-            )
-        ]
-    )
-    dash_prism.init("prism", app)
-    return app
-
-
 def test_persistence_false_writes_nothing_even_with_local_type(dash_duo):
     """persistence=False must win over persistence_type='local' (02 B-1)."""
-    dash_duo.start_server(
-        _persistence_app(persistence=False, persistence_type="local"),
-        port=testutils.get_free_port(),
-    )
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, persistence=False, persistence_type="local")
     dash_duo.driver.execute_script("localStorage.clear(); sessionStorage.clear();")
 
     # A workspace change that would be written straight away if persistence were on
@@ -225,10 +140,7 @@ def _wait_for_stored_tab_count(dash_duo, expected: int, timeout: float = 5.0) ->
 
 def test_persistence_true_with_local_type_writes_workspace(dash_duo):
     """The documented combination stores the workspace in localStorage."""
-    dash_duo.start_server(
-        _persistence_app(persistence=True, persistence_type="local"), port=testutils.get_free_port()
-    )
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
 
     dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(dash_duo, 2)
@@ -241,10 +153,7 @@ def test_persistence_true_with_local_type_writes_workspace(dash_duo):
 
 def test_undo_is_persisted_across_reload(dash_duo):
     """An undo must reach storage on its own, not only after the next action."""
-    dash_duo.start_server(
-        _persistence_app(persistence=True, persistence_type="local"), port=testutils.get_free_port()
-    )
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
     _wait_for_stored_tab_count(dash_duo, 1)
 
     dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
@@ -275,25 +184,6 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
     """
     app = Dash(__name__, suppress_callback_exceptions=True)
 
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    # Use a visible div for easier debugging
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "90vh"},
-            ),
-            html.Div(id="workspace-output", children="waiting"),
-        ]
-    )
-
     @app.callback(
         Output("workspace-output", "children"),
         Input("prism", "readWorkspace"),
@@ -303,9 +193,14 @@ def test_readWorkspace_reflects_tab_creation(dash_duo):
             return f"tabs:{len(workspace['tabs'])}"
         return "no-workspace"
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(
+        dash_duo,
+        app=app,
+        children=[
+            html.Div(id="workspace-output", children="waiting"),
+        ],
+        style={"height": "90vh"},
+    )
 
     # Initial state: 1 tab
     initial_tabs = testutils.get_tabs(dash_duo)
@@ -335,28 +230,6 @@ def test_updateWorkspace_modifies_state(dash_duo):
     demonstrating that Dash can push state changes to the Prism component.
     """
     app = Dash(__name__, suppress_callback_exceptions=True)
-
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "90vh"},
-            ),
-            html.Button("Rename Tabs", id="rename-btn"),
-            # Display to show updateWorkspace was triggered
-            html.Div(id="update-status", children="not-updated"),
-            # Hidden store for workspace data
-            dcc.Store(id="workspace-store"),
-        ]
-    )
 
     @app.callback(
         Output("workspace-store", "data"),
@@ -388,9 +261,18 @@ def test_updateWorkspace_modifies_state(dash_duo):
         # Return modified workspace with renamed tabs
         return {"tabs": modified_tabs}, "updated"
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(
+        dash_duo,
+        app=app,
+        children=[
+            html.Button("Rename Tabs", id="rename-btn"),
+            # Display to show updateWorkspace was triggered
+            html.Div(id="update-status", children="not-updated"),
+            # Hidden store for workspace data
+            dcc.Store(id="workspace-store"),
+        ],
+        style={"height": "90vh"},
+    )
 
     # Wait for initial readWorkspace sync by observing the store callback output
     WebDriverWait(dash_duo.driver, 10).until(
@@ -442,27 +324,6 @@ def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
     """
     app = Dash(__name__, suppress_callback_exceptions=True)
 
-    dash_prism.register_layout(
-        id="test",
-        name="Test",
-        layout=html.Div("Test content", id="test-content"),
-    )
-
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "90vh"},
-            ),
-            html.Button("Save", id="save-btn"),
-            html.Button("Load", id="load-btn"),
-            dcc.Store(id="saved-workspace", storage_type="memory"),
-            html.Div(id="tab-count-display", children="waiting"),
-        ]
-    )
-
     @app.callback(
         Output("saved-workspace", "data"),
         Input("save-btn", "n_clicks"),
@@ -490,9 +351,17 @@ def test_readWorkspace_updateWorkspace_roundtrip(dash_duo):
             return f"tabs:{len(workspace['tabs'])}"
         return "no-workspace"
 
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(
+        dash_duo,
+        app=app,
+        children=[
+            html.Button("Save", id="save-btn"),
+            html.Button("Load", id="load-btn"),
+            dcc.Store(id="saved-workspace", storage_type="memory"),
+            html.Div(id="tab-count-display", children="waiting"),
+        ],
+        style={"height": "90vh"},
+    )
 
     # Wait for initial state sync
     dash_duo.wait_for_text_to_equal("#tab-count-display", "tabs:1", timeout=10)

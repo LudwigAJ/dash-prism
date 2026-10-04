@@ -3,32 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
 
-import dash_prism
 from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
 
 def _start(dash_duo, max_panels: int):
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                maxPanels=max_panels,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, maxPanels=max_panels)
     # A second tab makes the panel splittable
     dash_duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(dash_duo, 2)

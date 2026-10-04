@@ -13,13 +13,20 @@ from __future__ import annotations
 
 import platform
 import socket
+from collections.abc import Mapping, Sequence
+from typing import Any
 
+from dash import Dash, html
+from dash.development.base_component import Component
+from dash.testing.composite import DashComposite
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
+import dash_prism
 
 # =============================================================================
 # CSS Selectors - use data-testid for stability across React re-renders
@@ -49,6 +56,65 @@ def get_free_port() -> int:
         s.listen(1)
         port = s.getsockname()[1]
     return port
+
+
+def start_app(dash_duo: DashComposite, app: Dash) -> None:
+    """Serve ``app`` on a free port and wait until the first Prism component renders.
+
+    Call :func:`dash_prism.init` before this function.
+
+    :param dash_duo: The dash[testing] fixture.
+    :param app: The Dash app to serve.
+    """
+    dash_duo.start_server(app, port=get_free_port())
+    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+
+
+def start_prism(
+    dash_duo: DashComposite,
+    *,
+    app: Dash | None = None,
+    layouts: Mapping[str, Component] | None = None,
+    children: Sequence[Component] = (),
+    **prism_props: Any,
+) -> DashComposite:
+    """Serve a Dash app with one Prism component and wait until Prism renders.
+
+    The Prism component has the ID ``prism`` and fills the viewport. It keeps the
+    workspace in memory, so no workspace goes from one test to the next. A keyword
+    argument replaces one of these props or adds a prop.
+
+    :param dash_duo: The dash[testing] fixture.
+    :param app: The Dash app to serve. Give an app when the test needs app options
+        or callbacks of its own. The default is a new app.
+    :param layouts: The static layouts to register, by layout ID. The name of each
+        layout is its ID in title case. The default registers a ``home`` layout.
+        Give ``{}`` when the test registers its layouts itself.
+    :param children: The components that follow Prism in the app layout.
+    :param prism_props: The props of the Prism component.
+    :returns: ``dash_duo``, after Prism rendered.
+    """
+    if app is None:
+        app = Dash(__name__, suppress_callback_exceptions=True)
+    if layouts is None:
+        layouts = {"home": html.Div("Home", id="home-content")}
+    for layout_id, layout in layouts.items():
+        dash_prism.register_layout(id=layout_id, name=layout_id.title(), layout=layout)
+
+    props = {
+        "id": "prism",
+        "persistence": False,
+        "persistence_type": "memory",
+        "style": {"height": "100vh", "width": "100%"},
+        **prism_props,
+    }
+    app.layout = html.Div(
+        [dash_prism.Prism(**props), *children],
+        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
+    )
+    dash_prism.init(props["id"], app)
+    start_app(dash_duo, app)
+    return dash_duo
 
 
 # =============================================================================

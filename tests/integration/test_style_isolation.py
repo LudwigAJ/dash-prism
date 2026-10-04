@@ -104,7 +104,7 @@ def _start_app(dash_duo, layout, layouts: Mapping[str, Component] | None = None)
     app.layout = layout
     dash_prism.init("prism-first", app)
     dash_duo.driver.set_window_size(1280, 900)
-    dash_duo.start_server(app, port=testutils.get_free_port())
+    testutils.start_app(dash_duo, app)
 
 
 def _prism(

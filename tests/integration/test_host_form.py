@@ -29,7 +29,7 @@ def test_prism_buttons_do_not_submit_the_form_around_them(dash_duo):
         style={"height": "100vh"},
     )
     dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
+    testutils.start_app(dash_duo, app)
     dash_duo.wait_for_element(HELP_BUTTON, timeout=10)
 
     # A shared Button that closes its dialog unmounts before the submit, so only buttons that

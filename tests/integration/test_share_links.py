@@ -6,7 +6,7 @@ import base64
 import json
 
 import pytest
-from dash import Dash, html
+from dash import html
 from selenium.common.exceptions import TimeoutException
 
 import dash_prism
@@ -24,30 +24,15 @@ def _share_hash(layout_id: str, name: str) -> str:
 
 
 def _start(dash_duo, enable_share_links: bool, *, allow_multiple: bool = True, **prism_props):
-    app = Dash(__name__, suppress_callback_exceptions=True)
     dash_prism.register_layout(
         id="home",
         name="Home",
         allow_multiple=allow_multiple,
         layout=html.Div("Home", id="home-content"),
     )
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                enableShareLinks=enable_share_links,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-                **prism_props,
-            )
-        ],
-        style={"height": "100vh"},
+    return testutils.start_prism(
+        dash_duo, layouts={}, enableShareLinks=enable_share_links, **prism_props
     )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
 
 
 def _open_home(duo) -> None:

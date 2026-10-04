@@ -7,7 +7,7 @@ import json
 from typing import Annotated, Literal, Optional
 
 import pytest
-from dash import Dash, html
+from dash import html
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
@@ -24,27 +24,11 @@ CHOICE = "[data-testid='prism-searchbar-param-choice-{}']"
 
 
 def _start(dash_duo):
-    app = Dash(__name__, suppress_callback_exceptions=True)
-
     @dash_prism.register_layout(id="typed", name="Typed", allow_multiple=True)
     def typed_layout(n: int = 1, kind: Literal["bar", "line"] = "bar"):
         return html.Div(f"n={n!r} kind={kind!r}", id="typed-content")
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def _enter_params_mode(duo, search: str = "Typed", layout_id: str = "typed") -> None:
@@ -113,7 +97,6 @@ def test_share_link_parameters_are_validated(dash_duo):
 
 def _start_optional(dash_duo):
     """Serve a layout whose only parameter is Optional *and* carries choices."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
 
     @dash_prism.register_layout(id="optional", name="Optional", allow_multiple=True)
     def optional_layout(
@@ -121,21 +104,7 @@ def _start_optional(dash_duo):
     ):
         return html.Div(f"ticker={ticker!r}", id="optional-content")
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def test_blank_is_accepted_for_an_optional_parameter_with_choices(dash_duo):
@@ -179,27 +148,12 @@ def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
 
 def _start_items(dash_duo):
     """Serve a layout that restricts its list's *items*, not the whole list."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
 
     @dash_prism.register_layout(id="items", name="Items", allow_multiple=True)
     def items_layout(tags: list[Literal["a", "b"]]):
         return html.Div(f"tags={tags!r}", id="items-content")
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
@@ -415,27 +369,12 @@ def test_arrow_keys_leave_a_parameter_without_choices_alone(dash_duo):
 
 def _start_many(dash_duo):
     """Serve a layout whose only parameter has 40 choices, more than the list shows."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
 
     @dash_prism.register_layout(id="many", name="Many", allow_multiple=True)
     def many_layout(pick: Annotated[str, dash_prism.Param(choices=MANY_CHOICES)]):
         return html.Div(f"pick={pick!r}", id="many-content")
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
+    return testutils.start_prism(dash_duo, layouts={})
 
 
 def test_the_active_choice_is_scrolled_into_view_in_the_list_only(dash_duo):

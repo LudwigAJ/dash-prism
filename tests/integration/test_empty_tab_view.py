@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
-import dash_prism
 from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
@@ -18,28 +16,8 @@ BLANK = "[data-testid='prism-empty-tab-blank']"
 LAYOUTS = "[data-testid='prism-empty-tab-layouts']"
 
 
-def _app(empty_tab_view: str) -> Dash:
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                emptyTabView=empty_tab_view,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    return app
-
-
 def test_empty_tab_view_none_renders_blank_pane(dash_duo):
-    dash_duo.start_server(_app("none"), port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, emptyTabView="none")
     dash_duo.wait_for_element(BLANK, timeout=10)
 
     assert dash_duo.find_elements(HINT) == []
@@ -52,7 +30,7 @@ def test_empty_tab_view_none_renders_blank_pane(dash_duo):
 
 
 def test_empty_tab_view_hint_renders_hint(dash_duo):
-    dash_duo.start_server(_app("hint"), port=testutils.get_free_port())
+    testutils.start_prism(dash_duo, emptyTabView="hint")
     dash_duo.wait_for_element(HINT, timeout=10)
 
     assert "search bar" in dash_duo.find_element(HINT).text.lower()
@@ -62,7 +40,7 @@ def test_empty_tab_view_hint_renders_hint(dash_duo):
 
 
 def test_empty_tab_view_layouts_keeps_the_layout_grid(dash_duo):
-    dash_duo.start_server(_app("layouts"), port=testutils.get_free_port())
+    testutils.start_prism(dash_duo, emptyTabView="layouts")
     # Assert on the grid itself: the layout name alone also appears in the
     # search dropdown, which opens on a fresh tab whatever emptyTabView says.
     dash_duo.wait_for_element(LAYOUTS, timeout=10)
@@ -81,7 +59,7 @@ KEYS = pytest.mark.parametrize("key", [Keys.ENTER, Keys.SPACE], ids=["enter", "s
 
 
 def _start_layout_grid(dash_duo):
-    dash_duo.start_server(_app("layouts"), port=testutils.get_free_port())
+    testutils.start_prism(dash_duo, emptyTabView="layouts")
     dash_duo.wait_for_element(CARD, timeout=10)
 
 

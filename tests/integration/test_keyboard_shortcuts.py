@@ -12,13 +12,11 @@ Best Practices Applied:
 from __future__ import annotations
 
 import pytest
-from dash import Dash, html
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
-import dash_prism
 from tests.integration import testutils
 
 # Mark all tests in this module as integration tests
@@ -142,23 +140,7 @@ def test_ctrl_space_focuses_the_search_bar_of_the_active_panel(prism_app_with_la
 
 def test_keyboard_shortcuts_can_be_disabled(dash_duo):
     """enableKeyboardShortcuts=False installs no listener and hides the help section."""
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                enableKeyboardShortcuts=False,
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh"},
-            )
-        ],
-        style={"height": "100vh"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.start_prism(dash_duo, enableKeyboardShortcuts=False)
     testutils.wait_for_tab_count(dash_duo, 1)
 
     body = dash_duo.find_element("body")

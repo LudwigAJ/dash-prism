@@ -27,10 +27,7 @@ pytestmark = pytest.mark.integration
 
 def _start_async_prism_app(dash_duo):
     """Start a Prism app with use_async=True and async layout callbacks."""
-    try:
-        app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
-    except TypeError:
-        pytest.skip("This version of Dash does not support use_async")
+    app = Dash(__name__, use_async=True, suppress_callback_exceptions=True)
 
     # Register a static layout (works in both sync and async modes)
     dash_prism.register_layout(
@@ -74,82 +71,7 @@ def _start_async_prism_app(dash_duo):
             ],
         )
 
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=False,
-                persistence_type="memory",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-
-    dash_prism.init("prism", app)
-
-    port = testutils.get_free_port()
-
-    # CRITICAL: Same ResizeObserver CDP patch as conftest._start_prism_app.
-    # Without this, headless Chrome panels get 0x0 dimensions and content never renders.
-    dash_duo.driver.execute_cdp_cmd(
-        "Page.addScriptToEvaluateOnNewDocument",
-        {"source": """
-            (function() {
-                const OriginalResizeObserver = window.ResizeObserver;
-                if (!OriginalResizeObserver) return;
-
-                window.ResizeObserver = class PatchedResizeObserver {
-                    constructor(callback) {
-                        this.callback = callback;
-                        this.observer = new OriginalResizeObserver((entries, observer) => {
-                            callback(entries, observer);
-                        });
-                    }
-
-                    observe(target, options) {
-                        this.observer.observe(target, options);
-
-                        const fireCallback = (attempt = 0) => {
-                            const rect = target.getBoundingClientRect();
-                            const entry = {
-                                target,
-                                contentRect: rect,
-                                borderBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
-                                contentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }]
-                            };
-                            this.callback([entry], this.observer);
-
-                            if ((rect.width === 0 && rect.height === 0) && attempt < 10) {
-                                requestAnimationFrame(() => fireCallback(attempt + 1));
-                            }
-                        };
-                        requestAnimationFrame(() => fireCallback(0));
-                    }
-
-                    unobserve(target) {
-                        this.observer.unobserve(target);
-                    }
-
-                    disconnect() {
-                        this.observer.disconnect();
-                    }
-                };
-
-                window.addEventListener('error', e => {
-                    if (e.message && e.message.includes('ResizeObserver loop')) {
-                        e.stopImmediatePropagation();
-                    }
-                });
-            })();
-            """},
-    )
-
-    dash_duo.driver.set_window_size(1920, 1080)
-    dash_duo.start_server(app, port=port)
-    dash_duo.driver.execute_script("window.dispatchEvent(new Event('resize'));")
-
-    return dash_duo
+    return testutils.start_prism(dash_duo, app=app, layouts={})
 
 
 def test_async_app_renders_initial_tab(dash_duo):

@@ -12,10 +12,8 @@ import json
 import time
 
 import pytest
-from dash import Dash, html
 from selenium.webdriver.support.wait import WebDriverWait
 
-import dash_prism
 from dash_prism.app_init import _compute_server_session_id
 from tests.integration import testutils
 
@@ -65,26 +63,6 @@ def _persisted_workspace(server_session_id: str) -> str:
     return json.dumps({key: json.dumps(value) for key, value in state.items()})
 
 
-def _start_app(dash_duo):
-    app = Dash(__name__, suppress_callback_exceptions=True)
-    dash_prism.register_layout(id="home", name="Home", layout=html.Div("home", id="home-content"))
-    app.layout = html.Div(
-        [
-            dash_prism.Prism(
-                id="prism",
-                persistence=True,
-                persistence_type="local",
-                style={"height": "100vh", "width": "100%"},
-            )
-        ],
-        style={"height": "100vh", "width": "100vw", "margin": "0", "padding": "0"},
-    )
-    dash_prism.init("prism", app)
-    dash_duo.start_server(app, port=testutils.get_free_port())
-    dash_duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
-    return dash_duo
-
-
 def _read_stored(duo) -> str | None:
     return duo.driver.execute_script("return localStorage.getItem(arguments[0]);", STORAGE_KEY)
 
@@ -128,7 +106,7 @@ def _wait_for_initial_write(duo, timeout: float = 15.0, stable_for: float = 0.6)
 
 
 def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
-    duo = _start_app(dash_duo)
+    duo = testutils.start_prism(dash_duo, persistence=True, persistence_type="local")
     _wait_for_initial_write(duo)
 
     # Simulate a workspace saved by a previous deployment that still had layout 'gone'.
