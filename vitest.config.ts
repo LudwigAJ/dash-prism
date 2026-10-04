@@ -15,7 +15,7 @@ export default defineConfig({
       // Include the .tsx files, so that the figure is for all of the sources and
       // not only for the .ts files.
       include: ['src/ts/**/*.{ts,tsx}'],
-      exclude: ['src/ts/**/*.test.ts', 'src/ts/index.ts'],
+      exclude: ['src/ts/**/*.test.ts', 'src/ts/store/testing.ts', 'src/ts/index.ts'],
     },
   },
   resolve: {

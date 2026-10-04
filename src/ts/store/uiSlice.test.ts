@@ -8,10 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import {
-  uiReducer,
-  initialUiState,
   setSearchBarMode,
   clearSearchBarMode,
   pruneSearchBarModes,
@@ -30,35 +27,23 @@ import {
   setLoadNotice,
   clearLoadNotice,
 } from './uiSlice';
-import { workspaceReducer, removeTab } from './workspaceSlice';
-import type { UiState, WorkspaceState } from './types';
-import type { PanelId, TabId } from '@types';
+import { removeTab } from './workspaceSlice';
+import type { UiState } from './types';
+import type { TabId } from '@types';
+import { createTestStore, makeWorkspace, TAB_1, TAB_2, type TestStore } from './testing';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
-
-function createTestStore(preloadedState?: Partial<UiState>) {
-  return configureStore({
-    reducer: { ui: uiReducer },
-    preloadedState: preloadedState ? { ui: { ...initialUiState, ...preloadedState } } : undefined,
-  });
+function createUiStore(ui: Partial<UiState> = {}): TestStore {
+  return createTestStore(undefined, { ui });
 }
-
-type TestStore = ReturnType<typeof createTestStore>;
 
 function getUiState(store: TestStore): UiState {
   return store.getState().ui;
 }
 
-// =============================================================================
-// Tests
-// =============================================================================
-
 describe('uiSlice', () => {
   describe('initial state', () => {
     it('has correct initial values', () => {
-      const store = createTestStore();
+      const store = createUiStore();
       const state = getUiState(store);
 
       expect(state.searchBarModes).toEqual({});
@@ -73,7 +58,7 @@ describe('uiSlice', () => {
 
   describe('setSearchBarMode', () => {
     it('sets mode for a panel', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(setSearchBarMode({ panelId: 'panel-1', mode: 'search' }));
 
@@ -81,7 +66,7 @@ describe('uiSlice', () => {
     });
 
     it('updates existing mode for a panel', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'display' },
       });
 
@@ -91,7 +76,7 @@ describe('uiSlice', () => {
     });
 
     it('can set mode for multiple panels', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(setSearchBarMode({ panelId: 'panel-1', mode: 'search' }));
       store.dispatch(setSearchBarMode({ panelId: 'panel-2', mode: 'options' }));
@@ -101,7 +86,7 @@ describe('uiSlice', () => {
     });
 
     it('accepts all valid mode values', () => {
-      const store = createTestStore();
+      const store = createUiStore();
       const modes = ['hidden', 'display', 'search', 'params', 'options'] as const;
 
       for (const mode of modes) {
@@ -113,7 +98,7 @@ describe('uiSlice', () => {
 
   describe('clearSearchBarMode', () => {
     it('removes mode for a panel', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'search' },
       });
 
@@ -123,7 +108,7 @@ describe('uiSlice', () => {
     });
 
     it('preserves other panels when clearing one', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: {
           'panel-1': 'search',
           'panel-2': 'display',
@@ -137,7 +122,7 @@ describe('uiSlice', () => {
     });
 
     it('is a no-op for non-existent panel', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'search' },
       });
 
@@ -147,9 +132,9 @@ describe('uiSlice', () => {
     });
   });
 
-  describe('pruneSearchBarModes (Phase 3 A-7)', () => {
+  describe('pruneSearchBarModes', () => {
     it('drops modes whose panel is not in the leaf list', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: {
           'panel-1': 'search',
           'panel-2': 'display',
@@ -163,7 +148,7 @@ describe('uiSlice', () => {
     });
 
     it('keeps every mode when all panels still exist', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'search', 'panel-2': 'display' },
       });
 
@@ -176,7 +161,7 @@ describe('uiSlice', () => {
     });
 
     it('clears everything when the leaf list is empty', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'search' },
       });
 
@@ -188,7 +173,7 @@ describe('uiSlice', () => {
 
   describe('startRenameTab / clearRenameTab', () => {
     it('startRenameTab sets renamingTabId', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(startRenameTab({ tabId: 'tab-1' }));
 
@@ -196,7 +181,7 @@ describe('uiSlice', () => {
     });
 
     it('clearRenameTab clears renamingTabId', () => {
-      const store = createTestStore({ renamingTabId: 'tab-1' });
+      const store = createUiStore({ renamingTabId: 'tab-1' });
 
       store.dispatch(clearRenameTab());
 
@@ -204,7 +189,7 @@ describe('uiSlice', () => {
     });
 
     it('startRenameTab replaces existing renamingTabId', () => {
-      const store = createTestStore({ renamingTabId: 'tab-1' });
+      const store = createUiStore({ renamingTabId: 'tab-1' });
 
       store.dispatch(startRenameTab({ tabId: 'tab-2' }));
 
@@ -214,7 +199,7 @@ describe('uiSlice', () => {
 
   describe('requestLayoutSelection / clearLayoutSelectionRequest', () => {
     it('requestLayoutSelection stores the tab and the layout', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(requestLayoutSelection({ tabId: 'tab-1', layoutId: 'home' }));
 
@@ -225,7 +210,7 @@ describe('uiSlice', () => {
     });
 
     it('clearLayoutSelectionRequest clears the request', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         layoutSelectionRequest: { tabId: 'tab-1', layoutId: 'home' },
       });
 
@@ -235,7 +220,7 @@ describe('uiSlice', () => {
     });
 
     it('a new request replaces a request that nobody consumed', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         layoutSelectionRequest: { tabId: 'tab-1', layoutId: 'home' },
       });
 
@@ -250,7 +235,7 @@ describe('uiSlice', () => {
 
   describe('requestSearchFocus / clearSearchFocusRequest', () => {
     it('requestSearchFocus stores the panel', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(requestSearchFocus({ panelId: 'panel-1' }));
 
@@ -258,7 +243,7 @@ describe('uiSlice', () => {
     });
 
     it('clearSearchFocusRequest clears the request', () => {
-      const store = createTestStore({ searchFocusPanelId: 'panel-1' });
+      const store = createUiStore({ searchFocusPanelId: 'panel-1' });
 
       store.dispatch(clearSearchFocusRequest());
 
@@ -268,7 +253,7 @@ describe('uiSlice', () => {
 
   describe('openInfoModal / closeInfoModal', () => {
     it('openInfoModal sets infoModalTabId', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(openInfoModal({ tabId: 'tab-1' }));
 
@@ -276,7 +261,7 @@ describe('uiSlice', () => {
     });
 
     it('closeInfoModal clears infoModalTabId', () => {
-      const store = createTestStore({ infoModalTabId: 'tab-1' });
+      const store = createUiStore({ infoModalTabId: 'tab-1' });
 
       store.dispatch(closeInfoModal());
 
@@ -284,7 +269,7 @@ describe('uiSlice', () => {
     });
 
     it('openInfoModal replaces existing modal', () => {
-      const store = createTestStore({ infoModalTabId: 'tab-1' });
+      const store = createUiStore({ infoModalTabId: 'tab-1' });
 
       store.dispatch(openInfoModal({ tabId: 'tab-2' }));
 
@@ -294,7 +279,7 @@ describe('uiSlice', () => {
 
   describe('openHelpModal / closeHelpModal', () => {
     it('openHelpModal sets helpModalOpen to true', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(openHelpModal());
 
@@ -302,7 +287,7 @@ describe('uiSlice', () => {
     });
 
     it('closeHelpModal sets helpModalOpen to false', () => {
-      const store = createTestStore({ helpModalOpen: true });
+      const store = createUiStore({ helpModalOpen: true });
 
       store.dispatch(closeHelpModal());
 
@@ -312,7 +297,7 @@ describe('uiSlice', () => {
 
   describe('setLoadNotice / clearLoadNotice', () => {
     it('starts empty, records the closed-tab count and clears it', () => {
-      const store = createTestStore();
+      const store = createUiStore();
       expect(getUiState(store).loadNotice).toBeNull();
 
       store.dispatch(setLoadNotice({ closedTabs: 2 }));
@@ -325,7 +310,7 @@ describe('uiSlice', () => {
 
   describe('openSetIconModal / closeSetIconModal', () => {
     it('openSetIconModal sets setIconModalTabId', () => {
-      const store = createTestStore();
+      const store = createUiStore();
 
       store.dispatch(openSetIconModal({ tabId: 'tab-1' }));
 
@@ -333,7 +318,7 @@ describe('uiSlice', () => {
     });
 
     it('closeSetIconModal clears setIconModalTabId', () => {
-      const store = createTestStore({ setIconModalTabId: 'tab-1' });
+      const store = createUiStore({ setIconModalTabId: 'tab-1' });
 
       store.dispatch(closeSetIconModal());
 
@@ -341,7 +326,7 @@ describe('uiSlice', () => {
     });
 
     it('openSetIconModal replaces existing modal', () => {
-      const store = createTestStore({ setIconModalTabId: 'tab-1' });
+      const store = createUiStore({ setIconModalTabId: 'tab-1' });
 
       store.dispatch(openSetIconModal({ tabId: 'tab-2' }));
 
@@ -351,7 +336,7 @@ describe('uiSlice', () => {
 
   describe('state isolation', () => {
     it('actions do not affect unrelated state', () => {
-      const store = createTestStore({
+      const store = createUiStore({
         searchBarModes: { 'panel-1': 'search' },
         renamingTabId: 'tab-1',
         infoModalTabId: 'tab-2',
@@ -372,43 +357,13 @@ describe('uiSlice', () => {
     });
   });
 
-  // ===========================================================================
-  // Cross-slice: removeTab clears stale UI references
-  // ===========================================================================
-
+  // removeTab in the workspace slice clears the ui references to the tab.
   describe('cross-slice: removeTab cleanup', () => {
-    const panelId = 'panel-1' as PanelId;
-    const tabId = 'tab-1' as TabId;
-    const tab2Id = 'tab-2' as TabId;
+    const tabId = TAB_1;
+    const tab2Id = TAB_2;
 
-    /**
-     * Creates a combined store with both workspace and UI reducers
-     * to test cross-slice extraReducers behavior.
-     */
-    function createCombinedStore(uiOverrides: Partial<UiState> = {}) {
-      const workspaceState: WorkspaceState = {
-        tabs: [
-          { id: tabId, name: 'Tab 1', panelId, createdAt: Date.now(), mountKey: 'm1' },
-          { id: tab2Id, name: 'Tab 2', panelId, createdAt: Date.now(), mountKey: 'm2' },
-        ],
-        panel: { id: panelId, order: 0, direction: 'horizontal', children: [], size: '100%' },
-        panelTabs: { [panelId]: [tabId, tab2Id] },
-        activeTabIds: { [panelId]: tabId },
-        activePanelId: panelId,
-        favoriteLayouts: [],
-        searchBarsHidden: false,
-      };
-
-      return configureStore({
-        reducer: combineReducers({
-          workspace: workspaceReducer,
-          ui: uiReducer,
-        }),
-        preloadedState: {
-          workspace: workspaceState,
-          ui: { ...initialUiState, ...uiOverrides },
-        },
-      });
+    function createCombinedStore(ui: Partial<UiState> = {}): TestStore {
+      return createTestStore(makeWorkspace([[TAB_1, TAB_2]]), { ui });
     }
 
     it('clears renamingTabId when that tab is removed', () => {

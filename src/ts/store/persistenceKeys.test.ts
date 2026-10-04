@@ -54,7 +54,7 @@ describe('getWorkspaceStorageKey', () => {
   });
 });
 
-describe('resolvePersistenceType (02 B-1)', () => {
+describe('resolvePersistenceType', () => {
   it('returns memory whenever persistence is off, regardless of persistence_type', () => {
     expect(resolvePersistenceType(false, 'local')).toBe('memory');
     expect(resolvePersistenceType(false, 'session')).toBe('memory');
