@@ -304,13 +304,13 @@ from .icons import AVAILABLE_ICONS, get_available_icons
 # Parameter validation
 from .params import (
     FieldError,
+    LayoutParameter,
     Param,
     ParamValidationError,
 )
 
 # Layout Registration
 from .registry import (
-    LayoutParameter,
     LayoutRegistration,
     LayoutRegistry,
     clear_registry,

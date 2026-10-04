@@ -67,6 +67,22 @@ def test_init_component_not_found_warning(dash_app: Dash) -> None:
         dash_prism.init("nonexistent", dash_app)
 
 
+def test_init_warns_and_continues_when_the_layout_function_raises(dash_app: Dash) -> None:
+    dash_prism.register_layout(id="home", name="Home", layout=html.Div("Home"))
+
+    def broken_layout() -> html.Div:
+        raise RuntimeError("the layout is broken")
+
+    dash_app.layout = broken_layout
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        dash_prism.init("test-prism", dash_app)
+
+    assert any("Failed to call app.layout()" in str(w.message) for w in caught)
+    assert app_init._is_connected(dash_app, "test-prism")
+
+
 def test_init_with_callback_layout(prism_app: Dash) -> None:
     """Test initialization with callback-based layout."""
 

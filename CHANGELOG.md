@@ -70,8 +70,20 @@ All notable changes to Dash Prism are recorded here. The project follows
   layout that takes a pydantic model. Code that read the schema must build it
   from its own pydantic model.
 
+- **`LayoutRegistry.layouts` is a read-only view.** The property returns a
+  `types.MappingProxyType` of the registry and no longer a copy. The view
+  shows each later registration. Code that changed the returned dictionary
+  now gets a `TypeError`.
+
 ### Changed
 
+- The module `dash_prism.registry` no longer re-exports `LayoutParameter` and
+  has no `__all__`. Import `LayoutParameter` from `dash_prism`.
+- `resolve_layout_params` in `dash_prism.registry` reads the layout ID from the
+  registration. It no longer takes the `layout_id` and `validate` arguments.
+  It is not part of the documented API.
+- `register_layout(name="")` keeps the empty name. Only an omitted name falls
+  back to the layout ID.
 - Context menus, dialogs, popovers and tooltips render inside the Prism root
   element and use the theme of their own instance. A host ancestor of the Prism
   component that has a `transform`, `filter` or `contain` property, or its own
@@ -131,6 +143,11 @@ All notable changes to Dash Prism are recorded here. The project follows
   keys for the platform, as the help dialog already did: `Ctrl+R` on Windows and
   Linux, `⌃R` on macOS. Before, the context menu showed `⌃R` on every platform.
   The help dialog lists Previous tab and Next tab as two rows.
+
+### Deprecated
+
+- `LayoutRegistration.body_param` is always `None`. Registration no longer sets
+  it, because nothing read it. The field goes away in 2.0.
 
 ### Removed
 

@@ -46,30 +46,12 @@ parameter options that the search bar shows::
 from __future__ import annotations
 
 import inspect
+import types
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, overload
 
-from .params import (
-    LayoutParameter,  # params.py holds this class. registry.py re-exports it.
-    ParamValidationError,
-    PydanticValidator,
-    build_layout_parameters,
-    build_validator,
-    introspect_callable,
-)
-
-__all__ = [
-    "LayoutParameter",
-    "LayoutRegistration",
-    "LayoutRegistry",
-    "registry",
-    "register_layout",
-    "get_layout",
-    "get_registered_layouts_metadata",
-    "resolve_layout_params",
-    "clear_registry",
-]
+from dash_prism import params
 
 # =============================================================================
 # DATA CLASSES
@@ -112,7 +94,7 @@ class LayoutRegistration:
     :type is_async: bool
     :ivar parameters: One ``LayoutParameter`` for each parameter of the
         callback. The list is empty for a static layout.
-    :type parameters: list[LayoutParameter]
+    :type parameters: list[params.LayoutParameter]
     :ivar param_options: Named sets of parameter values that the search bar
         offers as a list. Only a callback layout can have parameter options.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
@@ -121,8 +103,10 @@ class LayoutRegistration:
         sends into the type that the callback declares. It is ``None`` for a
         static layout.
     :type validator: PydanticValidator | None
-    :ivar body_param: The name of the one pydantic ``BaseModel`` parameter, if
-        the callback declares such a parameter. If not, it is ``None``.
+    :ivar body_param: Deprecated, and always ``None``. Registration no longer
+        sets this field, and nothing reads it. The validator keeps the name of
+        the model parameter. The field stays until version 2.0, because code
+        that makes a registration can give it.
     :type body_param: str | None
     """
 
@@ -134,9 +118,10 @@ class LayoutRegistration:
     layout: Any = None
     callback: Callable[..., Any] | None = None
     is_async: bool = False
-    parameters: list[LayoutParameter] = field(default_factory=list)
+    parameters: list[params.LayoutParameter] = field(default_factory=list)
     param_options: dict[str, tuple[str, dict[str, Any]]] | None = None
-    validator: PydanticValidator | None = field(default=None, repr=False, compare=False)
+    # A validator holds a generated pydantic model, which has no useful repr or equality.
+    validator: params.PydanticValidator | None = field(default=None, repr=False, compare=False)
     body_param: str | None = None
 
     @property
@@ -172,20 +157,20 @@ class LayoutRegistration:
         :returns: The metadata dictionary, with camelCase keys.
         :rtype: dict[str, Any]
         """
-        params = [] if self.param_options else [p.to_dict() for p in self.parameters]
+        parameter_dicts = [] if self.param_options else [p.to_dict() for p in self.parameters]
         result: dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "keywords": self.keywords,
             "allowMultiple": self.allow_multiple,
-            "params": params,
+            "params": parameter_dicts,
             "paramOptions": None,
         }
 
         if self.param_options:
             result["paramOptions"] = {
-                key: {"description": label, "params": params}
-                for key, (label, params) in self.param_options.items()
+                key: {"description": label, "params": option_params}
+                for key, (label, option_params) in self.param_options.items()
             }
 
         return result
@@ -220,18 +205,14 @@ class LayoutRegistry:
         self._layouts: dict[str, LayoutRegistration] = {}
 
     @property
-    def layouts(self) -> dict[str, LayoutRegistration]:
-        """Get a copy of the dictionary of registered layouts.
+    def layouts(self) -> types.MappingProxyType[str, LayoutRegistration]:
+        """A read-only view that maps each layout identifier to its registration.
 
-        The caller receives a new dictionary, thus a change to the result does
-        not change the registry. The registrations in the result are the same
-        objects that the registry holds.
-
-        :returns: A dictionary that maps each layout identifier to its
-            registration.
-        :rtype: dict[str, LayoutRegistration]
+        The view shows each later change to the registry. A change through the
+        view raises :exc:`TypeError`. The registrations in the view are the
+        same objects that the registry holds.
         """
-        return self._layouts.copy()
+        return types.MappingProxyType(self._layouts)
 
     def __contains__(self, layout_id: str) -> bool:
         """Tell if a layout identifier is registered."""
@@ -305,15 +286,13 @@ class LayoutRegistry:
         return {layout_id: reg.to_metadata() for layout_id, reg in self._layouts.items()}
 
 
-# The one registry that this process shares.
+#: The process-wide :class:`LayoutRegistry`.
+#:
+#: :func:`dash_prism.register_layout` writes each new registration into this
+#: registry. :func:`dash_prism.init` reads the registry one time, and puts the
+#: layout metadata into the Prism component. An application thus uses this
+#: registry and does not make its own.
 registry = LayoutRegistry()
-"""The process-wide :class:`LayoutRegistry`.
-
-:func:`dash_prism.register_layout` writes each new registration into this
-registry. :func:`dash_prism.init` reads the registry one time, and puts the
-layout metadata into the Prism component. An application thus uses this
-registry and does not make its own.
-"""
 
 
 # =============================================================================
@@ -321,27 +300,9 @@ registry and does not make its own.
 # =============================================================================
 
 
-def _is_async_function(func: Callable[..., Any]) -> bool:
-    """Tell if a function is a coroutine function.
-
-    The registration keeps the result as ``is_async``. :func:`dash_prism.init`
-    reads that field to know if it must await the callback.
-
-    :param func: The function to examine.
-    :type func: Callable[..., Any]
-    :returns: ``True`` if ``func`` is a coroutine function, ``False`` if not.
-    :rtype: bool
-    """
-    return inspect.iscoroutinefunction(func)
-
-
 def _validate_registration(
     *,
     layout_id: str,
-    name: str | None,
-    description: str,
-    keywords: list[str] | None,
-    allow_multiple: bool,
     param_options: dict[str, tuple[str, dict[str, Any]]] | None,
     layout: Any,
     callback: Callable[..., Any] | None,
@@ -357,21 +318,8 @@ def _validate_registration(
     - Each key of ``param_options`` is a string, and each value is a tuple of
       a string label and a dictionary of parameter values.
 
-    The function accepts ``name``, ``description``, ``keywords`` and
-    ``allow_multiple`` so that the two registration methods can give it one set
-    of arguments. The function does not examine those four arguments.
-
     :param layout_id: The identifier for the layout.
     :type layout_id: str
-    :param name: The name to show, or ``None`` to use the identifier.
-    :type name: str | None
-    :param description: The description of the layout.
-    :type description: str
-    :param keywords: The keywords for the search bar.
-    :type keywords: list[str] | None
-    :param allow_multiple: ``True`` if more than one tab of this layout can be
-        open at the same time.
-    :type allow_multiple: bool
     :param param_options: The named sets of parameter values, or ``None``.
     :type param_options: dict[str, tuple[str, dict[str, Any]]] | None
     :param layout: The static Dash component tree, or ``None``.
@@ -416,17 +364,17 @@ def _validate_registration(
                 raise ValueError(
                     f"param_options['{key}'] must be a tuple of " "(label: str, params: dict)"
                 )
-            label, params = value
+            label, option_params = value
             if not isinstance(label, str):
                 raise ValueError(f"param_options['{key}'] label must be a string")
-            if not isinstance(params, dict):
+            if not isinstance(option_params, dict):
                 raise ValueError(f"param_options['{key}'] params must be a dict")
 
 
 def _validate_param_options(
     param_options: dict[str, tuple[str, dict[str, Any]]],
-    parameters: list[LayoutParameter],
-    validator: PydanticValidator | None = None,
+    parameters: list[params.LayoutParameter],
+    validator: params.PydanticValidator | None = None,
 ) -> None:
     """Validate the parameter options of a callback layout.
 
@@ -444,7 +392,7 @@ def _validate_param_options(
     :param param_options: The parameter options to validate.
     :type param_options: dict[str, tuple[str, dict[str, Any]]]
     :param parameters: The parameters that the callback declares.
-    :type parameters: list[LayoutParameter]
+    :type parameters: list[params.LayoutParameter]
     :param validator: The validator of the layout, or ``None`` to check only
         the parameter names.
     :type validator: PydanticValidator | None
@@ -452,8 +400,8 @@ def _validate_param_options(
         not declare, or if the validator rejects the values of an option.
     """
     param_names = {p.name for p in parameters}
-    for option_key, (_, params) in param_options.items():
-        for param_name in params:
+    for option_key, (_, option_params) in param_options.items():
+        for param_name in option_params:
             if param_name not in param_names:
                 raise ValueError(
                     f"param_options['{option_key}'] references unknown parameter "
@@ -461,8 +409,8 @@ def _validate_param_options(
                 )
         if validator is not None:
             try:
-                validator.validate(params)
-            except ParamValidationError as exc:
+                validator.validate(option_params)
+            except params.ParamValidationError as exc:
                 details = "; ".join(f"{e.field}: {e.message}" for e in exc.errors)
                 raise ValueError(
                     f"param_options['{option_key}'] failed validation: {details}"
@@ -597,25 +545,22 @@ def register_layout(
         ... def home_layout():
         ...     return html.Div('Welcome!')
     """
-    # Method A: the caller gave a static component tree.
+    # An explicit empty name stays empty. Only an omitted name falls back to the id.
+    if name is None:
+        name = id
+    if keywords is None:
+        keywords = []
+
     if layout is not None:
         _validate_registration(
-            layout_id=id,
-            name=name,
-            description=description,
-            keywords=keywords,
-            allow_multiple=allow_multiple,
-            param_options=param_options,
-            layout=layout,
-            callback=None,
+            layout_id=id, param_options=param_options, layout=layout, callback=None
         )
-
         registry.register(
             LayoutRegistration(
                 id=id,
-                name=name or id,
+                name=name,
                 description=description,
-                keywords=keywords or [],
+                keywords=keywords,
                 allow_multiple=allow_multiple,
                 layout=layout,
                 callback=None,
@@ -626,23 +571,14 @@ def register_layout(
         )
         return None
 
-    # Method B: the caller wants the decorator.
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         _validate_registration(
-            layout_id=id,
-            name=name,
-            description=description,
-            keywords=keywords,
-            allow_multiple=allow_multiple,
-            param_options=param_options,
-            layout=None,
-            callback=func,
+            layout_id=id, param_options=param_options, layout=None, callback=func
         )
 
-        spec = introspect_callable(func)  # raises ValueError for a mixed body model
-        parameters = build_layout_parameters(spec)
-        validator = build_validator(id, spec)
-        is_async = _is_async_function(func)
+        spec = params.introspect_callable(func)  # raises ValueError for a mixed body model
+        parameters = params.build_layout_parameters(spec)
+        validator = params.build_validator(id, spec)
 
         if param_options:
             _validate_param_options(param_options, parameters, validator)
@@ -650,17 +586,16 @@ def register_layout(
         registry.register(
             LayoutRegistration(
                 id=id,
-                name=name or id,
+                name=name,
                 description=description,
-                keywords=keywords or [],
+                keywords=keywords,
                 allow_multiple=allow_multiple,
                 layout=None,
                 callback=func,
-                is_async=is_async,
+                is_async=inspect.iscoroutinefunction(func),
                 parameters=parameters,
                 param_options=param_options,
                 validator=validator,
-                body_param=spec.body_param,
             )
         )
 
@@ -700,11 +635,8 @@ def get_registered_layouts_metadata() -> dict[str, dict[str, Any]]:
 
 def resolve_layout_params(
     registration: LayoutRegistration,
-    layout_id: str,
     layout_params: dict[str, Any] | None,
     layout_option: str | None,
-    *,
-    validate: bool = True,
 ) -> dict[str, Any]:
     """Resolve the parameters for one tab of a layout.
 
@@ -722,23 +654,18 @@ def resolve_layout_params(
     A layout that does not declare ``param_options`` accepts ``layout_params``,
     and the caller must not give a ``layout_option``.
 
+    The validator of the layout then changes each string into the type that the
+    callback declares. A static layout has no validator, thus the function
+    returns its parameters unchanged.
+
     :param registration: The registration of the layout.
     :type registration: LayoutRegistration
-    :param layout_id: The identifier of the layout. The function puts this
-        identifier into its error messages.
-    :type layout_id: str
     :param layout_params: The parameters that the client sent, or ``None`` for
         no parameters.
     :type layout_params: dict[str, Any] | None
     :param layout_option: The key of the selected option in
         ``registration.param_options``, or ``None``.
     :type layout_option: str | None
-    :param validate: If this is ``True`` (the default), the function gives the
-        resolved parameters to the validator of the layout. The validator
-        changes each string into the type that the callback declares. A static
-        layout has no validator, thus the function returns the parameters
-        unchanged.
-    :type validate: bool
     :returns: The keyword arguments for the layout callback.
     :rtype: dict[str, Any]
     :raises ValueError: If ``layout_params`` is not a dictionary, if the layout
@@ -747,10 +674,9 @@ def resolve_layout_params(
         if ``layout_option`` is not a key of ``param_options``, or if a
         ``layout_option`` is given for a layout that declares no
         ``param_options``.
-    :raises ParamValidationError: If ``validate`` is ``True`` and a parameter
-        value is not valid.
+    :raises ParamValidationError: If a parameter value is not valid.
     """
-    # Examine the layout_params input.
+    layout_id = registration.id
     if layout_params is None:
         resolved_params: dict[str, Any] = {}
     elif not isinstance(layout_params, dict):
@@ -761,8 +687,8 @@ def resolve_layout_params(
     else:
         resolved_params = layout_params
 
-    # A layout with param_options resolves through an option, not through
-    # layout_params.
+    # The checks below examine the request only. Registration already makes
+    # sure that param_options belong to a callback layout and hold dicts.
     if registration.param_options:
         if layout_option is None:
             raise ValueError(
@@ -781,53 +707,20 @@ def resolve_layout_params(
                 f"got {type(layout_option).__name__}"
             )
 
-        if not registration.is_callable or registration.callback is None:
-            raise ValueError(
-                f"Layout options are only supported for callback layouts. "
-                f"Layout '{layout_id}' is static."
-            )
-
         option_entry = registration.param_options.get(layout_option)
         if not option_entry:
             raise ValueError(f"Layout option '{layout_option}' not found for layout '{layout_id}'.")
 
         _, option_params = option_entry
-        if not isinstance(option_params, dict):
-            raise ValueError(
-                f"param_options for layout '{layout_id}' must map to a dict of params."
-            )
-
-        return _validated(registration, dict(option_params), validate)
-
-    # A layout_option without param_options is an error.
-    if layout_option is not None:
+        resolved_params = dict(option_params)
+    elif layout_option is not None:
         raise ValueError(
             f"Layout '{layout_id}' does not define param_options but layoutOption was provided."
         )
 
-    return _validated(registration, resolved_params, validate)
-
-
-def _validated(
-    registration: LayoutRegistration, params: dict[str, Any], validate: bool
-) -> dict[str, Any]:
-    """Give ``params`` to the validator of the registration, if there is one.
-
-    :param registration: The registration whose validator to use.
-    :type registration: LayoutRegistration
-    :param params: The parameters to validate.
-    :type params: dict[str, Any]
-    :param validate: If this is ``False``, the function returns ``params``
-        unchanged.
-    :type validate: bool
-    :returns: The validated parameters, or ``params`` unchanged when
-        ``validate`` is ``False`` or the registration has no validator.
-    :rtype: dict[str, Any]
-    :raises ParamValidationError: If a parameter value is not valid.
-    """
-    if not validate or registration.validator is None:
-        return params
-    return registration.validator.validate(params)  # raises ParamValidationError
+    if registration.validator is None:
+        return resolved_params
+    return registration.validator.validate(resolved_params)
 
 
 def clear_registry() -> None:

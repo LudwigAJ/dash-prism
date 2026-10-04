@@ -248,7 +248,7 @@ def _get_layout_root(app: Dash) -> Any | None:
 
     try:
         return layout()
-    except Exception:  # pragma: no cover - depends on app layout
+    except Exception:  # The layout function of the application must not stop init().
         warnings.warn(
             "Failed to call app.layout() while searching for the Prism component. "
             "Make sure that your layout function can be called with no arguments.",
@@ -753,9 +753,7 @@ def _lookup_and_resolve(
     registration = registry.get_layout(layout_id)
     if registration is None:
         raise ValueError(f"Layout '{layout_id}' not found")
-    resolved_params = registry.resolve_layout_params(
-        registration, layout_id, layout_params, layout_option
-    )
+    resolved_params = registry.resolve_layout_params(registration, layout_params, layout_option)
     return registration, resolved_params
 
 
@@ -800,7 +798,7 @@ def _render_tab_layout(
 
     try:
         registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
-        if registration.is_callable and registration.callback is not None:
+        if registration.callback is not None:
             layout = _run_callback(
                 registration.callback, registration.is_async, resolved_params, timeout
             )
@@ -846,7 +844,7 @@ async def _render_tab_layout_async(
 
     try:
         registration, resolved_params = _lookup_and_resolve(layout_id, layout_params, layout_option)
-        if registration.is_callable and registration.callback is not None:
+        if registration.callback is not None:
             layout = await _run_callback_async(
                 registration.callback, registration.is_async, resolved_params, timeout
             )
