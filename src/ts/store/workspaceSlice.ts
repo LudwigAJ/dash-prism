@@ -2,6 +2,7 @@
 import {
   createSlice,
   createAsyncThunk,
+  isAnyOf,
   type PayloadAction,
   type ThunkAction,
   type UnknownAction,
@@ -216,74 +217,86 @@ export function createInitialWorkspaceState(): WorkspaceState {
 // Async Thunks (for maxTabs validation)
 // =============================================================================
 
-type AddTabPayload = {
+/** Gives the store shape and the extra argument that the workspace thunks use. */
+interface WorkspaceThunkConfig {
+  state: { workspace: { present: WorkspaceState } };
+  extra: ThunkExtra;
+  rejectValue: string;
+}
+
+/** Arguments of the addTab thunk. */
+interface AddTabPayload {
   panelId: PanelId;
   name?: string;
   layoutId?: string;
   params?: Record<string, string>;
   option?: string;
-  /** Internal: maxTabs limit passed through for race condition guard in reducer */
-  maxTabs?: number;
-};
-
-/** Return type for addTab thunk - includes tab and maxTabs for race condition guard */
-type AddTabResult = { tab: Tab; maxTabs: number };
+}
 
 /**
- * Async thunk for adding a tab with maxTabs validation.
- * Uses thunk extra argument to access config.
- *
- * Note: The fulfilled reducer includes a secondary maxTabs check to prevent
- * race conditions when multiple addTab calls are dispatched rapidly.
+ * Holds a tab that addTab or duplicateTab built, with the tab limit that the thunk read. The
+ * reducer checks the limit again, because another tab can arrive between the thunk and the reducer.
  */
-export const addTab = createAsyncThunk<
-  AddTabResult, // Return type
-  AddTabPayload, // Argument type
-  { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
->('workspace/addTab', async (payload, { getState, extra, rejectWithValue }) => {
-  const { tabs } = getState().workspace.present;
+interface TabInsertResult {
+  tab: Tab;
+  maxTabs: number;
+}
 
-  // Validate maxTabs limit using shared canAddTab helper
-  if (!canAddTab(tabs.length, extra.getMaxTabs())) {
-    extra.notify(
-      'warning',
-      `Maximum tabs limit reached (${extra.getMaxTabs()})`,
-      `Cannot add tab: maximum of ${extra.getMaxTabs()} tabs reached.`
-    );
-    return rejectWithValue(`Maximum tabs limit reached (${extra.getMaxTabs()})`);
-  }
+/**
+ * Adds a tab to a panel and makes it active. The thunk reads the limits from the thunk extra
+ * argument. It rejects the tab at the tab limit, and for a layout that does not allow multiple
+ * tabs while one is open, and tells the user why.
+ */
+export const addTab = createAsyncThunk<TabInsertResult, AddTabPayload, WorkspaceThunkConfig>(
+  'workspace/addTab',
+  async (payload, { getState, extra, rejectWithValue }) => {
+    const { tabs } = getState().workspace.present;
 
-  // Validate allowMultiple constraint
-  if (payload.layoutId) {
-    const layoutMeta = extra.getRegisteredLayouts()[payload.layoutId];
-    if (layoutMeta && findOpenTabForLayout(tabs, payload.layoutId, layoutMeta)) {
+    // Validate maxTabs limit using shared canAddTab helper
+    if (!canAddTab(tabs.length, extra.getMaxTabs())) {
       extra.notify(
-        'info',
-        `"${layoutMeta.name}" is already open`,
-        `This layout does not allow multiple instances.`
+        'warning',
+        `Maximum tabs limit reached (${extra.getMaxTabs()})`,
+        `Cannot add tab: maximum of ${extra.getMaxTabs()} tabs reached.`
       );
-      return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
+      return rejectWithValue(`Maximum tabs limit reached (${extra.getMaxTabs()})`);
     }
+
+    // Validate allowMultiple constraint
+    if (payload.layoutId) {
+      const layoutMeta = extra.getRegisteredLayouts()[payload.layoutId];
+      if (layoutMeta && findOpenTabForLayout(tabs, payload.layoutId, layoutMeta)) {
+        extra.notify(
+          'info',
+          `"${layoutMeta.name}" is already open`,
+          `This layout does not allow multiple instances.`
+        );
+        return rejectWithValue(`Layout "${payload.layoutId}" does not allow multiple instances`);
+      }
+    }
+
+    const newTab = createTab(payload.panelId, {
+      name: payload.name,
+      layoutId: payload.layoutId,
+      layoutParams: payload.params,
+      layoutOption: payload.option,
+    });
+
+    return { tab: newTab, maxTabs: extra.getMaxTabs() };
   }
+);
 
-  const newTab = createTab(payload.panelId, {
-    name: payload.name,
-    layoutId: payload.layoutId,
-    layoutParams: payload.params,
-    layoutOption: payload.option,
-  });
-
-  // Pass maxTabs through for race condition guard in reducer
-  return { tab: newTab, maxTabs: extra.getMaxTabs() };
-});
-
-/** Return type for duplicateTab thunk */
-type DuplicateTabResult = { tab: Tab; maxTabs: number };
-
+/**
+ * Adds a copy of a tab next to the original, in the same panel. The copy is unlocked, its name
+ * ends with "(copy)", and it gets fresh ids, so it mounts its own layout.
+ *
+ * The thunk applies the same limits as addTab: the tab limit, and a layout that does not allow
+ * multiple tabs.
+ */
 export const duplicateTab = createAsyncThunk<
-  DuplicateTabResult,
+  TabInsertResult,
   { tabId: TabId },
-  { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
+  WorkspaceThunkConfig
 >('workspace/duplicateTab', async ({ tabId }, { getState, extra, rejectWithValue }) => {
   const { tabs } = getState().workspace.present;
 
@@ -323,7 +336,6 @@ export const duplicateTab = createAsyncThunk<
     layoutParams: originalTab.layoutParams ? { ...originalTab.layoutParams } : undefined,
   });
 
-  // Pass maxTabs through for race condition guard in reducer
   return { tab: newTab, maxTabs: extra.getMaxTabs() };
 });
 
@@ -334,7 +346,7 @@ export const duplicateTab = createAsyncThunk<
 export const splitPanel = createAsyncThunk<
   SplitPanelResult,
   SplitPanelPayload,
-  { state: { workspace: { present: WorkspaceState } }; extra: ThunkExtra; rejectValue: string }
+  WorkspaceThunkConfig
 >('workspace/splitPanel', async (payload, { getState, extra, rejectWithValue }) => {
   const { panel } = getState().workspace.present;
   const maxPanels = extra.getMaxPanels();
@@ -749,28 +761,7 @@ const workspaceSlice = createSlice({
   },
 
   extraReducers: (builder) => {
-    // Handle async thunk fulfilled cases
     builder
-      .addCase(addTab.fulfilled, (state, action) => {
-        const { tab: newTab, maxTabs } = action.payload;
-
-        // Guard: Re-check maxTabs limit to prevent race condition.
-        // Between thunk validation and this reducer, another addTab could have completed.
-        if (!canAddTab(state.tabs.length, maxTabs)) {
-          // Silently skip - the tab was already created but we can't add it.
-          // This is a rare race condition edge case.
-          return;
-        }
-
-        state.tabs.push(newTab);
-
-        if (!state.panelTabs[newTab.panelId]) {
-          state.panelTabs[newTab.panelId] = [];
-        }
-        state.panelTabs[newTab.panelId].push(newTab.id);
-        state.activeTabIds[newTab.panelId] = newTab.id;
-        state.activePanelId = newTab.panelId;
-      })
       .addCase(splitPanel.fulfilled, (state, action) => {
         // Guard: Re-check maxPanels limit to prevent race condition, as addTab does for maxTabs.
         if (!canAddPanel(countLeafPanels(state.panel), action.payload.maxPanels)) return;
@@ -780,22 +771,12 @@ const workspaceSlice = createSlice({
 
         splitPanelInState(state, action.payload);
       })
-      .addCase(duplicateTab.fulfilled, (state, action) => {
-        const { tab: newTab, maxTabs } = action.payload;
-
-        // Guard: Re-check maxTabs limit to prevent race condition
-        if (!canAddTab(state.tabs.length, maxTabs)) {
-          return;
-        }
-
-        state.tabs.push(newTab);
-
-        if (!state.panelTabs[newTab.panelId]) {
-          state.panelTabs[newTab.panelId] = [];
-        }
-        state.panelTabs[newTab.panelId].push(newTab.id);
-        state.activeTabIds[newTab.panelId] = newTab.id;
-        state.activePanelId = newTab.panelId;
+      .addMatcher(isAnyOf(addTab.fulfilled, duplicateTab.fulfilled), (state, action) => {
+        const { tab, maxTabs } = action.payload;
+        // Two quick dispatches can both pass the check of the thunk. The second tab is dropped.
+        if (!canAddTab(state.tabs.length, maxTabs)) return;
+        state.tabs.push(tab);
+        attachTab(state, tab, tab.panelId);
       });
   },
 });
@@ -837,7 +818,7 @@ export const workspaceReducer = workspaceSlice.reducer;
 export const switchToOpenTab =
   (
     layoutId: LayoutId
-  ): ThunkAction<boolean, { workspace: { present: WorkspaceState } }, ThunkExtra, UnknownAction> =>
+  ): ThunkAction<boolean, WorkspaceThunkConfig['state'], ThunkExtra, UnknownAction> =>
   (dispatch, getState, extra) => {
     const layout = extra.getRegisteredLayouts()[layoutId];
     if (!layout) return false;
