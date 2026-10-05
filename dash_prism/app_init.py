@@ -43,9 +43,7 @@ from typing import Any, ParamSpec, TypeVar, cast
 from dash import MATCH, Dash, Input, Output, html
 from dash.exceptions import PreventUpdate
 
-# dash_prism/__init__.py imports this module before it rebinds the name
-# ``registry`` to the registry object, so this import gets the module.
-from dash_prism import layout_tree, params, registry
+from dash_prism import layout_registry, layout_tree, params
 
 logger = logging.getLogger(__name__)
 
@@ -370,7 +368,7 @@ def _check_registry(prism_component: Any | None) -> None:
     :raises InitializationError: If ``initialLayout`` names a layout that is not
         in the registry.
     """
-    if not registry.registry:
+    if not layout_registry.registry:
         warnings.warn(
             "No layouts registered. Register layouts with "
             "@dash_prism.register_layout() before calling init().",
@@ -381,10 +379,10 @@ def _check_registry(prism_component: Any | None) -> None:
     initial_layout = getattr(prism_component, "initialLayout", None)
     if initial_layout is None:
         return
-    if initial_layout not in registry.registry:
+    if initial_layout not in layout_registry.registry:
         raise InitializationError(
             f"initialLayout '{initial_layout}' not found in registered layouts. "
-            f"Available layouts: {sorted(registry.registry)}. "
+            f"Available layouts: {sorted(layout_registry.registry)}. "
             "Register the layout with @dash_prism.register_layout() before calling init()."
         )
     logger.info("Initial layout '%s' validated successfully", initial_layout)
@@ -433,8 +431,8 @@ def _attach_metadata(app: Dash, prism_id: str) -> None:
     :param prism_id: The ID of the Prism component.
     :type prism_id: str
     """
-    layouts_metadata = registry.get_registered_layouts_metadata()
-    session_id = _compute_server_session_id(registry.registry)
+    layouts_metadata = layout_registry.get_registered_layouts_metadata()
+    session_id = _compute_server_session_id(layout_registry.registry)
     original_layout = app.layout
 
     if not callable(original_layout):
@@ -730,7 +728,7 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
 
 def _lookup_and_resolve(
     layout_id: str, layout_params: dict[str, Any] | None, layout_option: str | None
-) -> tuple[registry.LayoutRegistration, dict[str, Any]]:
+) -> tuple[layout_registry.LayoutRegistration, dict[str, Any]]:
     """Read the registration of a layout, and resolve the parameters of a tab.
 
     The sync render path and the async render path use this function, so they
@@ -750,10 +748,12 @@ def _lookup_and_resolve(
         not agree with the registration.
     :raises ParamValidationError: If a parameter value is not valid.
     """
-    registration = registry.get_layout(layout_id)
+    registration = layout_registry.get_layout(layout_id)
     if registration is None:
         raise ValueError(f"Layout '{layout_id}' not found")
-    resolved_params = registry.resolve_layout_params(registration, layout_params, layout_option)
+    resolved_params = layout_registry.resolve_layout_params(
+        registration, layout_params, layout_option
+    )
     return registration, resolved_params
 
 
@@ -929,7 +929,7 @@ def _register_render_callback(app: Dash, background: bool) -> None:
     """
     use_async = _is_app_async(app)
 
-    if not use_async and any(reg.is_async for reg in registry.registry.layouts.values()):
+    if not use_async and any(reg.is_async for reg in layout_registry.registry.layouts.values()):
         warnings.warn(
             "Some registered layouts use async callbacks but the Dash app "
             "is not configured for async (use_async=True). Async layouts "
@@ -970,7 +970,9 @@ def _register_render_callback(app: Dash, background: bool) -> None:
             return _render_content_request(content_id, data)
 
     mode = "async" if use_async else "sync"
-    logger.info("Prism initialized with %d layout(s) [%s mode]", len(registry.registry), mode)
+    logger.info(
+        "Prism initialized with %d layout(s) [%s mode]", len(layout_registry.registry), mode
+    )
 
 
 def init(prism_id: str, app: Dash, background: bool = False) -> None:

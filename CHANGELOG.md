@@ -103,10 +103,18 @@ All notable changes to Dash Prism are recorded here. The project follows
   `validate_workspace` is in `dash_prism.workspace`. The names on `dash_prism`
   are the same. `validate_workspace(errors='ignore')` logs with the logger
   `dash_prism.workspace`, and its messages no longer start with `[Prism]`.
-- The module `dash_prism.registry` no longer re-exports `LayoutParameter` and
-  has no `__all__`. Import `LayoutParameter` from `dash_prism`.
-- `resolve_layout_params` in `dash_prism.registry` reads the layout ID from the
-  registration. It no longer takes the `layout_id` and `validate` arguments.
+- The module `dash_prism.registry` is now `dash_prism.layout_registry`. The
+  name `dash_prism.registry` is the process-wide `LayoutRegistry` object, as
+  before, and all the names in `dash_prism.__all__` are the same. Only code
+  that imported the module by its path, for example
+  `from dash_prism.registry import LayoutRegistration` or
+  `import dash_prism.registry`, must change. Import the public names from
+  `dash_prism`. No alias keeps the old module path, because the name
+  `dash_prism.registry` is the registry object.
+- The module `dash_prism.layout_registry` does not re-export `LayoutParameter`
+  and has no `__all__`. Import `LayoutParameter` from `dash_prism`.
+- `resolve_layout_params` in `dash_prism.layout_registry` reads the layout ID
+  from the registration. It no longer takes the `layout_id` and `validate` arguments.
   It is not part of the documented API.
 - `register_layout(name="")` keeps the empty name. Only an omitted name falls
   back to the layout ID.

@@ -178,9 +178,9 @@ Each place has one definition on each side. For ``registeredLayouts`` and
 the two sides of the workspace contract.
 
 ``registeredLayouts``
-   ``LayoutRegistration.to_metadata()`` in ``dash_prism/registry.py`` makes the
-   metadata of one layout. :func:`dash_prism.init` puts the metadata of every
-   layout into this prop. The ``RegisteredLayouts`` type in
+   ``LayoutRegistration.to_metadata()`` in ``dash_prism/layout_registry.py``
+   makes the metadata of one layout. :func:`dash_prism.init` puts the metadata
+   of every layout into this prop. The ``RegisteredLayouts`` type in
    ``src/ts/types/index.ts`` describes it. ``tests/test_registry.py`` compares
    the metadata of a set of reference layouts with
    ``tests/fixtures/layout_meta.json``. ``src/ts/types/layoutMeta.test.ts``
