@@ -60,14 +60,14 @@ def _wait_for_reload(duo) -> None:
         lambda driver: driver.execute_script("return window.__beforeReload === undefined;"),
         message="The page should reload",
     )
-    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.wait_for_workspace(duo)
 
 
 @KEYS
 def test_try_again_renders_the_content_again(prism_app_with_layouts, key):
     duo = prism_app_with_layouts
     _mount_boundary(duo, "panel")
-    assert duo.find_element(RETRY).tag_name == "button"
+    assert duo.wait_for_element(RETRY, timeout=5).tag_name == "button"
 
     testutils.tab_to(duo, RETRY)
     duo.driver.execute_script("window.__prismThrow = false;")

@@ -84,7 +84,7 @@ def _load_with_hash(duo, share_hash: str) -> None:
     """
     base = duo.driver.current_url.split("#")[0].split("?")[0]
     duo.driver.get(f"{base}?reload=1{share_hash}")
-    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.wait_for_workspace(duo)
 
 
 def test_share_link_opens_on_a_cold_load(dash_duo):
