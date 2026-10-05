@@ -159,7 +159,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   if (layoutEntries.length === 0) {
     return (
       <div
-        data-testid="prism-empty-tab-layouts"
+        data-testid="prism-empty-tab-no-layouts"
         className="tw:flex tw:h-full tw:items-center tw:justify-center tw:p-6"
       >
         <Card className="tw:w-full tw:max-w-md">

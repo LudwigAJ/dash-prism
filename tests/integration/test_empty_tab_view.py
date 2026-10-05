@@ -14,6 +14,7 @@ pytestmark = pytest.mark.integration
 HINT = "[data-testid='prism-empty-tab-hint']"
 BLANK = "[data-testid='prism-empty-tab-blank']"
 LAYOUTS = "[data-testid='prism-empty-tab-layouts']"
+NO_LAYOUTS = "[data-testid='prism-empty-tab-no-layouts']"
 
 
 def test_empty_tab_view_none_renders_blank_pane(dash_duo):
@@ -46,6 +47,15 @@ def test_empty_tab_view_layouts_keeps_the_layout_grid(dash_duo):
     assert duo.find_elements(HINT) == []
     assert duo.find_elements(BLANK) == []
     assert "Home" in duo.find_element(LAYOUTS).text
+
+
+def test_empty_tab_view_layouts_without_layouts_shows_the_no_layouts_card(dash_duo):
+    with pytest.warns(UserWarning, match="No layouts registered"):
+        duo = testutils.start_prism(dash_duo, layouts={}, emptyTabView="layouts")
+    duo.wait_for_element(NO_LAYOUTS, timeout=10)
+
+    assert "No Layouts Available" in duo.find_element(NO_LAYOUTS).text
+    assert duo.find_elements(LAYOUTS) == []
 
 
 CARD = "[data-testid='prism-layout-card-home']"
