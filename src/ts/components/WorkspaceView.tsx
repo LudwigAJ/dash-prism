@@ -55,7 +55,7 @@ const DashContentRenderer = memo(
     if (!api?.ExternalWrapper) {
       return (
         <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-muted-foreground">
-          <p>Dash API not available. Ensure you&apos;re using Dash 3.1.1+.</p>
+          <p>Dash API not available. Ensure you’re using Dash 3.1.1+.</p>
         </div>
       );
     }
@@ -124,6 +124,8 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
           if (!node) return null;
           return (
             <InPortal key={tab.mountKey ?? tab.id} node={node}>
+              {/* This boundary catches an error in the Dash content of the tab. React sends the
+                  error up through this tree, not through the panel that shows the content. */}
               <ErrorBoundary>
                 <DashContentRenderer tab={tab} />
               </ErrorBoundary>

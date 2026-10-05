@@ -43,6 +43,8 @@ export const tabStyleVariants = cva('', {
       dark: '',
     },
   },
+  // Tailwind generates a utility class only for a class name that it finds as text in the source.
+  // Each name is therefore written out in full and not built from TAB_STYLE_LABELS.
   compoundVariants: [
     // Red
     {
@@ -138,8 +140,9 @@ type TabStyleVariantProps = VariantProps<typeof tabStyleVariants>;
 export type TabStyleColor = NonNullable<TabStyleVariantProps['color']>;
 
 /**
- * Migration map from old Catppuccin color names to new semantic colors.
- * Used when loading tabs from storage that may have old style names.
+ * Maps the old Catppuccin color names to the current colors, for a tab stored with an old name.
+ * The map applies when a tab renders, not as a step of the persist migrations, because a tab
+ * style can also arrive from Dash through the updateWorkspace prop.
  */
 const TAB_STYLE_MIGRATION_MAP: Record<string, TabStyleColor> = {
   // Direct mappings (colors that exist in both systems)

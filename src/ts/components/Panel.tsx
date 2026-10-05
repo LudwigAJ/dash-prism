@@ -127,6 +127,9 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                   forceMount={true}
                   className="tw:h-full tw:min-h-full tw:w-full"
                 >
+                  {/* An error in the Dash content of a tab goes to its React parent, the boundary
+                      around InPortal in WorkspaceView. This boundary catches an error in the
+                      empty-tab view. */}
                   <ErrorBoundary>
                     {!tab.layoutId ? (
                       <EmptyTabView tabId={tab.id} />

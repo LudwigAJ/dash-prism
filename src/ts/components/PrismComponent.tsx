@@ -70,12 +70,6 @@ interface PrismProps extends DashComponentProps {
    */
   serverSessionId?: string;
 
-  // persisted props
-  // tabs: Record<PanelId, Tab[]>;
-  // panels: Panel;
-  // activePanelId: PanelId;
-  // activeTabIds: Record<PanelId, string>;
-
   /**
    * Child components (typically PrismContent instances).
    */

@@ -22,7 +22,7 @@ function isHexColor(value: string): boolean {
 
 /**
  * Computes a contrasting text color (black or white) for a given hex background.
- * Uses relative luminance to ensure WCAG-compliant contrast.
+ * It uses the YIQ luma heuristic, not the WCAG contrast ratio.
  */
 function getContrastColor(hex: string): string {
   const full = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;

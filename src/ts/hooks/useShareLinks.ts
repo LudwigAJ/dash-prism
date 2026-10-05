@@ -158,7 +158,7 @@ export function useShareLink() {
   );
 
   // =========================================================================
-  // Spawn Shared Tab (Redux Action - reversible!)
+  // Spawn Shared Tab
   // =========================================================================
   const spawnSharedTab = useCallback(
     async (shareData: ShareData): Promise<boolean> => {
@@ -193,8 +193,6 @@ export function useShareLink() {
         ? stringifyParams(layoutInfo.params ?? [], layoutParams)
         : undefined;
 
-      // Dispatch Redux action - THIS IS THE REVERSIBLE PART
-      // User can close the tab to "undo" opening the share link
       const result = await dispatch(
         addTab({
           panelId: activePanelId,

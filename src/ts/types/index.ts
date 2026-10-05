@@ -28,13 +28,13 @@ export interface Tab {
   name: string;
   panelId: PanelId;
   createdAt: number;
-  /** Layout ID or empty string if no layout assigned */
+  /** The registered layout that the tab shows. An empty tab has none. */
   layoutId?: LayoutId;
   layoutOption?: string;
   layoutParams?: Record<string, string>;
 
   locked?: boolean;
-  /** UUID for React key; regenerated on refresh to force remount. Auto-generated if missing. */
+  /** A random React key of the tab content. A refresh replaces it to mount the content again. */
   mountKey?: string;
 
   icon?: string;
@@ -48,7 +48,7 @@ export interface PanelNode {
   direction: PanelDirection;
   pinned?: boolean;
   children: PanelNode[];
-  /** Size as percentage (0-100) */
+  /** The size in the parent split, as react-split-pane takes it: '50%', or pixels after resize. */
   size?: string | number;
 }
 
@@ -103,7 +103,7 @@ type ParamScalar = string | number | boolean | null;
 export interface LayoutParam {
   name: string;
   hasDefault: boolean;
-  /** JSON-safe default (was typed `string` before 1.0, but was always `Any`). */
+  /** The JSON-safe default value. */
   default?: ParamScalar | ParamScalar[];
   annotation?: string | null;
   type?: ParamType;
@@ -150,7 +150,7 @@ export interface Workspace {
   panelTabs: Record<PanelId, TabId[]>; // Order per panel
   activeTabIds: Record<PanelId, TabId>;
   activePanelId: PanelId;
-  favoriteLayouts?: string[];
+  favoriteLayouts?: LayoutId[];
   searchBarsHidden?: boolean;
 }
 
@@ -170,28 +170,16 @@ export interface ShareData {
 }
 
 // =============================================================================
-// Notification Types (Handled by Sonner - not in Redux)
-// =============================================================================
-
-// Notifications are managed by Sonner library, not Redux.
-// See: Reversibility Philosophy section
-// Usage: import { usePrismToast } from '@hooks/usePrismToast'; usePrismToast()('success', 'Message');
-
-// =============================================================================
 // Dash Component API Types (for ExternalWrapper and loading states)
 // =============================================================================
 
-/**
- * Dash component specification format (from https://github.com/plotly/dash)
- */
+/** Holds the props of a Dash component spec: an optional id and any other prop. */
 interface BaseDashProps {
   id?: string | Record<string, string>;
   [propName: string]: unknown;
 }
 
-/**
- * Dash component specification format (from https://github.com/plotly/dash)
- */
+/** Holds a Dash component spec, the JSON form of a component in the Dash layout. */
 export interface DashComponent {
   type: string;
   namespace: string;

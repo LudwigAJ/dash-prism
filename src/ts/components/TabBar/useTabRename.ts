@@ -19,9 +19,6 @@ export function canRenameTab(tab: Tab, isPinned: boolean): boolean {
  *
  * The hook also starts a rename that the store requests (the rename shortcut). Each tab bar sees
  * the request. Only the tab bar that holds the tab starts the rename and clears the request.
- *
- * @param tabs - The tabs of the panel of the tab bar.
- * @param isPinned - Whether the panel is pinned.
  */
 export function useTabRename(tabs: Tab[], isPinned: boolean) {
   const dispatch = useAppDispatch();

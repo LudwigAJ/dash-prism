@@ -79,8 +79,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
-              The layout &quot;{data?.layoutId}&quot; did not respond within {effectiveTimeout}{' '}
-              seconds.
+              The layout “{data?.layoutId}” did not respond within {effectiveTimeout} seconds.
             </CardDescription>
           </CardHeader>
           <CardContent className="tw:space-y-4">
