@@ -217,9 +217,9 @@ const workspaceSlice = createSlice({
      *
      * Dispatched once after redux-persist's REHYDRATE. `serverSessionId` is the
      * Prism prop of the same name. Each tab whose layout the server no longer
-     * knows is closed (locked or not) instead of rendering a "Layout not found"
-     * error, and the new fingerprint is recorded. Nothing else is touched: the
-     * workspace is never wiped.
+     * knows is closed (locked or not) instead of rendering a "Layout is not
+     * registered" error, and the new fingerprint is recorded. Nothing else is
+     * touched: the workspace is never wiped.
      *
      * An empty `registeredLayoutIds` list disables pruning, because it cannot be
      * told apart from metadata that has not been injected.

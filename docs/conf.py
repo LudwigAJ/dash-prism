@@ -54,7 +54,7 @@ nitpick_ignore = [
     ("py:class", "dash_prism.PrismActionComponent.PrismActionComponent"),
     ("py:class", "dash_prism.PrismComponent.PrismComponent"),
     ("py:class", "dash_prism.PrismContentComponent.PrismContentComponent"),
-    ("py:class", "dash_prism.registry.LayoutRegistration"),
+    ("py:class", "dash_prism.layout_registry.LayoutRegistration"),
 ]
 
 html_theme = "furo"

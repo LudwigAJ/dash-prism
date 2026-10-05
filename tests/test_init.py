@@ -14,7 +14,7 @@ import pytest
 from dash import Dash, html
 
 import dash_prism
-from dash_prism import app_init, layout_tree
+from dash_prism import app_init, layout_registry, layout_tree
 
 
 def test_init_no_layouts_warning(prism_app: Dash) -> None:
@@ -28,7 +28,7 @@ def test_init_missing_layout_error() -> None:
     app = Dash(__name__)
     # app.layout is None
 
-    with pytest.raises(dash_prism.InitializationError, match="app.layout must be set"):
+    with pytest.raises(dash_prism.InitializationError, match="app.layout is not set"):
         dash_prism.init("test-prism", app)
 
 
@@ -729,7 +729,9 @@ def test_init_accepts_a_callable_layout_that_has_no_weak_reference(dash_app: Das
     assert len(dash_app._callback_list) == 1
 
 
-def test_app_init_gets_the_registry_module_not_the_registry_object() -> None:
-    # dash_prism/__init__.py rebinds the name "registry" to the registry object
-    # after it imports app_init, so a reorder of that file breaks app_init.
-    assert app_init.registry is sys.modules["dash_prism.registry"]
+def test_registry_is_the_singleton_and_app_init_uses_the_module() -> None:
+    # The public name dash_prism.registry is the singleton object. The module
+    # has another name, so the order of the imports in __init__.py cannot hide it.
+    assert isinstance(dash_prism.registry, dash_prism.LayoutRegistry)
+    assert dash_prism.registry is layout_registry.registry
+    assert app_init.layout_registry is sys.modules["dash_prism.layout_registry"]

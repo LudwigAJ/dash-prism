@@ -693,6 +693,32 @@ with ``use_async=True``. A synchronous callback in a synchronous app runs to the
 end, because Prism cannot stop it. A value that is not a finite positive number
 falls back to ``30`` on the two sides, so there is no setting for "no limit".
 
+Layout Errors
+^^^^^^^^^^^^^
+
+When a layout function raises an exception, the tab shows an error card in
+place of the layout. The text on the card depends on the Dash dev tools:
+
+- With the dev tools UI on, for example after ``app.run(debug=True)``, the
+  card shows ``Error rendering layout '<id>':`` and the message of the
+  exception.
+- With the dev tools UI off, the card shows ``Error rendering layout '<id>'.``
+  and ``The server log has the details.``, but no message. This is the default
+  for a production server, for example gunicorn. The message of an exception
+  can hold data that a user must not see, such as a file path or a database
+  address.
+
+Prism reads the switch of the app that you give to ``init()``, at each request.
+Thus the setting of ``app.run`` applies also when you call ``app.run`` after
+``init()``. A background callback (``init(..., background=True)``) runs in
+another process. Its card always shows the text without the message.
+
+The log always gets the class of the exception and the stack frames, but never
+the message. The texts that Prism writes itself do not change with the dev
+tools. These texts are the message for a request that does not agree with the
+registration, the timeout message, the "Invalid parameters" panel and the
+message for an async layout that cannot run in a sync app.
+
 Keyboard Shortcuts
 ^^^^^^^^^^^^^^^^^^
 

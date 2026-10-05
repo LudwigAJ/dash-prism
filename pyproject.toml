@@ -163,7 +163,7 @@ select = [
     "RUF100",  # noqa comment that suppresses nothing
     "N818",    # exception name without "Error"
 ]
-# registry.py has noqa comments for A002, a rule that this project does not select.
+# layout_registry.py has noqa comments for A002, a rule that this project does not select.
 external = ["A002"]
 
 [tool.ruff.lint.flake8-bandit]
@@ -199,11 +199,11 @@ files = [
     "dash_prism/Action.py",
     "dash_prism/icons.py",
     "dash_prism/app_init.py",
+    "dash_prism/layout_registry.py",
     "dash_prism/layout_tree.py",
     "dash_prism/params.py",
     "dash_prism/Prism.py",
     "dash_prism/PrismContent.py",
-    "dash_prism/registry.py",
     "dash_prism/utils.py",
     "dash_prism/workspace.py",
     "examples",

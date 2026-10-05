@@ -125,7 +125,7 @@ export interface LayoutOption {
   params: Record<string, unknown>;
 }
 
-/** Mirrors dash_prism.registry.LayoutRegistration.to_metadata() */
+/** Mirrors dash_prism.layout_registry.LayoutRegistration.to_metadata() */
 export interface LayoutMeta {
   name: string;
   description?: string;

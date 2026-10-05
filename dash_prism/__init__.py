@@ -56,16 +56,9 @@ from .PrismContentComponent import PrismContentComponent as _GeneratedPrismConte
 # Each wrapper class is a subclass of the related generated class above, and
 # adds documentation and type annotations.
 from .Action import Action, PrismAction
-
-# app_init imports the registry module by name. It must load before the import
-# from .registry below rebinds the name ``registry`` to the registry object.
 from .app_init import InitializationError, init
 from .icons import AVAILABLE_ICONS, get_available_icons
-from .layout_tree import find_component_by_id, inject_tab_id, update_component_props, walk_layout
-from .params import FieldError, LayoutParameter, Param, ParamValidationError
-from .Prism import Prism
-from .PrismContent import PrismContent
-from .registry import (
+from .layout_registry import (
     LayoutRegistration,
     LayoutRegistry,
     clear_registry,
@@ -74,6 +67,10 @@ from .registry import (
     register_layout,
     registry,
 )
+from .layout_tree import find_component_by_id, inject_tab_id, update_component_props, walk_layout
+from .params import FieldError, LayoutParameter, Param, ParamValidationError
+from .Prism import Prism
+from .PrismContent import PrismContent
 from .workspace import InvalidWorkspace, InvalidWorkspaceError, validate_workspace
 
 _PACKAGE_NAME = "dash_prism"

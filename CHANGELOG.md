@@ -103,11 +103,19 @@ All notable changes to Dash Prism are recorded here. The project follows
   `validate_workspace` is in `dash_prism.workspace`. The names on `dash_prism`
   are the same. `validate_workspace(errors='ignore')` logs with the logger
   `dash_prism.workspace`, and its messages no longer start with `[Prism]`.
-- The module `dash_prism.registry` no longer re-exports `LayoutParameter` and
-  has no `__all__`. Import `LayoutParameter` from `dash_prism`.
-- `resolve_layout_params` in `dash_prism.registry` reads the layout ID from the
-  registration. It no longer takes the `layout_id` and `validate` arguments.
-  It is not part of the documented API.
+- The module `dash_prism.registry` is now `dash_prism.layout_registry`. The
+  name `dash_prism.registry` is the process-wide `LayoutRegistry` object, as
+  before, and all the names in `dash_prism.__all__` are the same. Only code
+  that imported the module by its path, for example
+  `from dash_prism.registry import LayoutRegistration` or
+  `import dash_prism.registry`, must change. Import the public names from
+  `dash_prism`. No alias keeps the old module path, because the name
+  `dash_prism.registry` is the registry object.
+- The module `dash_prism.layout_registry` does not re-export `LayoutParameter`
+  and has no `__all__`. Import `LayoutParameter` from `dash_prism`.
+- `resolve_layout_params` in `dash_prism.layout_registry` reads the layout ID
+  from the registration. It no longer takes the `layout_id` and `validate`
+  arguments. It is not part of the documented API.
 - `register_layout(name="")` keeps the empty name. Only an omitted name falls
   back to the layout ID.
 - Context menus, dialogs, popovers and tooltips render inside the Prism root
@@ -122,14 +130,44 @@ All notable changes to Dash Prism are recorded here. The project follows
   `prism-error-action-clear-storage`. A host test that used the old
   `error-action-*` ids must use the new ones.
 - Prism logs a failed tab render once, and no log line holds a parameter value.
-  A timeout, a `TypeError`, a `ValueError` and invalid parameters log a warning.
-  Any other exception logs an error. The log names the class of the exception,
-  and for the error also the stack frames, but never the message of the
-  exception, because a message can hold a value that the user typed. The tab
-  still shows the message. Each tab render writes one `DEBUG` line with the tab
-  ID and the layout ID. Before, every render wrote the full request, with every
-  parameter value, at `INFO`. The logger name is now `dash_prism.app_init`, so a
-  handler on `dash_prism` still receives the records.
+  A timeout, invalid parameters and a request that the registration rejects
+  log a warning. Any other exception logs an error. The log names the class of
+  the exception, and for the error also the stack frames, but never the message
+  of the exception, because a message can hold a value that the user typed. The
+  tab shows the message only with the Dash dev tools on, see Security. Each tab
+  render writes one `DEBUG` line with the tab ID and the layout ID. Before,
+  every render wrote the full request, with every parameter value, at `INFO`.
+  The logger name is now `dash_prism.app_init`, so a handler on `dash_prism`
+  still receives the records.
+- The warning for invalid parameters names each invalid parameter with its
+  pydantic error type, for example `n (int_parsing)`. It names only the
+  declared parameter at the start of a field path, so a key of a dict
+  parameter is not in the log. An alias of a model field gives the name of the
+  field. A parameter name that the layout does not declare is written as
+  `<undeclared>`. The user can type both.
+- A `TypeError` or a `ValueError` that a layout function raises logs an error
+  with the stack frames, like any other exception of the layout. Before, it was
+  not logged. The tab shows it like any other exception of the layout, see
+  Security. Before, the tab showed the message of a `ValueError` with no
+  prefix.
+- When the function in `app.layout` raises an exception during a page request,
+  the log has the class and the stack frames of the exception, but not its
+  message. The call of that function in `init()` keeps the full traceback,
+  because no request exists at that time.
+- The exception messages of `register_layout`, of `init`, of a choice
+  declaration and of a request that the registration rejects have a new form.
+  A message states the condition that failed, then the values as `name=value`,
+  for example `Layout is already registered: layout_id='home'`. A message names
+  a field of the browser request as `Request field layoutOption` and an
+  argument of `register_layout` by its Python name, such as `param_options`.
+  The text that a tab shows for an unknown layout is now `Layout is not
+  registered: layout_id='...'`, and the first line of a `ParamValidationError`
+  message is `Invalid parameters: layout_id='...'`. In the messages of
+  `InvalidWorkspaceError`, a panel ID is now in quotes, for example
+  `panel (id='p1'): 'children' must be a list`. The timeout text, the
+  `Error rendering layout ...` text, the panel for invalid parameters and the
+  warnings of `init` keep their form. Code or tests that matched the old text
+  must change.
 - The module `dash_prism.init` is now `dash_prism.app_init`. The function
   `dash_prism.init` and the other public names are the same. Code that wrote
   `from dash_prism.init import ...` must import the public names from
@@ -265,6 +303,21 @@ All notable changes to Dash Prism are recorded here. The project follows
   utility class `collapse` made it invisible. Other class names of CSS
   frameworks such as Bootstrap (`container`, `border`, `rounded` and
   more) no longer get Prism styles in a tab too.
+
+### Security
+
+- When a layout function raises an exception, the tab shows the message of the
+  exception only when the Dash dev tools UI is on, for example after
+  `app.run(debug=True)`. Otherwise the tab shows
+  `Error rendering layout '<id>'.` and `The server log has the details.`
+  Before, the tab always showed the message, and a message can hold data that a
+  user must not see. Prism reads the switch of the app that `init()` connects,
+  at each request. A background callback always shows the text without the
+  message. The texts that Prism writes itself do not change: the message for a
+  request that does not agree with the registration, the timeout message, the
+  "Invalid parameters" panel and the message for an async layout that cannot
+  run in a sync app. The section "Layout Errors" of the user guide describes
+  the behavior.
 
 ## 1.0.0
 

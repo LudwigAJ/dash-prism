@@ -380,7 +380,9 @@ def test_empty_choices_are_rejected_at_registration():
     def layout(x: Annotated[str, Param(choices=[])], n: int):
         return html.Div()
 
-    with pytest.raises(ValueError, match=r"parameter 'x' declares Param\(choices=\[\]\)"):
+    with pytest.raises(
+        ValueError, match=r"Param\(choices=\.\.\.\) is an empty list: .*parameter='x'"
+    ):
         prism_params.build_validator("empty-choices", prism_params.introspect_callable(layout))
 
 
@@ -456,7 +458,7 @@ def test_scalar_choices_on_a_collection_parameter_are_rejected():
     def layout(tags: Annotated[list[str], Param(choices=["a", "b"])]):
         return html.Div()
 
-    with pytest.raises(ValueError, match="is a collection"):
+    with pytest.raises(ValueError, match="holds a value that is not a collection"):
         prism_params.build_validator("array-choices", prism_params.introspect_callable(layout))
 
 
@@ -480,7 +482,7 @@ def test_choices_that_contradict_the_annotation_are_rejected():
     def layout(x: Annotated[Optional[Literal["a", "b"]], Param(choices=["a", "b", "c"])] = None):
         return html.Div()
 
-    with pytest.raises(ValueError, match="declares its choices twice"):
+    with pytest.raises(ValueError, match="and the annotation allow different values"):
         prism_params.build_validator(
             "conflicting-choices", prism_params.introspect_callable(layout)
         )
@@ -502,7 +504,7 @@ def test_choices_that_match_the_annotation_are_allowed():
 def test_a_bad_choice_declaration_fails_the_registration_itself():
     """The error must name the parameter and reach the decorator, not the request."""
 
-    with pytest.raises(ValueError, match=r"parameter 'tags'"):
+    with pytest.raises(ValueError, match=r"parameter='tags'"):
 
         @dash_prism.register_layout(id="bad-choices", name="Bad")
         def layout(tags: Annotated[list[str], Param(choices=["a", "b"])]):
@@ -644,7 +646,7 @@ def test_a_genuinely_different_choice_list_is_still_a_contradiction():
     def layout(x: Annotated[Literal["a", "b"], Param(choices=["b", "c"])] = "a"):
         return html.Div()
 
-    with pytest.raises(ValueError, match="declares its choices twice"):
+    with pytest.raises(ValueError, match="and the annotation allow different values"):
         prism_params.build_validator("still-conflicting", prism_params.introspect_callable(layout))
 
 

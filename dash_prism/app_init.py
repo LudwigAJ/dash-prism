@@ -34,7 +34,6 @@ import hashlib
 import inspect
 import logging
 import math
-import traceback
 import warnings
 import weakref
 from collections.abc import Awaitable, Callable, Iterable
@@ -43,9 +42,7 @@ from typing import Any, ParamSpec, TypeVar, cast
 from dash import MATCH, Dash, Input, Output, html
 from dash.exceptions import PreventUpdate
 
-# dash_prism/__init__.py imports this module before it rebinds the name
-# ``registry`` to the registry object, so this import gets the module.
-from dash_prism import layout_tree, params, registry
+from dash_prism import layout_registry, layout_tree, params
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +82,14 @@ class InitializationError(Exception):
     names a layout that is not in the registry.
 
     ``init`` reports the problems together, one for each line of the message.
+    """
+
+
+class _RenderSetupError(RuntimeError):
+    """A setup of the Dash app that stops Prism from running a layout callback.
+
+    Prism writes the message, and the message holds no value that the user
+    typed. Thus the log and the tab both show it.
     """
 
 
@@ -167,7 +172,8 @@ def _create_layout_wrapper(
     The wrapper keeps the signature (``_P``) and the return type (``_R``) of the
     original layout function. It changes only the tree that the function
     returns. If the original layout function raises an exception, the wrapper
-    writes the traceback to the log and raises the same exception again.
+    writes the class and the stack frames of the exception to the log, and
+    raises the same exception again.
 
     :param original_layout: The layout function to wrap.
     :type original_layout: Callable
@@ -191,8 +197,10 @@ def _create_layout_wrapper(
             try:
                 # _R is the coroutine type for an async layout. mypy cannot see that.
                 tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
-            except Exception:
-                logger.exception("Error in async layout function")
+            except Exception as exc:
+                logger.error(
+                    "app.layout raised %s\n%s", type(exc).__name__, params.format_frames(exc)
+                )
                 raise
 
             return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
@@ -204,8 +212,10 @@ def _create_layout_wrapper(
         def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             try:
                 tree = original_layout(*args, **kwargs)
-            except Exception:
-                logger.exception("Error in sync layout function")
+            except Exception as exc:
+                logger.error(
+                    "app.layout raised %s\n%s", type(exc).__name__, params.format_frames(exc)
+                )
                 raise
 
             return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
@@ -255,6 +265,8 @@ def _get_layout_root(app: Dash) -> Any | None:
             UserWarning,
             stacklevel=3,
         )
+        # The log keeps the message, because init() runs with no request, so the
+        # message cannot hold a value that a user typed.
         logger.exception("Failed to call app.layout() while searching for Prism")
         return None
 
@@ -297,16 +309,16 @@ def _validate_init(app: Dash, prism_id: str) -> list[str]:
     errors: list[str] = []
 
     if not hasattr(app, "callback"):
-        errors.append("Invalid 'app' argument: expected a Dash application instance")
+        errors.append(
+            "app has no callback attribute, and init() needs a Dash app: "
+            f"type={type(app).__name__!r}"
+        )
 
     if not prism_id or not isinstance(prism_id, str):
-        errors.append("Invalid 'prism_id': must be a non-empty string")
+        errors.append(f"prism_id is not a non-empty string: {prism_id=}")
 
     if not hasattr(app, "layout") or app.layout is None:
-        errors.append(
-            "app.layout must be set before calling init(). "
-            "Make sure you define app.layout = ... before calling dash_prism.init()"
-        )
+        errors.append("app.layout is not set. Set app.layout before the call to dash_prism.init().")
 
     return errors
 
@@ -370,7 +382,7 @@ def _check_registry(prism_component: Any | None) -> None:
     :raises InitializationError: If ``initialLayout`` names a layout that is not
         in the registry.
     """
-    if not registry.registry:
+    if not layout_registry.registry:
         warnings.warn(
             "No layouts registered. Register layouts with "
             "@dash_prism.register_layout() before calling init().",
@@ -381,11 +393,11 @@ def _check_registry(prism_component: Any | None) -> None:
     initial_layout = getattr(prism_component, "initialLayout", None)
     if initial_layout is None:
         return
-    if initial_layout not in registry.registry:
+    if initial_layout not in layout_registry.registry:
         raise InitializationError(
-            f"initialLayout '{initial_layout}' not found in registered layouts. "
-            f"Available layouts: {sorted(registry.registry)}. "
-            "Register the layout with @dash_prism.register_layout() before calling init()."
+            f"initialLayout is not a registered layout: initialLayout={initial_layout!r}, "
+            f"registered={sorted(layout_registry.registry)}. Register the layout with "
+            "dash_prism.register_layout() before the call to dash_prism.init()."
         )
     logger.info("Initial layout '%s' validated successfully", initial_layout)
 
@@ -433,8 +445,8 @@ def _attach_metadata(app: Dash, prism_id: str) -> None:
     :param prism_id: The ID of the Prism component.
     :type prism_id: str
     """
-    layouts_metadata = registry.get_registered_layouts_metadata()
-    session_id = _compute_server_session_id(registry.registry)
+    layouts_metadata = layout_registry.get_registered_layouts_metadata()
+    session_id = _compute_server_session_id(layout_registry.registry)
     original_layout = app.layout
 
     if not callable(original_layout):
@@ -558,7 +570,7 @@ def _run_callback(
     :rtype: Any
     :raises TimeoutError: If an async callback takes more than ``timeout``
         seconds.
-    :raises RuntimeError: If ``is_async`` is ``True`` and an event loop is
+    :raises _RenderSetupError: If ``is_async`` is ``True`` and an event loop is
         already in operation in this thread. ``asyncio.run()`` cannot start a
         second loop. To correct this, set ``use_async=True`` on the Dash app, or
         make the layout callback sync.
@@ -576,10 +588,10 @@ def _run_callback(
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(_run_callback_async(callback, is_async, kwargs, timeout))
-    raise RuntimeError(
-        "Cannot run async layout callback from within an existing event loop "
-        "(for example Jupyter or uvicorn). Either set use_async=True on your Dash app, "
-        "or make the layout callback synchronous."
+    raise _RenderSetupError(
+        "An event loop is already running in this thread, so asyncio.run() cannot run "
+        "the async layout callback. Set use_async=True on the Dash app, or make the "
+        "layout callback sync."
     )
 
 
@@ -680,17 +692,78 @@ def _create_validation_error_component(layout_id: str, error: params.ParamValida
     )
 
 
-def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
+def _invalid_fields_for_log(error: params.ParamValidationError) -> str:
+    """Name each invalid parameter and its error type, without a value that the user typed.
+
+    The path of a field can hold a key from the input, for example a key of a
+    dict parameter, or the name of a parameter that the layout does not
+    declare. The log thus names only the parameter at the start of the path.
+    An alias of a model field gives the name of that field. The ``<root>``
+    path of an error for the whole model stays ``<root>``. Each other path
+    becomes ``<undeclared>``.
+
+    :param error: The validation error of one render.
+    :type error: ParamValidationError
+    :returns: One ``name (error type)`` entry for each invalid field, separated
+        by commas.
+    :rtype: str
+    """
+    # Maps each name that a request can use for a parameter to the declared name.
+    declared = {"<root>": "<root>"}
+    registration = layout_registry.get_layout(error.layout_id)
+    if registration is not None:
+        declared.update((p.name, p.name) for p in registration.parameters)
+        if registration.validator is not None:
+            for name, info in registration.validator.model.model_fields.items():
+                for alias in (info.alias, info.validation_alias):
+                    if isinstance(alias, str):
+                        declared[alias] = name
+    entries = []
+    for field_error in error.errors:
+        name = declared.get(field_error.field.partition(".")[0], "<undeclared>")
+        entries.append(f"{name} ({field_error.code})")
+    return ", ".join(entries)
+
+
+def _dev_tools_ui(app: Dash) -> bool:
+    """Tell if the dev tools UI of a Dash app is on.
+
+    Dash shows the traceback of a failed callback in the browser only when its
+    dev tools UI is on, for example after ``app.run(debug=True)``. Prism uses the
+    same switch for the message of an unexpected exception, because the message
+    can hold data that a production app must not show. The render callback calls
+    this function at each request, because ``app.run`` sets the switch after
+    :func:`init`.
+
+    :param app: The Dash app that :func:`init` connected.
+    :type app: Dash
+    :returns: ``True`` if the dev tools UI of ``app`` is on.
+    :rtype: bool
+    """
+    # Dash keeps the dev tools settings in a private attribute.
+    dev_tools = getattr(app, "_dev_tools", None) or {}
+    return bool(dev_tools.get("ui", False))
+
+
+def _error_component_for(
+    exc: Exception, layout_id: str, timeout: float, show_details: bool = False
+) -> Any:
     """Make the component that a tab shows when its layout failed.
 
     The function selects the component from the class of the exception. There
     is one component for a timeout, one for parameters that are not valid, and
     one for every other exception. The function writes each failure to the log
-    one time. A failure of the request or of the parameters gets a warning. Any
-    other exception gets an error with the class of the exception and its stack
-    frames. No log line holds an exception message or a parameter value,
-    because both can hold values that the user typed. The tab shows the
-    message.
+    one time. A timeout, a request that the registration rejects and invalid
+    parameters get a warning. Any other exception is unexpected, and gets an
+    error with the class of the exception and its stack frames. A ``TypeError``
+    or a ``ValueError`` of the layout callback is such an exception. No log line
+    holds an exception message, a parameter value or a key from the input,
+    because each can hold a value that the user typed.
+
+    The tab shows the message of an unexpected exception only when
+    ``show_details`` is ``True``. The texts that Prism writes itself always show.
+    A :class:`_RenderSetupError` gets an error with its message, because Prism
+    writes that message.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -699,6 +772,9 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     :param timeout: The count of seconds that the layout callback could take.
         The error message for a timeout includes this value.
     :type timeout: float
+    :param show_details: If ``True``, the tab shows the message of an
+        unexpected exception. :func:`_dev_tools_ui` gives the value.
+    :type show_details: bool
     :returns: The error component for the tab.
     :rtype: Any
     """
@@ -708,29 +784,32 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
         )
-    # ParamValidationError is a subclass of ValueError, so it must come first.
     if isinstance(exc, params.ParamValidationError):
-        # The message of the exception holds the input values, so log the field names only.
-        fields = ", ".join(error.field for error in exc.errors)
-        logger.warning("Layout %r has invalid parameters: %s", layout_id, fields)
+        logger.warning(
+            "Layout %r has invalid parameters: %s", layout_id, _invalid_fields_for_log(exc)
+        )
         return _create_validation_error_component(layout_id, exc)
-    if isinstance(exc, TypeError):
-        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
-        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
-    if isinstance(exc, ValueError):
-        # resolve_layout_params writes its ValueError messages for the user, so
-        # the tab shows them as they are.
-        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
+    if isinstance(exc, layout_registry._LayoutRequestError):
+        # resolve_layout_params writes these messages for the user, so the tab
+        # shows them as they are.
+        logger.warning("Layout %r: the registration rejected the render request", layout_id)
         return _create_error_component(str(exc))
-    # The log must not hold the message, so it gets the frames and not exc_info.
-    frames = "".join(traceback.format_tb(exc.__traceback__))
-    logger.error("Layout %r failed with %s\n%s", layout_id, type(exc).__name__, frames)
-    return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    if isinstance(exc, _RenderSetupError):
+        logger.error("Layout %r cannot run: %s", layout_id, exc)
+        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    logger.error(
+        "Layout %r failed with %s\n%s", layout_id, type(exc).__name__, params.format_frames(exc)
+    )
+    if show_details:
+        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    return _create_error_component(
+        f"Error rendering layout '{layout_id}'.\nThe server log has the details."
+    )
 
 
 def _lookup_and_resolve(
     layout_id: str, layout_params: dict[str, Any] | None, layout_option: str | None
-) -> tuple[registry.LayoutRegistration, dict[str, Any]]:
+) -> tuple[layout_registry.LayoutRegistration, dict[str, Any]]:
     """Read the registration of a layout, and resolve the parameters of a tab.
 
     The sync render path and the async render path use this function, so they
@@ -746,14 +825,16 @@ def _lookup_and_resolve(
     :returns: The registration, and the keyword arguments for the layout
         callback.
     :rtype: tuple[LayoutRegistration, dict[str, Any]]
-    :raises ValueError: If the layout is not registered, or if the request does
-        not agree with the registration.
+    :raises _LayoutRequestError: If the layout is not registered, or if the
+        request does not agree with the registration.
     :raises ParamValidationError: If a parameter value is not valid.
     """
-    registration = registry.get_layout(layout_id)
+    registration = layout_registry.get_layout(layout_id)
     if registration is None:
-        raise ValueError(f"Layout '{layout_id}' not found")
-    resolved_params = registry.resolve_layout_params(registration, layout_params, layout_option)
+        raise layout_registry._LayoutRequestError(f"Layout is not registered: {layout_id=}")
+    resolved_params = layout_registry.resolve_layout_params(
+        registration, layout_params, layout_option
+    )
     return registration, resolved_params
 
 
@@ -763,6 +844,7 @@ def _render_tab_layout(
     layout_params: dict[str, Any] | None,
     layout_option: str | None = None,
     timeout: float = DEFAULT_LAYOUT_TIMEOUT,
+    show_details: bool = False,
 ) -> Any:
     """Render the layout of a tab (SYNC version).
 
@@ -788,6 +870,9 @@ def _render_tab_layout(
     :param timeout: The maximum count of seconds for an async layout callback.
         A sync layout callback has no timeout on this path.
     :type timeout: float
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree of the tab. The function returns ``None``
         if ``layout_id`` is empty. It returns an error component if the layout
         is not in the registry, or if the render failed.
@@ -806,7 +891,7 @@ def _render_tab_layout(
             layout = copy.deepcopy(registration.layout)
         return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
-        return _error_component_for(exc, layout_id, timeout)
+        return _error_component_for(exc, layout_id, timeout, show_details)
 
 
 async def _render_tab_layout_async(
@@ -815,6 +900,7 @@ async def _render_tab_layout_async(
     layout_params: dict[str, Any] | None,
     layout_option: str | None = None,
     timeout: float = DEFAULT_LAYOUT_TIMEOUT,
+    show_details: bool = False,
 ) -> Any:
     """Render the layout of a tab (ASYNC version).
 
@@ -834,6 +920,9 @@ async def _render_tab_layout_async(
     :param timeout: The maximum count of seconds for the layout callback. The
         timeout applies to a sync layout callback and to an async one.
     :type timeout: float
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree of the tab. The function returns ``None``
         if ``layout_id`` is empty. It returns an error component if the layout
         is not in the registry, or if the render failed.
@@ -852,10 +941,10 @@ async def _render_tab_layout_async(
             layout = copy.deepcopy(registration.layout)
         return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
-        return _error_component_for(exc, layout_id, timeout)
+        return _error_component_for(exc, layout_id, timeout, show_details)
 
 
-def _render_content_request(content_id: Any, data: Any) -> Any:
+def _render_content_request(content_id: Any, data: Any, show_details: bool = False) -> Any:
     """Handle one render request in SYNC mode (the body of the Dash callback).
 
     The function stays at module level, so a test can call the body of the
@@ -866,6 +955,9 @@ def _render_content_request(content_id: Any, data: Any) -> Any:
     :type content_id: Any
     :param data: The ``data`` prop of the ``PrismContent`` component.
     :type data: Any
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree for the ``children`` prop of the
         ``PrismContent`` component.
     :rtype: Any
@@ -875,13 +967,17 @@ def _render_content_request(content_id: Any, data: Any) -> Any:
     tab_id, layout_id, layout_params, layout_option, timeout = _parse_content_request(
         content_id, data
     )
-    result = _render_tab_layout(tab_id, layout_id, layout_params, layout_option, timeout)
+    result = _render_tab_layout(
+        tab_id, layout_id, layout_params, layout_option, timeout, show_details
+    )
     if result is None:
         raise PreventUpdate
     return result
 
 
-async def _render_content_request_async(content_id: Any, data: Any) -> Any:
+async def _render_content_request_async(
+    content_id: Any, data: Any, show_details: bool = False
+) -> Any:
     """Handle one render request in ASYNC mode (the body of the Dash callback).
 
     The function stays at module level, so a test can call the body of the
@@ -892,6 +988,9 @@ async def _render_content_request_async(content_id: Any, data: Any) -> Any:
     :type content_id: Any
     :param data: The ``data`` prop of the ``PrismContent`` component.
     :type data: Any
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree for the ``children`` prop of the
         ``PrismContent`` component.
     :rtype: Any
@@ -902,7 +1001,7 @@ async def _render_content_request_async(content_id: Any, data: Any) -> Any:
         content_id, data
     )
     result = await _render_tab_layout_async(
-        tab_id, layout_id, layout_params, layout_option, timeout
+        tab_id, layout_id, layout_params, layout_option, timeout, show_details
     )
     if result is None:
         raise PreventUpdate
@@ -929,7 +1028,7 @@ def _register_render_callback(app: Dash, background: bool) -> None:
     """
     use_async = _is_app_async(app)
 
-    if not use_async and any(reg.is_async for reg in registry.registry.layouts.values()):
+    if not use_async and any(reg.is_async for reg in layout_registry.registry.layouts.values()):
         warnings.warn(
             "Some registered layouts use async callbacks but the Dash app "
             "is not configured for async (use_async=True). Async layouts "
@@ -955,22 +1054,32 @@ def _register_render_callback(app: Dash, background: bool) -> None:
         background=background,
     )
 
+    # The callback reads the switch of this app, and not of the app that
+    # dash.get_app() finds, because a process can hold more than one app. A
+    # background callback goes to another process, so its closure must not
+    # hold the app, and its error tab always shows the generic text.
+    show_details: Callable[[], bool] = (
+        (lambda: False) if background else functools.partial(_dev_tools_ui, app)
+    )
+
     if use_async:
 
         @register
         async def render_prism_content_async(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this async callback."""
-            return await _render_content_request_async(content_id, data)
+            return await _render_content_request_async(content_id, data, show_details())
 
     else:
 
         @register
         def render_prism_content(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this sync callback."""
-            return _render_content_request(content_id, data)
+            return _render_content_request(content_id, data, show_details())
 
     mode = "async" if use_async else "sync"
-    logger.info("Prism initialized with %d layout(s) [%s mode]", len(registry.registry), mode)
+    logger.info(
+        "Prism initialized with %d layout(s) [%s mode]", len(layout_registry.registry), mode
+    )
 
 
 def init(prism_id: str, app: Dash, background: bool = False) -> None:
