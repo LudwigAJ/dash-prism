@@ -48,6 +48,9 @@ module.exports = function (env, argv) {
         plugins: [
             new webpack.DefinePlugin({
                 'process.env.APP_VERSION': JSON.stringify(packagejson.version),
+                // `--env strict` wraps Prism in React.StrictMode for the StrictMode test run. A
+                // release build never sets it, because StrictMode also applies to the tab content.
+                'process.env.PRISM_STRICT_MODE': JSON.stringify(String(Boolean(env && env.strict))),
             }),
             new CopyPlugin({
                 patterns: [

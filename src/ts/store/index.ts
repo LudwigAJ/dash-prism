@@ -55,14 +55,20 @@ const UNDO_EXCLUDED_ACTIONS = [
 /**
  * Creates a configured Redux store with persistence, undo/redo, and middleware.
  *
+ * The creation has no side effects, because React can call a state initializer two times and
+ * keep one result. `start` begins the rehydration and the flush of a pending sync on page unload.
+ *
  * @example
  * ```tsx
- * const { store, persistor } = createPrismStore({
- *   componentId: 'my-prism',
- *   persistenceType: 'local',
- *   maxTabs: 16,
- *   setProps: dashSetProps,
- * });
+ * const [{ store, persistor, start }] = useState(() =>
+ *   createPrismStore({
+ *     componentId: 'my-prism',
+ *     persistenceType: 'local',
+ *     maxTabs: 16,
+ *     setProps: dashSetProps,
+ *   })
+ * );
+ * useEffect(() => start(), [start]);
  * ```
  */
 export function createPrismStore(config: StoreConfig) {
@@ -128,7 +134,6 @@ export function createPrismStore(config: StoreConfig) {
     },
   };
 
-  // Create dash sync middleware (returns middleware + cleanup function)
   const dashSync = createDashSyncMiddleware(setProps);
 
   // Reconcile the rehydrated workspace with the server's layout registry.
@@ -164,19 +169,27 @@ export function createPrismStore(config: StoreConfig) {
   // (the persist lifecycle, or the resetWorkspace() that validationMiddleware
   // dispatches for corrupt persisted data) is one undo away, and the user's
   // first real action can be undone back to exactly what was loaded.
-  const persistor = persistStore(store, undefined, () => {
+  const persistor = persistStore(store, { manualPersist: true }, () => {
     store.dispatch(UndoActionCreators.clearHistory());
   });
 
+  // redux-persist starts a rehydration timeout for each PERSIST. When the timeout of a second
+  // PERSIST ends, redux-persist dispatches a REHYDRATE with an error, so the store persists one time.
+  let persistStarted = false;
+
   /**
-   * Cleanup function to dispose of store resources.
-   * Call this when unmounting the Prism component to prevent memory leaks.
+   * Starts the rehydration and connects the Dash sync to the page. Returns the function that
+   * disconnects the Dash sync. A start after that function only connects the Dash sync again.
    */
-  const cleanup = () => {
-    dashSync.cleanup();
+  const start = () => {
+    if (!persistStarted) {
+      persistStarted = true;
+      persistor.persist();
+    }
+    return dashSync.connect();
   };
 
-  return { store, persistor, cleanup };
+  return { store, persistor, start };
 }
 
 // Type Exports

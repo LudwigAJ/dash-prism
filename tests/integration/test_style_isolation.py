@@ -308,6 +308,8 @@ def test_inactive_tab_does_not_extend_the_scroll_area_of_the_panel(dash_duo):
     assert scroll_height == client_height, "The hidden tab adds a scroll bar to the panel"
 
 
+# In StrictMode, React reports the legacy lifecycle method of dcc.Graph.
+@pytest.mark.allow_console_errors("UNSAFE_componentWillReceiveProps")
 def test_inactive_tab_keeps_the_size_of_its_graph(dash_duo):
     """The content of a background tab keeps a real width, so a Plotly graph lays out."""
     duo = _start_app(

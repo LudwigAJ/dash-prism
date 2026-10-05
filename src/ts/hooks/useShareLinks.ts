@@ -20,6 +20,12 @@ import {
 const MAX_SHARE_DATA_BYTES = 4096;
 
 /**
+ * Identifies the error toast of an invalid link. Only a valid link clears the hash, so a second
+ * read of the same hash replaces the error toast and does not add a second one.
+ */
+const INVALID_LINK_TOAST_ID = 'invalid-share-link';
+
+/**
  * Encodes string to base64 using TextEncoder (modern, UTF-8 safe).
  * Returns null if data exceeds size limit.
  */
@@ -223,7 +229,10 @@ export function useShareLink() {
     // Validate and decode
     const decoded = decodeShareData(encoded);
     if (!decoded) {
-      toast('error', 'Invalid share link: decoding failed', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: decoding failed', {
+        logLevel: 'warn',
+        id: INVALID_LINK_TOAST_ID,
+      });
       return;
     }
 
@@ -231,13 +240,19 @@ export function useShareLink() {
     try {
       shareData = JSON.parse(decoded);
     } catch {
-      toast('error', 'Invalid share link: malformed data', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: malformed data', {
+        logLevel: 'warn',
+        id: INVALID_LINK_TOAST_ID,
+      });
       return;
     }
 
     // Type-safe validation
     if (!isValidShareData(shareData)) {
-      toast('error', 'Invalid share link: missing or invalid fields', { logLevel: 'warn' });
+      toast('error', 'Invalid share link: missing or invalid fields', {
+        logLevel: 'warn',
+        id: INVALID_LINK_TOAST_ID,
+      });
       return;
     }
 
@@ -278,7 +293,8 @@ export function useShareLinkListener() {
   // Read the hash one time on mount, for a link that the user opens in a new browser tab. The
   // store is already rehydrated, because PersistGate mounts this hook only after that. The
   // function changes with the active panel. It is not a dependency, because only a valid link
-  // clears the hash, and each new call would show the error of an invalid link again.
+  // clears the hash, and each new call would show the error of an invalid link again. React
+  // StrictMode runs this effect two times, and then the toast ID keeps one error toast.
   useEffect(() => {
     if (enableShareLinks) processShareHash();
     // eslint-disable-next-line react-hooks/exhaustive-deps

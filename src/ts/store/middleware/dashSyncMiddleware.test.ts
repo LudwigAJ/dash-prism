@@ -7,7 +7,8 @@
  * - Deduplication via serialization comparison
  * - Syncs on workspace and undo/redo actions
  * - Does not sync on UI-only actions
- * - Cleanup clears a pending sync
+ * - A connected middleware sends a pending sync on page unload, also after a reconnect
+ * - A disconnect drops a pending sync
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -18,7 +19,10 @@ import { activateTab, removeTab } from '@store/workspaceSlice';
 import { addTab, splitPanel } from '@store/workspaceThunks';
 import { setSearchBarMode, openHelpModal } from '@store/uiSlice';
 import { createDashSyncMiddleware, isWorkspaceChange } from './dashSyncMiddleware';
-import { createTestStore, PANEL_1, TAB_1, TAB_2, type TestStore } from '@store/testing';
+import { createTestStore, PANEL_1, TAB_1, type TestStore } from '@store/testing';
+
+// connect() listens for page unload on window, and the tests run in node.
+vi.stubGlobal('window', new EventTarget());
 
 function createSyncedStore(setProps?: (props: Record<string, unknown>) => void) {
   const dashSync = createDashSyncMiddleware(setProps);
@@ -33,7 +37,7 @@ function createSyncedStore(setProps?: (props: Record<string, unknown>) => void) 
   };
 
   const store = createTestStore(undefined, { middleware: [dashSync.middleware, recorder] });
-  return { store, cleanup: dashSync.cleanup, dispatched };
+  return { store, connect: dashSync.connect, dispatched };
 }
 
 describe('dashSyncMiddleware', () => {
@@ -234,36 +238,57 @@ describe('dashSyncMiddleware', () => {
     });
   });
 
-  describe('cleanup', () => {
-    it('clears pending debounced sync', () => {
+  describe('page unload', () => {
+    /** Sends the first sync at once and leaves a second sync pending. */
+    async function makePendingSync(store: TestStore) {
+      const panelId = store.getState().workspace.present.activePanelId;
+      await store.dispatch(addTab({ panelId, name: 'Tab 1' }));
+      await store.dispatch(addTab({ panelId, name: 'Tab 2' }));
+    }
+
+    it('sends the pending sync at once when the page unloads', async () => {
       const setProps = vi.fn();
-      const { store, cleanup } = createSyncedStore(setProps);
+      const { store, connect } = createSyncedStore(setProps);
+      const disconnect = connect();
 
-      // First action - immediate
-      store.dispatch(activateTab({ tabId: TAB_1, panelId: PANEL_1 }));
+      await makePendingSync(store);
       expect(setProps).toHaveBeenCalledTimes(1);
 
-      // Second action - debounced
-      store.dispatch(activateTab({ tabId: TAB_2, panelId: PANEL_1 }));
-      expect(setProps).toHaveBeenCalledTimes(1);
+      window.dispatchEvent(new Event('pagehide'));
+      expect(setProps).toHaveBeenCalledTimes(2);
 
-      // Cleanup before debounce fires
-      cleanup();
-
-      // Advance timer - should NOT sync because cleanup cleared the timeout
+      // The timer of the flushed sync does not send the same workspace again.
       vi.advanceTimersByTime(500);
-      expect(setProps).toHaveBeenCalledTimes(1);
+      expect(setProps).toHaveBeenCalledTimes(2);
+      disconnect();
     });
 
-    it('can be called multiple times safely', () => {
-      const { cleanup } = createSyncedStore(undefined);
+    // React StrictMode runs the effect that connects the middleware, its cleanup and the effect
+    // again.
+    it('sends the pending sync on unload after a reconnect', async () => {
+      const setProps = vi.fn();
+      const { store, connect } = createSyncedStore(setProps);
+      connect()();
+      const disconnect = connect();
 
-      // Should not throw
-      expect(() => {
-        cleanup();
-        cleanup();
-        cleanup();
-      }).not.toThrow();
+      await makePendingSync(store);
+      window.dispatchEvent(new Event('beforeunload'));
+
+      expect(setProps).toHaveBeenCalledTimes(2);
+      disconnect();
+    });
+
+    it('drops the pending sync and ignores the unload after a disconnect', async () => {
+      const setProps = vi.fn();
+      const { store, connect } = createSyncedStore(setProps);
+      const disconnect = connect();
+
+      await makePendingSync(store);
+      disconnect();
+
+      vi.advanceTimersByTime(500);
+      window.dispatchEvent(new Event('pagehide'));
+      expect(setProps).toHaveBeenCalledTimes(1);
     });
   });
 

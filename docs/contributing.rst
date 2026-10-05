@@ -88,6 +88,33 @@ options. ``pnpm run test:ts:coverage`` writes the Vitest coverage report. That
 report includes the ``.tsx`` files, but the Vitest tests do not render
 components. Thus the figure for the components is low.
 
+React StrictMode
+----------------
+
+In a development build of React, StrictMode runs each render, each state
+initializer and each effect two times. A side effect in a render, or an effect
+without a correct cleanup, then shows as a defect. The CI job ``Test React
+StrictMode`` runs the integration tests with Prism in StrictMode. To run the
+same check on your computer:
+
+.. code-block:: bash
+
+   pnpm run build:strict
+   pnpm run test:integration:strict
+   pnpm run build
+
+``pnpm run build:strict`` writes a development bundle that wraps Prism in
+``React.StrictMode``. ``pnpm run test:integration:strict`` sets
+``PRISM_STRICT_MODE=1``. Then ``testutils.start_app`` makes Dash serve the
+development build of React, and it makes sure that Prism runs in StrictMode.
+The last command writes the release bundle again.
+
+The release bundle does not wrap Prism in StrictMode. StrictMode also applies
+to the Dash components in the tabs. Dash serves the development build of React
+to an app with ``debug=True``. Thus the components of that app, for example
+``dcc.Graph``, would run their effects two times and write StrictMode warnings
+to the console.
+
 Code Style
 ----------
 

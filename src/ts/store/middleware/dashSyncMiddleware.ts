@@ -36,11 +36,14 @@ export function isWorkspaceChange(action: Action): boolean {
   );
 }
 
-/** Holds the Dash sync middleware and the function that stops it. */
+/** Holds the Dash sync middleware and the function that connects it to the page. */
 export interface DashSyncMiddlewareResult {
   middleware: Middleware<object, RootState>;
-  /** Cleans up the event listeners and pending timeouts. */
-  cleanup: () => void;
+  /**
+   * Starts the flush of a pending sync on page unload. Returns the function that stops the flush
+   * and drops the pending sync.
+   */
+  connect: () => () => void;
 }
 
 /**
@@ -51,9 +54,10 @@ export interface DashSyncMiddlewareResult {
  * - Each later change starts the `DEBOUNCE_MS` timer again, so a burst of changes such as a drag
  *   or a resize sends one Dash request.
  * - A workspace that serializes to the last synced JSON is not sent again.
- * - A pending sync goes out when the page unloads.
+ * - A pending sync goes out when the page unloads, while the middleware is connected.
  *
- * Call `cleanup` when the store goes away.
+ * The creation adds no listener, because React can create a store and then discard it. Call
+ * `connect` in an effect, and call the function that it returns in the cleanup of that effect.
  */
 export function createDashSyncMiddleware(
   setProps: ((props: Record<string, unknown>) => void) | undefined
@@ -62,7 +66,6 @@ export function createDashSyncMiddleware(
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let isFirstSync = true;
   let pendingWorkspace: Workspace | null = null;
-  let flushPendingSync: (() => void) | null = null;
 
   const doSync = (workspace: Workspace) => {
     if (!setProps) return;
@@ -73,38 +76,24 @@ export function createDashSyncMiddleware(
     pendingWorkspace = null;
   };
 
-  // Flush pending sync on page unload
-  if (typeof window !== 'undefined') {
-    flushPendingSync = () => {
-      if (pendingWorkspace) {
-        if (timeoutId) clearTimeout(timeoutId);
-        doSync(pendingWorkspace);
-      }
-    };
+  const flushPendingSync = () => {
+    if (!pendingWorkspace) return;
+    if (timeoutId) clearTimeout(timeoutId);
+    doSync(pendingWorkspace);
+  };
+
+  // React StrictMode disconnects and connects again right after the mount. The disconnect keeps
+  // lastSyncedJson, so the middleware does not send the same workspace again after it reconnects.
+  const connect = () => {
     window.addEventListener('beforeunload', flushPendingSync);
     window.addEventListener('pagehide', flushPendingSync);
-  }
-
-  /**
-   * Cleanup function to remove event listeners and clear pending timeouts.
-   * Should be called when the store is being disposed (e.g., component unmount).
-   */
-  const cleanup = () => {
-    // Clear any pending debounced sync
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-
-    // Remove event listeners
-    if (typeof window !== 'undefined' && flushPendingSync) {
+    return () => {
       window.removeEventListener('beforeunload', flushPendingSync);
       window.removeEventListener('pagehide', flushPendingSync);
-    }
-
-    // Clear references
-    pendingWorkspace = null;
-    lastSyncedJson = '';
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = null;
+      pendingWorkspace = null;
+    };
   };
 
   const middleware: Middleware<object, RootState> = (store) => (next) => (action: unknown) => {
@@ -141,7 +130,7 @@ export function createDashSyncMiddleware(
     return result;
   };
 
-  return { middleware, cleanup };
+  return { middleware, connect };
 }
 
 /**

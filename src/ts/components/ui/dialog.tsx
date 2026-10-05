@@ -2,6 +2,8 @@
  * @fileoverview Dialog primitives from shadcn/ui, built on Radix.
  * Local changes: each utility class has the `tw:` prefix. The portal renders in the portal
  * container of the Prism root, so that the dialog takes the theme of its own Prism instance.
+ * `DialogOverlay` uses `forwardRef`, because the Radix portal gives its child a ref, and React 18
+ * gives a ref to a function component only through `forwardRef`.
  * `DialogTrigger`, `DialogClose`, `DialogOverlay` and `DialogPortal` stay as exports although no
  * other module uses them. They carry the `@public` tag, so knip does not report them.
  */
@@ -32,21 +34,21 @@ export function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrim
 }
 
 /** @public */
-export function DialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
-    <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
-      className={cn(
-        'tw:data-[state=open]:animate-in tw:data-[state=closed]:animate-out tw:data-[state=closed]:fade-out-0 tw:data-[state=open]:fade-in-0 tw:fixed tw:inset-0 tw:z-50 tw:bg-black/50',
-        className
-      )}
-      {...props}
-    />
-  );
-}
+export const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    data-slot="dialog-overlay"
+    className={cn(
+      'tw:data-[state=open]:animate-in tw:data-[state=closed]:animate-out tw:data-[state=closed]:fade-out-0 tw:data-[state=open]:fade-in-0 tw:fixed tw:inset-0 tw:z-50 tw:bg-black/50',
+      className
+    )}
+    {...props}
+  />
+));
+DialogOverlay.displayName = 'DialogOverlay';
 
 function DialogContent({
   className,

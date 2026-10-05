@@ -14,9 +14,10 @@ from selenium.webdriver.support.wait import WebDriverWait
 from tests.integration import testutils
 
 # The child throws on purpose, and React and the boundary write the error to the console.
+# The development build of React, which the StrictMode run uses, adds its own message.
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.allow_console_errors("Something broke in this tab"),
+    pytest.mark.allow_console_errors("Something broke in this tab", "The above error occurred"),
 ]
 
 # The boundary renders inside the Prism root, where the stylesheet applies. The child

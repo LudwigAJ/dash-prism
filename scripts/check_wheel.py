@@ -40,6 +40,10 @@ GENERATED_FILES = frozenset(
     }
 )
 
+# `pnpm run build:strict` writes a development bundle that wraps Prism in React.StrictMode for the
+# tests. The release bundle has no StrictMode, because StrictMode also applies to the tab content.
+_STRICT_MODE_MARKER = b"StrictMode"
+
 # The Python of the new environment runs this code. pydantic is a hard
 # dependency, thus the install must give version 2.
 _SMOKE_TEST = """
@@ -70,6 +74,14 @@ def missing_files(wheel: pathlib.Path, required: Iterable[str]) -> list[str]:
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
     return sorted(set(required) - names)
+
+
+def holds_strict_mode_bundle(wheel: pathlib.Path) -> bool:
+    """Tells if the JavaScript bundle in the wheel is the StrictMode test bundle."""
+    with zipfile.ZipFile(wheel) as archive:
+        if "dash_prism/dash_prism.js" not in archive.namelist():
+            return False
+        return _STRICT_MODE_MARKER in archive.read("dash_prism/dash_prism.js")
 
 
 def find_wheel(path: pathlib.Path) -> pathlib.Path:
@@ -132,6 +144,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         _write_summary(
             [f"## Wheel check: {wheel.name}", "", "Missing from the wheel:"]
             + [f"- `{name}`" for name in missing]
+        )
+        return 1
+    if holds_strict_mode_bundle(wheel):
+        _write_summary(
+            [
+                f"## Wheel check: {wheel.name}",
+                "",
+                "`dash_prism/dash_prism.js` is the StrictMode test bundle. Run `pnpm run build`.",
+            ]
         )
         return 1
     _write_summary([f"## Wheel check: {wheel.name}", "", "All required files are present."])

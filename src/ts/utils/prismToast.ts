@@ -22,9 +22,11 @@ export type ToastType = 'success' | 'warning' | 'error' | 'info';
  * @param type - The severity of the toast
  * @param message - User-facing message shown in the toast
  * @param options - A description for the toast, a text for the log that replaces `message`, a
- * log level and the ID of the Toaster that shows the toast. The log level defaults to the level
- * that matches the toast. An error toast that reports bad user input must set 'warn', because
- * the logger writes an error to `console.error` in production too.
+ * log level, the ID of the Toaster that shows the toast and the ID of the toast. The log level
+ * defaults to the level that matches the toast. An error toast that reports bad user input must
+ * set 'warn', because the logger writes an error to `console.error` in production too. A toast
+ * with the ID of a toast on screen replaces that toast. Give an ID to a toast that an effect
+ * shows, because React StrictMode runs each new effect two times.
  */
 export function prismToast(
   type: ToastType,
@@ -34,12 +36,15 @@ export function prismToast(
     logDetails?: string;
     logLevel?: 'info' | 'warn' | 'error';
     toasterId?: string;
+    id?: string;
   } = {}
 ): void {
   // The logger has no 'warning' or 'success' level.
   const matchingLevel = type === 'warning' ? 'warn' : type === 'success' ? 'info' : type;
   logger[options.logLevel ?? matchingLevel](options.logDetails ?? message);
   toast[type](message, {
+    // sonner keeps one list of toasts for all Toasters, so the ID of the toast holds the Toaster.
+    id: options.id === undefined ? undefined : `${options.toasterId ?? ''}:${options.id}`,
     description: options.description,
     toasterId: options.toasterId,
     cancel: { label: 'Dismiss', onClick: () => {} },
