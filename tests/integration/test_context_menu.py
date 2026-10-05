@@ -18,17 +18,6 @@ from tests.integration import testutils
 pytestmark = pytest.mark.integration
 
 
-def test_context_menu_appears_on_right_click(prism_app_with_layouts):
-    """Test that context menu appears on right-click."""
-    duo = prism_app_with_layouts
-    testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
-
-    assert duo.find_element(testutils.CONTEXT_MENU).is_displayed()
-
-    ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
-
-
 def test_context_menu_close(prism_app_with_layouts):
     """Test closing tab via context menu."""
     duo = prism_app_with_layouts
@@ -71,17 +60,17 @@ def test_context_menu_duplicate_creates_new_tab(prism_app_with_layouts):
 
 
 def test_context_menu_closes_on_escape(prism_app_with_layouts):
-    """Test that pressing Escape closes the context menu."""
+    """Escape closes the context menu that a right-click opened.
+
+    open_context_menu waits for the menu, so each test of the menu also checks that a
+    right-click opens it.
+    """
     duo = prism_app_with_layouts
     testutils.open_context_menu(duo, duo.find_element(testutils.TAB_SELECTOR))
-    assert duo.find_element(testutils.CONTEXT_MENU).is_displayed()
 
     ActionChains(duo.driver).send_keys(Keys.ESCAPE).perform()
-    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
-    menus = duo.find_elements(testutils.CONTEXT_MENU)
-    if menus:
-        assert not menus[0].is_displayed(), "Context menu should be hidden"
+    testutils.wait_for_element_invisible(duo, testutils.CONTEXT_MENU, timeout=2)
 
 
 ICON_DIALOG = "[role='dialog']"
@@ -134,9 +123,7 @@ def test_context_menu_refresh_hidden_without_layout(prism_app_with_layouts):
 def test_refresh_shortcut_remounts_the_tab_content(prism_app_with_layouts):
     """Ctrl/Cmd+Shift+R renders the layout of the active tab again, in the same tab."""
     duo = prism_app_with_layouts
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
-    duo.find_element("[data-testid='prism-layout-item-test-static']").click()
+    testutils.open_layout(duo, "test-static")
     content = duo.wait_for_element("[id*='static-content']", timeout=10)
 
     modifier = testutils.get_modifier_key()

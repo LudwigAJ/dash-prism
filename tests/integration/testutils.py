@@ -665,3 +665,18 @@ def open_context_menu(dash_duo, tab_element):
     WebDriverWait(dash_duo.driver, 3).until(
         EC.visibility_of_element_located((By.CSS_SELECTOR, CONTEXT_MENU))
     )
+
+
+def open_layout(dash_duo, layout_id: str) -> None:
+    """Search for a layout in the search bar of the first panel and click its item.
+
+    The helper types the layout ID, because the search matches the ID too. A layout
+    without parameters then opens in the active tab. A layout with parameters shows
+    its parameter prompt.
+
+    :param dash_duo: The dash testing fixture.
+    :param layout_id: The ID of the layout.
+    """
+    dash_duo.wait_for_element(".prism-search-bar", timeout=5).click()
+    dash_duo.wait_for_element(SEARCHBAR_INPUT, timeout=3).send_keys(layout_id)
+    dash_duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5).click()

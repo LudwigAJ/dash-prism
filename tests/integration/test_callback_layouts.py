@@ -59,12 +59,7 @@ def test_callback_layout_renders_content(dash_duo):
 
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-search-bar", timeout=5)
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Greeting")
-    duo.wait_for_element("[data-testid='prism-layout-item-greeting']", timeout=5)
-    duo.find_element("[data-testid='prism-layout-item-greeting']").click()
+    testutils.open_layout(duo, "greeting")
 
     # inject_tab_id turns the ID into a pattern ID, so the selector matches a part of it.
     duo.wait_for_element("[id*='greeting-content']", timeout=10)
@@ -77,12 +72,7 @@ def test_static_and_callback_layouts_coexist(dash_duo):
 
     testutils.wait_for_tab_count(duo, 1)
 
-    duo.wait_for_element(".prism-search-bar", timeout=5)
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("Static")
-    duo.wait_for_element("[data-testid='prism-layout-item-static']", timeout=5)
-    duo.find_element("[data-testid='prism-layout-item-static']").click()
+    testutils.open_layout(duo, "static")
 
     duo.wait_for_element("[id*='static-content']", timeout=10)
     testutils.wait_for_tab_named(duo, "Static Page", timeout=5)
