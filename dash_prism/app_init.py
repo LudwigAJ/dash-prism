@@ -34,7 +34,6 @@ import hashlib
 import inspect
 import logging
 import math
-import traceback
 import warnings
 import weakref
 from collections.abc import Awaitable, Callable, Iterable
@@ -165,7 +164,8 @@ def _create_layout_wrapper(
     The wrapper keeps the signature (``_P``) and the return type (``_R``) of the
     original layout function. It changes only the tree that the function
     returns. If the original layout function raises an exception, the wrapper
-    writes the traceback to the log and raises the same exception again.
+    writes the class and the stack frames of the exception to the log, and
+    raises the same exception again.
 
     :param original_layout: The layout function to wrap.
     :type original_layout: Callable
@@ -189,8 +189,10 @@ def _create_layout_wrapper(
             try:
                 # _R is the coroutine type for an async layout. mypy cannot see that.
                 tree = await cast(Awaitable[Any], original_layout(*args, **kwargs))
-            except Exception:
-                logger.exception("Error in async layout function")
+            except Exception as exc:
+                logger.error(
+                    "app.layout raised %s\n%s", type(exc).__name__, params.format_frames(exc)
+                )
                 raise
 
             return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
@@ -202,8 +204,10 @@ def _create_layout_wrapper(
         def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             try:
                 tree = original_layout(*args, **kwargs)
-            except Exception:
-                logger.exception("Error in sync layout function")
+            except Exception as exc:
+                logger.error(
+                    "app.layout raised %s\n%s", type(exc).__name__, params.format_frames(exc)
+                )
                 raise
 
             return _inject_metadata_into_layout(tree, prism_id, layouts_metadata, session_id)
@@ -253,6 +257,8 @@ def _get_layout_root(app: Dash) -> Any | None:
             UserWarning,
             stacklevel=3,
         )
+        # The log keeps the message, because init() runs with no request, so the
+        # message cannot hold a value that a user typed.
         logger.exception("Failed to call app.layout() while searching for Prism")
         return None
 
@@ -678,6 +684,39 @@ def _create_validation_error_component(layout_id: str, error: params.ParamValida
     )
 
 
+def _invalid_fields_for_log(error: params.ParamValidationError) -> str:
+    """Name each invalid parameter and its error type, without a value that the user typed.
+
+    The path of a field can hold a key from the input, for example a key of a
+    dict parameter, or the name of a parameter that the layout does not
+    declare. The log thus names only the parameter at the start of the path.
+    An alias of a model field gives the name of that field. The ``<root>``
+    path of an error for the whole model stays ``<root>``. Each other path
+    becomes ``<undeclared>``.
+
+    :param error: The validation error of one render.
+    :type error: ParamValidationError
+    :returns: One ``name (error type)`` entry for each invalid field, separated
+        by commas.
+    :rtype: str
+    """
+    # Maps each name that a request can use for a parameter to the declared name.
+    declared = {"<root>": "<root>"}
+    registration = layout_registry.get_layout(error.layout_id)
+    if registration is not None:
+        declared.update((p.name, p.name) for p in registration.parameters)
+        if registration.validator is not None:
+            for name, info in registration.validator.model.model_fields.items():
+                for alias in (info.alias, info.validation_alias):
+                    if isinstance(alias, str):
+                        declared[alias] = name
+    entries = []
+    for field_error in error.errors:
+        name = declared.get(field_error.field.partition(".")[0], "<undeclared>")
+        entries.append(f"{name} ({field_error.code})")
+    return ", ".join(entries)
+
+
 def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     """Make the component that a tab shows when its layout failed.
 
@@ -686,9 +725,9 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     one for every other exception. The function writes each failure to the log
     one time. A failure of the request or of the parameters gets a warning. Any
     other exception gets an error with the class of the exception and its stack
-    frames. No log line holds an exception message or a parameter value,
-    because both can hold values that the user typed. The tab shows the
-    message.
+    frames. No log line holds an exception message, a parameter value or a key
+    from the input, because each can hold a value that the user typed. The tab
+    shows the message.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -708,9 +747,9 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
         )
     # ParamValidationError is a subclass of ValueError, so it must come first.
     if isinstance(exc, params.ParamValidationError):
-        # The message of the exception holds the input values, so log the field names only.
-        fields = ", ".join(error.field for error in exc.errors)
-        logger.warning("Layout %r has invalid parameters: %s", layout_id, fields)
+        logger.warning(
+            "Layout %r has invalid parameters: %s", layout_id, _invalid_fields_for_log(exc)
+        )
         return _create_validation_error_component(layout_id, exc)
     if isinstance(exc, TypeError):
         logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
@@ -720,9 +759,9 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
         # the tab shows them as they are.
         logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
         return _create_error_component(str(exc))
-    # The log must not hold the message, so it gets the frames and not exc_info.
-    frames = "".join(traceback.format_tb(exc.__traceback__))
-    logger.error("Layout %r failed with %s\n%s", layout_id, type(exc).__name__, frames)
+    logger.error(
+        "Layout %r failed with %s\n%s", layout_id, type(exc).__name__, params.format_frames(exc)
+    )
     return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
 
 

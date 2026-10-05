@@ -219,6 +219,15 @@ class ParamValidationError(ValueError):
         return {"layoutId": self.layout_id, "errors": [error.to_dict() for error in self.errors]}
 
 
+def format_frames(exc: BaseException) -> str:
+    """Format the stack frames of an exception, without the message of the exception.
+
+    A log line holds this text in place of ``exc_info``, because the message of
+    an exception can hold a value that the user typed.
+    """
+    return "".join(traceback.format_tb(exc.__traceback__))
+
+
 # =============================================================================
 # PARAMETER DESCRIPTION (what the frontend sees)
 # =============================================================================
@@ -988,12 +997,11 @@ class PydanticValidator:
             # invalid parameters. Any other error becomes a server error,
             # which tells the user nothing. The message of the exception can
             # hold a parameter value, so the log gets the frames and not exc_info.
-            frames = "".join(traceback.format_tb(exc.__traceback__))
             logger.warning(
                 "Validation of the parameters of layout %r raised %s\n%s",
                 self.layout_id,
                 type(exc).__name__,
-                frames,
+                format_frames(exc),
             )
             raise ParamValidationError(
                 self.layout_id,

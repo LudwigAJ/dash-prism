@@ -138,6 +138,16 @@ All notable changes to Dash Prism are recorded here. The project follows
   ID and the layout ID. Before, every render wrote the full request, with every
   parameter value, at `INFO`. The logger name is now `dash_prism.app_init`, so a
   handler on `dash_prism` still receives the records.
+- The warning for invalid parameters names each invalid parameter with its
+  pydantic error type, for example `n (int_parsing)`. It names only the
+  declared parameter at the start of a field path, so a key of a dict
+  parameter is not in the log. An alias of a model field gives the name of the
+  field. A parameter name that the layout does not declare is written as
+  `<undeclared>`. The user can type both.
+- When the function in `app.layout` raises an exception during a page request,
+  the log has the class and the stack frames of the exception, but not its
+  message. The call of that function in `init()` keeps the full traceback,
+  because no request exists at that time.
 - The module `dash_prism.init` is now `dash_prism.app_init`. The function
   `dash_prism.init` and the other public names are the same. Code that wrote
   `from dash_prism.init import ...` must import the public names from

@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
-from typing import Any
+import traceback
+from typing import Annotated, Any, Literal
 
 import pydantic
 import pytest
@@ -586,7 +588,9 @@ def test_render_request_is_logged_once_without_parameter_values(
     ]
     assert "secret-value" not in caplog.text
     warnings_logged = _prism_records(caplog, logging.WARNING)
-    assert [r.getMessage() for r in warnings_logged] == ["Layout 'typed' has invalid parameters: n"]
+    assert [r.getMessage() for r in warnings_logged] == [
+        "Layout 'typed' has invalid parameters: n (int_parsing)"
+    ]
 
 
 def test_render_request_log_keeps_a_line_break_in_an_id_out_of_the_log(
@@ -679,6 +683,210 @@ def test_log_keeps_a_line_break_in_a_layout_id_out_of_the_log(
 
     [record] = _prism_records(caplog, logging.WARNING)
     assert "\n" not in record.getMessage()
+
+
+# A value that the user typed. No log record of a failed render can hold it.
+_SENTINEL = "sentinel-5f2c"
+
+
+def _assert_sentinel_not_logged(caplog: pytest.LogCaptureFixture) -> None:
+    for record in caplog.records:
+        logged = [record.getMessage(), repr(record.args)]
+        if record.exc_info:
+            logged.append("".join(traceback.format_exception(*record.exc_info)))
+        assert not any(_SENTINEL in text for text in logged), record
+
+
+def _refuse(value: str) -> str:
+    raise ValueError(f"refused {value}")
+
+
+def _crash(value: str) -> str:
+    raise RuntimeError(f"crashed on {value}")
+
+
+class _RefusingBody(pydantic.BaseModel):
+    code: str
+
+    @pydantic.field_validator("code")
+    @classmethod
+    def _refuse_code(cls, value: str) -> str:
+        return _refuse(value)
+
+
+class _ChoiceBody(pydantic.BaseModel):
+    code: Annotated[str, dash_prism.Param(choices=["a", "b"])] = "a"
+
+
+def _register_sentinel_layouts() -> None:
+    """Register one layout for each way that a typed value can make a render fail."""
+
+    @dash_prism.register_layout(id="refusing-validator")
+    def refusing_validator(code: Annotated[str, pydantic.AfterValidator(_refuse)] = ""):
+        return html.Div(code)
+
+    @dash_prism.register_layout(id="refusing-body")
+    def refusing_body(params: _RefusingBody):
+        return html.Div(params.code)
+
+    @dash_prism.register_layout(id="crashing-validator")
+    def crashing_validator(code: Annotated[str, pydantic.AfterValidator(_crash)] = ""):
+        return html.Div(code)
+
+    @dash_prism.register_layout(id="choices")
+    def choices(mode: Literal["a", "b"] = "a"):
+        return html.Div(mode)
+
+    @dash_prism.register_layout(id="choices-body")
+    def choices_body(params: _ChoiceBody):
+        return html.Div(params.code)
+
+    @dash_prism.register_layout(id="typed")
+    def typed(n: int = 1, cfg: dict[str, int] | None = None):
+        return html.Div(n)
+
+    @dash_prism.register_layout(id="options", param_options={"one": ("One", {"n": "1"})})
+    def options(n: int = 1):
+        return html.Div(n)
+
+    @dash_prism.register_layout(id="failing")
+    def failing(value: str = ""):
+        _crash(value)
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize(
+    ("layout_id", "layout_params", "layout_option"),
+    [
+        ("refusing-validator", {"code": _SENTINEL}, None),
+        ("refusing-body", {"code": _SENTINEL}, None),
+        ("crashing-validator", {"code": _SENTINEL}, None),
+        ("choices", {"mode": _SENTINEL}, None),
+        ("choices-body", {"code": _SENTINEL}, None),
+        ("typed", {"n": _SENTINEL}, None),
+        ("typed", {"cfg": {_SENTINEL: "x"}}, None),
+        ("typed", {_SENTINEL: "1"}, None),
+        ("options", None, _SENTINEL),
+        ("failing", {"value": _SENTINEL}, None),
+    ],
+    ids=[
+        "custom-validator",
+        "custom-validator-body-model",
+        "custom-validator-raises-another-error",
+        "choices",
+        "choices-body-model",
+        "type-error",
+        "dict-key",
+        "undeclared-parameter",
+        "unknown-option",
+        "layout-raises",
+    ],
+)
+def test_failed_render_never_logs_a_typed_value(
+    caplog: pytest.LogCaptureFixture,
+    path: str,
+    layout_id: str,
+    layout_params: dict[str, Any] | None,
+    layout_option: str | None,
+) -> None:
+    _register_sentinel_layouts()
+    content_id = {"type": "prism-content", "index": "tab-1"}
+    data = {"layoutId": layout_id, "layoutParams": layout_params, "layoutOption": layout_option}
+
+    with caplog.at_level(logging.DEBUG):
+        if path == "sync":
+            result = app_init._render_content_request(content_id, data)
+        else:
+            result = asyncio.run(app_init._render_content_request_async(content_id, data))
+
+    assert "prism-error-tab" in result.className
+    assert _prism_records(caplog, logging.WARNING)
+    _assert_sentinel_not_logged(caplog)
+
+
+def test_invalid_parameter_log_names_only_declared_parameters(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _register_sentinel_layouts()
+    content_id = {"type": "prism-content", "index": "tab-1"}
+    data = {"layoutId": "typed", "layoutParams": {"cfg": {_SENTINEL: "x"}, "extra": "1"}}
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        app_init._render_content_request(content_id, data)
+
+    [record] = _prism_records(caplog, logging.WARNING)
+    assert record.getMessage() == (
+        "Layout 'typed' has invalid parameters: cfg (int_parsing), <undeclared> (extra_forbidden)"
+    )
+
+
+class _AliasBody(pydantic.BaseModel):
+    count: int = pydantic.Field(alias="c")
+
+
+def test_invalid_parameter_log_gives_the_field_name_for_an_alias(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    @dash_prism.register_layout(id="aliased")
+    def aliased(params: _AliasBody):
+        return html.Div(params.count)
+
+    content_id = {"type": "prism-content", "index": "tab-1"}
+    data = {"layoutId": "aliased", "layoutParams": {"c": "x"}}
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        app_init._render_content_request(content_id, data)
+
+    [record] = _prism_records(caplog, logging.WARNING)
+    assert record.getMessage() == "Layout 'aliased' has invalid parameters: count (int_parsing)"
+
+
+def test_app_layout_that_fails_at_init_is_logged_with_its_message(
+    dash_app: Dash, caplog: pytest.LogCaptureFixture
+) -> None:
+    # init() runs with no request, so the message cannot hold a typed value.
+    def layout() -> Any:
+        _crash("no request")
+
+    dash_prism.register_layout(id="home", layout=html.Div("home"))
+    dash_app.layout = layout
+
+    with (
+        caplog.at_level(logging.DEBUG),
+        pytest.warns(UserWarning, match="Could not find Prism component"),
+        pytest.warns(UserWarning, match=re.escape("Failed to call app.layout()")),
+    ):
+        dash_prism.init("test-prism", dash_app)
+
+    [record] = _prism_records(caplog, logging.ERROR)
+    assert record.getMessage() == "Failed to call app.layout() while searching for Prism"
+    assert record.exc_info is not None
+    assert "crashed on no request" in "".join(traceback.format_exception(*record.exc_info))
+
+
+@pytest.mark.parametrize("is_async", [False, True], ids=["sync", "async"])
+def test_wrapped_app_layout_that_fails_is_logged_without_its_message(
+    caplog: pytest.LogCaptureFixture, is_async: bool
+) -> None:
+    def sync_layout() -> Any:
+        _crash(_SENTINEL)
+
+    async def async_layout() -> Any:
+        _crash(_SENTINEL)
+
+    layout = async_layout if is_async else sync_layout
+    wrapper = app_init._create_layout_wrapper(layout, "test-prism", {}, "session", is_async)
+
+    with caplog.at_level(logging.DEBUG), pytest.raises(RuntimeError, match=_SENTINEL):
+        if is_async:
+            asyncio.run(wrapper())
+        else:
+            wrapper()
+
+    [record] = _prism_records(caplog, logging.ERROR)
+    assert record.getMessage().startswith("app.layout raised RuntimeError")
+    assert "in _crash" in record.getMessage()
+    _assert_sentinel_not_logged(caplog)
 
 
 # =============================================================================
