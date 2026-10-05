@@ -6,6 +6,7 @@ import warnings
 
 import pytest
 from dash import Dash, html
+from dash.development import base_component
 
 import dash_prism
 from dash_prism.PrismComponent import PrismComponent
@@ -88,6 +89,18 @@ def test_generated_component_classes_are_not_public_exports() -> None:
     assert dash_prism.PrismContent.__module__ == "dash_prism.PrismContent"
 
 
+def test_actions_reach_the_browser_as_component_specs() -> None:
+    """The renderer gives StatusBar each action as a spec, which it renders with ExternalWrapper.
+
+    Dash renders a prop into React elements only when the class named like the
+    component's ``_type`` lists the prop in its own ``_children_props``.
+    Python still walks the actions, so the IDs of the actions are in the layout.
+    """
+    children_props = base_component.ComponentRegistry.children_props["dash_prism"]
+    assert not children_props["Prism"]
+    assert dash_prism.Prism._children_props == ["actions"]
+
+
 def test_prism_in_app_layout(dash_app: Dash) -> None:
     """Test that Prism can be included in a Dash app layout."""
     dash_app.layout = html.Div([dash_prism.Prism(id="prism", style={})])
@@ -116,12 +129,12 @@ def test_prism_does_not_warn_for_effective_persistence_combinations() -> None:
 
 
 def test_prop_docstrings_match_behaviour() -> None:
-    """Both docstring sources must describe the real behaviour (02 B-4).
+    """Both docstring sources must describe the real behaviour.
 
     ``PrismComponent`` is generated from the TypeScript JSDoc; ``Prism`` carries
     the hand-written docstring that Sphinx publishes (``docs/api.rst`` autoclass)
-    and ``help()`` shows. B-4 was exactly these two drifting apart, so both are
-    checked here.
+    and ``help()`` shows. The two sources drifted apart once, so the test checks
+    both.
     """
     claims = (
         "counts every panel together",  # maxTabs is global, not per panel

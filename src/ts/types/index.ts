@@ -13,7 +13,7 @@ export type Theme = 'light' | 'dark';
 export type Size = 'sm' | 'md' | 'lg';
 export type StatusBarPosition = 'top' | 'bottom';
 /** What an empty tab (no layout selected) renders in its body. */
-export type EmptyTabView = 'layouts' | 'hint' | 'none';
+export type EmptyTabViewKind = 'layouts' | 'hint' | 'none';
 /** A built-in status bar segment; see the statusBarItems prop. */
 export type StatusBarItem =
   'reset' | 'help' | 'undo' | 'mode' | 'panels' | 'tab' | 'count' | 'updated';
@@ -28,13 +28,13 @@ export interface Tab {
   name: string;
   panelId: PanelId;
   createdAt: number;
-  /** Layout ID or empty string if no layout assigned */
+  /** The registered layout that the tab shows. An empty tab has none. */
   layoutId?: LayoutId;
   layoutOption?: string;
   layoutParams?: Record<string, string>;
 
   locked?: boolean;
-  /** UUID for React key; regenerated on refresh to force remount. Auto-generated if missing. */
+  /** A random React key of the tab content. A refresh replaces it to mount the content again. */
   mountKey?: string;
 
   icon?: string;
@@ -48,9 +48,35 @@ export interface PanelNode {
   direction: PanelDirection;
   pinned?: boolean;
   children: PanelNode[];
-  /** Size as percentage (0-100) */
+  /** The size in the parent split, as react-split-pane takes it: '50%', or pixels after resize. */
   size?: string | number;
 }
+
+// =============================================================================
+// Drag and Drop Types
+// =============================================================================
+
+/** Holds the dnd-kit data of a panel edge drop zone. A drop there splits the panel. */
+export interface PanelEdgeDropData {
+  panelId: PanelId;
+  edge: 'left' | 'right' | 'top' | 'bottom';
+}
+
+/** Holds the dnd-kit data of the tab bar of a panel. A drop there moves the tab to the panel. */
+export interface TabBarDropData {
+  type: 'tab-bar';
+  panelId: PanelId;
+}
+
+/** Holds the dnd-kit data of a tab. A drop on a tab puts the dragged tab at its position. */
+export interface TabDragData {
+  type: 'tab';
+  tab: Tab;
+  panelId: PanelId;
+}
+
+/** Holds the data of a Prism droppable. */
+export type DropData = PanelEdgeDropData | TabBarDropData | TabDragData;
 
 // =============================================================================
 // Layout Types
@@ -77,7 +103,7 @@ type ParamScalar = string | number | boolean | null;
 export interface LayoutParam {
   name: string;
   hasDefault: boolean;
-  /** JSON-safe default (was typed `string` before 1.0, but was always `Any`). */
+  /** The JSON-safe default value. */
   default?: ParamScalar | ParamScalar[];
   annotation?: string | null;
   type?: ParamType;
@@ -124,7 +150,7 @@ export interface Workspace {
   panelTabs: Record<PanelId, TabId[]>; // Order per panel
   activeTabIds: Record<PanelId, TabId>;
   activePanelId: PanelId;
-  favoriteLayouts?: string[];
+  favoriteLayouts?: LayoutId[];
   searchBarsHidden?: boolean;
 }
 
@@ -144,51 +170,32 @@ export interface ShareData {
 }
 
 // =============================================================================
-// Notification Types (Handled by Sonner - not in Redux)
-// =============================================================================
-
-// Notifications are managed by Sonner library, not Redux.
-// See: Reversibility Philosophy section
-// Usage: import { usePrismToast } from '@hooks/usePrismToast'; usePrismToast()('success', 'Message');
-
-// =============================================================================
 // Dash Component API Types (for ExternalWrapper and loading states)
 // =============================================================================
 
-/**
- * Dash component specification format (from https://github.com/plotly/dash)
- */
+/** Holds the props of a Dash component spec: an optional id and any other prop. */
 interface BaseDashProps {
   id?: string | Record<string, string>;
   [propName: string]: unknown;
 }
 
-/**
- * Dash component specification format (from https://github.com/plotly/dash)
- */
+/** Holds a Dash component spec, the JSON form of a component in the Dash layout. */
 export interface DashComponent {
   type: string;
   namespace: string;
   props: BaseDashProps;
 }
 
-/**
- * Checks if a value is a DashComponent.
- * Useful for runtime validation of Dash-serialized React elements.
- */
-export function isDashComponent(value: unknown): value is DashComponent {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    'namespace' in value &&
-    'props' in value &&
-    typeof value.type === 'string' &&
-    typeof value.namespace === 'string' &&
-    typeof value.props === 'object' &&
-    value.props !== null &&
-    !Array.isArray(value.props)
-  );
+/** Holds the props that Dash gives to every component. */
+export interface DashComponentProps {
+  /**
+   * Unique ID to identify this component in Dash callbacks.
+   */
+  id?: string;
+  /**
+   * Updates props to trigger callbacks.
+   */
+  setProps: (props: Record<string, unknown>) => void;
 }
 
 /** The keys and indexes that lead to one component in the Dash layout tree. */

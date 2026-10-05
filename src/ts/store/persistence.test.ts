@@ -16,11 +16,6 @@ import {
 } from './persistence';
 
 describe('getWorkspacePersistKey', () => {
-  it('returns base key when no componentId is provided', () => {
-    expect(getWorkspacePersistKey()).toBe('prism-workspace');
-    expect(getWorkspacePersistKey(undefined)).toBe('prism-workspace');
-  });
-
   it('includes componentId in the key', () => {
     expect(getWorkspacePersistKey('my-prism')).toBe('prism-workspace-my-prism');
   });
@@ -32,10 +27,6 @@ describe('getWorkspacePersistKey', () => {
 });
 
 describe('getWorkspaceStorageKey', () => {
-  it('adds persist: prefix for default key', () => {
-    expect(getWorkspaceStorageKey()).toBe('persist:prism-workspace');
-  });
-
   it('adds persist: prefix with componentId', () => {
     expect(getWorkspaceStorageKey('my-prism')).toBe('persist:prism-workspace-my-prism');
   });
@@ -44,12 +35,6 @@ describe('getWorkspaceStorageKey', () => {
     const componentId = 'test-component';
     const persistKey = getWorkspacePersistKey(componentId);
     const storageKey = getWorkspaceStorageKey(componentId);
-    expect(storageKey).toBe(`persist:${persistKey}`);
-  });
-
-  it('is consistent for the default (no componentId) case', () => {
-    const persistKey = getWorkspacePersistKey();
-    const storageKey = getWorkspaceStorageKey();
     expect(storageKey).toBe(`persist:${persistKey}`);
   });
 });

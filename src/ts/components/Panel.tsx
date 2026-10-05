@@ -8,7 +8,7 @@ import { PanelDropzone } from '@components/PanelDropzone';
 import type { PanelNode, Tab, PanelId } from '@types';
 import { isLeafPanel } from '@utils/panels';
 import { findTabById, getActiveTabForPanel } from '@utils/tabs';
-import { EmptyTabView } from '@components/layouts';
+import { EmptyTabView } from '@components/emptyTab/EmptyTabView';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import {
   useAppDispatch,
@@ -127,6 +127,9 @@ const LeafPanel = memo(function LeafPanel({ panel }: LeafPanelProps) {
                   forceMount={true}
                   className="tw:h-full tw:min-h-full tw:w-full"
                 >
+                  {/* An error in the Dash content of a tab goes to its React parent, the boundary
+                      around InPortal in WorkspaceView. This boundary catches an error in the
+                      empty-tab view. */}
                   <ErrorBoundary>
                     {!tab.layoutId ? (
                       <EmptyTabView tabId={tab.id} />

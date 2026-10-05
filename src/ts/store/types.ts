@@ -1,4 +1,3 @@
-// src/ts/store/types.ts
 import type { LayoutId, PanelId, TabId, RegisteredLayouts, Workspace } from '@types';
 import type { Storage } from 'redux-persist';
 
@@ -14,7 +13,7 @@ import type { Storage } from 'redux-persist';
  * The undo history is ephemeral (not persisted) and resets on page reload.
  */
 export interface WorkspaceState extends Workspace {
-  favoriteLayouts: string[];
+  favoriteLayouts: LayoutId[];
   searchBarsHidden: boolean;
   /**
    * The `serverSessionId` that this workspace was last reconciled against.
@@ -39,7 +38,7 @@ export interface UiState {
   layoutSelectionRequest: { tabId: TabId; layoutId: LayoutId } | null;
   /** The panel whose search bar must take the focus. */
   searchFocusPanelId: PanelId | null;
-  // Modal state (moved from PrismContext useState)
+  // Which modal is open, and for which tab.
   infoModalTabId: TabId | null;
   helpModalOpen: boolean;
   setIconModalTabId: TabId | null;
@@ -54,7 +53,7 @@ export interface UiState {
 
 /** Holds the settings that Prism passes to createPrismStore. */
 export interface StoreConfig {
-  componentId?: string;
+  componentId: string;
   serverSessionId?: string;
   persistenceType: 'local' | 'session' | 'memory';
   /**

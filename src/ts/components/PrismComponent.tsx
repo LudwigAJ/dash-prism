@@ -31,17 +31,22 @@ import type {
   Workspace,
   StatusBarPosition,
   PersistenceType,
-  EmptyTabView,
+  EmptyTabViewKind,
+  DashComponent,
+  DashComponentProps,
 } from '@types';
 import '../global.css';
-import { type DashComponentProps } from 'props';
+
+// A Prism without a Dash id still needs one name for the Dash component paths of its tabs and
+// actions, for its toaster and for its storage key.
+const DEFAULT_COMPONENT_ID = 'prism';
 
 /**
  * Prism is an advanced multi-panel workspace manager for Plotly Dash.
  * It provides dynamic layout management with drag-and-drop tab organization,
  * multi-panel splits, and persistent workspace state across sessions.
  */
-export interface PrismProps extends DashComponentProps {
+interface PrismProps extends DashComponentProps {
   /**
    * Unique ID to identify this component in Dash callbacks. Also scopes the
    * persisted workspace (storage key), so it is read when the component mounts;
@@ -64,12 +69,6 @@ export interface PrismProps extends DashComponentProps {
    * component mounts.
    */
   serverSessionId?: string;
-
-  // persisted props
-  // tabs: Record<PanelId, Tab[]>;
-  // panels: Panel;
-  // activePanelId: PanelId;
-  // activeTabIds: Record<PanelId, string>;
 
   /**
    * Child components (typically PrismContent instances).
@@ -171,11 +170,16 @@ export interface PrismProps extends DashComponentProps {
    */
   updateWorkspace?: Partial<Workspace>;
 
+  // Dash gives the actions as component specs, not as React elements. The Python class Prism
+  // does not list `actions` in its own `_children_props`, so the renderer does not render them.
+  // extract-meta.js of the locked Dash reads the type name DashComponent as a node, so the
+  // Python prop type is a list of components. Dash 3.1.1 has no such mapping, and CI generates
+  // the Python classes with the locked Dash.
   /**
    * Array of PrismAction components to display in the status bar.
    * Each PrismAction has its own id and n_clicks for individual callbacks.
    */
-  actions?: JSX.Element[];
+  actions?: DashComponent[];
 
   /**
    * Whether to persist workspace state in the browser. When false (the default)
@@ -214,7 +218,7 @@ export interface PrismProps extends DashComponentProps {
    * 'hint' shows a single line pointing the user to the search bar.
    * 'none' shows nothing; users select layouts via the search bar only.
    */
-  emptyTabView?: EmptyTabView;
+  emptyTabView?: EmptyTabViewKind;
 
   /**
    * Whether Prism installs its keyboard shortcuts (Ctrl/Cmd+Alt+N, Ctrl/Cmd+D,
@@ -253,7 +257,7 @@ function PrismInner({
   children,
   updateWorkspace,
 }: {
-  actions: JSX.Element[];
+  actions: DashComponent[];
   children?: React.ReactNode;
   updateWorkspace?: Partial<Workspace>;
 }) {
@@ -427,6 +431,7 @@ export function Prism({
   // `persistence` is the on/off switch; `persistence_type` only applies when it is on.
   // Resolve once here so every consumer (store, error boundary) sees the same answer.
   const persistenceType = resolvePersistenceType(persistence, persistence_type);
+  const componentId = id ?? DEFAULT_COMPONENT_ID;
 
   // Radix portals render into the root element, so they get the theme of this instance.
   // State, not a ref: the provider must re-render once the element exists.
@@ -434,8 +439,8 @@ export function Prism({
 
   // Create stable callback for clearing storage from error boundary
   const handleClearStorage = useCallback(() => {
-    clearPersistedWorkspace(id, persistenceType);
-  }, [persistenceType, id]);
+    clearPersistedWorkspace(componentId, persistenceType);
+  }, [persistenceType, componentId]);
 
   return (
     <div
@@ -455,7 +460,7 @@ export function Prism({
         onClearStorage={persistence ? handleClearStorage : undefined}
       >
         <ConfigProvider
-          componentId={id}
+          componentId={componentId}
           serverSessionId={serverSessionId}
           registeredLayouts={registeredLayouts}
           theme={theme}
@@ -477,7 +482,7 @@ export function Prism({
         >
           <PortalContainerProvider value={rootElement}>
             <PrismInner
-              key={`${id ?? ''}|${persistenceType}`}
+              key={`${componentId}|${persistenceType}`}
               actions={actions}
               updateWorkspace={updateWorkspace}
             >

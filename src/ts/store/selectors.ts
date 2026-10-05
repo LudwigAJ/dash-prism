@@ -1,4 +1,3 @@
-// src/ts/store/selectors.ts
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { getLeafPanelIds } from '@utils/panels';
@@ -26,9 +25,9 @@ export const selectSearchBarModes = (state: RootState) => state.ui.searchBarMode
 export const selectRenamingTabId = (state: RootState) => state.ui.renamingTabId;
 export const selectLayoutSelectionRequest = (state: RootState) => state.ui.layoutSelectionRequest;
 export const selectSearchFocusPanelId = (state: RootState) => state.ui.searchFocusPanelId;
-export const selectInfoModalTabId = (state: RootState) => state.ui.infoModalTabId;
+const selectInfoModalTabId = (state: RootState) => state.ui.infoModalTabId;
 export const selectHelpModalOpen = (state: RootState) => state.ui.helpModalOpen;
-export const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
+const selectSetIconModalTabId = (state: RootState) => state.ui.setIconModalTabId;
 export const selectLoadNotice = (state: RootState) => state.ui.loadNotice;
 
 // Derived selectors (memoized)

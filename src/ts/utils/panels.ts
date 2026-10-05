@@ -132,7 +132,6 @@ export function removePanelFromTree(root: PanelNode, panelId: PanelId): boolean 
  * The original panel ID is preserved to avoid triggering React re-renders of tabs.
  *
  * @param rootPanel - The root panel of the tree (Immer draft or plain)
- * @param options - Split configuration
  * @returns The ID of the new sibling panel
  * @throws Error if the panel is not in the tree or is not a leaf panel. The caller gets the
  * panel ID from the rendered tree, so this is a programming error and not user input. A throw

@@ -13,7 +13,7 @@ import { logger } from '@utils/logger';
  * - Panel: catches errors in panel rendering
  * - Workspace: catches catastrophic errors at the top level
  */
-export type ErrorBoundaryLevel = 'panel' | 'workspace';
+type ErrorBoundaryLevel = 'panel' | 'workspace';
 
 interface Props {
   children: ReactNode;

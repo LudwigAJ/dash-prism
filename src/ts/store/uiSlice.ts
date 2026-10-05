@@ -1,4 +1,3 @@
-// src/ts/store/uiSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { LayoutId, PanelId, TabId } from '@types';
 import type { UiState, SearchBarMode } from './types';

@@ -13,9 +13,7 @@ import {
 import { cn } from '@utils/cn';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import { TabInfoRows } from '@components/TabInfoRows';
-import type { StatusBarItem } from '@types';
-import type { DashComponent, DashComponentApi } from '@types';
-import { isDashComponent } from '@types';
+import type { StatusBarItem, DashComponent, DashComponentApi } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -32,10 +30,10 @@ import {
 } from '@store';
 
 interface StatusBarProps {
-  /** Array of PrismAction component specs to render */
-  actions?: JSX.Element[];
+  /** The PrismAction components of the `actions` prop, as Dash component specs. */
+  actions?: DashComponent[];
   /** The time of the last workspace change, in ms since the epoch */
-  lastSyncTime: number;
+  lastChangeTime: number;
   onOpenHelp?: () => void;
 }
 
@@ -43,11 +41,11 @@ interface StatusBarProps {
  * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,
  * then the PrismAction components of the `actions` prop.
  */
-export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarProps) {
+export function StatusBar({ actions = [], lastChangeTime, onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =
     useConfig();
-  const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
+  const [changeTimeDisplay, setChangeTimeDisplay] = useState('just now');
 
   // Select state from Redux
   const tabs = useAppSelector(selectTabs);
@@ -66,19 +64,19 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const searchBarMode = searchBarModes[activePanelId] ?? 'display';
 
-  // Update sync time display every 5 seconds
+  // Update the read-out every 5 seconds.
   useEffect(() => {
-    const updateSyncDisplay = () => {
-      const elapsed = Date.now() - lastSyncTime;
-      if (elapsed < 10000) setSyncTimeDisplay('just now');
-      else if (elapsed < 60000) setSyncTimeDisplay(`${Math.floor(elapsed / 1000)}s ago`);
-      else if (elapsed < 3600000) setSyncTimeDisplay(`${Math.floor(elapsed / 60000)}m ago`);
-      else setSyncTimeDisplay(`${Math.floor(elapsed / 3600000)}h ago`);
+    const updateChangeTimeDisplay = () => {
+      const elapsed = Date.now() - lastChangeTime;
+      if (elapsed < 10000) setChangeTimeDisplay('just now');
+      else if (elapsed < 60000) setChangeTimeDisplay(`${Math.floor(elapsed / 1000)}s ago`);
+      else if (elapsed < 3600000) setChangeTimeDisplay(`${Math.floor(elapsed / 60000)}m ago`);
+      else setChangeTimeDisplay(`${Math.floor(elapsed / 3600000)}h ago`);
     };
-    updateSyncDisplay();
-    const interval = setInterval(updateSyncDisplay, 5000);
+    updateChangeTimeDisplay();
+    const interval = setInterval(updateChangeTimeDisplay, 5000);
     return () => clearInterval(interval);
-  }, [lastSyncTime]);
+  }, [lastChangeTime]);
 
   const handleUndo = useCallback(() => {
     if (canUndo) dispatch(undo());
@@ -228,50 +226,27 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
 
       <div className="tw:flex-1" />
 
-      {/* Action Buttons - rendered via ExternalWrapper or directly */}
-      {actions.length > 0 && (
+      {/* ExternalWrapper renders each action at its path in the Prism props, so the
+          action gets its own callbacks. */}
+      {api?.ExternalWrapper && actions.length > 0 && (
         <>
-          {actions.map((actionSpec, index) => {
-            // Check if this is a DashComponent spec or already a rendered element
-            if (isDashComponent(actionSpec)) {
-              // It's a DashComponent spec - render via ExternalWrapper if available
-              if (!api?.ExternalWrapper) return null;
-
-              const actionId = actionSpec.props.id;
-              const key =
-                typeof actionId === 'string'
-                  ? actionId
-                  : actionId
-                    ? JSON.stringify(actionId)
-                    : `action-${index}`;
-
-              // Add data-testid to action props for testing
-              const enhancedActionSpec: DashComponent = {
-                ...actionSpec,
-                props: {
-                  ...actionSpec.props,
-                  'data-testid': `prism-action-${typeof actionId === 'string' ? actionId : index}`,
-                },
-              };
-
-              return (
-                <React.Fragment key={key}>
-                  {index > 0 && <Sep />}
-                  <api.ExternalWrapper
-                    component={enhancedActionSpec}
-                    componentPath={[componentId ?? 'prism', 'actions', index]}
-                  />
-                </React.Fragment>
-              );
-            } else {
-              // It's already a React element - render directly
-              return (
-                <React.Fragment key={index}>
-                  {index > 0 && <Sep />}
-                  {actionSpec}
-                </React.Fragment>
-              );
-            }
+          {actions.map((action, index) => {
+            const actionId = action.props.id;
+            const key =
+              typeof actionId === 'string'
+                ? actionId
+                : actionId
+                  ? JSON.stringify(actionId)
+                  : `action-${index}`;
+            return (
+              <React.Fragment key={key}>
+                {index > 0 && <Sep />}
+                <api.ExternalWrapper
+                  component={action}
+                  componentPath={[componentId, 'actions', index]}
+                />
+              </React.Fragment>
+            );
           })}
           {showUpdated && <Sep />}
         </>
@@ -283,7 +258,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
           className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground"
           data-testid="prism-status-bar-updated"
         >
-          Updated: <span className="tw:text-foreground">{syncTimeDisplay}</span>
+          Updated: <span className="tw:text-foreground">{changeTimeDisplay}</span>
         </div>
       )}
     </div>

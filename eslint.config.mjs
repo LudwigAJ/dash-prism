@@ -64,8 +64,8 @@ export default [
       // that are correct without it (dnd-kit's setNodeRef, a ref mirror written in
       // render, resetting state when new children arrive, an icon component looked
       // up from a static table). `exhaustive-deps` and `rules-of-hooks` stay on,
-      // and `exhaustive-deps` is an error (the recommended preset only warns,
-      // which would let the stale-closure bug fixed in 02 A-4 through CI).
+      // and `exhaustive-deps` is an error. The recommended preset only warns, and a
+      // warning let a stale closure in the search bar click-outside listener through.
       'react-hooks/exhaustive-deps': 'error',
       'react-hooks/refs': 'off',
       'react-hooks/purity': 'off',

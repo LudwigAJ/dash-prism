@@ -6,7 +6,7 @@ import type {
   Size,
   StatusBarPosition,
   PersistenceType,
-  EmptyTabView,
+  EmptyTabViewKind,
   StatusBarItem,
 } from '@types';
 
@@ -15,8 +15,11 @@ import type {
  * it puts it here: the defaults, the panel limit and the list of status bar segments.
  */
 interface ConfigContextValue {
-  /** Component ID for namespacing persistence storage */
-  componentId?: string;
+  /**
+   * The Dash id of Prism, or a default id when Prism has none. It names the Dash component paths,
+   * the toaster and the storage key.
+   */
+  componentId: string;
   /** The `serverSessionId` prop of Prism. The store reads it one time, when it is created. */
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
@@ -37,7 +40,7 @@ interface ConfigContextValue {
   /** Whether new tabs auto-focus SearchBar and open dropdown */
   newTabOpensDropdown: boolean;
   /** What an empty tab renders in its body */
-  emptyTabView: EmptyTabView;
+  emptyTabView: EmptyTabViewKind;
   /** Whether Prism's keyboard shortcuts are installed */
   enableKeyboardShortcuts: boolean;
   /** Whether share links can be created and are read from the URL hash */
@@ -57,7 +60,7 @@ const ConfigContext = createContext<ConfigContextValue | null>(null);
  */
 interface ConfigProviderProps {
   children: React.ReactNode;
-  componentId?: string;
+  componentId: string;
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   theme: Theme;
@@ -72,7 +75,7 @@ interface ConfigProviderProps {
   statusBarItems: readonly StatusBarItem[];
   initialLayout?: string;
   newTabOpensDropdown: boolean;
-  emptyTabView: EmptyTabView;
+  emptyTabView: EmptyTabViewKind;
   enableKeyboardShortcuts: boolean;
   enableShareLinks: boolean;
   layoutTimeout: number;

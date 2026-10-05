@@ -40,7 +40,7 @@ import {
 const DashContentRenderer = memo(
   function DashContentRenderer({ tab }: { tab: Tab }) {
     const api: DashComponentApi | undefined = window.dash_component_api;
-    const { componentId = 'prism', layoutTimeout } = useConfig();
+    const { componentId, layoutTimeout } = useConfig();
 
     // Destructure only layout-affecting properties for stable memoization
     const { id, layoutId, layoutParams, layoutOption } = tab;
@@ -55,7 +55,7 @@ const DashContentRenderer = memo(
     if (!api?.ExternalWrapper) {
       return (
         <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-muted-foreground">
-          <p>Dash API not available. Ensure you&apos;re using Dash 3.1.1+.</p>
+          <p>Dash API not available. Ensure you’re using Dash 3.1.1+.</p>
         </div>
       );
     }
@@ -82,8 +82,8 @@ const DashContentRenderer = memo(
 );
 
 interface WorkspaceViewProps {
-  /** Array of PrismAction component specs */
-  actions?: JSX.Element[];
+  /** The PrismAction components of the `actions` prop, as Dash component specs. */
+  actions?: DashComponent[];
   children?: React.ReactNode;
 }
 
@@ -105,7 +105,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   // Hooks that use Redux
   useKeyboardShortcuts(rootRef);
   useShareLinkListener();
-  const { lastSyncTime } = useLastChangeTime();
+  const { lastChangeTime } = useLastChangeTime();
   const handleOpenHelp = () => {
     dispatch(openHelpModal());
   };
@@ -124,6 +124,8 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
           if (!node) return null;
           return (
             <InPortal key={tab.mountKey ?? tab.id} node={node}>
+              {/* This boundary catches an error in the Dash content of the tab. React sends the
+                  error up through this tree, not through the panel that shows the content. */}
               <ErrorBoundary>
                 <DashContentRenderer tab={tab} />
               </ErrorBoundary>
@@ -132,7 +134,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         })}
 
       {showStatusBar && statusBarPosition === 'top' && (
-        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastChangeTime={lastChangeTime} />
       )}
 
       <div className="prism-view-panels">
@@ -140,7 +142,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
       </div>
 
       {showStatusBar && statusBarPosition === 'bottom' && (
-        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastChangeTime={lastChangeTime} />
       )}
       {/* The ui slice holds which modal is open and for which tab */}
       <HelpModal open={helpModalOpen} onOpenChange={() => dispatch(closeHelpModal())} />

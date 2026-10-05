@@ -1,4 +1,3 @@
-// src/ts/context/PortalContext.tsx
 import React, { createContext, useContext, useCallback, useRef, useMemo, useEffect } from 'react';
 import { createHtmlPortalNode, type HtmlPortalNode } from 'react-reverse-portal';
 import { useAppSelector } from '@store/hooks';

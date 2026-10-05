@@ -77,6 +77,9 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Changed
 
+- The "No Layouts Available" card of an empty tab has the test id
+  `prism-empty-tab-no-layouts`. Before, it shared `prism-empty-tab-layouts`
+  with the layout grid.
 - The parameter validation logs with the logger `dash_prism.params`, so a
   handler on `dash_prism` still receives the records. Its messages no longer
   start with `dash_prism:`. When a custom validator of a layout raises an

@@ -13,8 +13,8 @@ import {
   requestLayoutSelection,
 } from '@store';
 
-/** Holds the props of `NewLayout`. */
-interface NewLayoutProps {
+/** Holds the props of `LayoutPicker`. */
+interface LayoutPickerProps {
   tabId: TabId;
 }
 
@@ -37,7 +37,7 @@ interface LayoutSectionProps {
 }
 
 // Defined at module level so React sees a stable component identity across renders.
-// Defining inside NewLayout would cause unmount/remount on every re-render,
+// Defining inside LayoutPicker would cause unmount/remount on every re-render,
 // replacing DOM nodes and swallowing in-flight click events.
 function LayoutCard({ id, meta, isFavorite, onLayoutClick, onToggleFavorite }: LayoutCardProps) {
   return (
@@ -123,7 +123,7 @@ function LayoutSection({
  * Displays available layouts as cards for new/empty tabs.
  * Shows favorites at top, then remaining layouts.
  */
-export function NewLayout({ tabId }: NewLayoutProps) {
+export function LayoutPicker({ tabId }: LayoutPickerProps) {
   const { registeredLayouts } = useConfig();
   const dispatch = useAppDispatch();
   const storedFavorites = useAppSelector(selectFavoriteLayouts);
@@ -159,7 +159,7 @@ export function NewLayout({ tabId }: NewLayoutProps) {
   if (layoutEntries.length === 0) {
     return (
       <div
-        data-testid="prism-empty-tab-layouts"
+        data-testid="prism-empty-tab-no-layouts"
         className="tw:flex tw:h-full tw:items-center tw:justify-center tw:p-6"
       >
         <Card className="tw:w-full tw:max-w-md">

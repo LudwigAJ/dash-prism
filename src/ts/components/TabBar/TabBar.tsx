@@ -4,7 +4,7 @@ import { useDroppable, useDndContext } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { TabsList, Tooltip, TooltipContent, TooltipTrigger } from '@components/ui';
 import { useConfig } from '@context/ConfigContext';
-import type { Tab, TabId, PanelId } from '@types';
+import type { Tab, TabId, PanelId, TabBarDropData, TabDragData } from '@types';
 import { cn } from '@utils/cn';
 import {
   useAppDispatch,
@@ -54,11 +54,14 @@ export const TabBar = memo(function TabBar({
 
   // A pinned panel takes no tabs, and a tab from this panel is already here
   const { active } = useDndContext();
+  // dnd-kit types the data of a draggable as a plain record. Each draggable of Prism sets a
+  // TabDragData.
+  const dragData = active?.data.current as TabDragData | undefined;
   const isDraggingFromOtherPanel =
-    active?.data.current?.type === 'tab' && active.data.current.panelId !== panelId && !isPinned;
+    dragData?.type === 'tab' && dragData.panelId !== panelId && !isPinned;
   const { setNodeRef, isOver } = useDroppable({
     id: `tab-bar-drop-${panelId}`,
-    data: { panelId, type: 'tab-bar' },
+    data: { panelId, type: 'tab-bar' } satisfies TabBarDropData,
     disabled: !isDraggingFromOtherPanel,
   });
 

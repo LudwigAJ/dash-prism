@@ -14,7 +14,7 @@ import {
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { getTabIcon } from '@constants/tab-icons';
 import { useConfig } from '@context/ConfigContext';
-import type { Tab, TabId } from '@types';
+import type { Tab, TabId, TabDragData } from '@types';
 import { MAX_TAB_NAME_LENGTH } from '@store/workspaceSlice';
 import { useAppDispatch, removeTab } from '@store';
 import { cn } from '@utils/cn';
@@ -55,7 +55,7 @@ export const TabItem = memo(function TabItem({
 }: TabItemProps) {
   const dispatch = useAppDispatch();
   const ctx = window.dash_component_api?.useDashContext?.();
-  const { componentId = 'prism', theme } = useConfig();
+  const { componentId, theme } = useConfig();
   const componentPath = useMemo(
     () => makeComponentPath(componentId, tab.id),
     [componentId, tab.id]
@@ -77,11 +77,7 @@ export const TabItem = memo(function TabItem({
     isDragging,
   } = useSortable({
     id: tab.id,
-    data: {
-      type: 'tab',
-      tab,
-      panelId: tab.panelId,
-    },
+    data: { type: 'tab', tab, panelId: tab.panelId } satisfies TabDragData,
     disabled: isLocked || isPinned || isLoading || isEditing,
   });
 

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
-import type { LayoutId } from '@types';
-import { type DashComponentProps } from 'props';
+import type { LayoutId, DashComponentProps } from '@types';
 import { normalizeLayoutTimeout } from '@utils/dashSpec';
 
 interface ContentData {
@@ -80,8 +79,7 @@ export function PrismContent({ children, data, layoutTimeout = 30 }: PrismConten
               <CardTitle>Layout Loading Timeout</CardTitle>
             </div>
             <CardDescription>
-              The layout &quot;{data?.layoutId}&quot; did not respond within {effectiveTimeout}{' '}
-              seconds.
+              The layout “{data?.layoutId}” did not respond within {effectiveTimeout} seconds.
             </CardDescription>
           </CardHeader>
           <CardContent className="tw:space-y-4">

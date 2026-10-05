@@ -28,7 +28,7 @@ interface SetIconModalProps {
  * Displays a scrollable grid of icons for tab customization.
  *
  * Uses Radix Dialog for accessible modal behavior.
- * Shows all available Lucide icons from TAB_ICONS constant.
+ * Shows all available Lucide icons from TAB_ICON_NAMES.
  * First icon is a "Ban" (no icon) option to remove the current icon.
  */
 export function SetIconModal({ open, onOpenChange, tab, onSelectIcon }: SetIconModalProps) {

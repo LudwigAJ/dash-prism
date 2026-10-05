@@ -1,4 +1,4 @@
-"""Regression tests for packaging and documentation claims (01 §4, §6)."""
+"""Regression tests for packaging and documentation claims."""
 
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def test_docs_do_not_use_removed_run_server() -> None:
 
 
 def test_user_guide_does_not_promise_string_ids_without_allow_multiple() -> None:
-    """inject_tab_id rewrites string IDs for every tab layout (01 §1.4).
+    """inject_tab_id rewrites string IDs for every tab layout.
 
     Assert the claim, not one phrasing of it: the guide must say the rewriting is
     unconditional and must nowhere tell the reader that a layout is rendered with
@@ -76,7 +76,7 @@ def test_user_guide_does_not_promise_string_ids_without_allow_multiple() -> None
 
 
 def test_api_reference_documents_exactly_the_public_api() -> None:
-    """docs/api.rst and dash_prism.__all__ must list the same names (01 §2.1)."""
+    """docs/api.rst and dash_prism.__all__ must list the same names."""
     api = (ROOT / "docs" / "api.rst").read_text(encoding="utf-8")
     documented = set(re.findall(r"^\.\. (?:auto\w+|data):: dash_prism\.(\w+)", api, re.M))
     public = set(dash_prism.__all__)
@@ -97,7 +97,7 @@ def _pyproject_version() -> str:
 
 
 def test_package_json_version_matches_pyproject() -> None:
-    """The JS bundle and the Python package are released together (00 §2.7)."""
+    """The JS bundle and the Python package are released together."""
     package_json = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     assert package_json["version"] == _pyproject_version()
 
@@ -199,3 +199,47 @@ def test_every_integration_server_gets_a_free_port() -> None:
             ):
                 ports = [keyword for keyword in node.keywords if keyword.arg == "port"]
                 assert ports, f"{path.name}:{node.lineno} starts a server without a port"
+
+
+# The audit and design documents are not in the repository, so a citation of
+# one of them tells a reader nothing. A comment states its reason in full.
+_AUDIT_CITATION = re.compile(
+    r"internal_docs(?!/\*\*)"  # the folder name in an ignore list is no citation
+    r"|§"
+    r"|\b0\d [A-Z]{1,2}-\d+\b"  # a design-set code such as "02 A-2"
+    r"|\bdoc 0\d\b"
+    r"|\b(?:TS-STATE|TS-UI|ST-TS|ST-PY|ST-CSS|XC|PY|V)-\d{2}\b"  # an audit finding ID
+)
+
+
+def test_no_source_file_cites_an_audit_document() -> None:
+    """Code, tests and docs carry no reference to a document outside the repository."""
+    suffixes = {".py", ".ts", ".tsx", ".css", ".rst", ".md", ".json"}
+    files = [
+        path
+        for folder in ("src", "tests", "docs", "dash_prism", "examples")
+        for path in (ROOT / folder).rglob("*")
+        if path.suffix in suffixes
+        and path.is_file()
+        and "_build" not in path.parts
+        and path != Path(__file__).resolve()
+    ]
+    root_files = (
+        "README.md",
+        "CHANGELOG.md",
+        "eslint.config.mjs",
+        "webpack.config.js",
+        "vitest.config.ts",
+        "tsconfig.json",
+        "knip.json",
+        "package.json",
+        "pyproject.toml",
+    )
+    files += [ROOT / name for name in root_files]
+    offenders = [
+        f"{path.relative_to(ROOT)}:{number}"
+        for path in files
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if _AUDIT_CITATION.search(line)
+    ]
+    assert offenders == []

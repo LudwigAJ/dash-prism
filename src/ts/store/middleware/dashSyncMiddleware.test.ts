@@ -14,11 +14,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isAction, type Middleware } from '@reduxjs/toolkit';
 import { ActionCreators, ActionTypes } from 'redux-undo';
 import { PERSIST, REHYDRATE } from 'redux-persist';
-import { activateTab, removeTab } from '../workspaceSlice';
-import { addTab, splitPanel } from '../workspaceThunks';
-import { setSearchBarMode, openHelpModal } from '../uiSlice';
+import { activateTab, removeTab } from '@store/workspaceSlice';
+import { addTab, splitPanel } from '@store/workspaceThunks';
+import { setSearchBarMode, openHelpModal } from '@store/uiSlice';
 import { createDashSyncMiddleware, isWorkspaceChange } from './dashSyncMiddleware';
-import { createTestStore, PANEL_1, TAB_1, TAB_2, type TestStore } from '../testing';
+import { createTestStore, PANEL_1, TAB_1, TAB_2, type TestStore } from '@store/testing';
 
 function createSyncedStore(setProps?: (props: Record<string, unknown>) => void) {
   const dashSync = createDashSyncMiddleware(setProps);
