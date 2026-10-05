@@ -31,7 +31,7 @@ import type {
   Workspace,
   StatusBarPosition,
   PersistenceType,
-  EmptyTabView,
+  EmptyTabViewKind,
   DashComponent,
   DashComponentProps,
 } from '@types';
@@ -218,7 +218,7 @@ interface PrismProps extends DashComponentProps {
    * 'hint' shows a single line pointing the user to the search bar.
    * 'none' shows nothing; users select layouts via the search bar only.
    */
-  emptyTabView?: EmptyTabView;
+  emptyTabView?: EmptyTabViewKind;
 
   /**
    * Whether Prism installs its keyboard shortcuts (Ctrl/Cmd+Alt+N, Ctrl/Cmd+D,

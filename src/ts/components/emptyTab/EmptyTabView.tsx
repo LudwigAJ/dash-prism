@@ -1,8 +1,8 @@
 import React from 'react';
 import { useConfig } from '@context/ConfigContext';
-import { NewLayout } from '@components/layouts/NewLayout';
+import { LayoutPicker } from '@components/emptyTab/LayoutPicker';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
-import type { TabId, EmptyTabView as EmptyTabViewKind } from '@types';
+import type { TabId, EmptyTabViewKind } from '@types';
 
 interface EmptyTabViewProps {
   tabId: TabId;
@@ -26,7 +26,7 @@ export function EmptyTabView({ tabId }: EmptyTabViewProps) {
   const view = resolveEmptyTabView(emptyTabView);
 
   if (view === 'layouts') {
-    return <NewLayout tabId={tabId} />;
+    return <LayoutPicker tabId={tabId} />;
   }
 
   if (view === 'hint') {

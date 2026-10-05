@@ -6,7 +6,7 @@ import type {
   Size,
   StatusBarPosition,
   PersistenceType,
-  EmptyTabView,
+  EmptyTabViewKind,
   StatusBarItem,
 } from '@types';
 
@@ -40,7 +40,7 @@ interface ConfigContextValue {
   /** Whether new tabs auto-focus SearchBar and open dropdown */
   newTabOpensDropdown: boolean;
   /** What an empty tab renders in its body */
-  emptyTabView: EmptyTabView;
+  emptyTabView: EmptyTabViewKind;
   /** Whether Prism's keyboard shortcuts are installed */
   enableKeyboardShortcuts: boolean;
   /** Whether share links can be created and are read from the URL hash */
@@ -75,7 +75,7 @@ interface ConfigProviderProps {
   statusBarItems: readonly StatusBarItem[];
   initialLayout?: string;
   newTabOpensDropdown: boolean;
-  emptyTabView: EmptyTabView;
+  emptyTabView: EmptyTabViewKind;
   enableKeyboardShortcuts: boolean;
   enableShareLinks: boolean;
   layoutTimeout: number;
