@@ -85,6 +85,14 @@ class InitializationError(Exception):
     """
 
 
+class _RenderSetupError(RuntimeError):
+    """A setup of the Dash app that stops Prism from running a layout callback.
+
+    Prism writes the message, and the message holds no value that the user
+    typed. Thus the log and the tab both show it.
+    """
+
+
 def _compute_server_session_id(layout_ids: Iterable[str]) -> str:
     """Make a fingerprint of the set of registered layout IDs.
 
@@ -562,7 +570,7 @@ def _run_callback(
     :rtype: Any
     :raises TimeoutError: If an async callback takes more than ``timeout``
         seconds.
-    :raises RuntimeError: If ``is_async`` is ``True`` and an event loop is
+    :raises _RenderSetupError: If ``is_async`` is ``True`` and an event loop is
         already in operation in this thread. ``asyncio.run()`` cannot start a
         second loop. To correct this, set ``use_async=True`` on the Dash app, or
         make the layout callback sync.
@@ -580,7 +588,7 @@ def _run_callback(
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(_run_callback_async(callback, is_async, kwargs, timeout))
-    raise RuntimeError(
+    raise _RenderSetupError(
         "An event loop is already running in this thread, so asyncio.run() cannot run "
         "the async layout callback. Set use_async=True on the Dash app, or make the "
         "layout callback sync."
@@ -754,6 +762,8 @@ def _error_component_for(
 
     The tab shows the message of an unexpected exception only when
     ``show_details`` is ``True``. The texts that Prism writes itself always show.
+    A :class:`_RenderSetupError` gets an error with its message, because Prism
+    writes that message.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -784,6 +794,9 @@ def _error_component_for(
         # shows them as they are.
         logger.warning("Layout %r: the registration rejected the render request", layout_id)
         return _create_error_component(str(exc))
+    if isinstance(exc, _RenderSetupError):
+        logger.error("Layout %r cannot run: %s", layout_id, exc)
+        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
     logger.error(
         "Layout %r failed with %s\n%s", layout_id, type(exc).__name__, params.format_frames(exc)
     )

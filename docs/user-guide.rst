@@ -716,7 +716,8 @@ another process. Its card always shows the text without the message.
 The log always gets the class of the exception and the stack frames, but never
 the message. The texts that Prism writes itself do not change with the dev
 tools. These texts are the message for a request that does not agree with the
-registration, the timeout message and the "Invalid parameters" panel.
+registration, the timeout message, the "Invalid parameters" panel and the
+message for an async layout that cannot run in a sync app.
 
 Keyboard Shortcuts
 ^^^^^^^^^^^^^^^^^^

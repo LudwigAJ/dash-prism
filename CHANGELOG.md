@@ -314,9 +314,10 @@ All notable changes to Dash Prism are recorded here. The project follows
   user must not see. Prism reads the switch of the app that `init()` connects,
   at each request. A background callback always shows the text without the
   message. The texts that Prism writes itself do not change: the message for a
-  request that does not agree with the registration, the timeout message and
-  the "Invalid parameters" panel. The section "Layout Errors" of the user guide
-  describes the behavior.
+  request that does not agree with the registration, the timeout message, the
+  "Invalid parameters" panel and the message for an async layout that cannot
+  run in a sync app. The section "Layout Errors" of the user guide describes
+  the behavior.
 
 ## 1.0.0
 

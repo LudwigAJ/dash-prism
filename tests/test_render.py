@@ -1117,6 +1117,28 @@ def test_each_app_follows_its_own_dev_tools_switch(use_async: bool) -> None:
     assert "detail-3b9d" in _post_render(debug_app, "failing")
 
 
+def test_event_loop_error_shows_its_message_in_the_tab(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    @dash_prism.register_layout(id="async-layout")
+    async def async_layout():
+        return html.Div()
+
+    async def render_inside_a_running_loop() -> Any:
+        return app_init._render_tab_layout("tab-1", "async-layout", None)
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        result = asyncio.run(render_inside_a_running_loop())
+
+    message = _error_message(result)
+    assert message.startswith(
+        "Error rendering layout 'async-layout': An event loop is already running"
+    )
+    [record] = _prism_records(caplog, logging.WARNING)
+    assert record.levelno == logging.ERROR
+    assert "An event loop is already running" in record.getMessage()
+
+
 # =============================================================================
 # Layout callbacks that return something other than a component
 # =============================================================================
