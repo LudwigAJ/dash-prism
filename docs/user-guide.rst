@@ -703,7 +703,9 @@ help dialog in the app shows the same bindings, and writes them with the ``⌃``
 ``⌥`` ``⇧`` symbols on macOS. The shortcuts apply to the Prism workspace that
 the user touched last. Prism ignores them while the user types in an input, and
 while a context menu or a dialog is open. A shortcut works only with exactly its
-keys: with an extra ``Shift`` or ``Alt``, it does nothing.
+keys: with an extra ``Shift`` or ``Alt``, it does nothing. A shortcut also does
+nothing when an element in the page calls ``preventDefault()`` on its key, so a
+component in a tab can keep a key for itself.
 
 ============================  ===========================================
 Shortcut                      Action
@@ -723,11 +725,9 @@ Shortcut                      Action
 ============================  ===========================================
 
 A tab in the tab bar takes the keyboard focus like the tabs of other apps: the
-arrow keys move between the tabs, ``Enter`` or ``Space`` opens the focused tab,
-and ``Delete`` closes it (``Backspace`` too, the Delete key of a Mac keyboard).
-A locked tab and a tab in a pinned panel stay open. ``Space`` on a tab also
-picks the tab up for a keyboard drag: the arrow keys move it and ``Space`` drops
-it.
+arrow keys move between the tabs, ``Enter`` opens the focused tab, and
+``Delete`` closes it (``Backspace`` too, the Delete key of a Mac keyboard).
+A locked tab and a tab in a pinned panel stay open.
 
 New tab is a three-key chord. Chrome, Edge and Safari keep plain
 ``Ctrl``/``Cmd`` + ``N`` for themselves, and do not give that keystroke to the
@@ -738,6 +738,31 @@ Pass ``enableKeyboardShortcuts=False`` to install none of the shortcuts. The
 shortcut hints then disappear from the context menu, the help dialog and the
 empty-tab view. Thus nothing on the screen shows a key binding that does
 nothing.
+
+Keyboard Drag
+^^^^^^^^^^^^^
+
+The keyboard can move a tab to each place that a mouse drag can reach. These
+keys work also when ``enableKeyboardShortcuts`` is ``False``.
+
+#. Move the focus to the tab and press ``Space`` to pick up the tab.
+#. Press an arrow key to go to the next drop target in that direction.
+   ``Left`` and ``Right`` go from one tab position to the next, and continue
+   into the tab bar of the next panel. The arrow keys also go to the four
+   edges of each panel that can split. A drop on an edge splits the panel.
+#. Press ``Enter`` or ``Space`` to drop the tab. Press ``Escape`` to cancel the
+   drag, and the tab stays at its position.
+
+An arrow key goes to a target in line with the current target. Without such
+a target, it goes to a target that is more ahead than to the side. At the outer
+edge of the workspace the drag thus stays where it is. The workspace shortcuts
+do nothing while a tab is picked up.
+
+The drop target shows the same highlight as for a mouse drag. A screen reader
+reads each drop target, for example "right edge of panel 2". After the drop,
+the focus is on the moved tab. ``Space`` on a locked tab or on a tab in a pinned
+panel opens the tab, because such a tab cannot move. A pinned panel accepts no
+tab.
 
 Caveats
 -------

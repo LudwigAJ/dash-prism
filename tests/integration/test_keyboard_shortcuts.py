@@ -120,6 +120,9 @@ def test_keyboard_shortcuts_can_be_disabled(dash_duo):
     dialog_text = duo.find_element("[role='dialog']").text.lower()
     assert "tab management" in dialog_text
     assert "keyboard shortcuts" not in dialog_text
+    # The keyboard drag works without the shortcuts, so its keys stay in the help.
+    drag_keys = duo.find_element("[data-testid='prism-help-drag-keys']").text
+    assert "Pick up focused tab" in drag_keys
 
 
 @pytest.mark.parametrize(

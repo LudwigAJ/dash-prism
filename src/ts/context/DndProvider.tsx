@@ -9,20 +9,26 @@ import {
   useSensor,
   useSensors,
   MeasuringStrategy,
+  type Active,
+  type Announcements,
   type DragStartEvent,
   type DragEndEvent,
+  type Over,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useConfig } from '@context/ConfigContext';
+import { DRAG_KEYS } from '@constants/shortcuts';
 import { getTabIcon } from '@constants/tab-icons';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
-import type { Tab, DropData } from '@types';
+import { describeDropTarget, dropTargetCoordinates } from '@utils/keyboardDrag';
+import { getLeafPanelIds } from '@utils/panels';
+import type { Tab, TabId, DropData, TabDragData } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
   selectTabs,
   selectIsSingleTabMode,
+  selectPanel,
   selectPanelTabs,
   splitPanel,
   moveTab,
@@ -33,10 +39,42 @@ interface DndProviderProps {
   children: React.ReactNode;
 }
 
+const SCREEN_READER_INSTRUCTIONS = {
+  draggable:
+    'To move the tab, press Space. Then use the arrow keys to go to a drop target. ' +
+    'Press Enter or Space to drop the tab. Press Escape to cancel.',
+};
+
+function tabName(active: Active): string {
+  // dnd-kit types the data of a draggable as a plain record. Each draggable of Prism sets a
+  // TabDragData, but dnd-kit puts an empty record in its place when the tab unmounts during a drag.
+  const data = active.data.current as Partial<TabDragData> | undefined;
+  return data?.tab?.name ?? String(active.id);
+}
+
+/**
+ * Puts the focus on the trigger of a tab when the tab is in the DOM. After a split, the split pane
+ * renders the new panels some frames later, and the search bar of a new panel takes the focus in
+ * its first effects. So the focus moves one frame after the trigger shows.
+ */
+function focusTabTrigger(root: Element, tabId: TabId, framesLeft = 10): void {
+  requestAnimationFrame(() => {
+    const trigger = root.querySelector<HTMLElement>(
+      `[data-testid="prism-tab-${tabId}"] [role="tab"]`
+    );
+    if (trigger) {
+      requestAnimationFrame(() => trigger.focus());
+    } else if (framesLeft > 0) {
+      focusTabTrigger(root, tabId, framesLeft - 1);
+    }
+  });
+}
+
 export function DndProvider({ children }: DndProviderProps) {
   const dispatch = useAppDispatch();
   const tabs = useAppSelector(selectTabs);
   const panelTabs = useAppSelector(selectPanelTabs);
+  const panelIds = getLeafPanelIds(useAppSelector(selectPanel));
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
 
   // Single-tab-single-panel mode allows no DnD operations
@@ -55,12 +93,34 @@ export function DndProvider({ children }: DndProviderProps) {
         distance: 8, // Same constraint for Selenium ActionChains compatibility
       },
     }),
-    // Enter only selects a focused tab. Space selects it and picks it up for a keyboard drag.
+    // Enter only selects a focused tab. Space picks it up, and the arrow keys move it from one
+    // drop target to the next.
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-      keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] },
+      coordinateGetter: dropTargetCoordinates,
+      keyboardCodes: {
+        start: DRAG_KEYS.pickUp.codes,
+        cancel: DRAG_KEYS.cancel.codes,
+        end: DRAG_KEYS.drop.codes,
+      },
     })
   );
+
+  // Each droppable of Prism sets a DropData, as in handleDragEnd
+  const describeOver = (over: Over | null) =>
+    over?.data.current
+      ? describeDropTarget(over.data.current as DropData, panelIds, panelTabs)
+      : 'none';
+
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      `You picked up tab ${tabName(active)}. Use the arrow keys to move it.`,
+    onDragOver: ({ active, over }) => `Tab ${tabName(active)}. Drop target: ${describeOver(over)}.`,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? `You dropped tab ${tabName(active)}. Drop target: ${describeOver(over)}.`
+        : `You dropped tab ${tabName(active)}. The tab did not move.`,
+    onDragCancel: ({ active }) => `You cancelled the drag. Tab ${tabName(active)} did not move.`,
+  };
 
   // ===== EVENT HANDLERS =====
 
@@ -103,7 +163,7 @@ export function DndProvider({ children }: DndProviderProps) {
       // 'before' = left/top (new panel first), 'after' = right/bottom (new panel second)
       const position = edge === 'left' || edge === 'top' ? 'before' : 'after';
 
-      dispatch(
+      const split = dispatch(
         splitPanel({
           panelId: dropData.panelId,
           direction,
@@ -111,6 +171,16 @@ export function DndProvider({ children }: DndProviderProps) {
           position,
         })
       );
+      // The moved tab mounts in its new panel after the focus restore of dnd-kit. So after a
+      // keyboard drop, this handler gives the focus back to the moved tab, as after the other
+      // drops. A mouse drop keeps the focus where the new panel puts it.
+      const trigger = event.activatorEvent?.target;
+      const root = trigger instanceof Element ? trigger.closest('.prism-root') : null;
+      if (event.activatorEvent instanceof KeyboardEvent && root) {
+        void split.then(() => {
+          focusTabTrigger(root, activeId);
+        });
+      }
       return;
     }
 
@@ -173,6 +243,7 @@ export function DndProvider({ children }: DndProviderProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
+      accessibility={{ announcements, screenReaderInstructions: SCREEN_READER_INSTRUCTIONS }}
     >
       {children}
 

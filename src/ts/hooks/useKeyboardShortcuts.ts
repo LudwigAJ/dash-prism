@@ -186,6 +186,10 @@ export function useKeyboardShortcuts(rootRef: RefObject<HTMLElement>) {
     if (!enableKeyboardShortcuts) return undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // A control handled the key already. During a drag the tab trigger stops every key, so a
+      // shortcut cannot close or change the tab that the user drags.
+      if (e.defaultPrevented) return;
+
       // Another Prism instance on the page owns the shortcuts right now
       if (rootRef.current && !rootRegistry.owns(rootRef.current)) return;
 

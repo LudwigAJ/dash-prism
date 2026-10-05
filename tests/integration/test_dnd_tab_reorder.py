@@ -24,22 +24,11 @@ def _moved(order: list[str], source_idx: int, target_idx: int) -> list[str]:
 
 
 def _keyboard_move_right(duo, tab_ids: list[str]) -> None:
-    """Move the first tab one place to the right with the keyboard drag of dnd-kit."""
-    # The live region of dnd-kit announces each step, so the helper waits for it
-    # before the next key. After the pickup it reports the tab over itself.
-    announcement = "return document.querySelector(\"[id^='DndLiveRegion']\").textContent;"
-
-    def press_and_wait_for(key: str, text: str) -> None:
-        testutils.press_key(duo, key)
-        WebDriverWait(duo.driver, 5).until(
-            lambda driver: text in driver.execute_script(announcement),
-            message=f"dnd-kit should announce {text!r} after the key",
-        )
-
-    duo.find_element(f"[data-testid='prism-tab-{tab_ids[0]}'] [role='tab']").click()
-    press_and_wait_for(Keys.SPACE, f"moved over droppable area {tab_ids[0]}")
-    press_and_wait_for(Keys.ARROW_RIGHT, f"moved over droppable area {tab_ids[1]}")
-    press_and_wait_for(Keys.SPACE, "dropped")
+    """Move the first tab one place to the right with the keyboard drag."""
+    duo.find_element(testutils.tab_trigger(tab_ids[0])).click()
+    testutils.press_drag_key(duo, Keys.SPACE, "Drop target: position 1 in panel 1")
+    testutils.press_drag_key(duo, Keys.ARROW_RIGHT, "Drop target: position 2 in panel 1")
+    testutils.press_drag_key(duo, Keys.ENTER, "You dropped tab")
 
 
 class TestTabReorder:
@@ -74,10 +63,7 @@ class TestTabReorder:
         assert len(testutils.get_panels(duo)) == 1, "Still 1 panel"
 
     def test_keyboard_reorder_from_the_tab_trigger(self, prism_app_with_layouts):
-        """Space on a focused tab picks it up, an arrow key moves it, and Space drops it.
-
-        Enter only selects a tab. The keyboard sensor of dnd-kit starts on Space alone.
-        """
+        """Space on a focused tab picks it up, an arrow key moves it, and Enter drops it."""
         duo = prism_app_with_layouts
         initial_order = testutils.create_tabs_for_dnd_test(duo, 3)
 
@@ -95,10 +81,7 @@ class TestTabReorder:
 
         _keyboard_move_right(duo, initial_order)
 
-        trigger = f"[data-testid='prism-tab-{initial_order[0]}'] [role='tab']"
-        assert duo.driver.execute_script(
-            "return document.activeElement.matches(arguments[0]);", trigger
-        )
+        testutils.wait_for_focus(duo, testutils.tab_trigger(initial_order[0]))
 
     def test_reorder_with_two_tabs(self, prism_app_with_layouts):
         """Test reordering with exactly 2 tabs (minimum for DnD)."""

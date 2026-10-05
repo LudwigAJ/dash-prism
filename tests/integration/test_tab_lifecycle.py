@@ -83,15 +83,11 @@ def test_tab_list_has_one_tab_stop(prism_app_with_layouts):
     close = duo.find_element(f"[data-testid='prism-tab-close-{tab_id}']")
     assert close.get_attribute("tabindex") == "-1"
 
-    duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']").click()
+    duo.find_element(testutils.tab_trigger(tab_id)).click()
     testutils.press_key(duo, Keys.TAB)
 
     focused = duo.driver.execute_script("return document.activeElement.dataset.testid;")
     assert focused == "prism-tab-bar-add-button"
-
-
-# The live region of dnd-kit announces each step of a keyboard drag.
-DND_ANNOUNCEMENT = "return document.querySelector(\"[id^='DndLiveRegion']\")?.textContent ?? '';"
 
 
 def _focus_first_tab_with_the_arrow_key(duo) -> str:
@@ -99,12 +95,13 @@ def _focus_first_tab_with_the_arrow_key(duo) -> str:
     duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
     first, second = testutils.get_tab_id(duo, 0), testutils.get_tab_id(duo, 1)
-    trigger = "[data-testid='prism-tab-{}'] [role='tab']"
+    trigger = testutils.tab_trigger(first)
 
-    duo.find_element(trigger.format(second)).click()
+    duo.find_element(testutils.tab_trigger(second)).click()
     testutils.press_key(duo, Keys.ARROW_LEFT)
-    assert duo.find_element(trigger.format(first)).get_attribute("aria-selected") == "false"
-    return trigger.format(first)
+    testutils.wait_for_focus(duo, trigger)
+    assert duo.find_element(trigger).get_attribute("aria-selected") == "false"
+    return trigger
 
 
 def _wait_until_selected(duo, trigger: str) -> None:
@@ -125,30 +122,25 @@ def test_enter_selects_the_focused_tab_without_a_drag(prism_app_with_layouts):
 
     testutils.press_key(duo, Keys.ENTER)
     _wait_until_selected(duo, trigger)
-    announcement = duo.driver.execute_script(DND_ANNOUNCEMENT)
-    assert "Picked up" not in announcement and "moved over" not in announcement
+    assert "Drop target" not in testutils.dnd_announcement(duo)
 
     testutils.press_key(duo, Keys.ESCAPE)
-    assert "cancelled" not in duo.driver.execute_script(DND_ANNOUNCEMENT)
+    assert "cancelled" not in testutils.dnd_announcement(duo)
 
 
-def test_space_selects_the_focused_tab_and_picks_it_up(prism_app_with_layouts):
-    """Space selects the focused tab and starts a keyboard drag, which Escape cancels."""
+def test_space_picks_up_the_focused_tab_without_a_select(prism_app_with_layouts):
+    """Space starts a keyboard drag of the focused tab and does not select it.
+
+    Escape cancels the drag.
+    """
     duo = prism_app_with_layouts
     trigger = _focus_first_tab_with_the_arrow_key(duo)
 
-    testutils.press_key(duo, Keys.SPACE)
-    _wait_until_selected(duo, trigger)
-    WebDriverWait(duo.driver, 3).until(
-        lambda driver: "moved over" in driver.execute_script(DND_ANNOUNCEMENT),
-        message="Space should pick the tab up",
-    )
+    testutils.press_drag_key(duo, Keys.SPACE, "Drop target: position 1 in panel 1")
+    assert duo.find_element(trigger).get_attribute("aria-selected") == "false"
 
-    testutils.press_key(duo, Keys.ESCAPE)
-    WebDriverWait(duo.driver, 3).until(
-        lambda driver: "cancelled" in driver.execute_script(DND_ANNOUNCEMENT),
-        message="Escape should cancel the drag",
-    )
+    testutils.press_drag_key(duo, Keys.ESCAPE, "You cancelled the drag")
+    assert duo.find_element(trigger).get_attribute("aria-selected") == "false"
 
 
 @pytest.mark.parametrize("key", [Keys.DELETE, Keys.BACKSPACE])
@@ -159,7 +151,7 @@ def test_delete_closes_the_focused_tab(prism_app_with_layouts, key):
     testutils.wait_for_tab_count(duo, 2)
     tab_id = testutils.get_tab_id(duo, 1)
 
-    duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']").click()
+    duo.find_element(testutils.tab_trigger(tab_id)).click()
     testutils.press_key(duo, key)
 
     testutils.wait_for_tab_count(duo, 1)
@@ -181,7 +173,7 @@ def test_delete_on_the_last_tab_of_a_panel_moves_the_focus_to_another_panel(
     testutils.wait_for_tab_count(duo, 2)
     tab_id = testutils.get_tab_id(duo, 1)
 
-    duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']").click()
+    duo.find_element(testutils.tab_trigger(tab_id)).click()
     testutils.press_key(duo, Keys.DELETE)
 
     testutils.wait_for_panel_count(duo, 1)
@@ -198,7 +190,7 @@ def test_delete_keeps_a_locked_tab(prism_app_with_layouts):
     duo.find_element(testutils.ADD_TAB_BUTTON).click()
     testutils.wait_for_tab_count(duo, 2)
     tab_id = testutils.get_tab_id(duo, 1)
-    trigger = f"[data-testid='prism-tab-{tab_id}'] [role='tab']"
+    trigger = testutils.tab_trigger(tab_id)
     duo.find_element(trigger).click()
     duo.find_element("body").send_keys(testutils.get_modifier_key(), "o")
     duo.wait_for_element(f"{trigger}[data-locked]", timeout=3)
@@ -247,9 +239,9 @@ def test_tab_selection(prism_app_with_layouts):
         return [
             tab_id
             for tab_id in tab_ids
-            if driver.find_element(
-                By.CSS_SELECTOR, f"[data-testid='prism-tab-{tab_id}'] [role='tab']"
-            ).get_attribute("aria-selected")
+            if driver.find_element(By.CSS_SELECTOR, testutils.tab_trigger(tab_id)).get_attribute(
+                "aria-selected"
+            )
             == "true"
         ]
 

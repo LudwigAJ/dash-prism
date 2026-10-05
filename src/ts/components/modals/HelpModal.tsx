@@ -8,7 +8,13 @@ import {
   DialogFooter,
 } from '@components/ui/dialog';
 import { Button } from '@components/ui/button';
-import { SHORTCUTS, formatKeys, isMacPlatform } from '@constants/shortcuts';
+import {
+  DRAG_KEYS,
+  SHORTCUTS,
+  formatDragKeys,
+  formatKeys,
+  isMacPlatform,
+} from '@constants/shortcuts';
 import { cn } from '@utils/cn';
 import { useConfig } from '@context/ConfigContext';
 
@@ -111,6 +117,23 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
               </div>
             </>
           )}
+
+          {/* The keyboard drag works without the shortcuts, so this section always shows */}
+          <h3 className={SECTION_TITLE_CLASS}>Keyboard Drag</h3>
+          <div className={SECTION_BOX_CLASS} data-testid="prism-help-drag-keys">
+            {Object.values(DRAG_KEYS).map((step) => (
+              <div key={step.label} className={SHORTCUT_ROW_CLASS}>
+                <span className={SHORTCUT_LABEL_CLASS}>{step.label}</span>
+                <div className="tw:flex tw:items-center tw:gap-1">
+                  {formatDragKeys(step).map((key) => (
+                    <kbd key={key} className={KBD_CLASS}>
+                      {key}
+                    </kbd>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
 
           <h3 className={SECTION_TITLE_CLASS}>Tab Management</h3>
           <div className={cn(SECTION_BOX_CLASS, 'tw:space-y-2')}>
