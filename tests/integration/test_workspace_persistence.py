@@ -228,7 +228,7 @@ def test_update_workspace_modifies_state(dash_duo):
 def test_read_workspace_update_workspace_roundtrip(dash_duo):
     """Test save/load roundtrip using readWorkspace and updateWorkspace.
 
-    Simulates the pattern used in usage.py for save/load functionality.
+    Simulates a pair of save and load callbacks.
     """
     app = Dash(__name__, suppress_callback_exceptions=True)
 

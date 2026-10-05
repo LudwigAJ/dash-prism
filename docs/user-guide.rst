@@ -162,6 +162,11 @@ tab. As an alternative, give the component an explicit dict ID yourself
 (``id={'type': 'settings-theme', 'index': 'global'}``), which Prism leaves
 untouched, when you need a fixed index.
 
+A callback with a fixed dict ID does not run again when the tab opens again,
+because Dash makes the initial call only for a new component ID. When a callback
+must run each time the tab opens, give the component an index that changes on
+each render, for example ``uuid.uuid4().hex``, and use ``MATCH``.
+
 Prism walks only the ``children`` of each component. Thus a component that sits
 in a different prop keeps its string ID. A ``label`` prop that holds a component
 is one example.
@@ -557,6 +562,56 @@ Configuration
        enableKeyboardShortcuts=True,  # False if they clash with your app's shortcuts
        enableShareLinks=True,   # False to disable tab share links and '#p:' hashes
    )
+
+Theme
+^^^^^
+
+The ``theme`` prop sets the colors of Prism, ``'light'`` or ``'dark'``. A
+callback can change it (``Output('workspace', 'theme')``). The prop does not
+change the colors of your layouts. Two hooks let a layout follow the theme.
+
+Prism adds the class ``dark`` to its root element, ``.prism-root``, when
+``theme='dark'``. The layout of each tab is inside this element. Thus your CSS
+can give a layout its dark colors under ``.prism-root.dark``:
+
+.. code-block:: css
+
+   .prism-root .my-page {
+     background-color: #fff;
+     color: #24292f;
+   }
+
+   .prism-root.dark .my-page {
+     background-color: #0a0e14;
+     color: #e6e6e6;
+   }
+
+A Plotly figure cannot read CSS. To make a figure follow the theme, give its
+graph a dict ID and write a ``MATCH`` callback that has the ``theme`` prop as
+its input. The callback replaces the template of the figure with a ``Patch``:
+
+.. code-block:: python
+
+   import plotly.io as pio
+   from dash import MATCH, Input, Output, Patch, callback
+
+   TEMPLATES = {'light': 'plotly_white', 'dark': 'plotly_dark'}
+
+   @callback(
+       Output({'type': 'themed-graph', 'index': MATCH}, 'figure'),
+       Input('workspace', 'theme'),
+   )
+   def apply_figure_theme(theme):
+       patch = Patch()
+       patch['layout']['template'] = pio.templates[TEMPLATES[theme]]
+       return patch
+
+Dash runs the callback for each new graph, and again for each graph when the
+theme changes. Prism does not change a dict ID (see Component IDs Inside Tabs).
+Thus each graph needs an index that no other graph has, for example
+``{'type': 'themed-graph', 'index': uuid.uuid4().hex}``. The demo app in
+``examples/`` uses both hooks. See ``examples/theme.py`` and
+``examples/assets/demo.css``.
 
 Tab Limits
 ^^^^^^^^^^

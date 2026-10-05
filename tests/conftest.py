@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
+from collections.abc import Iterator
+from types import ModuleType
+
 import pytest
-from dash import Dash, html
+from dash import Dash, _callback, html
 
 import dash_prism
 
@@ -72,3 +77,27 @@ def sample_layout():
             html.P("This is a test layout", id="test-paragraph"),
         ]
     )
+
+
+@pytest.fixture
+def demo_app() -> Iterator[ModuleType]:
+    """Import the demo app module ``examples.app`` again, into the empty registry.
+
+    The demo registers its layouts and its ``dash.callback`` callbacks when Python
+    imports it. The fixture removes the earlier import, so each test gets a new app
+    and new registrations. Dash keeps a ``dash.callback`` in a global list until an
+    app starts a server. Thus the fixture restores that list after the test, so the
+    callbacks of the demo cannot reach the app of a later test.
+
+    :returns: The module ``examples.app``.
+    """
+    for name in [name for name in sys.modules if name.split(".")[0] == "examples"]:
+        del sys.modules[name]
+    callback_list = list(_callback.GLOBAL_CALLBACK_LIST)
+    callback_map = dict(_callback.GLOBAL_CALLBACK_MAP)
+    inline_scripts = list(_callback.GLOBAL_INLINE_SCRIPTS)
+    yield importlib.import_module("examples.app")
+    _callback.GLOBAL_CALLBACK_LIST[:] = callback_list
+    _callback.GLOBAL_CALLBACK_MAP.clear()
+    _callback.GLOBAL_CALLBACK_MAP.update(callback_map)
+    _callback.GLOBAL_INLINE_SCRIPTS[:] = inline_scripts

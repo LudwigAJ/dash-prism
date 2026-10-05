@@ -179,9 +179,8 @@ known-first-party = ["dash_prism", "tests"]
 [tool.ruff.lint.per-file-ignores]
 # The check of the Dash import runs before the component imports.
 "dash_prism/__init__.py" = ["E402"]
-# Move the pydantic import to the top of the module to remove the E402 part of this entry.
 # The slow demo layout sleeps on purpose.
-"usage.py" = ["E402", "TID251"]
+"examples/layouts/delayed.py" = ["TID251"]
 # The slow layouts under test sleep on purpose.
 "tests/integration/test_layout_timeout.py" = ["TID251"]
 "tests/test_render.py" = ["TID251"]
@@ -207,6 +206,7 @@ files = [
     "dash_prism/registry.py",
     "dash_prism/utils.py",
     "dash_prism/workspace.py",
+    "examples",
     "scripts/check_wheel.py",
 ]
 
