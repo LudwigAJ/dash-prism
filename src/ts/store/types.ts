@@ -54,7 +54,7 @@ export interface UiState {
 
 /** Holds the settings that Prism passes to createPrismStore. */
 export interface StoreConfig {
-  componentId?: string;
+  componentId: string;
   serverSessionId?: string;
   persistenceType: 'local' | 'session' | 'memory';
   /**

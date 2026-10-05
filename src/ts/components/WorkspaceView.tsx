@@ -40,7 +40,7 @@ import {
 const DashContentRenderer = memo(
   function DashContentRenderer({ tab }: { tab: Tab }) {
     const api: DashComponentApi | undefined = window.dash_component_api;
-    const { componentId = 'prism', layoutTimeout } = useConfig();
+    const { componentId, layoutTimeout } = useConfig();
 
     // Destructure only layout-affecting properties for stable memoization
     const { id, layoutId, layoutParams, layoutOption } = tab;

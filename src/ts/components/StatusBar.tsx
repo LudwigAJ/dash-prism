@@ -243,7 +243,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
                 {index > 0 && <Sep />}
                 <api.ExternalWrapper
                   component={action}
-                  componentPath={[componentId ?? 'prism', 'actions', index]}
+                  componentPath={[componentId, 'actions', index]}
                 />
               </React.Fragment>
             );

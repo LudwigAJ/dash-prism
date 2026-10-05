@@ -55,7 +55,7 @@ export const TabItem = memo(function TabItem({
 }: TabItemProps) {
   const dispatch = useAppDispatch();
   const ctx = window.dash_component_api?.useDashContext?.();
-  const { componentId = 'prism', theme } = useConfig();
+  const { componentId, theme } = useConfig();
   const componentPath = useMemo(
     () => makeComponentPath(componentId, tab.id),
     [componentId, tab.id]

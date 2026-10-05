@@ -209,11 +209,10 @@ export type AppDispatch = ThunkDispatch<RootState, ThunkExtra, UnknownAction>;
  */
 export const undo = UndoActionCreators.undo;
 
-// Re-exports. The components import the store through this module (`@store`), and src/ts/index.ts
-// re-exports part of it, so each name below has an importer.
+// Re-exports. The components import the store through this module (`@store`), and each name below
+// has an importer.
 
 export {
-  createInitialWorkspaceState,
   removeTab,
   activateTab,
   renameTab,
@@ -238,9 +237,7 @@ export {
 } from './workspaceSlice';
 export { addTab, duplicateTab, splitPanel, canAddTab, canAddPanel } from './workspaceThunks';
 export {
-  initialUiState,
   setSearchBarMode,
-  pruneSearchBarModes,
   startRenameTab,
   clearRenameTab,
   requestLayoutSelection,
@@ -253,7 +250,6 @@ export {
   closeHelpModal,
   openSetIconModal,
   closeSetIconModal,
-  setLoadNotice,
   clearLoadNotice,
 } from './uiSlice';
 export {
@@ -274,10 +270,8 @@ export {
   selectRenamingTabId,
   selectLayoutSelectionRequest,
   selectSearchFocusPanelId,
-  selectInfoModalTabId,
   selectInfoModalTab,
   selectHelpModalOpen,
-  selectSetIconModalTabId,
   selectSetIconModalTab,
   selectLoadNotice,
   selectTabCount,
@@ -286,4 +280,4 @@ export {
   selectWorkspaceSnapshot,
 } from './selectors';
 export { useAppDispatch, useAppSelector } from './hooks';
-export type { WorkspaceState, UiState, SearchBarMode, StoreConfig, ThunkExtra } from './types';
+export type { StoreConfig } from './types';

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@utils/logger';
-import type { LayoutId } from '@types';
-import { type DashComponentProps } from 'props';
+import type { LayoutId, DashComponentProps } from '@types';
 import { normalizeLayoutTimeout } from '@utils/dashSpec';
 
 interface ContentData {

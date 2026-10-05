@@ -15,8 +15,11 @@ import type {
  * it puts it here: the defaults, the panel limit and the list of status bar segments.
  */
 interface ConfigContextValue {
-  /** Component ID for namespacing persistence storage */
-  componentId?: string;
+  /**
+   * The Dash id of Prism, or a default id when Prism has none. It names the Dash component paths,
+   * the toaster and the storage key.
+   */
+  componentId: string;
   /** The `serverSessionId` prop of Prism. The store reads it one time, when it is created. */
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
@@ -57,7 +60,7 @@ const ConfigContext = createContext<ConfigContextValue | null>(null);
  */
 interface ConfigProviderProps {
   children: React.ReactNode;
-  componentId?: string;
+  componentId: string;
   serverSessionId?: string;
   registeredLayouts: RegisteredLayouts;
   theme: Theme;

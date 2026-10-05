@@ -33,16 +33,20 @@ import type {
   PersistenceType,
   EmptyTabView,
   DashComponent,
+  DashComponentProps,
 } from '@types';
 import '../global.css';
-import { type DashComponentProps } from 'props';
+
+// A Prism without a Dash id still needs one name for the Dash component paths of its tabs and
+// actions, for its toaster and for its storage key.
+const DEFAULT_COMPONENT_ID = 'prism';
 
 /**
  * Prism is an advanced multi-panel workspace manager for Plotly Dash.
  * It provides dynamic layout management with drag-and-drop tab organization,
  * multi-panel splits, and persistent workspace state across sessions.
  */
-export interface PrismProps extends DashComponentProps {
+interface PrismProps extends DashComponentProps {
   /**
    * Unique ID to identify this component in Dash callbacks. Also scopes the
    * persisted workspace (storage key), so it is read when the component mounts;
@@ -433,6 +437,7 @@ export function Prism({
   // `persistence` is the on/off switch; `persistence_type` only applies when it is on.
   // Resolve once here so every consumer (store, error boundary) sees the same answer.
   const persistenceType = resolvePersistenceType(persistence, persistence_type);
+  const componentId = id ?? DEFAULT_COMPONENT_ID;
 
   // Radix portals render into the root element, so they get the theme of this instance.
   // State, not a ref: the provider must re-render once the element exists.
@@ -440,8 +445,8 @@ export function Prism({
 
   // Create stable callback for clearing storage from error boundary
   const handleClearStorage = useCallback(() => {
-    clearPersistedWorkspace(id, persistenceType);
-  }, [persistenceType, id]);
+    clearPersistedWorkspace(componentId, persistenceType);
+  }, [persistenceType, componentId]);
 
   return (
     <div
@@ -461,7 +466,7 @@ export function Prism({
         onClearStorage={persistence ? handleClearStorage : undefined}
       >
         <ConfigProvider
-          componentId={id}
+          componentId={componentId}
           serverSessionId={serverSessionId}
           registeredLayouts={registeredLayouts}
           theme={theme}
@@ -483,7 +488,7 @@ export function Prism({
         >
           <PortalContainerProvider value={rootElement}>
             <PrismInner
-              key={`${id ?? ''}|${persistenceType}`}
+              key={`${componentId}|${persistenceType}`}
               actions={actions}
               updateWorkspace={updateWorkspace}
             >

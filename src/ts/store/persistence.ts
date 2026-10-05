@@ -11,18 +11,17 @@ const WORKSPACE_PERSIST_PREFIX = 'prism-workspace';
 
 /**
  * Builds the redux-persist config key of a workspace, the key that `persistReducer` gets.
- * Without `componentId`, the key is the prefix alone. redux-persist adds its own `persist:`
- * prefix when it writes to the storage.
+ * redux-persist adds its own `persist:` prefix when it writes to the storage.
  */
-export function getWorkspacePersistKey(componentId?: string): string {
-  return componentId ? `${WORKSPACE_PERSIST_PREFIX}-${componentId}` : WORKSPACE_PERSIST_PREFIX;
+export function getWorkspacePersistKey(componentId: string): string {
+  return `${WORKSPACE_PERSIST_PREFIX}-${componentId}`;
 }
 
 /**
  * Builds the full storage key as it appears in localStorage or sessionStorage. Use it to read
  * or remove the stored workspace without redux-persist.
  */
-export function getWorkspaceStorageKey(componentId?: string): string {
+export function getWorkspaceStorageKey(componentId: string): string {
   return `persist:${getWorkspacePersistKey(componentId)}`;
 }
 
@@ -65,7 +64,7 @@ export function getStorage(type: PersistenceType): Storage {
  * 'memory' type stores nothing, so there is nothing to remove.
  */
 export function clearPersistedWorkspace(
-  componentId: string | undefined,
+  componentId: string,
   persistenceType: PersistenceType
 ): void {
   const key = getWorkspaceStorageKey(componentId);
