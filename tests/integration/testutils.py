@@ -80,7 +80,7 @@ return key !== undefined && (root[key].mode & 24) === 24;
 """
 
 
-def start_app(dash_duo: DashComposite, app: Dash) -> DashComposite:
+def start_app(dash_duo: DashComposite, app: Dash, **server_options: Any) -> DashComposite:
     """Serve ``app`` on a free port and wait until the first Prism component renders.
 
     Call :func:`dash_prism.init` before this function. With ``PRISM_STRICT_MODE=1``,
@@ -89,6 +89,8 @@ def start_app(dash_duo: DashComposite, app: Dash) -> DashComposite:
 
     :param dash_duo: The dash[testing] fixture.
     :param app: The Dash app to serve.
+    :param server_options: More keyword arguments for ``app.run``, for example
+        ``debug=True``.
     :returns: ``dash_duo``, after Prism rendered.
     :raises AssertionError: When ``PRISM_STRICT_MODE=1`` and Prism does not run in
         StrictMode, for example because the bundle is not the StrictMode build.
@@ -99,6 +101,7 @@ def start_app(dash_duo: DashComposite, app: Dash) -> DashComposite:
         port=get_free_port(),
         dev_tools_serve_dev_bundles=STRICT_MODE,
         dev_tools_props_check=STRICT_MODE,
+        **server_options,
     )
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
     if STRICT_MODE:

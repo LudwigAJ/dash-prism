@@ -717,7 +717,29 @@ def _invalid_fields_for_log(error: params.ParamValidationError) -> str:
     return ", ".join(entries)
 
 
-def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
+def _dev_tools_ui(app: Dash) -> bool:
+    """Tell if the dev tools UI of a Dash app is on.
+
+    Dash shows the traceback of a failed callback in the browser only when its
+    dev tools UI is on, for example after ``app.run(debug=True)``. Prism uses the
+    same switch for the message of an unexpected exception, because the message
+    can hold data that a production app must not show. The render callback calls
+    this function at each request, because ``app.run`` sets the switch after
+    :func:`init`.
+
+    :param app: The Dash app that :func:`init` connected.
+    :type app: Dash
+    :returns: ``True`` if the dev tools UI of ``app`` is on.
+    :rtype: bool
+    """
+    # Dash keeps the dev tools settings in a private attribute.
+    dev_tools = getattr(app, "_dev_tools", None) or {}
+    return bool(dev_tools.get("ui", False))
+
+
+def _error_component_for(
+    exc: Exception, layout_id: str, timeout: float, show_details: bool = False
+) -> Any:
     """Make the component that a tab shows when its layout failed.
 
     The function selects the component from the class of the exception. There
@@ -728,7 +750,10 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     error with the class of the exception and its stack frames. A ``TypeError``
     or a ``ValueError`` of the layout callback is such an exception. No log line
     holds an exception message, a parameter value or a key from the input,
-    because each can hold a value that the user typed. The tab shows the message.
+    because each can hold a value that the user typed.
+
+    The tab shows the message of an unexpected exception only when
+    ``show_details`` is ``True``. The texts that Prism writes itself always show.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -737,6 +762,9 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     :param timeout: The count of seconds that the layout callback could take.
         The error message for a timeout includes this value.
     :type timeout: float
+    :param show_details: If ``True``, the tab shows the message of an
+        unexpected exception. :func:`_dev_tools_ui` gives the value.
+    :type show_details: bool
     :returns: The error component for the tab.
     :rtype: Any
     """
@@ -759,7 +787,11 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     logger.error(
         "Layout %r failed with %s\n%s", layout_id, type(exc).__name__, params.format_frames(exc)
     )
-    return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    if show_details:
+        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
+    return _create_error_component(
+        f"Error rendering layout '{layout_id}'.\nThe server log has the details."
+    )
 
 
 def _lookup_and_resolve(
@@ -799,6 +831,7 @@ def _render_tab_layout(
     layout_params: dict[str, Any] | None,
     layout_option: str | None = None,
     timeout: float = DEFAULT_LAYOUT_TIMEOUT,
+    show_details: bool = False,
 ) -> Any:
     """Render the layout of a tab (SYNC version).
 
@@ -824,6 +857,9 @@ def _render_tab_layout(
     :param timeout: The maximum count of seconds for an async layout callback.
         A sync layout callback has no timeout on this path.
     :type timeout: float
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree of the tab. The function returns ``None``
         if ``layout_id`` is empty. It returns an error component if the layout
         is not in the registry, or if the render failed.
@@ -842,7 +878,7 @@ def _render_tab_layout(
             layout = copy.deepcopy(registration.layout)
         return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
-        return _error_component_for(exc, layout_id, timeout)
+        return _error_component_for(exc, layout_id, timeout, show_details)
 
 
 async def _render_tab_layout_async(
@@ -851,6 +887,7 @@ async def _render_tab_layout_async(
     layout_params: dict[str, Any] | None,
     layout_option: str | None = None,
     timeout: float = DEFAULT_LAYOUT_TIMEOUT,
+    show_details: bool = False,
 ) -> Any:
     """Render the layout of a tab (ASYNC version).
 
@@ -870,6 +907,9 @@ async def _render_tab_layout_async(
     :param timeout: The maximum count of seconds for the layout callback. The
         timeout applies to a sync layout callback and to an async one.
     :type timeout: float
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree of the tab. The function returns ``None``
         if ``layout_id`` is empty. It returns an error component if the layout
         is not in the registry, or if the render failed.
@@ -888,10 +928,10 @@ async def _render_tab_layout_async(
             layout = copy.deepcopy(registration.layout)
         return layout_tree.inject_tab_id(layout, tab_id)
     except Exception as exc:  # noqa: BLE001 - a failed layout must not break the Dash callback
-        return _error_component_for(exc, layout_id, timeout)
+        return _error_component_for(exc, layout_id, timeout, show_details)
 
 
-def _render_content_request(content_id: Any, data: Any) -> Any:
+def _render_content_request(content_id: Any, data: Any, show_details: bool = False) -> Any:
     """Handle one render request in SYNC mode (the body of the Dash callback).
 
     The function stays at module level, so a test can call the body of the
@@ -902,6 +942,9 @@ def _render_content_request(content_id: Any, data: Any) -> Any:
     :type content_id: Any
     :param data: The ``data`` prop of the ``PrismContent`` component.
     :type data: Any
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree for the ``children`` prop of the
         ``PrismContent`` component.
     :rtype: Any
@@ -911,13 +954,17 @@ def _render_content_request(content_id: Any, data: Any) -> Any:
     tab_id, layout_id, layout_params, layout_option, timeout = _parse_content_request(
         content_id, data
     )
-    result = _render_tab_layout(tab_id, layout_id, layout_params, layout_option, timeout)
+    result = _render_tab_layout(
+        tab_id, layout_id, layout_params, layout_option, timeout, show_details
+    )
     if result is None:
         raise PreventUpdate
     return result
 
 
-async def _render_content_request_async(content_id: Any, data: Any) -> Any:
+async def _render_content_request_async(
+    content_id: Any, data: Any, show_details: bool = False
+) -> Any:
     """Handle one render request in ASYNC mode (the body of the Dash callback).
 
     The function stays at module level, so a test can call the body of the
@@ -928,6 +975,9 @@ async def _render_content_request_async(content_id: Any, data: Any) -> Any:
     :type content_id: Any
     :param data: The ``data`` prop of the ``PrismContent`` component.
     :type data: Any
+    :param show_details: If ``True``, the error tab of an unexpected exception
+        shows the message of the exception.
+    :type show_details: bool
     :returns: The Dash component tree for the ``children`` prop of the
         ``PrismContent`` component.
     :rtype: Any
@@ -938,7 +988,7 @@ async def _render_content_request_async(content_id: Any, data: Any) -> Any:
         content_id, data
     )
     result = await _render_tab_layout_async(
-        tab_id, layout_id, layout_params, layout_option, timeout
+        tab_id, layout_id, layout_params, layout_option, timeout, show_details
     )
     if result is None:
         raise PreventUpdate
@@ -991,19 +1041,27 @@ def _register_render_callback(app: Dash, background: bool) -> None:
         background=background,
     )
 
+    # The callback reads the switch of this app, and not of the app that
+    # dash.get_app() finds, because a process can hold more than one app. A
+    # background callback goes to another process, so its closure must not
+    # hold the app, and its error tab always shows the generic text.
+    show_details: Callable[[], bool] = (
+        (lambda: False) if background else functools.partial(_dev_tools_ui, app)
+    )
+
     if use_async:
 
         @register
         async def render_prism_content_async(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this async callback."""
-            return await _render_content_request_async(content_id, data)
+            return await _render_content_request_async(content_id, data, show_details())
 
     else:
 
         @register
         def render_prism_content(content_id: Any, data: Any) -> Any:
             """Render the contents of one tab. Dash calls this sync callback."""
-            return _render_content_request(content_id, data)
+            return _render_content_request(content_id, data, show_details())
 
     mode = "async" if use_async else "sync"
     logger.info(
