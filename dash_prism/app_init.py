@@ -229,8 +229,8 @@ def _get_layout_root(app: Dash) -> Any | None:
     ``app.layout`` is a component tree or a function that returns one. If it is
     a sync function, this function calls it with no arguments. If it is a
     coroutine function, this function returns ``None``, because it cannot await
-    the coroutine here. Prism then validates the Prism component at render time
-    instead.
+    the coroutine here. :func:`init` then does not check the Prism component of
+    the layout.
 
     If the call to the layout function raises an exception, this function sends
     a :class:`UserWarning`, writes the traceback to the log, and returns
@@ -250,10 +250,7 @@ def _get_layout_root(app: Dash) -> Any | None:
     # Prism cannot validate an async layout here, because this function is sync
     # and cannot await the coroutine.
     if inspect.iscoroutinefunction(layout):
-        logger.info(
-            "Skipping Prism component validation for async callable layout. "
-            "Validation will occur at runtime when layout is first rendered."
-        )
+        logger.info("app.layout is an async function, so init() does not check its Prism component")
         return None
 
     try:
