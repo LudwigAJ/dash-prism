@@ -130,12 +130,12 @@ All notable changes to Dash Prism are recorded here. The project follows
   `prism-error-action-clear-storage`. A host test that used the old
   `error-action-*` ids must use the new ones.
 - Prism logs a failed tab render once, and no log line holds a parameter value.
-  A timeout, a `TypeError`, a `ValueError` and invalid parameters log a warning.
-  Any other exception logs an error. The log names the class of the exception,
-  and for the error also the stack frames, but never the message of the
-  exception, because a message can hold a value that the user typed. The tab
-  still shows the message. Each tab render writes one `DEBUG` line with the tab
-  ID and the layout ID. Before, every render wrote the full request, with every
+  A timeout, invalid parameters and a request that the registration rejects
+  log a warning. Any other exception logs an error. The log names the class of
+  the exception, and for the error also the stack frames, but never the message
+  of the exception, because a message can hold a value that the user typed. The
+  tab still shows the message. Each tab render writes one `DEBUG` line with the
+  tab ID and the layout ID. Before, every render wrote the full request, with every
   parameter value, at `INFO`. The logger name is now `dash_prism.app_init`, so a
   handler on `dash_prism` still receives the records.
 - The warning for invalid parameters names each invalid parameter with its
@@ -144,6 +144,11 @@ All notable changes to Dash Prism are recorded here. The project follows
   parameter is not in the log. An alias of a model field gives the name of the
   field. A parameter name that the layout does not declare is written as
   `<undeclared>`. The user can type both.
+- A `TypeError` or a `ValueError` that a layout function raises logs an error
+  with the stack frames, like any other exception of the layout. Before, it was
+  not logged. The tab shows the message with the prefix
+  `Error rendering layout '<id>':`. Before, the tab showed the message of a
+  `ValueError` with no prefix.
 - When the function in `app.layout` raises an exception during a page request,
   the log has the class and the stack frames of the exception, but not its
   message. The call of that function in `init()` keeps the full traceback,

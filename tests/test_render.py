@@ -453,7 +453,7 @@ def _render_on_path(
     [
         (TimeoutError("slow backend"), "Layout 'failing' timed out after 5s."),
         (TypeError("bad type"), "Error rendering layout 'failing': bad type"),
-        (ValueError("bad value"), "bad value"),
+        (ValueError("bad value"), "Error rendering layout 'failing': bad value"),
         (RuntimeError("boom"), "Error rendering layout 'failing': boom"),
     ],
     ids=["timeout", "type-error", "value-error", "other"],
@@ -539,7 +539,11 @@ def test_missing_layout_shows_error_component(prism_app: Dash, path: str) -> Non
     ],
 )
 def test_request_that_does_not_agree_with_the_registration_names_the_request_field(
-    layout_id: str, layout_params: Any, layout_option: Any, expected: str
+    caplog: pytest.LogCaptureFixture,
+    layout_id: str,
+    layout_params: Any,
+    layout_option: Any,
+    expected: str,
 ) -> None:
     @dash_prism.register_layout(id="with-options", param_options={"one": ("One", {"n": "1"})})
     def with_options(n: int = 1):
@@ -549,9 +553,14 @@ def test_request_that_does_not_agree_with_the_registration_names_the_request_fie
     def without_options(n: int = 1):
         return html.Div(n)
 
-    result = app_init._render_tab_layout("tab-1", layout_id, layout_params, layout_option)
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        result = app_init._render_tab_layout("tab-1", layout_id, layout_params, layout_option)
 
     assert _error_message(result) == expected
+    [record] = _prism_records(caplog, logging.WARNING)
+    assert record.getMessage() == (
+        f"Layout {layout_id!r}: the registration rejected the render request"
+    )
 
 
 @pytest.mark.parametrize("path", ["sync", "async"])
@@ -593,8 +602,8 @@ def _prism_records(caplog: pytest.LogCaptureFixture, level: int) -> list[logging
     ("error", "level"),
     [
         (TimeoutError("slow backend"), logging.WARNING),
-        (TypeError("bad type"), logging.WARNING),
-        (ValueError("bad value"), logging.WARNING),
+        (TypeError("bad type"), logging.ERROR),
+        (ValueError("bad value"), logging.ERROR),
         (RuntimeError("boom"), logging.ERROR),
     ],
     ids=["timeout", "type-error", "value-error", "other"],
@@ -956,6 +965,29 @@ def test_wrapped_app_layout_that_fails_is_logged_without_its_message(
     [record] = _prism_records(caplog, logging.ERROR)
     assert record.getMessage().startswith("app.layout raised RuntimeError")
     assert "in _crash" in record.getMessage()
+    _assert_sentinel_not_logged(caplog)
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize("error_class", [TypeError, ValueError])
+def test_type_or_value_error_of_a_layout_is_logged_as_unexpected(
+    caplog: pytest.LogCaptureFixture, path: str, error_class: type[Exception]
+) -> None:
+    # A request that the registration rejects raises a ValueError subclass. A
+    # plain ValueError of the layout callback must not get its warning without frames.
+    @dash_prism.register_layout(id="failing")
+    def failing(value: str = ""):
+        raise error_class(value)
+
+    with caplog.at_level(logging.DEBUG, logger="dash_prism"):
+        result = _render_on_path(path, "failing", {"value": _SENTINEL})
+
+    assert _SENTINEL in _error_message(result)
+    [record] = _prism_records(caplog, logging.WARNING)
+    message = record.getMessage()
+    assert record.levelno == logging.ERROR
+    assert message.startswith(f"Layout 'failing' failed with {error_class.__name__}")
+    assert "in failing" in message
     _assert_sentinel_not_logged(caplog)
 
 

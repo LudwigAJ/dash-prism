@@ -723,11 +723,12 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
     The function selects the component from the class of the exception. There
     is one component for a timeout, one for parameters that are not valid, and
     one for every other exception. The function writes each failure to the log
-    one time. A failure of the request or of the parameters gets a warning. Any
-    other exception gets an error with the class of the exception and its stack
-    frames. No log line holds an exception message, a parameter value or a key
-    from the input, because each can hold a value that the user typed. The tab
-    shows the message.
+    one time. A timeout, a request that the registration rejects and invalid
+    parameters get a warning. Any other exception is unexpected, and gets an
+    error with the class of the exception and its stack frames. A ``TypeError``
+    or a ``ValueError`` of the layout callback is such an exception. No log line
+    holds an exception message, a parameter value or a key from the input,
+    because each can hold a value that the user typed. The tab shows the message.
 
     :param exc: The exception that the render of the layout raised.
     :type exc: Exception
@@ -745,19 +746,15 @@ def _error_component_for(exc: Exception, layout_id: str, timeout: float) -> Any:
             f"Layout '{layout_id}' timed out after {timeout:g}s.\n"
             "The callback took too long to respond. Try refreshing the tab."
         )
-    # ParamValidationError is a subclass of ValueError, so it must come first.
     if isinstance(exc, params.ParamValidationError):
         logger.warning(
             "Layout %r has invalid parameters: %s", layout_id, _invalid_fields_for_log(exc)
         )
         return _create_validation_error_component(layout_id, exc)
-    if isinstance(exc, TypeError):
-        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
-        return _create_error_component(f"Error rendering layout '{layout_id}': {exc}")
-    if isinstance(exc, ValueError):
-        # resolve_layout_params writes its ValueError messages for the user, so
-        # the tab shows them as they are.
-        logger.warning("Layout %r failed with %s", layout_id, type(exc).__name__)
+    if isinstance(exc, layout_registry._LayoutRequestError):
+        # resolve_layout_params writes these messages for the user, so the tab
+        # shows them as they are.
+        logger.warning("Layout %r: the registration rejected the render request", layout_id)
         return _create_error_component(str(exc))
     logger.error(
         "Layout %r failed with %s\n%s", layout_id, type(exc).__name__, params.format_frames(exc)
@@ -783,13 +780,13 @@ def _lookup_and_resolve(
     :returns: The registration, and the keyword arguments for the layout
         callback.
     :rtype: tuple[LayoutRegistration, dict[str, Any]]
-    :raises ValueError: If the layout is not registered, or if the request does
-        not agree with the registration.
+    :raises _LayoutRequestError: If the layout is not registered, or if the
+        request does not agree with the registration.
     :raises ParamValidationError: If a parameter value is not valid.
     """
     registration = layout_registry.get_layout(layout_id)
     if registration is None:
-        raise ValueError(f"Layout is not registered: {layout_id=}")
+        raise layout_registry._LayoutRequestError(f"Layout is not registered: {layout_id=}")
     resolved_params = layout_registry.resolve_layout_params(
         registration, layout_params, layout_option
     )

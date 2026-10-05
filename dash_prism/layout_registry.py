@@ -53,6 +53,15 @@ from typing import Any, overload
 
 from dash_prism import params
 
+
+class _LayoutRequestError(ValueError):
+    """A render request that does not agree with the registration of its layout.
+
+    The message names the request field and the registration that disagree.
+    The message is for the user, so the tab shows it as it is.
+    """
+
+
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
@@ -676,19 +685,19 @@ def resolve_layout_params(
     :type layout_option: str | None
     :returns: The keyword arguments for the layout callback.
     :rtype: dict[str, Any]
-    :raises ValueError: If ``layout_params`` is not a dictionary, if the layout
-        declares ``param_options`` but ``layout_option`` is absent or is not a
-        string, if ``layout_params`` and ``param_options`` are given together,
-        if ``layout_option`` is not a key of ``param_options``, or if a
-        ``layout_option`` is given for a layout that declares no
-        ``param_options``.
+    :raises _LayoutRequestError: If ``layout_params`` is not a dictionary, if
+        the layout declares ``param_options`` but ``layout_option`` is absent or
+        is not a string, if ``layout_params`` and ``param_options`` are given
+        together, if ``layout_option`` is not a key of ``param_options``, or if
+        a ``layout_option`` is given for a layout that declares no
+        ``param_options``. The class is a subclass of :class:`ValueError`.
     :raises ParamValidationError: If a parameter value is not valid.
     """
     layout_id = registration.id
     if layout_params is None:
         resolved_params: dict[str, Any] = {}
     elif not isinstance(layout_params, dict):
-        raise ValueError(
+        raise _LayoutRequestError(
             f"Request field layoutParams is not an object: {layout_id=}, "
             f"type={type(layout_params).__name__!r}"
         )
@@ -699,27 +708,27 @@ def resolve_layout_params(
     # sure that param_options belong to a callback layout and hold dicts.
     if registration.param_options:
         if layout_option is None:
-            raise ValueError(
+            raise _LayoutRequestError(
                 "Request field layoutOption is missing, and the layout declares "
                 f"param_options: {layout_id=}"
             )
 
         if resolved_params:
-            raise ValueError(
+            raise _LayoutRequestError(
                 "Request field layoutParams is not empty, and the layout declares "
                 f"param_options: {layout_id=}. The layout accepts values only through "
                 "an option."
             )
 
         if not isinstance(layout_option, str):
-            raise ValueError(
+            raise _LayoutRequestError(
                 f"Request field layoutOption is not a string: {layout_id=}, "
                 f"type={type(layout_option).__name__!r}"
             )
 
         option_entry = registration.param_options.get(layout_option)
         if not option_entry:
-            raise ValueError(
+            raise _LayoutRequestError(
                 "Request field layoutOption is not a key of param_options: "
                 f"{layout_id=}, layoutOption={layout_option!r}"
             )
@@ -727,7 +736,7 @@ def resolve_layout_params(
         _, option_params = option_entry
         resolved_params = dict(option_params)
     elif layout_option is not None:
-        raise ValueError(
+        raise _LayoutRequestError(
             "Request field layoutOption is given, and the layout declares no "
             f"param_options: {layout_id=}"
         )
