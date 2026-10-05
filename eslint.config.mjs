@@ -139,7 +139,7 @@ export default [
     files: ['src/ts/utils/logger.ts'],
     rules: { 'no-console': 'off' },
   },
-  // knip (`pnpm run lint:exports`) reports an unused export. import/no-unused-modules needs an
+  // knip (`pnpm run lint:knip`) reports an unused export. import/no-unused-modules needs an
   // .eslintrc file under flat config and an alias resolver, so it is not used.
 
   // Rules that wait for later work, so that this config reports zero findings:

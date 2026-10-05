@@ -231,7 +231,7 @@ def test_no_source_file_cites_an_audit_document() -> None:
         "webpack.config.js",
         "vitest.config.ts",
         "tsconfig.json",
-        "knip.json",
+        "knip.jsonc",
         "package.json",
         "pyproject.toml",
     )

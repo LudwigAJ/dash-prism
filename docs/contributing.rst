@@ -133,8 +133,10 @@ Code Style
    pnpm run format
 
 ``pnpm run lint`` is the command that CI runs. ``pnpm run lint:py``, ``pnpm run
-lint:js`` and ``pnpm run lint:css`` run the Python checks, ESLint and Stylelint
-alone. ``just lint`` calls ``pnpm run lint``.
+lint:js``, ``pnpm run lint:knip`` and ``pnpm run lint:css`` run the Python
+checks, ESLint, knip and Stylelint alone. knip reports unused exports, unused
+dependencies and dependencies that ``package.json`` does not list. Its
+configuration is ``knip.jsonc``. ``just lint`` calls ``pnpm run lint``.
 
 Ruff and Black check each Python file in the repository, except the files that
 ``.gitignore`` lists. ``pnpm run format:py`` sorts the imports with Ruff and then

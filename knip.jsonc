@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "project": ["src/**/*.{ts,tsx,css}"],
+  "include": [
+    "exports",
+    "types",
+    "dependencies",
+    "devDependencies",
+    "optionalPeerDependencies",
+    "unlisted",
+    "binaries",
+    "unresolved"
+  ],
+  // dash-generate-components (pnpm run build:backends) runs extract-meta.js from the dash
+  // Python package, and that script requires react-docgen from node_modules.
+  "ignoreDependencies": ["react-docgen"],
+  // The scripts call poetry from the Python toolchain. It is not an npm package.
+  "ignoreBinaries": ["poetry"]
+}
