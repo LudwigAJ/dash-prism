@@ -172,25 +172,6 @@ export interface DashComponent {
   props: BaseDashProps;
 }
 
-/**
- * Checks if a value is a DashComponent.
- * Useful for runtime validation of Dash-serialized React elements.
- */
-export function isDashComponent(value: unknown): value is DashComponent {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    'namespace' in value &&
-    'props' in value &&
-    typeof value.type === 'string' &&
-    typeof value.namespace === 'string' &&
-    typeof value.props === 'object' &&
-    value.props !== null &&
-    !Array.isArray(value.props)
-  );
-}
-
 /** The keys and indexes that lead to one component in the Dash layout tree. */
 type DashPath = Array<string | number>;
 

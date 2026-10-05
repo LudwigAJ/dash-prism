@@ -346,6 +346,9 @@ class Prism(PrismComponent):
     # refuses a component whose ``_type`` is not "Prism", thus the override is
     # necessary for both the renderer and init().
     _type = "Prism"
+    # The class does not set ``_children_props``, so the renderer gives ``actions``
+    # to the status bar as component specs. The test
+    # test_actions_reach_the_browser_as_component_specs pins this.
 
     def __init__(
         self,

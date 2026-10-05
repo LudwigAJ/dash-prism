@@ -82,8 +82,8 @@ const DashContentRenderer = memo(
 );
 
 interface WorkspaceViewProps {
-  /** Array of PrismAction component specs */
-  actions?: JSX.Element[];
+  /** The PrismAction components of the `actions` prop, as Dash component specs. */
+  actions?: DashComponent[];
   children?: React.ReactNode;
 }
 

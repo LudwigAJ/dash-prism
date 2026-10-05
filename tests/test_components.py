@@ -6,6 +6,7 @@ import warnings
 
 import pytest
 from dash import Dash, html
+from dash.development import base_component
 
 import dash_prism
 from dash_prism.PrismComponent import PrismComponent
@@ -86,6 +87,18 @@ def test_generated_component_classes_are_not_public_exports() -> None:
     assert dash_prism.Prism.__module__ == "dash_prism.Prism"
     assert dash_prism.Action.__module__ == "dash_prism.Action"
     assert dash_prism.PrismContent.__module__ == "dash_prism.PrismContent"
+
+
+def test_actions_reach_the_browser_as_component_specs() -> None:
+    """The renderer gives StatusBar each action as a spec, which it renders with ExternalWrapper.
+
+    Dash renders a prop into React elements only when the class named like the
+    component's ``_type`` lists the prop in its own ``_children_props``.
+    Python still walks the actions, so the IDs of the actions are in the layout.
+    """
+    children_props = base_component.ComponentRegistry.children_props["dash_prism"]
+    assert not children_props["Prism"]
+    assert dash_prism.Prism._children_props == ["actions"]
 
 
 def test_prism_in_app_layout(dash_app: Dash) -> None:

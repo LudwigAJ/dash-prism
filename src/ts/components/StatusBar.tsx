@@ -13,9 +13,7 @@ import {
 import { cn } from '@utils/cn';
 import { SHORTCUTS, formatShortcut, isMacPlatform } from '@constants/shortcuts';
 import { TabInfoRows } from '@components/TabInfoRows';
-import type { StatusBarItem } from '@types';
-import type { DashComponent, DashComponentApi } from '@types';
-import { isDashComponent } from '@types';
+import type { StatusBarItem, DashComponent, DashComponentApi } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -32,8 +30,8 @@ import {
 } from '@store';
 
 interface StatusBarProps {
-  /** Array of PrismAction component specs to render */
-  actions?: JSX.Element[];
+  /** The PrismAction components of the `actions` prop, as Dash component specs. */
+  actions?: DashComponent[];
   /** The time of the last workspace change, in ms since the epoch */
   lastSyncTime: number;
   onOpenHelp?: () => void;
@@ -228,50 +226,27 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
 
       <div className="tw:flex-1" />
 
-      {/* Action Buttons - rendered via ExternalWrapper or directly */}
-      {actions.length > 0 && (
+      {/* ExternalWrapper renders each action at its path in the Prism props, so the
+          action gets its own callbacks. */}
+      {api?.ExternalWrapper && actions.length > 0 && (
         <>
-          {actions.map((actionSpec, index) => {
-            // Check if this is a DashComponent spec or already a rendered element
-            if (isDashComponent(actionSpec)) {
-              // It's a DashComponent spec - render via ExternalWrapper if available
-              if (!api?.ExternalWrapper) return null;
-
-              const actionId = actionSpec.props.id;
-              const key =
-                typeof actionId === 'string'
-                  ? actionId
-                  : actionId
-                    ? JSON.stringify(actionId)
-                    : `action-${index}`;
-
-              // Add data-testid to action props for testing
-              const enhancedActionSpec: DashComponent = {
-                ...actionSpec,
-                props: {
-                  ...actionSpec.props,
-                  'data-testid': `prism-action-${typeof actionId === 'string' ? actionId : index}`,
-                },
-              };
-
-              return (
-                <React.Fragment key={key}>
-                  {index > 0 && <Sep />}
-                  <api.ExternalWrapper
-                    component={enhancedActionSpec}
-                    componentPath={[componentId ?? 'prism', 'actions', index]}
-                  />
-                </React.Fragment>
-              );
-            } else {
-              // It's already a React element - render directly
-              return (
-                <React.Fragment key={index}>
-                  {index > 0 && <Sep />}
-                  {actionSpec}
-                </React.Fragment>
-              );
-            }
+          {actions.map((action, index) => {
+            const actionId = action.props.id;
+            const key =
+              typeof actionId === 'string'
+                ? actionId
+                : actionId
+                  ? JSON.stringify(actionId)
+                  : `action-${index}`;
+            return (
+              <React.Fragment key={key}>
+                {index > 0 && <Sep />}
+                <api.ExternalWrapper
+                  component={action}
+                  componentPath={[componentId ?? 'prism', 'actions', index]}
+                />
+              </React.Fragment>
+            );
           })}
           {showUpdated && <Sep />}
         </>

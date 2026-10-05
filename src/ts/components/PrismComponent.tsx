@@ -32,6 +32,7 @@ import type {
   StatusBarPosition,
   PersistenceType,
   EmptyTabView,
+  DashComponent,
 } from '@types';
 import '../global.css';
 import { type DashComponentProps } from 'props';
@@ -171,11 +172,16 @@ export interface PrismProps extends DashComponentProps {
    */
   updateWorkspace?: Partial<Workspace>;
 
+  // Dash gives the actions as component specs, not as React elements. The Python class Prism
+  // does not list `actions` in its own `_children_props`, so the renderer does not render them.
+  // extract-meta.js of the locked Dash reads the type name DashComponent as a node, so the
+  // Python prop type is a list of components. Dash 3.1.1 has no such mapping, and CI generates
+  // the Python classes with the locked Dash.
   /**
    * Array of PrismAction components to display in the status bar.
    * Each PrismAction has its own id and n_clicks for individual callbacks.
    */
-  actions?: JSX.Element[];
+  actions?: DashComponent[];
 
   /**
    * Whether to persist workspace state in the browser. When false (the default)
@@ -253,7 +259,7 @@ function PrismInner({
   children,
   updateWorkspace,
 }: {
-  actions: JSX.Element[];
+  actions: DashComponent[];
   children?: React.ReactNode;
   updateWorkspace?: Partial<Workspace>;
 }) {
