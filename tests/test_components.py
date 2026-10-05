@@ -116,12 +116,12 @@ def test_prism_does_not_warn_for_effective_persistence_combinations() -> None:
 
 
 def test_prop_docstrings_match_behaviour() -> None:
-    """Both docstring sources must describe the real behaviour (02 B-4).
+    """Both docstring sources must describe the real behaviour.
 
     ``PrismComponent`` is generated from the TypeScript JSDoc; ``Prism`` carries
     the hand-written docstring that Sphinx publishes (``docs/api.rst`` autoclass)
-    and ``help()`` shows. B-4 was exactly these two drifting apart, so both are
-    checked here.
+    and ``help()`` shows. The two sources drifted apart once, so the test checks
+    both.
     """
     claims = (
         "counts every panel together",  # maxTabs is global, not per panel

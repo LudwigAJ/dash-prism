@@ -222,7 +222,7 @@ def test_layout_parameter_to_dict_contract() -> None:
 
     result = param.to_dict()
 
-    # Verify exact field names for frontend (doc 04 §3.6 LayoutParam)
+    # The keys must match the LayoutParam interface in src/ts/types/index.ts.
     assert result == {
         "name": "test_param",
         "hasDefault": True,  # camelCase

@@ -248,7 +248,7 @@ def _sync_prism_app() -> Dash:
 
 
 def test_sync_callback_honours_client_timeout_for_async_layouts() -> None:
-    """Regression for 01 §1.1: the sync callback used to ignore data["timeout"]."""
+    """The sync callback applies the data["timeout"] that the client sends."""
 
     app = _sync_prism_app()
 
