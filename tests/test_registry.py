@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -83,12 +84,35 @@ def test_duplicate_registration_error(sample_layout) -> None:
         layout=sample_layout,
     )
 
-    with pytest.raises(ValueError, match="already registered"):
+    with pytest.raises(
+        ValueError, match=re.escape("Layout is already registered: layout_id='duplicate'")
+    ):
         dash_prism.register_layout(
             id="duplicate",
             name="Second",
             layout=sample_layout,
         )
+
+
+@pytest.mark.parametrize(
+    ("layout_id", "message"),
+    [
+        (None, "Layout id is not a string: layout_id=None"),
+        (7, "Layout id is not a string: layout_id=7"),
+        ("", "Layout id is an empty string"),
+    ],
+    ids=["none", "int", "empty"],
+)
+def test_register_layout_rejects_a_bad_id(sample_layout, layout_id, message) -> None:
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        dash_prism.register_layout(id=layout_id, layout=sample_layout)
+
+
+def test_param_options_for_a_static_layout_names_the_layout(sample_layout) -> None:
+    with pytest.raises(
+        ValueError, match=re.escape("param_options is given for a static layout: layout_id='s'")
+    ):
+        dash_prism.register_layout(id="s", layout=sample_layout, param_options={"a": ("A", {})})
 
 
 def test_get_layout_metadata() -> None:

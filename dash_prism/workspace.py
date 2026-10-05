@@ -138,12 +138,12 @@ def _validate_panel_structure(
         direction = panel.get("direction")
         if direction not in ("horizontal", "vertical"):
             errors.append(
-                f"{path} (id={panel_id}): container panel missing valid 'direction' "
+                f"{path} (id={panel_id!r}): container panel missing valid 'direction' "
                 f"(got {direction!r}, expected 'horizontal' or 'vertical')"
             )
 
         if not isinstance(children, list):
-            errors.append(f"{path} (id={panel_id}): 'children' must be a list")
+            errors.append(f"{path} (id={panel_id!r}): 'children' must be a list")
         else:
             for i, child in enumerate(children):
                 _validate_panel_structure(child, errors, path=f"{path}.children[{i}]")

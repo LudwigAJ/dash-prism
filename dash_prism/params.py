@@ -208,7 +208,7 @@ class ParamValidationError(ValueError):
 
     def format(self) -> str:
         """Make the message of the error, with one line for each parameter."""
-        lines = [f"Invalid parameters for layout '{self.layout_id}':"]
+        lines = [f"Invalid parameters: layout_id={self.layout_id!r}"]
         for error in self.errors:
             suffix = "" if error.input is None else f" (got {error.input!r})"
             lines.append(f"  - {error.field}: {error.message}{suffix}")
@@ -509,8 +509,9 @@ def introspect_callable(func: Callable[..., Any]) -> SignatureSpec:
 
     if body is not None and len(params) != 1:
         raise ValueError(
-            f"Layout callback '{getattr(func, '__name__', func)}' declares a pydantic model "
-            f"parameter '{body[0]}'. A model parameter must be the only parameter."
+            "Layout callback has a pydantic model parameter and other parameters: "
+            f"callback={getattr(func, '__name__', func)!r}, model_parameter={body[0]!r}. "
+            "A model parameter must be the only parameter."
         )
 
     return SignatureSpec(
@@ -712,9 +713,9 @@ def _check_choice_declaration(layout_id: str, param: ResolvedParam) -> None:
     declared = list(param.meta.choices)
     if not declared:
         raise ValueError(
-            f"Layout '{layout_id}': parameter '{name}' declares Param(choices=[]). "
+            f"Param(choices=...) is an empty list: {layout_id=}, parameter={name!r}. "
             "No value can satisfy an empty choice list. Remove the argument, "
-            "or list the values the parameter accepts."
+            "or list the values that the parameter accepts."
         )
 
     description = describe_type(param.annotation)
@@ -722,21 +723,21 @@ def _check_choice_declaration(layout_id: str, param: ResolvedParam) -> None:
         isinstance(choice, (list, tuple, set, frozenset)) for choice in declared
     ):
         raise ValueError(
-            f"Layout '{layout_id}': parameter '{name}' is a collection, but "
-            f"Param(choices={declared!r}) lists scalar values, so every input is "
-            "rejected. Choices for a collection parameter must be whole values for "
-            "that collection, such as choices=[[1, 2], [3]]. To restrict the items "
-            "instead, annotate the item type: list[Literal['a', 'b']]."
+            "Param(choices=...) holds a value that is not a collection, for a collection "
+            f"parameter: {layout_id=}, parameter={name!r}, choices={declared!r}. Each "
+            "choice of a collection parameter is a whole collection, such as "
+            "choices=[[1, 2], [3]]. To restrict the items, annotate the item type: "
+            "list[Literal['a', 'b']]."
         )
 
     annotated = description.choices
     if annotated is not None and not _same_choices(annotated, declared):
         raise ValueError(
-            f"Layout '{layout_id}': parameter '{name}' declares its choices twice and "
-            f"the two disagree -- the annotation allows {_json_safe(annotated)!r} but "
-            f"Param(choices=...) lists {_json_safe(declared)!r}. The search bar offers "
-            "the second list while the callback enforces the first. Remove one, or "
-            "make them match."
+            "Param(choices=...) and the annotation allow different values: "
+            f"{layout_id=}, parameter={name!r}, annotation={_json_safe(annotated)!r}, "
+            f"param_choices={_json_safe(declared)!r}. The search bar offers the "
+            "Param list, and the validator enforces the annotation. Remove one, or make "
+            "them match."
         )
 
 

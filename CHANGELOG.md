@@ -148,6 +148,20 @@ All notable changes to Dash Prism are recorded here. The project follows
   the log has the class and the stack frames of the exception, but not its
   message. The call of that function in `init()` keeps the full traceback,
   because no request exists at that time.
+- The exception messages of `register_layout`, of `init`, of a choice
+  declaration and of a request that the registration rejects have a new form.
+  A message states the condition that failed, then the values as `name=value`,
+  for example `Layout is already registered: layout_id='home'`. A message names
+  a field of the browser request as `Request field layoutOption` and an
+  argument of `register_layout` by its Python name, such as `param_options`.
+  The text that a tab shows for an unknown layout is now `Layout is not
+  registered: layout_id='...'`, and the first line of a `ParamValidationError`
+  message is `Invalid parameters: layout_id='...'`. In the messages of
+  `InvalidWorkspaceError`, a panel ID is now in quotes, for example
+  `panel (id='p1'): 'children' must be a list`. The timeout text, the
+  `Error rendering layout ...` text, the panel for invalid parameters and the
+  warnings of `init` keep their form. Code or tests that matched the old text
+  must change.
 - The module `dash_prism.init` is now `dash_prism.app_init`. The function
   `dash_prism.init` and the other public names are the same. Code that wrote
   `from dash_prism.init import ...` must import the public names from

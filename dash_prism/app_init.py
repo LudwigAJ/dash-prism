@@ -301,16 +301,16 @@ def _validate_init(app: Dash, prism_id: str) -> list[str]:
     errors: list[str] = []
 
     if not hasattr(app, "callback"):
-        errors.append("Invalid 'app' argument: expected a Dash application instance")
+        errors.append(
+            "app has no callback attribute, and init() needs a Dash app: "
+            f"type={type(app).__name__!r}"
+        )
 
     if not prism_id or not isinstance(prism_id, str):
-        errors.append("Invalid 'prism_id': must be a non-empty string")
+        errors.append(f"prism_id is not a non-empty string: {prism_id=}")
 
     if not hasattr(app, "layout") or app.layout is None:
-        errors.append(
-            "app.layout must be set before calling init(). "
-            "Make sure you define app.layout = ... before calling dash_prism.init()"
-        )
+        errors.append("app.layout is not set. Set app.layout before the call to dash_prism.init().")
 
     return errors
 
@@ -387,9 +387,9 @@ def _check_registry(prism_component: Any | None) -> None:
         return
     if initial_layout not in layout_registry.registry:
         raise InitializationError(
-            f"initialLayout '{initial_layout}' not found in registered layouts. "
-            f"Available layouts: {sorted(layout_registry.registry)}. "
-            "Register the layout with @dash_prism.register_layout() before calling init()."
+            f"initialLayout is not a registered layout: initialLayout={initial_layout!r}, "
+            f"registered={sorted(layout_registry.registry)}. Register the layout with "
+            "dash_prism.register_layout() before the call to dash_prism.init()."
         )
     logger.info("Initial layout '%s' validated successfully", initial_layout)
 
@@ -581,9 +581,9 @@ def _run_callback(
     except RuntimeError:
         return asyncio.run(_run_callback_async(callback, is_async, kwargs, timeout))
     raise RuntimeError(
-        "Cannot run async layout callback from within an existing event loop "
-        "(for example Jupyter or uvicorn). Either set use_async=True on your Dash app, "
-        "or make the layout callback synchronous."
+        "An event loop is already running in this thread, so asyncio.run() cannot run "
+        "the async layout callback. Set use_async=True on the Dash app, or make the "
+        "layout callback sync."
     )
 
 
@@ -789,7 +789,7 @@ def _lookup_and_resolve(
     """
     registration = layout_registry.get_layout(layout_id)
     if registration is None:
-        raise ValueError(f"Layout '{layout_id}' not found")
+        raise ValueError(f"Layout is not registered: {layout_id=}")
     resolved_params = layout_registry.resolve_layout_params(
         registration, layout_params, layout_option
     )

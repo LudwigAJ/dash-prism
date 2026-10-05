@@ -28,7 +28,7 @@ def test_init_missing_layout_error() -> None:
     app = Dash(__name__)
     # app.layout is None
 
-    with pytest.raises(dash_prism.InitializationError, match="app.layout must be set"):
+    with pytest.raises(dash_prism.InitializationError, match="app.layout is not set"):
         dash_prism.init("test-prism", app)
 
 

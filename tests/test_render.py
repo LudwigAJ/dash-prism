@@ -481,7 +481,77 @@ def test_missing_layout_shows_error_component(prism_app: Dash, path: str) -> Non
     result = _render_on_path(path, "missing")
 
     assert result.className == "prism-error-tab"
-    assert _error_message(result) == "Layout 'missing' not found"
+    assert _error_message(result) == "Layout is not registered: layout_id='missing'"
+
+
+@pytest.mark.parametrize(
+    ("layout_id", "layout_params", "layout_option", "expected"),
+    [
+        (
+            "with-options",
+            None,
+            None,
+            "Request field layoutOption is missing, and the layout declares param_options: "
+            "layout_id='with-options'",
+        ),
+        (
+            "with-options",
+            {"n": "2"},
+            "one",
+            "Request field layoutParams is not empty, and the layout declares param_options: "
+            "layout_id='with-options'. The layout accepts values only through an option.",
+        ),
+        (
+            "with-options",
+            None,
+            5,
+            "Request field layoutOption is not a string: layout_id='with-options', type='int'",
+        ),
+        (
+            "with-options",
+            None,
+            "two",
+            "Request field layoutOption is not a key of param_options: "
+            "layout_id='with-options', layoutOption='two'",
+        ),
+        (
+            "without-options",
+            None,
+            "one",
+            "Request field layoutOption is given, and the layout declares no param_options: "
+            "layout_id='without-options'",
+        ),
+        (
+            "without-options",
+            "n=2",
+            None,
+            "Request field layoutParams is not an object: layout_id='without-options', "
+            "type='str'",
+        ),
+    ],
+    ids=[
+        "option-missing",
+        "params-with-options",
+        "option-not-a-string",
+        "option-unknown",
+        "option-without-options",
+        "params-not-an-object",
+    ],
+)
+def test_request_that_does_not_agree_with_the_registration_names_the_request_field(
+    layout_id: str, layout_params: Any, layout_option: Any, expected: str
+) -> None:
+    @dash_prism.register_layout(id="with-options", param_options={"one": ("One", {"n": "1"})})
+    def with_options(n: int = 1):
+        return html.Div(n)
+
+    @dash_prism.register_layout(id="without-options")
+    def without_options(n: int = 1):
+        return html.Div(n)
+
+    result = app_init._render_tab_layout("tab-1", layout_id, layout_params, layout_option)
+
+    assert _error_message(result) == expected
 
 
 @pytest.mark.parametrize("path", ["sync", "async"])

@@ -1,8 +1,8 @@
 """Integration tests for ``serverSessionId`` reconciliation.
 
 A persisted workspace that references a layout the server no longer registers
-must lose that tab on the next load instead of rendering a "Layout not found"
-error; the other tabs are kept.
+must lose that tab on the next load instead of rendering a "Layout is not
+registered" error; the other tabs are kept.
 """
 
 from __future__ import annotations
@@ -130,7 +130,9 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     tabs = duo.find_elements(testutils.TAB_SELECTOR)
     assert [t.text for t in tabs] == ["Home"]
     duo.wait_for_element("[id*='home-content']", timeout=10)
-    assert "not found" not in duo.find_element(testutils.PRISM_ROOT).text.lower()
+    # The test looks for the error component and not its text, so a change of
+    # the wording cannot make the check pass.
+    assert duo.find_elements(".prism-error-tab") == []
 
     # The registry change is recorded: the stored fingerprint is now the one
     # derived from the current registry, not the seeded one.

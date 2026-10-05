@@ -60,13 +60,13 @@ interface PrismProps extends DashComponentProps {
    * set of layouts. Prism stores it with the persisted workspace. When the
    * workspace loads, Prism closes each tab whose layout is not in
    * registeredLayouts any more. Prism keeps the rest of the workspace and
-   * records the new fingerprint. A closed tab shows no "Layout not found" error,
-   * but a toast tells the user how many tabs Prism closed. The tabs that Prism
-   * closes depend only on registeredLayouts, and Prism closes no tab while that
-   * registry is empty. dash_prism.init() sets this prop unless you set it
-   * yourself. If you set it yourself, init() keeps your value, and only the
-   * recorded fingerprint changes. Prism reads the prop one time, when the
-   * component mounts.
+   * records the new fingerprint. A closed tab shows no "Layout is not
+   * registered" error, but a toast tells the user how many tabs Prism closed.
+   * The tabs that Prism closes depend only on registeredLayouts, and Prism
+   * closes no tab while that registry is empty. dash_prism.init() sets this
+   * prop unless you set it yourself. If you set it yourself, init() keeps your
+   * value, and only the recorded fingerprint changes. Prism reads the prop one
+   * time, when the component mounts.
    */
   serverSessionId?: string;
 
