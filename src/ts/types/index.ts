@@ -53,6 +53,32 @@ export interface PanelNode {
 }
 
 // =============================================================================
+// Drag and Drop Types
+// =============================================================================
+
+/** Holds the dnd-kit data of a panel edge drop zone. A drop there splits the panel. */
+export interface PanelEdgeDropData {
+  panelId: PanelId;
+  edge: 'left' | 'right' | 'top' | 'bottom';
+}
+
+/** Holds the dnd-kit data of the tab bar of a panel. A drop there moves the tab to the panel. */
+export interface TabBarDropData {
+  type: 'tab-bar';
+  panelId: PanelId;
+}
+
+/** Holds the dnd-kit data of a tab. A drop on a tab puts the dragged tab at its position. */
+export interface TabDragData {
+  type: 'tab';
+  tab: Tab;
+  panelId: PanelId;
+}
+
+/** Holds the data of a Prism droppable. */
+export type DropData = PanelEdgeDropData | TabBarDropData | TabDragData;
+
+// =============================================================================
 // Layout Types
 // =============================================================================
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
-import type { PanelId } from '@types';
+import type { PanelId, PanelEdgeDropData } from '@types';
 import { useConfig } from '@context/ConfigContext';
 import { useAppSelector, selectIsSingleTabMode, selectPanelCount, canAddPanel } from '@store';
 
@@ -32,25 +32,25 @@ export function PanelDropzone({ panelId, children, isPinned = false }: PanelDrop
   // Create 4 separate droppable zones: left, right, top, bottom
   const leftZone = useDroppable({
     id: `panel-drop-left-${panelId}`,
-    data: { panelId, edge: 'left' },
+    data: { panelId, edge: 'left' } satisfies PanelEdgeDropData,
     disabled: !dropzonesEnabled,
   });
 
   const rightZone = useDroppable({
     id: `panel-drop-right-${panelId}`,
-    data: { panelId, edge: 'right' },
+    data: { panelId, edge: 'right' } satisfies PanelEdgeDropData,
     disabled: !dropzonesEnabled,
   });
 
   const topZone = useDroppable({
     id: `panel-drop-top-${panelId}`,
-    data: { panelId, edge: 'top' },
+    data: { panelId, edge: 'top' } satisfies PanelEdgeDropData,
     disabled: !dropzonesEnabled,
   });
 
   const bottomZone = useDroppable({
     id: `panel-drop-bottom-${panelId}`,
-    data: { panelId, edge: 'bottom' },
+    data: { panelId, edge: 'bottom' } satisfies PanelEdgeDropData,
     disabled: !dropzonesEnabled,
   });
 

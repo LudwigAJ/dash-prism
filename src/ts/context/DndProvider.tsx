@@ -17,7 +17,7 @@ import { useConfig } from '@context/ConfigContext';
 import { getTabIcon } from '@constants/tab-icons';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
-import type { Tab } from '@types';
+import type { Tab, DropData } from '@types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -92,35 +92,30 @@ export function DndProvider({ children }: DndProviderProps) {
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // Case 1: Dropped on a panel drop zone (cross-panel move or split)
-    // Use data object from droppable instead of parsing string ID
-    const dropData = over.data.current as
-      { panelId?: string; edge?: string; type?: string } | undefined;
+    // dnd-kit types the data of a droppable as a plain record. Each droppable of Prism sets a
+    // DropData.
+    const dropData = over.data.current as DropData | undefined;
 
-    if (dropData?.edge) {
-      const { edge, panelId: targetPanelId } = dropData;
+    // Case 1: Dropped on a panel edge drop zone (split)
+    if (dropData && 'edge' in dropData) {
+      const { edge } = dropData;
+      const direction = edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical';
+      // 'before' = left/top (new panel first), 'after' = right/bottom (new panel second)
+      const position = edge === 'left' || edge === 'top' ? 'before' : 'after';
 
-      if (edge && edge !== 'center' && targetPanelId) {
-        // Edge drop → SPLIT_PANEL
-        const direction = edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical';
-        // 'before' = left/top (new panel first), 'after' = right/bottom (new panel second)
-        const position = edge === 'left' || edge === 'top' ? 'before' : 'after';
-
-        dispatch(
-          splitPanel({
-            panelId: targetPanelId,
-            direction,
-            tabId: activeId,
-            position,
-          })
-        );
-      }
+      dispatch(
+        splitPanel({
+          panelId: dropData.panelId,
+          direction,
+          tabId: activeId,
+          position,
+        })
+      );
       return;
     }
 
     // Case 2: Dropped on the tab bar of a panel (cross-panel move)
-    // Use data object instead of regex matching
-    if (dropData?.type === 'tab-bar' && dropData.panelId) {
+    if (dropData?.type === 'tab-bar') {
       const targetPanelId = dropData.panelId;
       if (activeTab.panelId !== targetPanelId) {
         dispatch(moveTab({ tabId: activeId, targetPanelId }));
