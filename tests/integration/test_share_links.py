@@ -80,7 +80,7 @@ def _load_with_hash(duo, share_hash: str) -> None:
     Changing only the fragment is a same-document navigation: the page is not
     reloaded, so only the hashchange listener runs. A different query string
     forces a real load, which is the path a user takes when they paste a share
-    link into a new browser tab, and it is handled by the mount timer instead.
+    link into a new browser tab, and the mount effect handles it instead.
     """
     base = duo.driver.current_url.split("#")[0].split("?")[0]
     duo.driver.get(f"{base}?reload=1{share_hash}")

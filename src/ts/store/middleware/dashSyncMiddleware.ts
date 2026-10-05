@@ -10,6 +10,9 @@ import { selectWorkspaceSnapshot } from '@store/selectors';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
 
+// The docstrings of the readWorkspace prop promise a sync 500 ms after the last change, and
+// tests/test_components.py pins that wording. Change the constant, the docstrings and the test
+// together.
 const DEBOUNCE_MS = 500;
 
 /** Holds the redux-undo actions that move the present workspace through the history. */
@@ -41,22 +44,21 @@ export interface DashSyncMiddlewareResult {
 }
 
 /**
- * Middleware that syncs workspace state to Dash via setProps callback.
- * Replaces the useDashSync hook with middleware-based approach.
+ * Creates the middleware that writes the present workspace to the `readWorkspace` prop of Dash.
  *
- * Features:
- * - First sync is immediate
- * - Subsequent syncs are debounced (500ms)
- * - Deduplication via serialization comparison
- * - Flushes on page unload
- * - Returns cleanup function to prevent memory leaks
+ * - The first change, which is the rehydration on page load, syncs at once. A Dash callback with
+ *   the input `readWorkspace` then gets the loaded workspace before the user does anything.
+ * - Each later change starts the `DEBOUNCE_MS` timer again, so a burst of changes such as a drag
+ *   or a resize sends one Dash request.
+ * - A workspace that serializes to the last synced JSON is not sent again.
+ * - A pending sync goes out when the page unloads.
  *
- * @returns Object with middleware and cleanup function
+ * Call `cleanup` when the store goes away.
  */
 export function createDashSyncMiddleware(
   setProps: ((props: Record<string, unknown>) => void) | undefined
 ): DashSyncMiddlewareResult {
-  let lastSyncRef = '';
+  let lastSyncedJson = '';
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let isFirstSync = true;
   let pendingWorkspace: Workspace | null = null;
@@ -65,8 +67,8 @@ export function createDashSyncMiddleware(
   const doSync = (workspace: Workspace) => {
     if (!setProps) return;
     const serialized = JSON.stringify(workspace);
-    if (serialized === lastSyncRef) return;
-    lastSyncRef = serialized;
+    if (serialized === lastSyncedJson) return;
+    lastSyncedJson = serialized;
     setProps({ readWorkspace: workspace });
     pendingWorkspace = null;
   };
@@ -102,7 +104,7 @@ export function createDashSyncMiddleware(
 
     // Clear references
     pendingWorkspace = null;
-    lastSyncRef = '';
+    lastSyncedJson = '';
   };
 
   const middleware: Middleware<object, RootState> = (store) => (next) => (action: unknown) => {

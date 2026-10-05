@@ -105,7 +105,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
   // Hooks that use Redux
   useKeyboardShortcuts(rootRef);
   useShareLinkListener();
-  const { lastSyncTime } = useLastChangeTime();
+  const { lastChangeTime } = useLastChangeTime();
   const handleOpenHelp = () => {
     dispatch(openHelpModal());
   };
@@ -132,7 +132,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
         })}
 
       {showStatusBar && statusBarPosition === 'top' && (
-        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastChangeTime={lastChangeTime} />
       )}
 
       <div className="prism-view-panels">
@@ -140,7 +140,7 @@ export function WorkspaceView({ actions = [], children }: WorkspaceViewProps) {
       </div>
 
       {showStatusBar && statusBarPosition === 'bottom' && (
-        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastSyncTime={lastSyncTime} />
+        <StatusBar actions={actions} onOpenHelp={handleOpenHelp} lastChangeTime={lastChangeTime} />
       )}
       {/* The ui slice holds which modal is open and for which tab */}
       <HelpModal open={helpModalOpen} onOpenChange={() => dispatch(closeHelpModal())} />

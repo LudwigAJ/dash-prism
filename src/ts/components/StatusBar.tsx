@@ -33,7 +33,7 @@ interface StatusBarProps {
   /** The PrismAction components of the `actions` prop, as Dash component specs. */
   actions?: DashComponent[];
   /** The time of the last workspace change, in ms since the epoch */
-  lastSyncTime: number;
+  lastChangeTime: number;
   onOpenHelp?: () => void;
 }
 
@@ -41,11 +41,11 @@ interface StatusBarProps {
  * Renders the status bar of the workspace: the segments that the `statusBarItems` prop selects,
  * then the PrismAction components of the `actions` prop.
  */
-export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarProps) {
+export function StatusBar({ actions = [], lastChangeTime, onOpenHelp }: StatusBarProps) {
   const dispatch = useAppDispatch();
   const { maxTabs, componentId, persistenceType, statusBarItems, enableKeyboardShortcuts } =
     useConfig();
-  const [syncTimeDisplay, setSyncTimeDisplay] = useState('just now');
+  const [changeTimeDisplay, setChangeTimeDisplay] = useState('just now');
 
   // Select state from Redux
   const tabs = useAppSelector(selectTabs);
@@ -64,19 +64,19 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const searchBarMode = searchBarModes[activePanelId] ?? 'display';
 
-  // Update sync time display every 5 seconds
+  // Update the read-out every 5 seconds.
   useEffect(() => {
-    const updateSyncDisplay = () => {
-      const elapsed = Date.now() - lastSyncTime;
-      if (elapsed < 10000) setSyncTimeDisplay('just now');
-      else if (elapsed < 60000) setSyncTimeDisplay(`${Math.floor(elapsed / 1000)}s ago`);
-      else if (elapsed < 3600000) setSyncTimeDisplay(`${Math.floor(elapsed / 60000)}m ago`);
-      else setSyncTimeDisplay(`${Math.floor(elapsed / 3600000)}h ago`);
+    const updateChangeTimeDisplay = () => {
+      const elapsed = Date.now() - lastChangeTime;
+      if (elapsed < 10000) setChangeTimeDisplay('just now');
+      else if (elapsed < 60000) setChangeTimeDisplay(`${Math.floor(elapsed / 1000)}s ago`);
+      else if (elapsed < 3600000) setChangeTimeDisplay(`${Math.floor(elapsed / 60000)}m ago`);
+      else setChangeTimeDisplay(`${Math.floor(elapsed / 3600000)}h ago`);
     };
-    updateSyncDisplay();
-    const interval = setInterval(updateSyncDisplay, 5000);
+    updateChangeTimeDisplay();
+    const interval = setInterval(updateChangeTimeDisplay, 5000);
     return () => clearInterval(interval);
-  }, [lastSyncTime]);
+  }, [lastChangeTime]);
 
   const handleUndo = useCallback(() => {
     if (canUndo) dispatch(undo());
@@ -258,7 +258,7 @@ export function StatusBar({ actions = [], lastSyncTime, onOpenHelp }: StatusBarP
           className="tw:flex tw:items-center tw:gap-1 tw:text-muted-foreground"
           data-testid="prism-status-bar-updated"
         >
-          Updated: <span className="tw:text-foreground">{syncTimeDisplay}</span>
+          Updated: <span className="tw:text-foreground">{changeTimeDisplay}</span>
         </div>
       )}
     </div>

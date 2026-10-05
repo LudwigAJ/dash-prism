@@ -3,36 +3,23 @@ import { useAppSelector, selectWorkspaceSnapshot } from '@store';
 import type { Workspace } from '@types';
 
 /**
- * Tracks when the workspace state last changed, for the StatusBar "Updated"
- * read-out. It does NOT know when the debounced sync to Dash happened (that is
- * dashSyncMiddleware's business, up to 500 ms later); hence the name.
+ * Gives the time of the last workspace change, in ms since the epoch, for the "Updated" read-out
+ * of the status bar. The debounced sync to Dash follows up to 500 ms later, so the hook does not
+ * give the time of the sync.
  *
- * Uses reference equality instead of JSON serialization for change detection,
- * since Redux returns new references when state changes.
- *
- * @returns Object containing `lastSyncTime` timestamp for StatusBar display
- *
- * @example
- * ```tsx
- * function WorkspaceView() {
- *   const { lastSyncTime } = useLastChangeTime();
- *   return <StatusBar lastSyncTime={lastSyncTime} />;
- * }
- * ```
+ * A new workspace object marks a change, because the store gives a new object for each change.
  */
-export function useLastChangeTime(): { lastSyncTime: number } {
+export function useLastChangeTime(): { lastChangeTime: number } {
   const workspace = useAppSelector(selectWorkspaceSnapshot);
   const lastWorkspaceRef = useRef<Partial<Workspace> | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState(Date.now);
+  const [lastChangeTime, setLastChangeTime] = useState(Date.now);
 
-  // Update lastSyncTime when workspace reference changes
-  // The actual sync is handled by dashSyncMiddleware
   useEffect(() => {
     if (workspace !== lastWorkspaceRef.current) {
       lastWorkspaceRef.current = workspace;
-      setLastSyncTime(Date.now());
+      setLastChangeTime(Date.now());
     }
   }, [workspace]);
 
-  return { lastSyncTime };
+  return { lastChangeTime };
 }

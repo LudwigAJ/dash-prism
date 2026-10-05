@@ -277,11 +277,12 @@ export function useShareLinkListener() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [processShareHash, enableShareLinks]);
 
-  // Process hash on mount (user opens share link directly)
+  // Read the hash one time on mount, for a link that the user opens in a new browser tab. The
+  // store is already rehydrated, because PersistGate mounts this hook only after that. The
+  // function changes with the active panel. It is not a dependency, because only a valid link
+  // clears the hash, and each new call would show the error of an invalid link again.
   useEffect(() => {
-    if (!enableShareLinks) return undefined;
-    const timer = setTimeout(processShareHash, 100);
-    return () => clearTimeout(timer);
+    if (enableShareLinks) processShareHash();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enableShareLinks]); // Only on mount (and if the prop flips)
+  }, [enableShareLinks]);
 }
