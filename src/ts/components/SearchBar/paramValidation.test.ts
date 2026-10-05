@@ -165,6 +165,18 @@ describe('checkParams', () => {
       { field: 'n', message: 'Must be a whole number' },
     ]);
   });
+
+  it('checks each item of a list value, and an item can hold a comma', () => {
+    const lists = [
+      param({ name: 'ids', type: 'array', items: 'integer' }),
+      param({ name: 'tags', type: 'array', items: 'string', constraints: { maxLength: 2 } }),
+    ];
+    expect(checkParams(lists, { ids: [1, 2], tags: ['a,b', 'c'] })).toEqual([]);
+    expect(checkParams(lists, { ids: [1, 'x'], tags: ['a', 'b', 'c'] })).toEqual([
+      { field: 'ids', message: '"x": Must be a whole number' },
+      { field: 'tags', message: 'Must have at most 2 items' },
+    ]);
+  });
 });
 
 describe('resolveEnumInput / filterChoices', () => {
@@ -232,9 +244,9 @@ describe('stringifyParams', () => {
     expect(stringifyParams(params, { country: '' })).toEqual({ country: '' });
   });
 
-  it('joins a list and stringifies other scalars', () => {
-    expect(stringifyParams(params, { tags: ['a', 'b'], n: 3, country: 'SE' })).toEqual({
-      tags: 'a,b',
+  it('sends a list as a JSON array of strings and stringifies other scalars', () => {
+    expect(stringifyParams(params, { tags: ['a,b', 2], n: 3, country: 'SE' })).toEqual({
+      tags: '["a,b","2"]',
       n: '3',
       country: 'SE',
     });

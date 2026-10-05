@@ -271,6 +271,11 @@ All notable changes to Dash Prism are recorded here. The project follows
   array such as `[1, 2]` for a list parameter. The server already accepted both,
   but the search bar showed an error for them. A shared table of inputs now
   fails a test if the search bar and the server disagree.
+- A list in the parameters of a share link reaches the layout with each item
+  intact. Prism sends the list to the server as a JSON array of strings. Before,
+  Prism joined the items with commas, so an item that held a comma became two
+  items, and an empty list left out a parameter that has a default. A share
+  link that Prism made holds the parameters as text, so it works as before.
 - A second `dash_prism.init()` with another `prism_id` now gives that Prism
   component its layout metadata, and the app keeps one render callback. Before,
   the second call registered a second callback for the same output, which Dash
