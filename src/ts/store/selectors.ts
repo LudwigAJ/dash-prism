@@ -1,4 +1,3 @@
-// src/ts/store/selectors.ts
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { getLeafPanelIds } from '@utils/panels';

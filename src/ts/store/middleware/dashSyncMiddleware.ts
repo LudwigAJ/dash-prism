@@ -1,13 +1,12 @@
-// src/ts/store/middleware/dashSyncMiddleware.ts
 import { isAction, type Action, type Middleware } from '@reduxjs/toolkit';
 import { REHYDRATE } from 'redux-persist';
 import { ActionTypes as UndoActionTypes } from 'redux-undo';
-import type { RootState } from '../index';
+import type { RootState } from '@store';
 import type { Workspace } from '@types';
-import { pruneSearchBarModes } from '../uiSlice';
+import { pruneSearchBarModes } from '@store/uiSlice';
 import { getLeafPanelIds } from '@utils/panels';
-import { resetWorkspace } from '../workspaceSlice';
-import { selectWorkspaceSnapshot } from '../selectors';
+import { resetWorkspace } from '@store/workspaceSlice';
+import { selectWorkspaceSnapshot } from '@store/selectors';
 import { validateWorkspace } from '@utils/workspace';
 import { logger } from '@utils/logger';
 

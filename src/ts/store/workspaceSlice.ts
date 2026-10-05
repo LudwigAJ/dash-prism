@@ -1,4 +1,3 @@
-// src/ts/store/workspaceSlice.ts
 import {
   createSlice,
   isAnyOf,

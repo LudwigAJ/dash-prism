@@ -17,7 +17,7 @@ import { useConfig } from '@context/ConfigContext';
 import { getTabIcon } from '@constants/tab-icons';
 import { tabStyleVariants, migrateTabStyle } from '@constants/tab-styles';
 import { cn } from '@utils/cn';
-import type { Tab } from '../types';
+import type { Tab } from '@types';
 import {
   useAppDispatch,
   useAppSelector,

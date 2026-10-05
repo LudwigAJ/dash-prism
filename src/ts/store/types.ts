@@ -1,4 +1,3 @@
-// src/ts/store/types.ts
 import type { LayoutId, PanelId, TabId, RegisteredLayouts, Workspace } from '@types';
 import type { Storage } from 'redux-persist';
 

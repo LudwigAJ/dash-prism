@@ -1,10 +1,9 @@
-// src/ts/store/middleware/reconcileMiddleware.ts
 import { isAction, type Middleware } from '@reduxjs/toolkit';
 import { REHYDRATE } from 'redux-persist';
 import type { RegisteredLayouts } from '@types';
-import type { RootState } from '../index';
-import { reconcileWithServer } from '../workspaceSlice';
-import { setLoadNotice } from '../uiSlice';
+import type { RootState } from '@store';
+import { reconcileWithServer } from '@store/workspaceSlice';
+import { setLoadNotice } from '@store/uiSlice';
 
 /**
  * After redux-persist has rehydrated the workspace, reconcile it with the
