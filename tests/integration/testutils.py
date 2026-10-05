@@ -262,6 +262,24 @@ def wait_for_drop_zones_visible(dash_duo, timeout: float = 5.0) -> None:
     )
 
 
+def wait_for_focus(dash_duo, selector: str, timeout: float = 3.0) -> None:
+    """Wait until the element that matches ``selector`` has focus.
+
+    The tab list of Radix moves the focus one task after an arrow key, so a test waits
+    for the focus before the next key.
+
+    :param dash_duo: The dash testing fixture.
+    :param selector: The CSS selector of the element that must receive focus.
+    :param timeout: The maximum wait in seconds.
+    """
+    WebDriverWait(dash_duo.driver, timeout).until(
+        lambda driver: driver.execute_script(
+            "return document.activeElement.matches(arguments[0]);", selector
+        ),
+        message=f"{selector} did not receive focus",
+    )
+
+
 def wait_for_callbacks_idle(dash_duo, timeout: float = 10.0) -> None:
     """Wait until Dash has no callback that is requested or running.
 
@@ -315,6 +333,11 @@ def get_panel_id(dash_duo, panel_index: int = 0) -> str | None:
     return testid.replace("prism-panel-", "") if testid else None
 
 
+def tab_trigger(tab_id: str) -> str:
+    """Return the CSS selector of the trigger of a tab, the element that takes the focus."""
+    return f"[data-testid='prism-tab-{tab_id}'] [role='tab']"
+
+
 def get_tab_order_in_panel(dash_duo, panel_index: int = 0) -> list[str]:
     """Return the IDs of the tabs in a panel, in the order of the tab bar.
 
@@ -365,7 +388,7 @@ def trigger_rename_mode(dash_duo, tab_id: str) -> str:
     # The onDoubleClick handler is on the inner TabsTrigger button, not on the
     # wrapper that has the test ID. A synthetic event on the button reaches it
     # without the pointer events that start a drag.
-    trigger = dash_duo.find_element(f"[data-testid='prism-tab-{tab_id}'] [role='tab']")
+    trigger = dash_duo.find_element(tab_trigger(tab_id))
     dash_duo.driver.execute_script(
         "arguments[0].dispatchEvent(new MouseEvent('dblclick', "
         "{bubbles: true, cancelable: true, view: window, detail: 2}));",
@@ -583,6 +606,32 @@ def start_drag_without_drop(dash_duo, tab_index: int, panel_index: int = 0) -> N
 def cancel_drag_with_escape(dash_duo) -> None:
     """Press Escape, which cancels an active drag."""
     ActionChains(dash_duo.driver).send_keys(Keys.ESCAPE).perform()
+
+
+# The live region of dnd-kit holds the last announcement of a drag.
+_DND_ANNOUNCEMENT = "return document.querySelector(\"[id^='DndLiveRegion']\")?.textContent ?? '';"
+
+
+def dnd_announcement(dash_duo) -> str:
+    """Return the last announcement of dnd-kit for a screen reader."""
+    return dash_duo.driver.execute_script(_DND_ANNOUNCEMENT)
+
+
+def press_drag_key(dash_duo, key: str, announcement: str) -> None:
+    """Press a key of a keyboard drag and wait until dnd-kit announces the result.
+
+    A keyboard drag changes its target one render after the key, so a test waits for
+    the announcement before the next key.
+
+    :param dash_duo: The dash testing fixture.
+    :param key: The key to press.
+    :param announcement: A part of the announcement that the key causes.
+    """
+    press_key(dash_duo, key)
+    WebDriverWait(dash_duo.driver, 5).until(
+        lambda _: announcement in dnd_announcement(dash_duo),
+        message=f"dnd-kit should announce {announcement!r} after the key",
+    )
 
 
 # =============================================================================

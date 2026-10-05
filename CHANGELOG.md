@@ -161,7 +161,21 @@ All notable changes to Dash Prism are recorded here. The project follows
   the add button. A keyboard drag starts from the focused tab, and the focus
   comes back to that tab after the drop.
 - `Enter` on a focused tab selects it and no longer starts a keyboard drag.
-  `Space` selects the tab and starts the drag.
+  `Space` picks up the tab and no longer selects it. A tab that cannot move,
+  locked or in a pinned panel, still opens on `Space`.
+- The arrow keys move a keyboard drag from one drop target to the next, and no
+  longer move it by pixels. `Left` and `Right` go through the tab positions of a
+  tab bar and on into the next panel. The arrow keys also reach the edges of
+  each panel that can split, so the keyboard can split a panel. An arrow key
+  does not jump far to the side. `Enter` or `Space` drops the tab, and `Escape`
+  cancels the drag. A screen reader reads the keys and each drop target, for
+  example "right edge of panel 2". The help dialog lists the keys in a new
+  "Keyboard Drag" section. After a drop the focus is on the moved tab, also
+  after a split.
+- A workspace shortcut no longer fires when another handler already handled
+  its key with `preventDefault()`. A Dash component in a tab can thus keep a key
+  such as `Ctrl+D` for itself. While a tab is picked up for a keyboard drag, the
+  tab handles every key, so no shortcut fires.
 - A keyboard shortcut works only with exactly its keys. An extra Shift or Alt
   stops it, so `Ctrl+Shift+D` and `Ctrl+Alt+D` no longer close a tab. The
   legacy `'Spacebar'` key value of old browsers is no longer read.
@@ -197,6 +211,8 @@ All notable changes to Dash Prism are recorded here. The project follows
 
 ### Fixed
 
+- A drop on a tab of a pinned panel no longer moves the dragged tab into that
+  panel. Before, only the tab bar and the edges of a pinned panel refused a tab.
 - In an app with `debug=True`, the help, info and icon dialogs no longer write
   the React warning "Function components cannot be given refs" to the browser
   console. The dialog overlay now takes the ref that Radix gives it.

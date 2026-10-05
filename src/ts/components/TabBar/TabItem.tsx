@@ -66,6 +66,7 @@ export const TabItem = memo(function TabItem({
   const styleColor = migrateTabStyle(tab.style);
   const isDefaultStyle = styleColor === 'default';
   const isLocked = tab.locked ?? false;
+  const isDragDisabled = isLocked || isPinned || isLoading || isEditing;
 
   const {
     attributes,
@@ -78,8 +79,11 @@ export const TabItem = memo(function TabItem({
   } = useSortable({
     id: tab.id,
     data: { type: 'tab', tab, panelId: tab.panelId } satisfies TabDragData,
-    disabled: isLocked || isPinned || isLoading || isEditing,
+    // A boolean would turn off the drag only. A pinned panel takes no tabs, so its tabs take no
+    // drop either. Another tab that cannot move still marks a drop position.
+    disabled: { draggable: isDragDisabled, droppable: isPinned },
   });
+  const { onKeyDown: dragKeyDown, ...pointerListeners } = listeners ?? {};
 
   // The close button and the rename input are next to the trigger, because a button cannot hold
   // another control. So the wrapper, and not the trigger, dims an inactive tab, and the close
@@ -92,6 +96,19 @@ export const TabItem = memo(function TabItem({
   const hasCloseButton = !isLocked && !isPinned;
 
   const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    // Radix skips its handlers for a prevented key. During a drag the keys belong to the drag, so
+    // an arrow key does not move the focus and Enter does not select a tab.
+    if (isDragging) {
+      e.preventDefault();
+      return;
+    }
+    // Space starts the drag here, before the handlers of Radix. dnd-kit stops the default of the
+    // key, so Radix does not also select the tab. A tab that cannot move has no listener, and
+    // Space selects it. dnd-kit types its listeners as plain functions. A key with a modifier
+    // belongs to a shortcut such as Ctrl+Space, and dnd-kit does not check the modifiers.
+    const hasModifier = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+    if (!hasModifier) (dragKeyDown as React.KeyboardEventHandler | undefined)?.(e);
+    if (e.defaultPrevented) return;
     // Delete closes the focused tab, as in the APG tabs pattern. Backspace is the Delete key of a
     // Mac keyboard.
     if ((e.key !== 'Delete' && e.key !== 'Backspace') || !hasCloseButton) return;
@@ -111,13 +128,11 @@ export const TabItem = memo(function TabItem({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         {/*
-          The wrapper takes the pointer and keyboard listeners of the drag, so a press on the close
-          button can also start a drag. The trigger is the activator: the keyboard drag starts only
-          when Space on the trigger bubbles up to the wrapper. The trigger handles the key first,
-          and the Tabs root uses manual activation, so Space both selects the tab and picks it up.
-          Enter only selects it, because the keyboard sensor in DndProvider starts on Space alone.
-          The wrapper takes no role and no tab stop, so the tab list has one tab stop, the active
-          trigger.
+          The wrapper takes the pointer listeners of the drag, so a press on the close button can
+          also start a drag. The trigger is the activator and takes the keyboard listener, so
+          Space on the trigger picks the tab up. The Tabs root uses manual activation, so Enter
+          selects the tab. The wrapper takes no role and no tab stop, so the tab list has one tab
+          stop, the active trigger.
         */}
         <div
           ref={setNodeRef}
@@ -128,11 +143,12 @@ export const TabItem = memo(function TabItem({
             isDragging && 'tw:z-50',
             isPinned && 'tw:flex tw:flex-1'
           )}
-          {...listeners}
+          {...pointerListeners}
         >
           <TabsTrigger
             ref={setActivatorNodeRef}
-            aria-describedby={attributes['aria-describedby']}
+            // The instructions tell how to move the tab, so a tab that cannot move has none
+            aria-describedby={isDragDisabled ? undefined : attributes['aria-describedby']}
             value={tab.id}
             isLocked={isLocked}
             isLoading={isLoading}

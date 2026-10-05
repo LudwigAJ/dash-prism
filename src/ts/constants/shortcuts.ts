@@ -50,6 +50,54 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
   focusSearch: { key: 'Space', ctrlOnly: true, label: 'Focus search' },
 };
 
+/** Names the direction of an arrow key. */
+export type Direction = 'left' | 'right' | 'up' | 'down';
+
+/** Maps the code of each arrow key to its direction. A keyboard drag moves in that direction. */
+export const ARROW_DIRECTIONS: Partial<Record<string, Direction>> = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+};
+
+/** Names a step of the keyboard drag of a tab. */
+type DragStep = 'pickUp' | 'move' | 'drop' | 'cancel';
+
+/** Describes the keys of one step of a keyboard drag. These keys need no Control. */
+interface DragKeys {
+  /** Holds the `KeyboardEvent.code` values of the keys. */
+  codes: string[];
+  /** Holds the name of the step in the help modal. */
+  label: string;
+}
+
+/**
+ * Holds the keys of the keyboard drag of a tab, in the order of the help modal. The keyboard
+ * sensor in DndProvider and the help modal read this table. Space drops the tab too, so Space
+ * toggles the drag as in the default of dnd-kit.
+ */
+export const DRAG_KEYS: Record<DragStep, DragKeys> = {
+  pickUp: { codes: ['Space'], label: 'Pick up focused tab' },
+  move: { codes: Object.keys(ARROW_DIRECTIONS), label: 'Move tab to next drop target' },
+  drop: { codes: ['Enter', 'NumpadEnter', 'Space'], label: 'Drop tab' },
+  cancel: { codes: ['Escape'], label: 'Cancel drag' },
+};
+
+const KEY_NAMES: Partial<Record<string, string>> = {
+  ArrowLeft: '←',
+  ArrowRight: '→',
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  Escape: 'Esc',
+  NumpadEnter: 'Enter',
+};
+
+/** Gives the key names of a drag step as the help shows them, each name once. */
+export function formatDragKeys(keys: DragKeys): string[] {
+  return [...new Set(keys.codes.map((code) => KEY_NAMES[code] ?? code))];
+}
+
 /**
  * Gives the key names of a shortcut in the order to press them. macOS uses the symbols of its
  * menus. The other platforms use words. Control shows on macOS too, because it works there for

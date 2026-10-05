@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SHORTCUTS, formatKeys, formatShortcut } from './shortcuts';
+import { DRAG_KEYS, SHORTCUTS, formatDragKeys, formatKeys, formatShortcut } from './shortcuts';
 
 describe('SHORTCUTS', () => {
   it('gives each key chord to one action only', () => {
@@ -47,5 +47,13 @@ describe('formatShortcut', () => {
   it('joins the symbols on macOS and the words with + elsewhere', () => {
     expect(formatShortcut(SHORTCUTS.refreshTab, true)).toBe('⌃⇧R');
     expect(formatShortcut(SHORTCUTS.refreshTab, false)).toBe('Ctrl+Shift+R');
+  });
+});
+
+describe('formatDragKeys', () => {
+  it('writes the arrow keys as arrows, and each key name once', () => {
+    expect(formatDragKeys(DRAG_KEYS.move)).toEqual(['←', '→', '↑', '↓']);
+    expect(formatDragKeys(DRAG_KEYS.cancel)).toEqual(['Esc']);
+    expect(formatDragKeys(DRAG_KEYS.drop)).toEqual(['Enter', 'Space']);
   });
 });
