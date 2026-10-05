@@ -55,6 +55,16 @@ def clear_registry_integration():
 
 
 @pytest.fixture(autouse=True)
+def no_implicit_wait(dash_duo):
+    """Turn off the implicit wait of 2 s that dash[testing] sets on the driver.
+
+    With an implicit wait, each search for a missing element lasts 2 s. A test
+    waits for an element with an explicit wait helper instead.
+    """
+    dash_duo.driver.implicitly_wait(0)
+
+
+@pytest.fixture(autouse=True)
 def assert_no_browser_errors(request, dash_duo):
     """Fail each test that leaves an error in the browser console.
 

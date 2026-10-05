@@ -14,19 +14,12 @@ from tests.integration import testutils
 pytestmark = pytest.mark.integration
 
 
-def _search(duo, query: str) -> None:
-    duo.wait_for_element(".prism-search-bar", timeout=5)
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys(query)
-
-
 def test_select_layout_from_search(prism_app_with_layouts):
     """Test selecting a layout from search results opens the correct tab."""
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    _search(duo, "Static")
-    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5).click()
+    testutils.open_layout(duo, "test-static")
 
     testutils.wait_for_tab_named(duo, "Test Static Layout")
     duo.wait_for_element("[id*='static-content']", timeout=10)
@@ -37,8 +30,7 @@ def test_select_layout_with_callback_content(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    _search(duo, "Callback")
-    duo.wait_for_element("[data-testid='prism-layout-item-test-callback']", timeout=5).click()
+    testutils.open_layout(duo, "test-callback")
 
     testutils.wait_for_tab_named(duo, "Test Callback Layout")
     duo.wait_for_element("[id*='test-button']", timeout=10)
@@ -49,7 +41,8 @@ def test_search_filters_layouts(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    _search(duo, "Static")
+    duo.find_element(".prism-search-bar").click()
+    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys("Static")
 
     duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5)
     assert (
@@ -62,8 +55,7 @@ def test_select_layout_opens_in_current_tab(prism_app_with_layouts):
     duo = prism_app_with_layouts
     testutils.wait_for_tab_count(duo, 1)
 
-    _search(duo, "Static")
-    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5).click()
+    testutils.open_layout(duo, "test-static")
 
     testutils.wait_for_tab_named(duo, "Test Static Layout")
     assert len(testutils.get_tabs(duo)) == 1, "Should still have 1 tab after selecting layout"
@@ -74,8 +66,7 @@ DISPLAY_BAR = "[data-testid='prism-search-bar-display']"
 
 def _open_static_layout(duo) -> None:
     """Open the static layout in the first tab, so the search bar shows its display mode."""
-    _search(duo, "Static")
-    duo.wait_for_element("[data-testid='prism-layout-item-test-static']", timeout=5).click()
+    testutils.open_layout(duo, "test-static")
     duo.wait_for_element(DISPLAY_BAR, timeout=10)
 
 

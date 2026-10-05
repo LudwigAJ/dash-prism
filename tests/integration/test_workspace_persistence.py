@@ -108,7 +108,7 @@ def test_undo_is_persisted_across_reload(dash_duo):
     _wait_for_stored_tab_count(duo, 1)
 
     duo.driver.refresh()
-    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.wait_for_workspace(duo)
     testutils.wait_for_tab_count(duo, 1)
 
 

@@ -18,8 +18,11 @@ pytestmark = pytest.mark.integration
 SHARE_ITEM = "[data-testid='prism-context-menu-share']"
 
 
-def _share_hash(layout_id: str, name: str) -> str:
-    payload = json.dumps({"layoutId": layout_id, "name": name}, separators=(",", ":"))
+def _share_hash(layout_id: str, name: str, params: dict | None = None) -> str:
+    share = {"layoutId": layout_id, "name": name}
+    if params is not None:
+        share["layoutParams"] = params
+    payload = json.dumps(share, separators=(",", ":"))
     return "#p:" + base64.b64encode(payload.encode("utf-8")).decode("ascii")
 
 
@@ -36,11 +39,7 @@ def _start(dash_duo, enable_share_links: bool, *, allow_multiple: bool = True, *
 
 
 def _open_home(duo) -> None:
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys("home")
-    duo.wait_for_element("[data-testid='prism-layout-item-home']", timeout=5)
-    duo.find_element("[data-testid='prism-layout-item-home']").click()
+    testutils.open_layout(duo, "home")
     duo.wait_for_element("[id*='home-content']", timeout=10)
 
 
@@ -84,7 +83,7 @@ def _load_with_hash(duo, share_hash: str) -> None:
     """
     base = duo.driver.current_url.split("#")[0].split("?")[0]
     duo.driver.get(f"{base}?reload=1{share_hash}")
-    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.wait_for_workspace(duo)
 
 
 def test_share_link_opens_on_a_cold_load(dash_duo):
@@ -147,3 +146,16 @@ def test_share_link_to_an_open_single_instance_layout_switches_to_it(dash_duo):
     duo.wait_for_contains_text(testutils.TOAST, "is already open. Switching to it.", timeout=10)
 
     assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
+
+
+def test_share_link_keeps_a_comma_inside_an_item_of_a_list(dash_duo):
+    """Each item of a list in a share link reaches the layout as one item."""
+
+    @dash_prism.register_layout(id="tags", name="Tags")
+    def tags_layout(tags: list[str]):
+        return html.Div(f"tags={tags!r}", id="tags-content")
+
+    duo = testutils.start_prism(dash_duo, layouts={}, enableShareLinks=True)
+    _load_with_hash(duo, _share_hash("tags", "Shared", {"tags": ["a,b", "c"]}))
+
+    duo.wait_for_text_to_equal("[id*='tags-content']", "tags=['a,b', 'c']", timeout=10)

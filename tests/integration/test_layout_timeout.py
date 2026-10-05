@@ -44,15 +44,6 @@ def _start_app(dash_duo):
         return testutils.start_prism(dash_duo, app=app, layouts={}, layoutTimeout=TIMEOUT_SECONDS)
 
 
-def _select_layout(duo, layout_id: str) -> None:
-    duo.wait_for_element(".prism-search-bar", timeout=5)
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(layout_id)
-    duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)
-    duo.find_element(f"[data-testid='prism-layout-item-{layout_id}']").click()
-
-
 def _root_text(duo) -> str:
     return duo.find_element(testutils.PRISM_ROOT).text
 
@@ -61,7 +52,7 @@ def test_server_enforces_layout_timeout_for_async_layouts_in_sync_app(dash_duo):
     """The sync render callback passes layoutTimeout to asyncio.wait_for."""
     duo = _start_app(dash_duo)
     started = time.monotonic()
-    _select_layout(duo, "slow-async")
+    testutils.open_layout(duo, "slow-async")
 
     # The server error must arrive well before the 4 s layout could have finished.
     WebDriverWait(duo.driver, SLOW_SECONDS - 1).until(
@@ -75,7 +66,7 @@ def test_server_enforces_layout_timeout_for_async_layouts_in_sync_app(dash_duo):
 def test_client_shows_timeout_card_after_layout_timeout_seconds(dash_duo):
     """PrismContent's loading timer uses the layoutTimeout prop (not the 30 s default)."""
     duo = _start_app(dash_duo)
-    _select_layout(duo, "slow-sync")
+    testutils.open_layout(duo, "slow-sync")
 
     # Client-side card appears after ~1 s while the uninterruptible sync callback runs.
     WebDriverWait(duo.driver, SLOW_SECONDS - 1).until(

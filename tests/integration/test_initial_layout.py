@@ -19,8 +19,6 @@ from tests.integration import testutils
 
 pytestmark = pytest.mark.integration
 
-DISPLAY_BAR = "[data-testid='prism-search-bar-display']"
-
 
 def _stored_layout_ids(driver) -> list[str] | None:
     """Return the layout ID of each tab in the persisted workspace, or None before the write."""
@@ -84,9 +82,7 @@ def test_persisted_workspace_wins_over_initial_layout(dash_duo):
 
     # Put the other layout into the only tab, so the persisted workspace differs
     # from the one that initialLayout makes.
-    duo.find_element(DISPLAY_BAR).click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3).send_keys("Analytics")
-    duo.wait_for_element("[data-testid='prism-layout-item-analytics']", timeout=5).click()
+    testutils.open_layout(duo, "analytics")
     testutils.wait_for_tab_named(duo, "Analytics", index=0)
     WebDriverWait(duo.driver, 5).until(
         lambda driver: _stored_layout_ids(driver) == ["analytics"],

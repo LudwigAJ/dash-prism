@@ -47,6 +47,8 @@
   {"type": "array", "items": "integer", "input": "1,x", "ok": false},
   {"type": "array", "items": "integer", "input": "[1, \"x\"]", "ok": false},
   {"type": "array", "items": "integer", "input": "[1,", "ok": false},
+  {"type": "array", "items": "integer", "input": "[\"1\",\"2\"]", "ok": true},
   {"type": "array", "items": "string", "input": "a,b", "ok": true},
-  {"type": "array", "items": "string", "input": "[\"a\", \"b\"]", "ok": true}
+  {"type": "array", "items": "string", "input": "[\"a\", \"b\"]", "ok": true},
+  {"type": "array", "items": "string", "input": "[\"a,b\",\"c\"]", "ok": true}
 ]

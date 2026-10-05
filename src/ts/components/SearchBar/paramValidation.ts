@@ -16,8 +16,10 @@ const INTEGER_RE = /^[+-]?\d+$/;
 
 /** Turns a parameter value into the string that the server receives. */
 function toWireString(value: unknown): string {
-  // The server splits a list parameter on commas, so a list leaves as one comma-joined string.
-  return Array.isArray(value) ? value.map(String).join(',') : String(value ?? '');
+  // A JSON array keeps an item that holds a comma as one item, and the server reads JSON for a
+  // list parameter. Each item goes as a string, because pydantic changes "1" to an int but
+  // rejects 1 for a str.
+  return Array.isArray(value) ? JSON.stringify(value.map(String)) : String(value ?? '');
 }
 
 /** Reads the items of a JSON array like the server does, or returns null if the text is not one. */

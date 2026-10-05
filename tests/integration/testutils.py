@@ -81,7 +81,7 @@ return key !== undefined && (root[key].mode & 24) === 24;
 
 
 def start_app(dash_duo: DashComposite, app: Dash, **server_options: Any) -> DashComposite:
-    """Serve ``app`` on a free port and wait until the first Prism component renders.
+    """Serve ``app`` on a free port and wait until the workspace of a Prism component renders.
 
     Call :func:`dash_prism.init` before this function. With ``PRISM_STRICT_MODE=1``,
     Dash serves the development build of React, and the function makes sure that
@@ -103,7 +103,7 @@ def start_app(dash_duo: DashComposite, app: Dash, **server_options: Any) -> Dash
         dev_tools_props_check=STRICT_MODE,
         **server_options,
     )
-    dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    wait_for_workspace(dash_duo)
     if STRICT_MODE:
         assert dash_duo.driver.execute_script(
             _STRICT_MODE_SCRIPT, PRISM_ROOT
@@ -161,6 +161,21 @@ def start_prism(
 # Wait Helpers
 # Each wait raises TimeoutException when its condition does not hold in time.
 # =============================================================================
+def wait_for_workspace(dash_duo, timeout: float = 10.0) -> None:
+    """Wait until the workspace of a Prism component renders.
+
+    The Prism root renders first. The workspace renders one task later, after
+    redux-persist loads the store.
+
+    :param dash_duo: The dash testing fixture.
+    :param timeout: The maximum wait in seconds.
+    """
+    WebDriverWait(dash_duo.driver, timeout).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, PANEL_SELECTOR)),
+        message="The workspace did not render",
+    )
+
+
 def wait_for_panel_layout_stable(dash_duo, timeout: float = 5.0) -> None:
     """Wait until every panel has a width and a height.
 
@@ -517,13 +532,8 @@ def _activate_drag(dash_duo, source) -> None:
 def _drop(dash_duo) -> None:
     """Release the mouse and wait until the drag ends."""
     ActionChains(dash_duo.driver).release().perform()
-    # A WebDriver search for a missing element waits out the implicit wait of
-    # dash[testing] (2 s). A query in the page returns at once.
     WebDriverWait(dash_duo.driver, 5).until(
-        lambda driver: driver.execute_script(
-            "return document.querySelector(arguments[0]) === null;", DROP_ZONE_LEFT
-        ),
-        message="The drag did not end",
+        lambda _: not are_drop_zones_present(dash_duo), message="The drag did not end"
     )
 
 
@@ -655,3 +665,18 @@ def open_context_menu(dash_duo, tab_element):
     WebDriverWait(dash_duo.driver, 3).until(
         EC.visibility_of_element_located((By.CSS_SELECTOR, CONTEXT_MENU))
     )
+
+
+def open_layout(dash_duo, layout_id: str) -> None:
+    """Search for a layout in the search bar of the first panel and click its item.
+
+    The helper types the layout ID, because the search matches the ID too. A layout
+    without parameters then opens in the active tab. A layout with parameters shows
+    its parameter prompt.
+
+    :param dash_duo: The dash testing fixture.
+    :param layout_id: The ID of the layout.
+    """
+    dash_duo.wait_for_element(".prism-search-bar", timeout=5).click()
+    dash_duo.wait_for_element(SEARCHBAR_INPUT, timeout=3).send_keys(layout_id)
+    dash_duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5).click()

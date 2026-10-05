@@ -116,7 +116,7 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     )
     assert _stored_session_id(duo) == "stale", "the seed was overwritten before reload"
     duo.driver.refresh()
-    duo.wait_for_element(testutils.PRISM_ROOT, timeout=10)
+    testutils.wait_for_workspace(duo)
 
     # The user is told what happened (the toast is raised after mount, not from
     # the reducer during rehydration where nothing is listening yet).

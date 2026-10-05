@@ -31,12 +31,8 @@ def _start(dash_duo):
     return testutils.start_prism(dash_duo, layouts={})
 
 
-def _enter_params_mode(duo, search: str = "Typed", layout_id: str = "typed") -> None:
-    duo.find_element(".prism-search-bar").click()
-    duo.wait_for_element(testutils.SEARCHBAR_INPUT, timeout=3)
-    duo.find_element(testutils.SEARCHBAR_INPUT).send_keys(search)
-    duo.wait_for_element(f"[data-testid='prism-layout-item-{layout_id}']", timeout=5)
-    duo.find_element(f"[data-testid='prism-layout-item-{layout_id}']").click()
+def _enter_params_mode(duo, layout_id: str = "typed") -> None:
+    testutils.open_layout(duo, layout_id)
     duo.wait_for_element(PARAM_INPUT, timeout=5)
 
 
@@ -115,7 +111,7 @@ def test_blank_is_accepted_for_an_optional_parameter_with_choices(dash_duo):
     no input could succeed except picking a choice.
     """
     duo = _start_optional(dash_duo)
-    _enter_params_mode(duo, search="Optional", layout_id="optional")
+    _enter_params_mode(duo, "optional")
     duo.wait_for_element(CHOICE.format("BTPS"), timeout=5)
 
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
@@ -133,7 +129,7 @@ def test_a_choice_still_reaches_an_optional_parameter_with_choices(dash_duo):
     is what guards that.
     """
     duo = _start_optional(dash_duo)
-    _enter_params_mode(duo, search="Optional", layout_id="optional")
+    _enter_params_mode(duo, "optional")
     duo.wait_for_element(CHOICE.format("FRTR"), timeout=5)
 
     duo.find_element(CHOICE.format("FRTR")).click()
@@ -161,7 +157,7 @@ def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
     of: " before it could ever reach the server.
     """
     duo = _start_items(dash_duo)
-    _enter_params_mode(duo, search="Items", layout_id="items")
+    _enter_params_mode(duo, "items")
 
     testutils.set_input_value_react(duo, PARAM_INPUT, "a,b")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
@@ -173,7 +169,7 @@ def test_list_of_literal_items_accepts_a_valid_comma_separated_value(dash_duo):
 def test_an_off_list_item_is_still_refused_by_the_server(dash_duo):
     """Handing the check to the server must not mean nothing checks it."""
     duo = _start_items(dash_duo)
-    _enter_params_mode(duo, search="Items", layout_id="items")
+    _enter_params_mode(duo, "items")
 
     testutils.set_input_value_react(duo, PARAM_INPUT, "a,zzz")
     duo.find_element(PARAM_INPUT).send_keys(Keys.ENTER)
@@ -376,7 +372,7 @@ def test_the_active_choice_is_scrolled_into_view_in_the_list_only(dash_duo):
     # must scroll the list and nothing else: the input stays in view and no ancestor moves.
     duo = _start_many(dash_duo)
     duo.driver.set_window_size(900, 300)
-    _enter_params_mode(duo, search="Many", layout_id="many")
+    _enter_params_mode(duo, "many")
     duo.wait_for_element(CHOICE_LIST, timeout=5)
 
     duo.find_element(PARAM_INPUT).send_keys(Keys.ARROW_UP)  # the last of 40 choices
