@@ -23,6 +23,7 @@ import {
 } from '@store';
 import type { AppDispatch } from '@store';
 import { usePortal } from '@context/PortalContext';
+import { useLatestRef } from '@hooks/useLatestRef';
 
 interface PanelProps {
   panel: PanelNode;
@@ -36,8 +37,7 @@ interface PanelProps {
 
 function useNativePanelFocus(panelId: PanelId, activePanelId: PanelId, dispatch: AppDispatch) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const activePanelIdRef = useRef(activePanelId);
-  activePanelIdRef.current = activePanelId;
+  const activePanelIdRef = useLatestRef(activePanelId);
 
   useEffect(() => {
     const el = panelRef.current;
@@ -51,7 +51,7 @@ function useNativePanelFocus(panelId: PanelId, activePanelId: PanelId, dispatch:
 
     el.addEventListener('pointerdown', handler, true);
     return () => el.removeEventListener('pointerdown', handler, true);
-  }, [dispatch, panelId]);
+  }, [dispatch, panelId, activePanelIdRef]);
 
   return panelRef;
 }

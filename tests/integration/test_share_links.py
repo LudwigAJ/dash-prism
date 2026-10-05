@@ -108,6 +108,20 @@ def test_share_link_is_ignored_on_a_cold_load_when_disabled(dash_duo):
     assert "#p:" in duo.driver.current_url
 
 
+def test_invalid_share_link_on_a_cold_load_shows_one_error(dash_duo):
+    """An invalid link shows one error toast, and the hash stays in the URL.
+
+    React StrictMode runs the effect that reads the hash two times.
+    """
+    duo = _start(dash_duo, True)
+    _load_with_hash(duo, "#p:not-base64!")
+
+    duo.wait_for_contains_text(testutils.TOAST, "Invalid share link: decoding failed", timeout=10)
+    assert len(duo.find_elements(testutils.TOAST)) == 1
+    assert len(duo.find_elements(testutils.TAB_SELECTOR)) == 1
+    assert "#p:" in duo.driver.current_url
+
+
 def test_share_link_at_the_tab_limit_shows_the_limit_and_no_success(dash_duo):
     """The tab limit refuses the share link, and the thunk tells the user why."""
     duo = _start(dash_duo, True, maxTabs=2)

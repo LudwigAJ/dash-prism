@@ -263,9 +263,11 @@ function PrismInner({
 }) {
   const config = useConfig();
 
-  // The store is created exactly once per mount (useState initialiser, not
-  // useMemo: React may discard a memo, and a dependency list keyed on props
-  // would rebuild the store, dropping the undo history and any debounced sync).
+  // The store is created once per mount (useState initialiser, not useMemo:
+  // React may discard a memo, and a dependency list keyed on props would rebuild
+  // the store, dropping the undo history and any debounced sync). StrictMode
+  // calls the initialiser two times and keeps one store, so creation has no side
+  // effects and the effect below starts the store.
   // Everything the store needs after creation is read through ref getters so
   // later prop changes reach it without a rebuild:
   //  - setProps: Dash hands out a new reference after every sync
@@ -278,7 +280,7 @@ function PrismInner({
   const maxTabsRef = useLatestRef(config.maxTabs);
   const maxPanelsRef = useLatestRef(config.maxPanels);
 
-  const [{ store, persistor, cleanup }] = useState(() =>
+  const [{ store, persistor, start }] = useState(() =>
     createPrismStore({
       componentId: config.componentId,
       serverSessionId: config.serverSessionId,
@@ -290,12 +292,9 @@ function PrismInner({
     })
   );
 
-  // Clean up middleware resources on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
+  // StrictMode stops and starts the store again right after the mount, and the store must work
+  // after that restart.
+  useEffect(() => start(), [start]);
 
   return (
     <Provider store={store}>
@@ -328,7 +327,9 @@ function LoadNotice() {
   useEffect(() => {
     if (!notice) return;
     const n = notice.closedTabs;
-    toast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`);
+    toast('info', `Closed ${n} tab${n === 1 ? '' : 's'} whose layout is no longer available`, {
+      id: 'load-notice',
+    });
     dispatch(clearLoadNotice());
   }, [notice, dispatch, toast]);
 

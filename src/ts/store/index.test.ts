@@ -114,17 +114,21 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-function createStore(
-  options: {
-    componentId?: string;
-    storage?: Storage;
-    setProps?: () => void;
-    serverSessionId?: string;
-    registeredLayouts?: RegisteredLayouts;
-    maxTabs?: number | (() => number);
-    maxPanels?: number | (() => number);
-  } = {}
-) {
+// The Dash sync listens for page unload on window, and the tests run in node.
+vi.stubGlobal('window', new EventTarget());
+
+interface StoreOptions {
+  componentId?: string;
+  storage?: Storage;
+  setProps?: () => void;
+  serverSessionId?: string;
+  registeredLayouts?: RegisteredLayouts;
+  maxTabs?: number | (() => number);
+  maxPanels?: number | (() => number);
+}
+
+/** Creates a store that has not started, as the state initializer of PrismInner does. */
+function createUnstartedStore(options: StoreOptions = {}) {
   const setProps = options.setProps ?? vi.fn();
   const result = createPrismStore({
     componentId: options.componentId ?? COMPONENT_ID,
@@ -139,9 +143,15 @@ function createStore(
   return { ...result, setProps };
 }
 
+/** Creates a store and starts it, as PrismInner does in its effect. */
+function createStore(options: StoreOptions = {}) {
+  const created = createUnstartedStore(options);
+  return { ...created, stop: created.start() };
+}
+
 const LAYOUTS: RegisteredLayouts = { home: { name: 'Home' }, about: { name: 'About' } };
 
-type Created = ReturnType<typeof createStore>;
+type Created = ReturnType<typeof createUnstartedStore>;
 
 /**
  * Waits until redux-persist completes the rehydration (the PersistGate condition). The persistor
@@ -187,7 +197,7 @@ describe('createPrismStore', () => {
       expect(persistMeta(created)?.rehydrated).toBe(true);
       expect(present(created).tabs).toHaveLength(1);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('treats undo right after load as a no-op and keeps persistence armed', async () => {
@@ -200,7 +210,7 @@ describe('createPrismStore', () => {
       expect(created.store.getState().workspace).toBe(before);
       expect(persistMeta(created)?.rehydrated).toBe(true);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('restores a saved workspace that undo cannot wipe', async () => {
@@ -233,7 +243,7 @@ describe('createPrismStore', () => {
         ['tab-b', 'Beta'],
       ]);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('lets the first user action after load be undone back to the restored workspace', async () => {
@@ -271,7 +281,7 @@ describe('createPrismStore', () => {
         ['tab-b', 'Beta'],
       ]);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('keeps recording ordinary actions after load', async () => {
@@ -287,7 +297,7 @@ describe('createPrismStore', () => {
       created.store.dispatch(undo());
       expect(present(created).tabs[0].name).toBe('New Tab');
 
-      created.cleanup();
+      created.stop();
     });
 
     it('does not record ui request actions', async () => {
@@ -315,7 +325,7 @@ describe('createPrismStore', () => {
       });
       expect(selectSearchFocusPanelId(created.store.getState())).toBe(panelId);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('does not record redux-persist lifecycle actions (flush, pause, purge)', async () => {
@@ -333,7 +343,7 @@ describe('createPrismStore', () => {
       expect(history(created).future).toHaveLength(0);
       expect(present(created).tabs[0].id).toBe(tabId);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('clears history recorded by any action dispatched before rehydration finished', async () => {
@@ -348,7 +358,7 @@ describe('createPrismStore', () => {
       expect(history(created).past).toHaveLength(0);
       expect(selectCanUndo(created.store.getState())).toBe(false);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('clears history recorded before rehydration finished (corrupt persisted state)', async () => {
@@ -369,7 +379,7 @@ describe('createPrismStore', () => {
       expect(present(created).tabs).toHaveLength(1);
       expect(persistMeta(created)?.rehydrated).toBe(true);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -395,7 +405,7 @@ describe('createPrismStore', () => {
       await created.persistor.flush();
       expect(storedTabIds(data)).toEqual(['tab-a']);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('stores only the present workspace, never the undo history', async () => {
@@ -411,7 +421,7 @@ describe('createPrismStore', () => {
       expect(JSON.parse(stored._persist)).toMatchObject({ version: 2 });
       expect((JSON.parse(stored.present) as WorkspaceState).tabs[0].name).toBe('Two');
 
-      created.cleanup();
+      created.stop();
     });
 
     it('migrates a version 1 flat payload written by 0.9.x', async () => {
@@ -431,7 +441,7 @@ describe('createPrismStore', () => {
       expect('tabs' in stored).toBe(false);
       expect((JSON.parse(stored.present) as WorkspaceState).tabs[0].name).toBe('Migrated');
 
-      created.cleanup();
+      created.stop();
     });
 
     it('loads a version 2 payload', async () => {
@@ -443,7 +453,7 @@ describe('createPrismStore', () => {
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
       expect(history(created).past).toHaveLength(0);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -472,7 +482,7 @@ describe('createPrismStore', () => {
       const firstSync = setProps.mock.calls[0][0] as { readWorkspace: WorkspaceState };
       expect(firstSync.readWorkspace.tabs.map((t) => t.id)).toEqual(['tab-a']);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('resets corrupt persisted state before reconciling (middleware order)', async () => {
@@ -496,7 +506,7 @@ describe('createPrismStore', () => {
       expect(created.store.getState().ui.loadNotice).toBeNull();
       expect(history(created).past).toHaveLength(0);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('rejects a persisted serverSessionId that is not a string', async () => {
@@ -510,7 +520,7 @@ describe('createPrismStore', () => {
       expect(present(created).tabs[0].name).toBe('New Tab');
       expect(present(created).serverSessionId).toBe('v1');
 
-      created.cleanup();
+      created.stop();
     });
 
     it('keeps a workspace whose session id matches and whose layouts all exist', async () => {
@@ -523,7 +533,7 @@ describe('createPrismStore', () => {
       expect(present(created).serverSessionId).toBe('same');
       expect(created.store.getState().ui.loadNotice).toBeNull();
 
-      created.cleanup();
+      created.stop();
     });
 
     it('still closes tabs for unknown layouts when the session id matches', async () => {
@@ -535,7 +545,7 @@ describe('createPrismStore', () => {
 
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-b']);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('records the session id on a fresh workspace (memory persistence)', async () => {
@@ -546,7 +556,7 @@ describe('createPrismStore', () => {
       expect(present(created).tabs).toHaveLength(1);
       expect(history(created).past).toHaveLength(0);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('does not prune anything when no layouts are registered', async () => {
@@ -557,7 +567,7 @@ describe('createPrismStore', () => {
 
       expect(present(created).tabs.map((t) => t.id)).toEqual(['tab-a', 'tab-b']);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -579,7 +589,7 @@ describe('createPrismStore', () => {
       expect(addTab.fulfilled.match(fulfilled)).toBe(true);
       expect(present(created).tabs).toHaveLength(2);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('still accepts a plain number', async () => {
@@ -590,7 +600,7 @@ describe('createPrismStore', () => {
       const rejected = await created.store.dispatch(addTab({ panelId }));
       expect(addTab.rejected.match(rejected)).toBe(true);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -612,7 +622,7 @@ describe('createPrismStore', () => {
       await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
       expect(present(created).panelTabs[panelId]).not.toContain(tabId);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -642,7 +652,7 @@ describe('createPrismStore', () => {
       expect(present(created).panelTabs[panelId]).toContain(tabB.id);
       expect(present(created).tabs.find((t) => t.id === tabB.id)?.panelId).toBe(panelId);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('lets only one of two splits in the same tick pass the limit', async () => {
@@ -660,7 +670,7 @@ describe('createPrismStore', () => {
 
       expect(Object.keys(present(created).panelTabs)).toHaveLength(2);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('skips a split whose panel an earlier split in the same tick removed', async () => {
@@ -688,7 +698,7 @@ describe('createPrismStore', () => {
       expect(present(created).panelTabs[secondPanelId]).toBeUndefined();
       expect(present(created).panelTabs[firstPanelId]).toContain(tabC.id);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -706,7 +716,7 @@ describe('createPrismStore', () => {
       await created.store.dispatch(splitPanel({ panelId, direction: 'horizontal', tabId }));
       expect(selectIsSingleTabMode(created.store.getState())).toBe(false);
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -724,7 +734,7 @@ describe('createPrismStore', () => {
       expect(selectInfoModalTab(state())).toBe(tab);
       expect(selectSetIconModalTab(state())).toBe(tab);
 
-      created.cleanup();
+      created.stop();
     });
 
     it('give null when the tab of the modal no longer exists', async () => {
@@ -736,7 +746,7 @@ describe('createPrismStore', () => {
       expect(selectInfoModalTab(created.store.getState())).toBeNull();
       expect(selectSetIconModalTab(created.store.getState())).toBeNull();
 
-      created.cleanup();
+      created.stop();
     });
   });
 
@@ -756,8 +766,41 @@ describe('createPrismStore', () => {
         expect.objectContaining({ toasterId: 'prism-b' })
       );
 
-      first.cleanup();
-      second.cleanup();
+      first.stop();
+      second.stop();
+    });
+  });
+
+  describe('start', () => {
+    it('does not load or sync before the start', async () => {
+      const created = createUnstartedStore();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(persistMeta(created)).toBeUndefined();
+      expect(created.setProps).not.toHaveBeenCalled();
+    });
+
+    // React StrictMode starts the store, stops it and starts it again right after the mount.
+    it('loads the workspace one time when it starts again after a stop', async () => {
+      vi.useFakeTimers();
+      try {
+        const created = createUnstartedStore();
+        created.start()();
+        const stop = created.start();
+        await settle(created);
+        const listener = vi.fn();
+        const unsubscribe = created.store.subscribe(listener);
+
+        // redux-persist ends each rehydration that has not finished after 5 s with an error.
+        vi.advanceTimersByTime(5000);
+
+        expect(listener).not.toHaveBeenCalled();
+        expect(created.setProps).toHaveBeenCalledTimes(1);
+        unsubscribe();
+        stop();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -772,7 +815,7 @@ describe('createPrismStore', () => {
       expect(payload.readWorkspace.tabs).toHaveLength(1);
       expect(payload.readWorkspace.panelTabs).toEqual(present(created).panelTabs);
 
-      created.cleanup();
+      created.stop();
     });
   });
 });

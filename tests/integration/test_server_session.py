@@ -123,6 +123,8 @@ def test_tabs_for_removed_layouts_are_closed_on_load(dash_duo):
     # sonner mounts the toast element before it fills in the text, so wait for
     # the text rather than reading it once.
     duo.wait_for_contains_text(testutils.TOAST, "Closed 1 tab", timeout=10)
+    # React StrictMode runs the effect that shows the toast two times.
+    assert len(duo.find_elements(testutils.TOAST)) == 1
 
     testutils.wait_for_tab_count(duo, 1, timeout=10)
     tabs = duo.find_elements(testutils.TAB_SELECTOR)

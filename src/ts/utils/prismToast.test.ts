@@ -72,4 +72,22 @@ describe('prismToast', () => {
       expect.objectContaining({ toasterId: 'prism-a' })
     );
   });
+
+  it('gives the toast an ID that holds the Toaster, so two instances do not share a toast', () => {
+    vi.spyOn(logger, 'info').mockImplementation(() => {});
+
+    prismToast('info', 'Closed', { toasterId: 'prism-a', id: 'notice' });
+    prismToast('info', 'Closed', { toasterId: 'prism-b', id: 'notice' });
+
+    expect(toast.info).toHaveBeenNthCalledWith(
+      1,
+      'Closed',
+      expect.objectContaining({ id: 'prism-a:notice' })
+    );
+    expect(toast.info).toHaveBeenNthCalledWith(
+      2,
+      'Closed',
+      expect.objectContaining({ id: 'prism-b:notice' })
+    );
+  });
 });

@@ -200,6 +200,9 @@ All notable changes to Dash Prism are recorded here. The project follows
 - In an app with `debug=True`, the help, info and icon dialogs no longer write
   the React warning "Function components cannot be given refs" to the browser
   console. The dialog overlay now takes the ref that Radix gives it.
+- Prism now behaves the same in React StrictMode. Before, the "Closed tabs"
+  notice on load and the error of an invalid share link showed two toasts, and
+  a pending workspace sync did not go out when the page unloaded.
 - A click on the close button of an inactive tab no longer selects that tab
   before it closes it, so the selected tab stays selected.
 - `dash_prism.init()` no longer warns that it cannot find the Prism component
