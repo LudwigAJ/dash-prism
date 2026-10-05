@@ -18,10 +18,10 @@ check_wheel = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check_wheel)
 
 
-def _make_wheel(path: pathlib.Path, names: set[str]) -> pathlib.Path:
+def _make_wheel(path: pathlib.Path, names: set[str], bundle: str = "") -> pathlib.Path:
     with zipfile.ZipFile(path, "w") as archive:
         for name in sorted(names):
-            archive.writestr(name, "")
+            archive.writestr(name, bundle if name == "dash_prism/dash_prism.js" else "")
     return path
 
 
@@ -117,6 +117,30 @@ def test_main_runs_the_smoke_test_when_every_file_is_present(
 
     assert check_wheel.main([str(wheel)]) == 0
     assert installed == [wheel]
+
+
+def test_holds_strict_mode_bundle_finds_the_strict_mode_wrapper(tmp_path: pathlib.Path) -> None:
+    names = {"dash_prism/dash_prism.js"}
+    strict = _make_wheel(tmp_path / "strict.whl", names, bundle="React.StrictMode")
+    release = _make_wheel(tmp_path / "release.whl", names, bundle="React.Fragment")
+    no_bundle = _make_wheel(tmp_path / "empty.whl", set())
+
+    assert check_wheel.holds_strict_mode_bundle(strict)
+    assert not check_wheel.holds_strict_mode_bundle(release)
+    assert not check_wheel.holds_strict_mode_bundle(no_bundle)
+
+
+def test_main_rejects_the_strict_mode_bundle_and_does_not_install(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(check_wheel, "smoke_test", pytest.fail)
+    wheel = _make_wheel(
+        tmp_path / "pkg.whl", set(check_wheel.required_files()), bundle="React.StrictMode"
+    )
+
+    assert check_wheel.main([str(wheel)]) == 1
+    assert "StrictMode test bundle" in capsys.readouterr().out
 
 
 def test_main_exits_with_a_usage_error_for_a_file_that_is_not_a_wheel(

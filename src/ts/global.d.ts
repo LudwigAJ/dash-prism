@@ -4,6 +4,8 @@ declare namespace NodeJS {
   interface ProcessEnv {
     /** App version injected at build time from package.json */
     APP_VERSION: string;
+    /** Is 'true' in the bundle of `--env strict`, which wraps Prism in React.StrictMode */
+    PRISM_STRICT_MODE?: string;
   }
 }
 

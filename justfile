@@ -69,6 +69,12 @@ test-integration:
 test-integration-seq:
     pnpm run test:integration -n 0
 
+# Run the integration tests with Prism in React StrictMode, then build the release bundle again
+test-strict:
+    pnpm run build:strict
+    pnpm run test:integration:strict
+    pnpm run build
+
 # Run all tests (TypeScript + Python)
 test:
     pnpm run test:ts

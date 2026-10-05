@@ -8,6 +8,7 @@ hold in time. The selectors use the ``data-testid`` attributes of Prism.
 
 from __future__ import annotations
 
+import os
 import platform
 import socket
 from collections.abc import Mapping, Sequence
@@ -67,17 +68,43 @@ def storage_key(component_id: str) -> str:
     return f"persist:prism-workspace-{component_id}"
 
 
+# With PRISM_STRICT_MODE=1, the suite runs against the bundle of `pnpm run build:strict`.
+STRICT_MODE = os.environ.get("PRISM_STRICT_MODE") == "1"
+
+# The fiber mode bits StrictLegacyMode (8) and StrictEffectsMode (16) of React 18. React sets both
+# inside <React.StrictMode> under a createRoot root.
+_STRICT_MODE_SCRIPT = """
+const root = document.querySelector(arguments[0]);
+const key = Object.keys(root).find((name) => name.startsWith('__reactFiber$'));
+return key !== undefined && (root[key].mode & 24) === 24;
+"""
+
+
 def start_app(dash_duo: DashComposite, app: Dash) -> DashComposite:
     """Serve ``app`` on a free port and wait until the first Prism component renders.
 
-    Call :func:`dash_prism.init` before this function.
+    Call :func:`dash_prism.init` before this function. With ``PRISM_STRICT_MODE=1``,
+    Dash serves the development build of React, and the function makes sure that
+    Prism runs in StrictMode.
 
     :param dash_duo: The dash[testing] fixture.
     :param app: The Dash app to serve.
     :returns: ``dash_duo``, after Prism rendered.
+    :raises AssertionError: When ``PRISM_STRICT_MODE=1`` and Prism does not run in
+        StrictMode, for example because the bundle is not the StrictMode build.
     """
-    dash_duo.start_server(app, port=get_free_port())
+    # Dash serves the development build of React only together with the props check.
+    dash_duo.start_server(
+        app,
+        port=get_free_port(),
+        dev_tools_serve_dev_bundles=STRICT_MODE,
+        dev_tools_props_check=STRICT_MODE,
+    )
     dash_duo.wait_for_element(PRISM_ROOT, timeout=10)
+    if STRICT_MODE:
+        assert dash_duo.driver.execute_script(
+            _STRICT_MODE_SCRIPT, PRISM_ROOT
+        ), "Prism does not run in StrictMode. Build the bundle with `pnpm run build:strict`."
     return dash_duo
 
 

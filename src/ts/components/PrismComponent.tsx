@@ -443,7 +443,7 @@ export function Prism({
     clearPersistedWorkspace(componentId, persistenceType);
   }, [persistenceType, componentId]);
 
-  return (
+  const root = (
     <div
       id={id}
       ref={setRootElement}
@@ -493,6 +493,15 @@ export function Prism({
         </ConfigProvider>
       </ErrorBoundary>
     </div>
+  );
+
+  // The StrictMode test build checks that Prism behaves the same when React runs each render,
+  // each state initializer and each effect two times. React does this in development only.
+  // StrictMode wraps only the returned tree, so the run does not check a hook of Prism itself.
+  return process.env.PRISM_STRICT_MODE === 'true' ? (
+    <React.StrictMode>{root}</React.StrictMode>
+  ) : (
+    root
   );
 }
 
